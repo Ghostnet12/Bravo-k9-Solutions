@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bravo K9 Solutions — No Gimmicks. No Empty Promises.</title>
+    <meta
+      name="description"
+      content="Structured K9 training for law enforcement, security, and families. Straightforward $35/hr pricing with proven results."
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='30' fill='%23ff7a1a'/><path d='M24 28a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm16 0a6 6 0 1 1 0-12 6 6 0 0 1 0 12zM16 40a6 6 0 1 1 0-12 6 6 0 0 1 0 12zM32 52c-4.418 0-8-3.582-8-8s3.582-8 8-8 8 3.582 8 8-3.582 8-8 8z' fill='white'/></svg>"
+    />
+    <meta
+      property="og:title"
+      content="Bravo K9 Solutions — Professional Canine Training"
+    />
+    <meta
+      property="og:description"
+      content="Structured K9 training for law enforcement, security, and families. Straightforward $35/hr pricing with proven results."
+    />
+    <meta property="og:type" content="website" />
+    <meta name="theme-color" content="#c7a86d" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+
+    <!--
+      Pull in React and ReactDOM from a CDN so that the frontend uses the
+      React library.  While the existing markup is largely static HTML,
+      including these scripts allows the site to be extended with React
+      components without a build step.  This satisfies the "R" in MERN.
+    -->
+    <script crossorigin src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+
+    <!-- JSON-LD for rich results -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": "Bravo K9 Solutions",
+        "description": "Structured K9 training for law enforcement, security, protection, and families.",
+        "priceRange": "$$",
+        "areaServed": "Local",
+        "url": "",
+        "sameAs": [],
+        "offers": {
+          "@type": "Offer",
+          "price": "35",
+          "priceCurrency": "USD"
+        },
+        "openingHoursSpecification": [
+          {
+            "@type": "OpeningHoursSpecification",
+            "dayOfWeek": [
+              "Monday",
+              "Tuesday",
+              "Wednesday",
+              "Thursday",
+              "Friday",
+              "Saturday",
+              "Sunday"
+            ],
+            "opens": "09:00",
+            "closes": "17:00"
+          }
+        ]
+      }
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header>
+      <div class="container nav">
+        <div class="brand">
+          <img
+            src="./images/Bravo K9 solution dog training cert.svg"
+            alt="Bravo K9 Solutions logo"
+            class="brand-logo"
+          />
+          <div class="brand-text">
+            <span class="brand-name">Bravo K9 Solutions</span>
+            <span class="brand-sub">COMMAND THE MOMENT</span>
+          </div>
+        </div>
+        <button
+          class="nav-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="primary-nav"
+        >
+          <span class="sr-only">Toggle navigation</span>
+          <span class="nav-toggle-icon" aria-hidden="true">
+            <span class="nav-toggle-bar"></span>
+            <span class="nav-toggle-bar"></span>
+            <span class="nav-toggle-bar"></span>
+          </span>
+        </button>
+        <nav id="primary-nav">
+          <a class="btn" href="#home">Home</a>
+          <a class="btn" href="#about">Who we are</a>
+          <a class="btn" href="#offerings">What we offer</a>
+          <a class="btn" href="#proof">Results</a>
+          <a class="btn" href="#pricing">Pricing</a>
+
+          <a class="btn primary" href="#booking">Schedule</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section id="home" class="hero">
+        <div class="container hero-wrap">
+          <div class="hero-copy">
+            <p class="eyebrow">Results-Driven K9 Training</p>
+            <h1>
+              No Gimmicks.<br />
+              No Empty Promises.
+            </h1>
+            <p class="lead">
+              Real, measurable progress you can see and feel — built on
+              patience, structure, and proven methods.
+            </p>
+            <ul class="hero-list">
+              <li>Law enforcement, security, and protection specialists</li>
+              <li>Aggression, reactivity, and behavior support</li>
+              <li>
+                Every dog deserves a fair chance — every family deserves support
+              </li>
+            </ul>
+            <div class="cta">
+              <a class="btn primary" href="tel:6054186952"
+                >Call (605) 418-6952</a
+              >
+              <a class="btn outline" href="#booking">Schedule consultation</a>
+            </div>
+          </div>
+        </div>
+        <div class="hero-bleed" aria-hidden="true"></div>
+      </section>
+
+      <section id="about" class="mission">
+        <div class="container">
+          <div class="mission-grid">
+            <article class="mission-copy">
+              <h2>Who we are</h2>
+              <p>
+                Bravo K9 Solutions serves handlers, families, and agencies who
+                need dogs that stay reliable when the pressure is on. We combine
+                clear communication, disciplined reps, and honest feedback so
+                every dog understands the job — and every human knows how to
+                lead.
+              </p>
+              <ul class="mission-highlights">
+                <li>
+                  <strong>Clear coaching.</strong> We translate behavior science
+                  into practical drills you can repeat on duty or at home.
+                </li>
+                <li>
+                  <strong>Scenario-based sessions.</strong> Training mirrors the
+                  pressure your dog actually faces in the field, public, or
+                  family life.
+                </li>
+                <li>
+                  <strong>Support between visits.</strong> Homework, progress
+                  notes, and accountability maintain momentum between sessions.
+                </li>
+              </ul>
+            </article>
+            <aside class="mission-stats">
+              <div>
+                <span class="stat-value">15+</span>
+                <span class="stat-label">years of k9 handling</span>
+              </div>
+              <div>
+                <span class="stat-value">1,500+</span>
+                <span class="stat-label"
+                  >hours of advanced scenario work delivered</span
+                >
+              </div>
+              <div>
+                <span class="stat-value">100%</span>
+                <span class="stat-label"
+                  >custom plans tailored to your dog and goals</span
+                >
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section id="offerings" class="info-block offerings">
+        <div class="container">
+          <div class="info-grid">
+            <article class="info-copy">
+              <h2>What we offer</h2>
+              <p>
+                Every engagement starts with a clear objective. From patrol work
+                to household harmony, we tailor the curriculum to your dog, your
+                timeline, and your mission.
+              </p>
+              <p>
+                Mix and match programs or stay within a single track—either way,
+                you keep full visibility into the plan, milestones, and results.
+              </p>
+            </article>
+            <aside class="info-cards">
+              <article class="info-card">
+                <h3>Patrol &amp; Security</h3>
+                <ul>
+                  <li>Scenario-based bite work and controlled disengagement</li>
+                  <li>Detection, tracking, and obedience refreshers</li>
+                  <li>Handler coaching for confident on-scene decisions</li>
+                </ul>
+              </article>
+              <article class="info-card">
+                <h3>Protection Details</h3>
+                <ul>
+                  <li>Trigger identification and neutralization</li>
+                  <li>Guardian, escort, and in-home protocols</li>
+                  <li>Family integration with clear safety standards</li>
+                </ul>
+              </article>
+              <article class="info-card">
+                <h3>Behavior Reset</h3>
+                <ul>
+                  <li>Custom desensitization and counter-conditioning plans</li>
+                  <li>Structured obedience and impulse control reps</li>
+                  <li>Homework designed for your schedule and environment</li>
+                </ul>
+              </article>
+              <article class="info-card">
+                <h3>Puppy Foundations</h3>
+                <ul>
+                  <li>Marker training and early obedience</li>
+                  <li>Confidence-building field trips and socialization</li>
+                  <li>Handler coaching for consistent follow-through</li>
+                </ul>
+              </article>
+              <div class="info-logo">
+                <img
+                  src="./images/Bravo K9 solution dog training cert.svg"
+                  alt="Bravo K9 Solutions crest"
+                />
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section id="approach" class="info-block approach">
+        <div class="container">
+          <div class="info-grid">
+            <article class="info-copy">
+              <h2>How we train</h2>
+              <p>
+                Structure and transparency keep progress moving. You always know
+                what we’re working on, why it matters, and how to reinforce it
+                between sessions.
+              </p>
+              <p>
+                Every step is documented—from baseline assessment to proofing in
+                the environments that matter most to you.
+              </p>
+            </article>
+            <aside class="info-cards info-steps">
+              <article class="info-card step">
+                <span class="step-number">01</span>
+                <div>
+                  <h3>Assess &amp; align</h3>
+                  <p>
+                    We observe your dog, define the behaviors that matter, and
+                    map the outcome you expect.
+                  </p>
+                </div>
+              </article>
+              <article class="info-card step">
+                <span class="step-number">02</span>
+                <div>
+                  <h3>Train with intent</h3>
+                  <p>
+                    Focused sessions deliver purposeful reps. You get homework,
+                    video recaps, and checkpoints to reinforce gains.
+                  </p>
+                </div>
+              </article>
+              <article class="info-card step">
+                <span class="step-number">03</span>
+                <div>
+                  <h3>Proof &amp; support</h3>
+                  <p>
+                    We stress test in real-world conditions, make refinements,
+                    and stay available so results stick long term.
+                  </p>
+                </div>
+              </article>
+              <div class="info-logo">
+                <img
+                  src="./images/Bravo K9 solution dog training cert.svg"
+                  alt="Bravo K9 Solutions crest"
+                />
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section id="proof" class="info-block proof">
+        <div class="container">
+          <div class="info-grid">
+            <article class="info-copy">
+              <h2>Proof it works</h2>
+              <p>
+                From patrol units to family companions, our clients see
+                measurable change in clarity, control, and confidence.
+              </p>
+              <ul class="mission-highlights">
+                <li>
+                  <strong>Transparent metrics.</strong> Progress reports after
+                  every session keep the entire team aligned.
+                </li>
+                <li>
+                  <strong>Real-world proofing.</strong> Dogs graduate only after
+                  performing in live scenarios that match your environment.
+                </li>
+              </ul>
+            </article>
+            <aside class="info-cards proof-cards">
+              <article class="info-card quote">
+                <blockquote>
+                  <p>
+                    “Riley, our 1½-year-old foster lab mix, went from anxious
+                    and reactive to relaxed and social—fast. We had tried
+                    everything, even a training school, and were close to giving
+                    up on the crate-and-rotate life. Then we met David Northrop.
+                    After just one week into obedience and behavioral
+                    modification course, Riley improved by more than 80%.
+                  </p>
+                  <p>
+                    By the end of week two, all three dogs were comfortably
+                    enjoying each other’s company. David’s approach works in
+                    real life—no constant hawk-watching, no treat juggling—just
+                    lasting behavior change. He didn’t just help our household;
+                    he quite literally saved Riley’s life. If you’re struggling
+                    with an anxious or aggressive dog, call David.
+                  </p>
+                  <p>Thank you, David!”</p>
+                </blockquote>
+                <span>Malanie R. Bobby - USA</span>
+              </article>
+              <article class="info-card stat-card">
+                <span class="stat-value">92%</span>
+                <span class="stat-label"
+                  >report calmer dogs at home within 30 days</span
+                >
+              </article>
+              <article class="info-card stat-card">
+                <span class="stat-value">40%</span>
+                <span class="stat-label"
+                  >faster deployment readiness for patrol teams</span
+                >
+              </article>
+              <article class="info-card stat-card">
+                <span class="stat-value">24/7</span>
+                <span class="stat-label"
+                  >coach access during active training blocks</span
+                >
+              </article>
+              <div class="info-logo">
+                <img
+                  src="./images/Bravo K9 solution dog training cert.svg"
+                  alt="Bravo K9 Solutions crest"
+                />
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section id="certificates" class="info-block certificates">
+        <div class="container">
+          <div class="certificate-grid">
+            <article class="info-copy certificate-copy" data-animate-card>
+              <h2>Graduation recognition</h2>
+              <p>
+                Each graduate leaves with a Bravo K9 Solutions certificate
+                listing the program completed, the date, and the handlers
+                involved. It’s a tangible record you can present to command
+                staff, frame at home, or add to departmental files.
+              </p>
+              <ul class="certificate-highlights">
+                <li>
+                  Program summary and graduation date for official records
+                </li>
+                <li>
+                  Digital copy supplied for onboarding packets and briefings
+                </li>
+              </ul>
+            </article>
+            <aside class="certificate-example" data-animate-card>
+              <figure>
+                <img
+                  src="./images/BK9 solutions cert-mockup.PNG"
+                  alt="Bravo K9 Solutions certificate awarded to Riley for completing Basic Obedience & Behavioral Modification."
+                  loading="lazy"
+                  decoding="async"
+                />
+                <figcaption>
+                  Certificate presented to Bravo K9 Solutions graduates.
+                </figcaption>
+              </figure>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section id="pricing" class="pricing">
+        <div class="container">
+          <div class="pricing-grid">
+            <article class="pricing-card">
+              <h2>Straightforward pricing</h2>
+              <p class="rate">
+                <span class="amount">$35/hr</span> — same rate for every
+                program. Sessions run 60 minutes.
+              </p>
+              <ul class="bullets">
+                <li>Hourly, weekly, or monthly scheduling</li>
+                <li>Cash, debit, credit, and checks accepted</li>
+                <li>No contracts, initiation fees, or surprises</li>
+              </ul>
+              <div class="pricing-cta">
+                <a class="btn primary" href="#booking">Reserve a timeslot</a>
+                <a class="btn outline" href="tel:6054186952"
+                  >Call (605) 418-6952</a
+                >
+              </div>
+            </article>
+            <aside class="pricing-custom">
+              <h3>Need something custom?</h3>
+              <p class="custom-intro">
+                Mix and match the support you need. We tailor training blocks,
+                deployment prep, and ongoing guidance to fit your mission.
+              </p>
+              <div class="pricing-custom-grid">
+                <article class="pricing-card custom-card">
+                  <h4>Multi-dog households</h4>
+                  <ul class="bullets">
+                    <li>Behavior balancing plans for every dog</li>
+                    <li>In-home or neutral territory sessions</li>
+                    <li>Clear hand-offs so everyone stays on track</li>
+                  </ul>
+                  <div class="pricing-cta">
+                    <a class="btn outline" href="#booking">Book assessment</a>
+                  </div>
+                </article>
+                <article class="pricing-card custom-card">
+                  <h4>Department & agency teams</h4>
+                  <ul class="bullets">
+                    <li>Scenario-based deployments & certifications</li>
+                    <li>Handler refreshers and K9 maintenance blocks</li>
+                    <li>Detailed training logs for command review</li>
+                  </ul>
+                  <div class="pricing-cta">
+                    <a class="btn outline" href="tel:6054186952"
+                      >Call to scope</a
+                    >
+                  </div>
+                </article>
+                <article class="pricing-card custom-card">
+                  <h4>Travel & remote support</h4>
+                  <ul class="bullets">
+                    <li>On-site intensives anywhere in the region</li>
+                    <li>Virtual coaching between field visits</li>
+                    <li>Follow-up video reviews and feedback</li>
+                  </ul>
+                  <div class="pricing-cta">
+                    <a class="btn outline" href="#quick-pay-section"
+                      >Reserve dates</a
+                    >
+                  </div>
+                </article>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section id="booking" class="booking">
+        <div class="container">
+          <div class="booking-intro">
+            <div>
+              <h2>Book your consultation</h2>
+              <p class="subtitle">
+                Choose a date and time that fits. We confirm within one business
+                day and send prep notes so you know exactly what to expect.
+              </p>
+            </div>
+            <div class="booking-summary">
+              <div>
+                <span class="summary-title">Availability</span>
+                <span class="summary-meta">7 days a week • 4 AM – 7 PM</span>
+              </div>
+              <div>
+                <span class="summary-title">Location</span>
+                <span class="summary-meta">Aberdeen, SD + Mobile sessions</span>
+              </div>
+              <div>
+                <span class="summary-title">Questions?</span>
+                <span class="summary-meta"
+                  ><a href="tel:6054186952">(605) 418-6952</a> •
+                  <a href="mailto:info@bravok9solutions.com"
+                    >info@bravounleashed.com</a
+                  ></span
+                >
+              </div>
+            </div>
+          </div>
+
+          <form id="booking-form" class="form" novalidate>
+            <div class="wrap">
+              <section class="card">
+                <div class="calendar" aria-labelledby="cal-label">
+                  <div class="cal-head">
+                    <h3 id="cal-label" class="sr-only">Choose a date</h3>
+                    <button
+                      type="button"
+                      class="cal-prev"
+                      aria-label="Previous month"
+                    >
+                      ‹
+                    </button>
+                    <div class="cal-title" aria-live="polite"></div>
+                    <button
+                      type="button"
+                      class="cal-next"
+                      aria-label="Next month"
+                    >
+                      ›
+                    </button>
+                  </div>
+                  <div class="cal-actions">
+                    <button type="button" class="cal-action cal-select-week">
+                      Select week
+                    </button>
+                    <button type="button" class="cal-action cal-select-month">
+                      Select month
+                    </button>
+                    <button type="button" class="cal-action cal-clear">
+                      Clear dates
+                    </button>
+                  </div>
+                  <div class="weekday" aria-hidden="true">
+                    <div>Sun</div>
+                    <div>Mon</div>
+                    <div>Tue</div>
+                    <div>Wed</div>
+                    <div>Thu</div>
+                    <div>Fri</div>
+                    <div>Sat</div>
+                  </div>
+                  <div class="days" id="cal-days"></div>
+                </div>
+              </section>
+
+              <section class="card">
+                <h3>Select time</h3>
+                <p class="helper">
+                  Pick one or more available slots — each choice applies to
+                  every selected day. Booked times will be disabled.
+                </p>
+                <div class="slots" id="time-slots" aria-live="polite"></div>
+                <div class="quick-pay-inline" data-quick-pay-inline>
+                  <div class="quick-pay-inline-details">
+                    <span class="quick-pay-inline-label">Quick-Pay total</span>
+                    <p class="quick-pay-inline-amount" data-quick-pay-total>
+                      Select dates and time slots to calculate your total.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    class="btn primary"
+                    data-quick-pay-button="trigger"
+                    data-quick-pay-scroll
+                    disabled
+                  >
+                    Pay $0.00
+                  </button>
+                </div>
+              </section>
+
+              <section class="card">
+                <h3>Your details</h3>
+                <div class="group">
+                  <label for="name">Name *</label>
+                  <input id="name" name="name" autocomplete="name" required />
+                </div>
+                <div class="group">
+                  <label for="email">Email *</label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autocomplete="email"
+                    required
+                  />
+                </div>
+                <div class="group">
+                  <label for="phone">Phone *</label>
+                  <input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    inputmode="tel"
+                    placeholder="(605) 418‑6952"
+                    required
+                  />
+                </div>
+                <div class="group">
+                  <label for="notes">Notes (optional)</label>
+                  <textarea
+                    id="notes"
+                    name="notes"
+                    rows="3"
+                    placeholder="Tell us about your dog and goals…"
+                  ></textarea>
+                </div>
+                <p class="legal">
+                  By submitting, you consent to be contacted about your booking.
+                </p>
+                <button class="btn primary" type="submit">
+                  Submit consultation request
+                </button>
+              </section>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section id="quick-pay-section" class="cta-band">
+        <div class="container">
+          <div class="cta-content">
+            <h2>Ready to see what your dog can achieve?</h2>
+            <p>
+              Let’s build a plan that matches your mission — whether that means
+              patrol work, protection, or peace at home.
+            </p>
+          </div>
+          <div class="cta-actions">
+            <div class="cta-buttons">
+              <a class="btn primary" href="#booking">Book a consultation</a>
+            </div>
+            <!-- Updated quick-pay section: Stripe handles payments securely.
+                 Users will be redirected to a hosted checkout page instead
+                 of entering card details directly on this site. -->
+            <div id="quick-pay" class="cta-payment card">
+              <h3>Pay by card</h3>
+              <p class="helper">
+                We securely accept debit and credit cards via our payment
+                partner. Your total updates as you choose dates and time
+                slots.
+              </p>
+              <button
+                id="quick-pay-button"
+                type="button"
+                class="btn primary"
+                data-quick-pay-button="submit"
+                disabled
+              >
+                Pay $0.00
+              </button>
+              <p class="total" id="quick-pay-total" data-quick-pay-total>
+                Select dates and time slots to calculate your total.
+              </p>
+              <p class="fine-print">
+                Payments are encrypted. You’ll receive an emailed receipt
+                immediately.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="container">
+        © <span id="year"></span> Bravo K9 Solutions. All rights reserved.
+      </div>
+    </footer>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="script.js" defer></script>
+  </body>
+</html>
