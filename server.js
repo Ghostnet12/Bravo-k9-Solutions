@@ -101,8 +101,12 @@ app.get('/api/bookings', async (req, res) => {
   res.json(bookings);
 });
 
-// Serve static files from the React-like client folder
-const clientDir = path.join(__dirname, 'client');
+// Serve static files. In this repository the front-end assets (index.html,
+// script.js and styles.css) live in the project root rather than in a
+// dedicated `client` directory. Serving from `__dirname` allows
+// Express to find these files without requiring a `client` folder. If you
+// reorganise the project later, update this path accordingly.
+const clientDir = __dirname;
 app.use(express.static(clientDir));
 
 /**
