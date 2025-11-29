@@ -350,7 +350,7 @@ header {
       rgba(237, 200, 51, 0.18),
       rgba(3, 3, 3, 0)
     ),
-    url("Screenshot\ 2025-10-27\ at\ 12.31.48\ AM.png") center / cover
+    url("hero.png") center / cover
       no-repeat;
 }
 .hero::before {
