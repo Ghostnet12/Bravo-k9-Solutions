@@ -1,88 +1,53 @@
-/* eslint-disable @next/next/no-img-element -- direct static image delivery is required by the Sites host */
-import Link from "./Link";
-import BrandLockup from "./Brand";
+import Link from './Link';
+import { Header, Footer } from './ui';
+import { SERVICES, money } from '../../shared/catalog';
 
-const programs = [
-  { eyebrow: "01 / Everyday control", title: "Obedience & behavior", copy: "Clear communication, dependable boundaries, and calm decisions that hold up at home and out in the world.", meta: "Mobile • Private • Real-world", image: "/images/obedience-real-world.webp", alt: "Trainer coaching a dog owner during a real-world obedience session" },
-  { eyebrow: "02 / Purpose-built", title: "Service dog foundations", copy: "Public-access manners, task foundations, and handler confidence developed with care and practical structure.", meta: "Focus • Neutrality • Reliability", image: "/images/service-dog-training.webp", alt: "Service dog foundations training in a public environment" },
-  { eyebrow: "03 / Advanced work", title: "Protection & working K9s", copy: "Disciplined development for capable dogs—built around control, sound nerves, clear outs, and responsible handling.", meta: "Control • Confidence • Purpose", image: "/images/protection-training.webp", alt: "Controlled working K9 protection training" },
-  { eyebrow: "04 / Nose to ground", title: "Tracking & search", copy: "Purposeful scent work that develops drive, accuracy, environmental confidence, and a stronger handler partnership.", meta: "Scent • Search • Teamwork", image: "/images/tracking-training.webp", alt: "Working dog following a scent track through prairie grass" },
+const primary = ['training', 'sitting', 'aggression'];
+const serviceDetails: Record<string, { label: string; text: string; features: string[] }> = {
+  training: { label: 'BUILD A BETTER EVERYDAY', text: 'Calmer walks. Clearer boundaries. A dog you can depend on.', features: ['Private professional training', 'Your home. Your real environment.', 'A plan around your dog'] },
+  sitting: { label: 'CARE THAT COMES TO YOU', text: 'Dependable care, in the place your dog knows best.', features: ['Choose the days you need', 'Review every visit time', 'Care in your own home'] },
+  aggression: { label: 'START WITH UNDERSTANDING', text: 'A focused first step for dogs who need a more considered approach.', features: ['Initial assessment with two trainers', 'Behavior and handling review', 'Discuss the next steps with Bravo'] },
+};
+const team = [
+  { name: 'David Northrop', role: 'Founder & Lead Trainer', image: 'david-northrop', detail: 'Behavior · Working K9s · Service work' },
+  { name: 'Ashley Leverock', role: 'Pitbull Specialist & Trainer', image: 'ashley-leverock', detail: 'Obedience · Behavior · Handler coaching' },
+  { name: 'Janet Hughes', role: 'Dog Trainer', image: 'janet-hughes', detail: 'Foundations · Structure · Owner support' },
 ];
-
-const process = [
-  ["01", "We meet the dog", "We come to you, learn the full picture, and watch how the dog behaves in its real environment."],
-  ["02", "We build the structure", "A professional trainer creates a clear plan around the dog, the handler, and the outcome—not a generic class."],
-  ["03", "We make it hold", "Training moves into real life so obedience stays useful when the street, doorway, stranger, or distraction changes."],
-];
-
 export default function Home() {
-  return (
+  return <div className="bravo-home"><Header/>
     <main id="main-content" tabIndex={-1}>
-      <header className="site-header">
-        <BrandLockup />
-        <nav className="desktop-nav" aria-label="Primary navigation"><a href="#training">Training</a><a href="#method">Our method</a><a href="#team">Team</a><Link href="/learn">Online training</Link><Link href="/community">Bravo Room</Link></nav>
-        <div className="header-actions"><Link className="text-link login-link" href="/account">Client login</Link><Link className="button button-small" href="/portal">Book training <span>↗</span></Link></div>
-        <details className="mobile-menu"><summary aria-label="Open menu"><span></span><span></span></summary><div><a href="#training">Training</a><a href="#method">Our method</a><a href="#team">Team</a><Link href="/learn">Online training • $50/mo</Link><Link href="/community">Bravo Room</Link><Link href="/portal">Book training</Link></div></details>
-      </header>
-
-      <section className="hero" aria-labelledby="hero-title">
-        <img className="hero-image" src="/images/hero-bravo-k9.webp" width="1782" height="883" fetchPriority="high" decoding="async" alt="Professional handler working a Belgian Malinois in a prairie training field" />
-        <div className="hero-shade" />
-        <div className="hero-content shell">
-          <p className="kicker"><span /> Aberdeen, South Dakota • Mobile training</p>
-          <h1 id="hero-title">Training that<br /><em>holds up</em> in<br />the real world.</h1>
-          <p className="hero-copy">Professional, psychology-based dog training built around structure, clear communication, and results you can live with.</p>
-          <div className="button-row"><Link className="button" href="/portal">Schedule training <span>↗</span></Link><a className="button button-ghost" href="#training">Explore programs <span>↓</span></a></div>
-        </div>
-        <div className="hero-proof"><div><strong>No treats.</strong><span>No toys. Clear communication.</span></div><div><strong>Private training.</strong><span>Built around your dog.</span></div><div><strong>We come to you.</strong><span>Aberdeen & surrounding areas.</span></div></div>
+      <section className="home-hero" aria-labelledby="home-title">
+        <img className="home-hero-image" src="/images/hero-bravo-k9.webp" width="1782" height="883" fetchPriority="high" alt="Handler and Belgian Malinois in a prairie training field"/>
+        <div className="home-hero-shade"/>
+        <div className="shell home-hero-inner"><div className="home-hero-copy">
+          <p className="eyebrow">ABERDEEN, SOUTH DAKOTA <span> / </span> MOBILE DOG TRAINING</p>
+          <h1 id="home-title">Good dogs.<br/>Real work.<br/><em>Everyday life.</em></h1>
+          <p className="home-intro">Training that holds up in the real world. Professional, psychology-based guidance—at your home, with your dog.</p>
+          <div className="home-hero-actions"><Link className="button" href="/portal">Find your program <span aria-hidden="true">↗</span></Link><a className="home-text-link" href="#method">Meet the Bravo method</a></div>
+          <div className="hero-service-note"><span>PRIVATE TRAINING</span><span>WE COME TO YOU</span><span>NO GROUP CLASSES</span></div>
+        </div><div className="hero-field-note"><span>THE BRAVO STANDARD</span><p>Trust.<br/>Train.<br/><em>Deploy.</em></p></div></div>
       </section>
-
-      <section className="trust-strip" aria-label="Bravo K9 highlights"><span>PROFESSIONAL TRAINERS</span><i>•</i><span>REAL-WORLD OBEDIENCE</span><i>•</i><span>BODY-CAM TRANSPARENCY</span><i>•</i><span>MOBILE SERVICE</span></section>
-
-      <section className="section shell" id="training" aria-labelledby="training-title">
-        <div className="section-heading split-heading"><div><p className="kicker gold"><span /> Training programs</p><h2 id="training-title">One standard.<br />Different missions.</h2></div><p>From a calmer home to advanced working-dog performance, every plan starts with the dog in front of us—not a one-size-fits-all script.</p></div>
-        <div className="program-grid">{programs.map((program) => <article className="program-card" key={program.title}><div className="program-image"><img src={program.image} width="1200" height="800" loading="lazy" decoding="async" alt={program.alt} /></div><div className="program-card-copy"><p className="program-eyebrow">{program.eyebrow}</p><h3>{program.title}</h3><p>{program.copy}</p><Link className="program-meta" href="/portal"><span>{program.meta}</span><b aria-hidden="true">↗</b><span className="sr-only">Schedule {program.title}</span></Link></div></article>)}</div>
+      <div className="home-service-strip"><div className="shell"><p><strong>A professional on your team.</strong><span>Private sessions. Clear communication. Practical structure.</span></p><a href="tel:+16058242767">Talk to Bravo <span>(605) 824-2767</span></a></div></div>
+      <section className="home-section shell" id="training" aria-labelledby="program-title">
+        <div className="home-section-heading"><div><p className="eyebrow">01 / FIND YOUR FIT</p><h2 id="program-title">Your dog.<br/><em>Your way forward.</em></h2></div><p>Choose the support you need. Review real availability before sending your request.</p></div>
+        <div className="home-pricing-grid">{primary.map(id => { const service = SERVICES.find(s => s.id === id)!; const detail = serviceDetails[id]; return <article className={`home-price-card ${id === 'training' ? 'featured' : ''}`} key={id}>
+          <p className="eyebrow">{detail.label}</p><h3>{service.name}</h3><p className="service-description">{detail.text}</p>
+          <div className="home-price">{money(service.cents)}<span>{service.interval === 'month' ? '/ month' : service.interval === 'day' ? '/ care day' : 'initial intake'}</span></div>
+          <ul>{detail.features.map(feature => <li key={feature}>{feature}</li>)}</ul><Link className={`button ${id === 'training' ? '' : 'button-ghost'}`} href={id === 'sitting' ? '/portal/dog-sitting' : `/portal?program=${id}`}>{id === 'sitting' ? 'Plan dog sitting' : id === 'aggression' ? 'Request an assessment' : 'Choose training'}<span aria-hidden="true">↗</span></Link>
+        </article>; })}</div>
+        <div className="home-package-row"><div><span className="eyebrow">TRAINING + DOG SITTING</span><h3>One team. More support.</h3><p>Combine private training and care in one program.</p></div><p className="package-price">$350<span>/ month</span></p><Link className="home-text-link" href="/portal?program=complete">Explore the package <span aria-hidden="true">↗</span></Link></div>
+        <p className="home-price-note">Saving a request does not charge your card. Visits are subject to availability and Bravo’s confirmation.</p>
       </section>
-
-      <section className="care-feature shell-wide" aria-labelledby="care-title">
-        <div className="care-feature-image"><img src="/images/dog-sitting-care.webp" width="1536" height="1024" loading="lazy" decoding="async" alt="Professional dog sitter caring for a small dog and a golden retriever in their home" /></div>
-        <div className="care-feature-copy"><p className="kicker gold"><span /> Dog sitting • $20 per day</p><h2 id="care-title">Familiar home.<br />Dependable care.</h2><p>Choose several care days, set a different time for each visit, or let the scheduler find open times between your departure and return.</p><ul><li>Care in your dog’s own environment</li><li>Clear daily pricing before checkout</li><li>Editable auto-scheduled visits</li></ul><Link className="button" href="/portal/dog-sitting">Schedule dog sitting <span>↗</span></Link></div>
-      </section>
-
-      <section className="image-story shell-wide">
-        <div className="story-image"><img src="/images/service-dog-training.webp" width="1200" height="676" loading="lazy" decoding="async" alt="Trainer and client working with a service dog in public" /><span className="image-label">SERVICE DOG FOUNDATIONS</span></div>
-        <div className="story-copy"><p className="kicker gold"><span /> More than commands</p><h2>Calm is a skill.<br />So is trust.</h2><p>Good training changes what happens between the commands. We teach the dog how to make better choices—and teach the handler how to create a clear, dependable relationship.</p><ul><li><span>01</span>Clear structure without gimmicks</li><li><span>02</span>Private coaching in real environments</li><li><span>03</span>Professional handling from the first session</li></ul><Link className="text-link gold-link" href="/portal">Find the right program <span>↗</span></Link></div>
-      </section>
-
-      <section className="section method-section" id="method" aria-labelledby="method-title"><div className="shell"><div className="section-heading centered"><p className="kicker gold"><span /> The Bravo method</p><h2 id="method-title">Simple process.<br /><em>Serious</em> follow-through.</h2></div><div className="process-grid">{process.map(([number, title, copy]) => <article key={number}><span>{number}</span><div><h3>{title}</h3><p>{copy}</p></div></article>)}</div></div></section>
-
-      <section className="protection-feature shell-wide"><img src="/images/protection-training.webp" width="1200" height="800" loading="lazy" decoding="async" alt="Controlled professional bite-sleeve training with a Belgian Malinois" /><div className="protection-overlay" /><div className="protection-copy"><p className="kicker"><span /> Control before intensity</p><h2>Drive is power.<br />Control is the standard.</h2><p>Protection work is never about chaos. It is confidence, clarity, obedience, and a dog that can switch on—and come back under control.</p><Link className="button" href="/portal">Talk to a trainer <span>↗</span></Link></div></section>
-
-      <section className="section shell team-section" id="team" aria-labelledby="team-title">
-        <div className="section-heading split-heading team-heading"><div><p className="kicker gold"><span /> Meet the trainers</p><h2 id="team-title">Experience you can<br />see in the dog.</h2></div><p>Bravo is built by people who care about the work, the mission, and what happens after the trainer leaves.</p></div>
-        <div className="trainer-grid">
-          <article className="trainer-profile">
-            <div className="trainer-portrait"><img src="/images/david-northrop.webp" width="1254" height="1568" loading="lazy" decoding="async" alt="David Northrop, founder and lead trainer at Bravo K9 Solutions" /></div>
-            <div className="trainer-profile-copy"><span>01 / FOUNDER</span><h3>David Northrop</h3><p>Founder & Lead Trainer</p><small>Behavior • Working K9s • Service work</small></div>
-          </article>
-          <article className="trainer-profile">
-            <div className="trainer-portrait"><img src="/images/ashley-leverock.webp" width="1003" height="1568" loading="lazy" decoding="async" alt="Ashley Leverock, pitbull specialist and dog trainer at Bravo K9 Solutions" /></div>
-            <div className="trainer-profile-copy"><span>02 / SPECIALIST</span><h3>Ashley Leverock</h3><p>Pitbull Specialist & Trainer</p><small>Obedience • Behavior • Handler coaching</small></div>
-          </article>
-          <article className="trainer-profile">
-            <div className="trainer-portrait"><img src="/images/janet-hughes.webp" width="1122" height="1402" loading="lazy" decoding="async" alt="Janet Hughes, dog trainer at Bravo K9 Solutions" /></div>
-            <div className="trainer-profile-copy"><span>03 / TRAINER</span><h3>Janet Hughes</h3><p>Dog Trainer</p><small>Foundations • Structure • Owner support</small></div>
-          </article>
-        </div>
-      </section>
-
-      <section className="tracking-section shell-wide"><img src="/images/tracking-training.webp" width="1400" height="779" loading="lazy" decoding="async" alt="Working dog following a scent trail through prairie grass" /><div><p className="kicker"><span /> Tracking & search</p><h2>The nose knows.<br />We teach the team.</h2><p>From scent foundations to purposeful tracks, we develop the dog’s natural ability and the handler’s ability to read the work.</p></div></section>
-
-      <section className="learn-teaser"><div className="shell learn-grid"><div><p className="kicker gold"><span /> Online training • $50 per month</p><h2>Learn the work<br />behind the work.</h2><p>Member-only lessons on everyday handling, safe tool use, structure, timing, and the small details that change a dog. The public can browse the catalog; active members unlock the videos.</p><Link className="button" href="/learn">See the program <span>↗</span></Link></div><div className="video-panel" aria-label="Online training membership preview"><div className="video-screen"><div className="play-button locked">LOCKED</div><span>MEMBER LESSON 01</span><strong>Leash pressure:<br />timing over force</strong><b className="video-price">$50 <small>/ MONTH</small></b></div><div className="video-meta"><span>06:42</span><span>FOUNDATIONS</span><span>MEMBERS ONLY</span></div></div></div></section>
-
-      <section className="booking-cta shell-wide"><div><p className="kicker"><span /> Ready when you are</p><h2>See real availability.<br />Choose your time.<br /><em>Start the work.</em></h2><p>Open the client scheduling experience, select a program, and see which appointment times are still available.</p><Link className="button button-light" href="/portal">Open the scheduler <span>↗</span></Link></div><div className="booking-callout"><span>BRAVO SCHEDULING</span><strong>9 AM–9 PM</strong><p>Aberdeen local time. Choose dates and view Bravo’s current openings in the scheduler.</p><Link className="button button-light" href="/portal">Find a time ↗</Link></div></section>
-
-      <footer><div className="shell footer-grid"><div><BrandLockup className="footer-mark" /><p>Professional mobile dog training<br />in Aberdeen, South Dakota.</p></div><div><small>EXPLORE</small><a href="#training">Training</a><a href="#method">Our method</a><Link href="/learn">Online training • $50/mo</Link><Link href="/community">Bravo Room</Link></div><div><small>CLIENTS</small><Link href="/account">Account login</Link><Link href="/portal">Schedule training</Link><Link href="/media-rights">Photo & media rights</Link><a href="tel:+16058242767">(605) 824-2767</a></div><div><small>OUR STANDARD</small><p className="footer-tagline">TRUST.<br />TRAIN.<br /><em>DEPLOY.</em></p></div></div><div className="shell footer-bottom"><span>© 2026 Bravo K9 Solutions, LLC</span><span>Aberdeen, SD • We come to you</span></div></footer>
-    </main>
-  );
+      <section className="home-method shell" id="method" aria-labelledby="method-title"><div className="home-method-photo"><img src="/images/obedience-real-world.webp" width="1200" height="800" loading="lazy" alt="Trainer and dog owner working together outdoors"/><span>TRAIN FOR THE LIFE YOU ACTUALLY LIVE.</span></div><div className="home-method-copy"><p className="eyebrow">02 / THE BRAVO METHOD</p><h2 id="method-title">Clear structure.<br/><em>Lasting trust.</em></h2><p>We work where life happens. No treats, no toys, and no crowded classes. Just professional handling and a clearer relationship with your dog.</p><ol className="home-process"><li><span>01</span><div><h3>Meet the dog.</h3><p>We come to you, learn the full picture, and see your dog in its own environment.</p></div></li><li><span>02</span><div><h3>Build the plan.</h3><p>Your trainer shapes the work around your dog, your routines, and your goals.</p></div></li><li><span>03</span><div><h3>Make it hold.</h3><p>Bring that structure into walks, doorways, distractions, and everyday decisions.</p></div></li></ol></div></section>
+      <section className="home-section shell" aria-labelledby="specialties-title"><div className="home-section-heading"><div><p className="eyebrow">PURPOSE BEYOND OBEDIENCE</p><h2 id="specialties-title">Different work.<br/><em>The same standard.</em></h2></div><Link className="home-text-link" href="/contact">Discuss a specialist program <span aria-hidden="true">↗</span></Link></div><div className="home-specialties">{[
+        ['Obedience & behavior', 'Calm choices, dependable boundaries, and clearer communication.'],
+        ['Service dog foundations', 'Public-access manners, task foundations, and handler confidence.'],
+        ['Protection & working K9s', 'Control, sound nerves, clear outs, and responsible handling.'],
+        ['Tracking & search', 'Scent foundations, accuracy, and a stronger handler partnership.'],
+      ].map(([title, copy], index) => <article key={title}><span className="eyebrow">0{index + 1}</span><h3>{title}</h3><p>{copy}</p></article>)}</div></section>
+      <section className="home-team-section" id="team"><div className="shell"><div className="home-section-heading"><div><p className="eyebrow">03 / YOUR BRAVO TEAM</p><h2>People behind<br/><em>the progress.</em></h2></div><p>Professional trainers who care about the work—and what happens after the session ends.</p></div><div className="home-team-grid">{team.map(person => <article key={person.name}><div className="home-portrait"><img src={`/images/${person.image}.webp`} width="1000" height="1400" loading="lazy" alt={`${person.name}, ${person.role}`}/></div><div className="home-person"><p className="eyebrow">{person.role}</p><h3>{person.name}</h3><p>{person.detail}</p></div></article>)}</div></div></section>
+      <section className="home-section shell home-learning"><div><p className="eyebrow">KEEP LEARNING WITH BRAVO</p><h2>The work behind<br/><em>the progress.</em></h2><p>Our online library is being prepared. Browse upcoming topics now; published lessons will include private video, English captions, and a readable transcript.</p><div className="home-learning-price"><strong>$50 <span>/ month online</span></strong><span>Training + sitting + online: $400 / month</span></div><Link className="button button-ghost" href="/learn">Preview the lesson catalog <span aria-hidden="true">↗</span></Link><p className="home-price-note">Online enrollment opens when published lessons are ready.</p></div><Link className="home-lesson-preview" href="/learn"><img src="/images/training-education.webp" width="1600" height="900" loading="lazy" alt="Handler demonstrating a lesson with a Belgian Malinois"/><div><span className="badge">UPCOMING / FOUNDATIONS</span><h3>Leash pressure:<br/>timing over force.</h3><span className="home-text-link">Explore upcoming topics <span aria-hidden="true">↗</span></span></div></Link></section>
+      <section className="home-close"><div className="shell"><div><p className="eyebrow">THE FIRST STEP IS SIMPLE.</p><h2>Let’s meet<br/><em>your dog.</em></h2></div><div><p>Choose a program, find an opening, and let Bravo know what you need.</p><Link className="button" href="/portal">Request your first visit <span aria-hidden="true">↗</span></Link><a href="tel:+16058242767">Prefer to talk? (605) 824-2767</a></div></div></section>
+    </main><Footer/>
+  </div>;
 }

@@ -8,6 +8,7 @@ import Accessibility from './Accessibility';
 import { Page } from './ui';
 import './legacy.css';
 import './styles.css';
+import './professional.css';
 const BookingPage = lazy(() => import('./BookingPage'));
 const AccountPage = lazy(() => import('./AccountPage'));
 const LearnPage = lazy(() => import('./LearnPage'));

@@ -45,7 +45,7 @@
       "destination": "/media-rights.html"
     },
     {
-      "source": "/((?!api(?:/|$)|assets/|images/|favicon|sitemap.xml|robots.txt).*)",
+      "source": "/((?!api(?:/|$)|assets/|images/|fonts/|favicon|sitemap.xml|robots.txt).*)",
       "destination": "/index.html"
     }
   ],
