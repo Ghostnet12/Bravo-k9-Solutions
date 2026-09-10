@@ -3,10 +3,12 @@ import { ALL_MODELS, Settings } from './models.js';
 import { DEFAULT_SCHEDULE } from './scheduling.js';
 let pending;
 function databaseIssue(error, phase) {
-  if (error?.code === 18) return 'authentication_failed';
+  // Atlas may return code 8000 for an authentication failure rather than code 18.
+  // Inspect the message locally for this known pattern, but never log or return it.
+  if (error?.code === 18 || (error?.code === 8000 && /bad auth|authentication failed/i.test(error.message || ''))) return 'authentication_failed';
   if (error?.code === 13) return 'database_permission_denied';
-  if (error?.name === 'MongoParseError' || error?.name === 'MongoInvalidArgumentError') return 'invalid_connection_string';
-  if (['ENOTFOUND', 'EAI_AGAIN', 'ECONNREFUSED', 'ETIMEDOUT'].includes(error?.code) || ['MongoServerSelectionError', 'MongooseServerSelectionError', 'MongoNetworkError'].includes(error?.name)) return 'database_unreachable';
+  if (['MongoParseError', 'MongoInvalidArgumentError', 'URIError'].includes(error?.name)) return 'invalid_connection_string';
+  if (['ENOTFOUND', 'EAI_AGAIN', 'ECONNREFUSED', 'ETIMEDOUT', 'ENODATA', 'ESERVFAIL', 'ETIMEOUT'].includes(error?.code) || ['MongoServerSelectionError', 'MongooseServerSelectionError', 'MongoNetworkError'].includes(error?.name)) return 'database_unreachable';
   return phase === 'initialize' ? 'initialization_failed' : 'connection_failed';
 }
 export async function connectDb() {

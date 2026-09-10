@@ -14,9 +14,9 @@ test('database diagnostics identify retry failures without exposing driver secre
   });
   const logs = [];
   t.mock.method(console, 'error', (...args) => { logs.push(args); });
-  let failure = { code: 18, name: 'MongoServerError' };
+  let failure = { code: 8000, name: 'MongoServerError' };
   const connection = t.mock.method(mongoose, 'connect', async () => {
-    throw Object.assign(new Error(process.env.MONGODB_URI), failure);
+    throw Object.assign(new Error(`bad auth: authentication failed ${process.env.MONGODB_URI}`), failure);
   });
   const first = await request(app).get('/api/config').expect(200);
   assert.equal(first.body.connected, false);
