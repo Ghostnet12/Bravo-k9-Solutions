@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 const { Schema } = mongoose;
-mongoose.set('bufferCommands', false);
+// Models are registered before connectDb() runs on a cold start. Keep Mongoose's
+// default buffering so collection/index initialization waits for the connection.
+// API handlers still await connectDb() before accessing these models.
 const model = (name, schema) => mongoose.models[name] || mongoose.model(name, schema);
 const id = Schema.Types.ObjectId;
 export const User = model('BravoUser', new Schema({

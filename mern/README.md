@@ -8,10 +8,13 @@ host such as Vercel, following The Fold’s architecture. Do not deploy this Nod
 backend to the existing Cloudflare/Sites Worker runtime or copy The Fold’s data
 or credentials into Bravo.
 
-## Current status — September 9, 2026
+## Current status — September 10, 2026
 
 - Production frontend build: passed.
-- Domain/API checks: 13 passed (no production services contacted).
+- Domain/API/startup checks: 14 passed (no production services contacted by these tests).
+- Fixed cold-start initialization: models now wait for the database connection
+  before creating collections and indexes. The regression test uses the real
+  Mongoose lifecycle with an isolated driver stub; it does not verify Atlas access.
 - Production dependency audit: 0 known vulnerabilities at the time of testing.
 - Full database integration: **not verified**. The disposable MongoDB process
   was blocked by the execution environment (`open: Operation not permitted`).
@@ -19,8 +22,11 @@ or credentials into Bravo.
 - Real Stripe sandbox checkout and webhook delivery: **not tested**; no Bravo
   Stripe account or keys were connected. No payments were taken.
 - Browser/mobile interaction testing: not performed in this turn.
-- No new deployment or audience changes were made. The original live site remains
-  as it was. This is a saved implementation, **not a production launch**.
+- The MERN app is deployed at `https://bravo-k9-mern.vercel.app`. Production
+  redeployments are confirmed in the owner's dashboard, but the deployed version
+  still reports the database disconnected. This startup fix needs a new deployment
+  from the updated GitHub source, followed by live account/database verification.
+  The original Sites deployment remains unchanged. Payments are not live.
 
 ## Local setup
 
