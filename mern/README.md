@@ -11,7 +11,7 @@ or credentials into Bravo.
 ## Current status — September 10, 2026
 
 - Production frontend build: passed.
-- Domain/API/startup checks: 14 passed (no production services contacted by these tests).
+- Domain/API/startup checks: 15 passed (no production services contacted by these tests).
 - Fixed cold-start initialization: models now wait for the database connection
   before creating collections and indexes. The regression test uses the real
   Mongoose lifecycle with an isolated driver stub; it does not verify Atlas access.
@@ -22,10 +22,11 @@ or credentials into Bravo.
 - Real Stripe sandbox checkout and webhook delivery: **not tested**; no Bravo
   Stripe account or keys were connected. No payments were taken.
 - Browser/mobile interaction testing: not performed in this turn.
-- The MERN app is deployed at `https://bravo-k9-mern.vercel.app`. Production
-  redeployments are confirmed in the owner's dashboard, but the deployed version
-  still reports the database disconnected. This startup fix needs a new deployment
-  from the updated GitHub source, followed by live account/database verification.
+- The MERN app is deployed at `https://bravo-k9-mern.vercel.app`. GitHub-triggered
+  production deployment of the startup repair is confirmed for commit `92be298`.
+  Live database verification still reports disconnected. `/api/config` now supplies
+  a fixed `connectionIssue` category for diagnosis, without exposing credentials,
+  hostnames, or driver error messages. Live account/database verification remains pending.
   The original Sites deployment remains unchanged. Payments are not live.
 
 ## Local setup

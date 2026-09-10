@@ -24,9 +24,16 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json', limit: '
 app.use(express.json({ limit: '32kb' }), cookieParser());
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 app.get('/api/config', async (_req, res) => {
-  let connected = false, schedule = DEFAULT_SCHEDULE;
-  if (process.env.MONGODB_URI) { try { await connectDb(); schedule = await Settings.findById('schedule').lean(); connected = true; } catch { /* Honest setup state; never simulate persistence. */ } }
-  res.json({ connected, paymentsReady: connected && !!stripeClient(), schedule, timezone: 'America/Chicago', services: SERVICES });
+  let connected = false, connectionIssue = null, schedule = DEFAULT_SCHEDULE;
+  try {
+    await connectDb();
+    schedule = await Settings.findById('schedule').lean();
+    connected = true;
+  } catch (error) {
+    // Fixed diagnostic categories only; never return driver errors or env values.
+    connectionIssue = error.databaseIssue || 'unavailable';
+  }
+  res.json({ connected, connectionIssue, paymentsReady: connected && !!stripeClient(), schedule, timezone: 'America/Chicago', services: SERVICES });
 });
 app.get('/api/lessons', async (_req, res) => {
   if (!process.env.MONGODB_URI) return res.json({ lessons: LESSON_PREVIEWS });
