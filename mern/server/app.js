@@ -12,6 +12,7 @@ import { createBooking, getAvailability, getEntitlements, cancelBooking } from '
 import { stripeClient, stripeWebhook, checkout } from './payments.js';
 import { LESSON_PREVIEWS, privatePath, protectedLesson } from './lessons.js';
 import { DEFAULT_SCHEDULE, HOURS, autoSchedule, validateVisits, availability, dateTime } from './scheduling.js';
+import { PAGE_METADATA } from '../shared/page-metadata.js';
 import { SERVICES, quote } from '../shared/catalog.js';
 
 const app = express();
@@ -38,7 +39,7 @@ app.get('/api/config', async (_req, res) => {
 app.get('/api/lessons', async (_req, res) => {
   if (!process.env.MONGODB_URI) return res.json({ lessons: LESSON_PREVIEWS });
   await connectDb();
-  const stored = await Lesson.find().lean();
+  const stored = await Lesson.find({ published: true }).lean();
   const merged = new Map(LESSON_PREVIEWS.map(l => [l._id, l]));
   for (const lesson of stored) merged.set(lesson._id, lesson);
   res.json({ lessons: [...merged.values()] });
@@ -155,16 +156,32 @@ app.patch('/api/admin/bookings/:id', requireUser, requireStaff, async (req, res)
   else { booking.status = status; await booking.save(); }
   res.json({ ok: true });
 });
+app.get('/api/admin/lessons', requireUser, requireStaff, async (_req, res) => {
+  const stored = await Lesson.find().select('+videoFile +captionFile +transcript').lean();
+  const lessons = new Map(LESSON_PREVIEWS.map(l => [l._id, { ...l, videoFile: '', captionFile: '', transcript: '' }]));
+  for (const lesson of stored) lessons.set(lesson._id, lesson);
+  res.json({ lessons: [...lessons.values()] });
+});
 app.put('/api/admin/lessons/:id', requireUser, requireStaff, async (req, res) => {
-  const data = z.object({ title: z.string().min(1).max(120), category: z.string().min(1).max(40), instructor: z.string().min(1).max(80), image: z.string().regex(/^\/images\/[a-z0-9-]+\.webp$/), videoFile: z.string(), captionFile: z.string(), transcript: z.string().min(1).max(20000), published: z.boolean() }).parse(req.body);
+  const data = z.object({ title: z.string().trim().min(1).max(120), category: z.string().trim().min(1).max(40), instructor: z.string().trim().min(1).max(80), image: z.string().regex(/^\/images\/[a-z0-9-]+\.webp$/), videoFile: z.string().max(160), captionFile: z.string().max(160), transcript: z.string().max(20000), published: z.boolean() }).parse(req.body);
   if (!/^[a-z0-9-]{1,80}$/.test(req.params.id)) throw new Error('Use a simple lesson slug.');
-  if (data.published) { await access(privatePath(data.videoFile)); await access(privatePath(data.captionFile)); }
+  if (data.published) {
+    if (!data.transcript.trim()) throw new Error('Add a transcript before publishing.');
+    if (!/\.(mp4|webm)$/.test(data.videoFile) || !/\.vtt$/.test(data.captionFile)) throw new Error('A private video and English VTT captions are required.');
+    try { await access(privatePath(data.videoFile)); await access(privatePath(data.captionFile)); }
+    catch { throw new Error('The private video or captions are not available. Save a draft until media storage is connected.'); }
+  }
   await Lesson.updateOne({ _id: req.params.id }, { $set: data }, { upsert: true }); res.json({ ok: true });
 });
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Endpoint not found.' }));
 const clientDir = fileURLToPath(new URL('../client/dist/', import.meta.url));
-app.use(express.static(clientDir, { maxAge: '1h', index: false }));
-app.get('/{*path}', (_req, res) => res.sendFile(path.join(clientDir, 'index.html'), { maxAge: 0 }));
+app.use(express.static(clientDir, { maxAge: '1h', index: false, redirect: false }));
+app.get('/{*path}', (req, res) => {
+  const known = PAGE_METADATA[req.path];
+  if (known?.private) res.set('X-Robots-Tag', 'noindex, nofollow');
+  if (!known) res.status(404);
+  res.sendFile(path.join(clientDir, known && req.path !== '/' ? req.path.slice(1) + '.html' : 'index.html'), { maxAge: 0 });
+});
 app.use((error, _req, res, _next) => {
   const status = error instanceof z.ZodError ? 400 : error.status || (error.code === 11000 ? 409 : error.name === 'CastError' ? 400 : 400);
   let message = error instanceof z.ZodError ? error.issues[0]?.message : error.message;

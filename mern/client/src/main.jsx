@@ -1,3 +1,4 @@
+import { PAGE_METADATA, SITE_ORIGIN } from '../../shared/page-metadata';
 import React, { useEffect, lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
@@ -11,6 +12,7 @@ const BookingPage = lazy(() => import('./BookingPage'));
 const AccountPage = lazy(() => import('./AccountPage'));
 const LearnPage = lazy(() => import('./LearnPage'));
 const CommunityPage = lazy(() => import('./CommunityPage'));
+const ContactPage = lazy(() => import('./ContactPage'));
 const AdminPage = lazy(() => import('./AdminPage'));
 function RouteBehavior() {
   const { pathname, search, hash } = useLocation();
@@ -22,8 +24,19 @@ function RouteBehavior() {
       if (hash) target?.scrollIntoView({ behavior: 'instant' });
       else target?.focus({ preventScroll: true });
     }, 100);
-    const titles = { '/': 'Real-world mobile dog training', '/portal': 'Book your program', '/portal/dog-sitting': 'Schedule dog sitting', '/account': 'Your Bravo account', '/learn': 'Online training', '/community': 'Bravo Room', '/admin': 'Staff desk' };
-    document.title = `${titles[pathname] || 'Bravo K9 Solutions'} | Bravo K9 Solutions`;
+    const metadata = PAGE_METADATA[pathname];
+    document.title = metadata?.title || 'Page not found | Bravo K9 Solutions';
+    function meta(selector, attributes) {
+      let element = document.head.querySelector(selector);
+      if (!element) { element = document.createElement(selector.startsWith('link') ? 'link' : 'meta'); document.head.appendChild(element); }
+      for (const [name, value] of Object.entries(attributes)) element.setAttribute(name, value);
+    }
+    meta('meta[name="description"]', { name: 'description', content: metadata?.description || 'Return to Bravo K9 Solutions.' });
+    meta('meta[name="robots"]', { name: 'robots', content: !metadata || metadata.private ? 'noindex, nofollow' : 'index, follow' });
+    meta('link[rel="canonical"]', { rel: 'canonical', href: SITE_ORIGIN + pathname });
+    meta('meta[property="og:title"]', { property: 'og:title', content: document.title });
+    meta('meta[property="og:description"]', { property: 'og:description', content: metadata?.description || '' });
+    meta('meta[property="og:url"]', { property: 'og:url', content: SITE_ORIGIN + pathname });
     return () => clearTimeout(timer);
   }, [pathname, search, hash]);
   return null;
@@ -33,5 +46,5 @@ class ErrorBoundary extends React.Component {
   static getDerivedStateFromError() { return { error: true }; }
   render() { return this.state.error ? <Page title="Let’s get you back on track."><p>The page couldn’t load. Your saved bookings are not affected.</p><a className="button" href="/">Reload Bravo</a></Page> : this.props.children; }
 }
-function App() { return <BrowserRouter><AppProvider><a className="skip-link" href="#main-content">Skip to main content</a><RouteBehavior/><ErrorBoundary><Suspense fallback={<Page title="Opening Bravo…"><p role="status">Loading your page.</p></Page>}><Routes><Route path="/" element={<Home/>}/><Route path="/portal" element={<BookingPage key="programs"/>}/><Route path="/portal/dog-sitting" element={<BookingPage key="sitting" sitting/>}/><Route path="/account" element={<AccountPage/>}/><Route path="/learn" element={<LearnPage/>}/><Route path="/community" element={<CommunityPage/>}/><Route path="/admin" element={<AdminPage/>}/><Route path="/media-rights" element={<Page title="Bravo media & permissions" eyebrow="Brand standards"><div className="panel prose"><p>Bravo’s logo, team photographs, copy, and branded materials are provided for viewing on this website. Contact Bravo K9 Solutions for permission before reusing them.</p><p>Rights depend on the individual asset and its applicable license. A notice or a browser control does not establish ownership or make an image impossible to copy.</p><p>For permission requests, call <a href="tel:+16058242767">(605) 824-2767</a>. Please identify the image and intended use.</p></div></Page>}/><Route path="*" element={<Page title="That page wandered off."><p>Head back to Bravo and we’ll get you where you need to go.</p><a className="button" href="/">Back to home</a></Page>}/></Routes></Suspense></ErrorBoundary><Accessibility/></AppProvider></BrowserRouter>; }
+function App() { return <BrowserRouter><AppProvider><a className="skip-link" href="#main-content">Skip to main content</a><RouteBehavior/><ErrorBoundary><Suspense fallback={<Page title="Opening Bravo…"><p role="status">Loading your page.</p></Page>}><Routes><Route path="/" element={<Home/>}/><Route path="/portal" element={<BookingPage key="programs"/>}/><Route path="/portal/dog-sitting" element={<BookingPage key="sitting" sitting/>}/><Route path="/account" element={<AccountPage/>}/><Route path="/learn" element={<LearnPage/>}/><Route path="/community" element={<CommunityPage/>}/><Route path="/contact" element={<ContactPage/>}/><Route path="/admin" element={<AdminPage/>}/><Route path="/media-rights" element={<Page title="Bravo media & permissions" eyebrow="Brand standards"><div className="panel prose"><p>Bravo’s logo, team photographs, copy, and branded materials are provided for viewing on this website. Contact Bravo K9 Solutions for permission before reusing them.</p><p>Rights depend on the individual asset and its applicable license. A notice or a browser control does not establish ownership or make an image impossible to copy.</p><p>For permission requests, call <a href="tel:+16058242767">(605) 824-2767</a>. Please identify the image and intended use.</p></div></Page>}/><Route path="*" element={<Page title="That page wandered off."><p>Head back to Bravo and we’ll get you where you need to go.</p><a className="button" href="/">Back to home</a></Page>}/></Routes></Suspense></ErrorBoundary><Accessibility/></AppProvider></BrowserRouter>; }
 createRoot(document.getElementById('root')).render(<React.StrictMode><App/></React.StrictMode>);
