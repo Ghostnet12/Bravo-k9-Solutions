@@ -30,13 +30,22 @@ export async function identify(req, _res, next) {
   const token = req.cookies[cookieName()];
   if (token) {
     const session = await Session.findOne({ tokenHash: digest(token), expiresAt: { $gt: new Date() } });
-    if (session) req.user = await User.findById(session.userId);
+    if (session) {
+      req.user = await User.findById(session.userId);
+      // Bootstrap only the existing owner record, never a freely entered email.
+      const ownerId = process.env.OWNER_USER_ID || '6aa290cbd066f8feb3c1964f';
+      if (req.user && String(req.user._id) === ownerId && req.user.role !== 'owner' && !req.user.blocked) {
+        req.user.role = 'owner'; await req.user.save();
+      }
+      if (req.user?.blocked) { await Session.deleteMany({ userId: req.user._id }); req.user = null; }
+    }
   }
   next();
 }
 export function requireUser(req, _res, next) { if (!req.user) throw Object.assign(new Error('Sign in to continue.'), { status: 401 }); next(); }
-export function requireStaff(req, _res, next) { if (req.user?.role !== 'staff') throw Object.assign(new Error('Bravo staff access required.'), { status: 403 }); next(); }
-export function publicUser(user) { return { id: String(user._id), email: user.email, name: user.name, role: user.role, dogName: user.dogName, phone: user.phone, address: user.address }; }
+export function requireStaff(req, _res, next) { if (!['staff', 'owner'].includes(req.user?.role)) throw Object.assign(new Error('Bravo staff access required.'), { status: 403 }); next(); }
+export function requireOwner(req, _res, next) { if (req.user?.role !== 'owner') throw Object.assign(new Error('Bravo owner access required.'), { status: 403 }); next(); }
+export function publicUser(user) { return { id: String(user._id), email: user.email, name: user.name, role: user.role, dogName: user.dogName, phone: user.phone, address: user.address, title: user.title, bio: user.bio, showPhone: user.showPhone }; }
 export function sameOrigin(req, _res, next) {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
   const allowed = process.env.APP_ORIGIN || (process.env.NODE_ENV !== 'production' ? 'http://localhost:5173' : '');

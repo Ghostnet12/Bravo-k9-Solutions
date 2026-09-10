@@ -8,14 +8,11 @@ import { privatePath } from '../server/lessons.js';
 import { stripeClient } from '../server/payments.js';
 test('Bravo pricing stays exact and recurring charges are separated', () => {
   assert.equal(quote(['training', 'online']).monthlyCents, 25000);
-  assert.equal(quote(['complete']).monthlyCents, 35000);
-  assert.equal(quote(['all-access']).monthlyCents, 40000);
   const q = quote(['aggression', 'online']);
   assert.equal(q.monthlyCents, 5000); assert.equal(q.oneTimeCents, 40000);
-  assert.equal(quote(['sitting'], Array.from({ length: 5 }, (_, i) => ({ date: `2026-10-${10+i}`, service: 'sitting' }))).oneTimeCents, 10000);
 });
-test('duplicate programs, unknown IDs, and double-billed packages are rejected', () => {
-  for (const ids of [[], ['training','training'], ['free'], ['all-access','online'], ['training','aggression']]) assert.throws(() => serviceSelection(ids));
+test('duplicate programs, retired services, and conflicting intakes are rejected', () => {
+  for (const ids of [[], ['training','training'], ['free'], ['sitting'], ['all-access'], ['training','aggression']]) assert.throws(() => serviceSelection(ids));
 });
 test('dates use Aberdeen timezone and reject impossible dates', () => {
   assert.throws(() => dateTime('2026-02-30')); assert.throws(() => dateTime('2026-10-02','24:00'));
@@ -33,14 +30,14 @@ test('availability excludes past slots, weekends, occupied slots and disabled sc
 });
 test('trip auto scheduler honors cutoffs, both boundary dates, count and preference', () => {
   const days = Array.from({ length: 7 }, (_, i) => ({ date: `2026-10-${10+i}`, slots: HOURS }));
-  const result = autoSchedule(days, { count: 5, startDate:'2026-10-10', startTime:'16:00', endDate:'2026-10-16', endTime:'11:00', preference:'evening', service:'sitting' });
+  const result = autoSchedule(days, { count: 5, startDate:'2026-10-10', startTime:'16:00', endDate:'2026-10-16', endTime:'11:00', preference:'evening', service:'training' });
   assert.equal(result.visits.length,5); assert.equal(result.visits[0].time,'17:00'); assert.equal(result.visits.at(-1).date,'2026-10-16'); assert.ok(result.visits.at(-1).time <= '11:00');
   assert.equal(result.uncoveredDates.length,2); assert.equal(result.boundaryWarning,false);
   assert.throws(() => autoSchedule(days.slice(0,2), { count:5, startDate:'2026-10-10', endDate:'2026-10-16' }), /Only 2/);
 });
 test('visits must cover every selected hands-on service and cannot overlap', () => {
-  assert.throws(() => validateVisits(['all-access'], [{ date:'2026-10-10', time:'09:00', service:'training' }]), /sitting/);
-  assert.throws(() => validateVisits(['sitting'], [{ date:'2026-10-10', time:'09:00', service:'sitting' },{ date:'2026-10-10', time:'10:00', service:'sitting' }]), /one scheduled/);
+  assert.throws(() => validateVisits(['aggression'], []), /aggression/);
+  assert.throws(() => validateVisits(['training'], [{ date:'2026-10-10', time:'09:00', service:'training' },{ date:'2026-10-10', time:'09:00', service:'training' }]), /same time slot/);
   assert.doesNotThrow(() => validateVisits(['online'], []));
 });
 test('password storage is salted and never plaintext', async () => {

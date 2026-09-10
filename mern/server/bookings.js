@@ -11,14 +11,16 @@ export const bookingInput = z.object({
 });
 export async function getEntitlements(userId) {
   const subs = await Subscription.find({ userId, status: { $in: ['active', 'trialing'] }, validUntil: { $gt: new Date() } }).lean();
-  return { subscriptions: subs, services: [...new Set(subs.flatMap(s => serviceSelection(s.serviceIds).flatMap(p => p.includes)))] };
+  const active = new Set(['training', 'online', 'aggression']);
+  const legacy = { complete: ['training'], 'all-access': ['training', 'online'] };
+  return { subscriptions: subs, services: [...new Set(subs.flatMap(subscription => subscription.serviceIds.flatMap(id => legacy[id] || (active.has(id) ? [id] : []))))] };
 }
 export async function getAvailability(from, to) {
   const settings = await Settings.findById('schedule').lean();
   const slots = await Slot.find({ date: { $gte: from, $lte: to } }, { _id: 1 }).lean();
   return { days: availability({ from, to, settings, occupied: slots.map(s => s._id) }), enabled: settings.enabled };
 }
-export async function createBooking(userId, payload) {
+export async function createBooking(userId, payload, assignment = {}) {
   const data = bookingInput.parse(payload);
   validateVisits(data.serviceIds, data.visits);
   if (data.visits.length && data.address.length < 5) throw new Error('Enter the address where Bravo should visit.');
@@ -38,7 +40,7 @@ export async function createBooking(userId, payload) {
         const open = availability({ from: dates[0], to: dates.at(-1), settings });
         if (data.visits.some(v => !open.find(d => d.date === v.date)?.slots.includes(v.time))) throw Object.assign(new Error('One or more visits are no longer available. Refresh the schedule.'), { status: 409 });
       }
-      [booking] = await Booking.create([{ ...data, userId, quote: quote(data.serviceIds, data.visits), paymentStatus: covered ? 'covered' : 'unpaid' }], { session });
+      [booking] = await Booking.create([{ ...data, userId, staffId: assignment.staffId || null, createdBy: assignment.createdBy || userId, quote: quote(data.serviceIds, data.visits), paymentStatus: covered ? 'covered' : 'unpaid' }], { session });
       if (data.visits.length) await Slot.insertMany(data.visits.map(v => ({ _id: `${v.date}|${v.time}`, date: v.date, time: v.time, bookingId: booking._id })), { session });
     });
   } catch (error) {

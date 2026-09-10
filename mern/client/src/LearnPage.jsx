@@ -6,7 +6,7 @@ import { Page, Notice } from './ui';
 export default function LearnPage() {
   const { user, services } = useBravo();
   const [lessons, setLessons] = useState([]), [filter, setFilter] = useState('All'), [selected, setSelected] = useState(null), [transcript, setTranscript] = useState(''), [error, setError] = useState(''), [loading, setLoading] = useState(true);
-  const member = user?.role === 'staff' || services.includes('online');
+  const member = ['staff', 'owner'].includes(user?.role) || services.includes('online');
   useEffect(() => { api('/lessons').then(data => setLessons(data.lessons)).catch(e => setError(e.message)).finally(() => setLoading(false)); }, []);
   async function open(lesson) {
     setError(''); setSelected(null); setTranscript('');

@@ -2,6 +2,7 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "client/dist",
+  "redirects": [{ "source": "/dog-sitting", "destination": "/portal", "permanent": true }],
   "functions": {
     "api/index.js": {
       "maxDuration": 30
@@ -15,10 +16,6 @@
     {
       "source": "/portal",
       "destination": "/portal.html"
-    },
-    {
-      "source": "/portal/dog-sitting",
-      "destination": "/portal/dog-sitting.html"
     },
     {
       "source": "/learn",
