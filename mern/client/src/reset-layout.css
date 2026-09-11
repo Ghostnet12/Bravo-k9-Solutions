@@ -1,0 +1,18 @@
+/* Native iOS date controls must shrink inside a grid/fieldset, not widen it. */
+.booking-layout > *, .booking-main, .booking-fields,
+.form-grid, .form-grid > *, .panel > label { min-width: 0; min-inline-size: 0; }
+.form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.form-grid input, .form-grid select, .form-grid textarea,
+.panel input[type="date"], .panel input[type="time"], .panel input[type="datetime-local"] {
+  box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0;
+  inline-size: 100%; max-inline-size: 100%; min-inline-size: 0;
+}
+.panel input[type="date"], .panel input[type="time"], .panel input[type="datetime-local"] {
+  display: block; -webkit-appearance: none; appearance: none;
+}
+.panel input::-webkit-date-and-time-value { min-width: 0; text-align: left; }
+.panel input::-webkit-datetime-edit { min-width: 0; padding: 0; }
+.booking-schedule-actions, .desk-reset-actions, .thread-tools { flex-wrap: wrap; gap: .75rem; }
+.desk-reset-actions { display: flex; align-items: center; justify-content: space-between; margin: 0 0 1rem; }
+.desk-reset-actions p { margin: 0; }
+@media (max-width: 700px) { .form-grid { grid-template-columns: minmax(0, 1fr); } }
