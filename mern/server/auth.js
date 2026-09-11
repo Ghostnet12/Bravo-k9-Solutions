@@ -55,7 +55,7 @@ export function sameOrigin(req, _res, next) {
 }
 // Database-backed buckets apply across Node instances, not only one process.
 export function rateLimit(scope, limit, milliseconds) {
-  return async (req, _res, next) => {
+  return async (req, res, next) => {
     const bucket = Math.floor(Date.now() / milliseconds);
     const identity = req.user ? String(req.user._id) : req.ip;
     const key = digest(`${scope}:${identity}:${bucket}`);
@@ -66,7 +66,13 @@ export function rateLimit(scope, limit, milliseconds) {
       if (error.code !== 11000) throw error;
       doc = await RateBucket.findOneAndUpdate({ _id: key }, { $inc: { count: 1 } }, { returnDocument: 'after' });
     }
-    if (doc.count > limit) throw Object.assign(new Error('Too many attempts. Please wait and try again.'), { status: 429 });
+    const allowed = typeof limit === 'function' ? limit(req) : limit;
+    if (doc.count > allowed) {
+      const retryAfter = Math.max(1, Math.ceil(((bucket + 1) * milliseconds - Date.now()) / 1000));
+      res.set('Retry-After', String(retryAfter));
+      const minutes = Math.max(1, Math.ceil(retryAfter / 60));
+      throw Object.assign(new Error(`Too many attempts. Please wait about ${minutes} ${minutes === 1 ? 'minute' : 'minutes'} and try again.`), { status: 429 });
+    }
     next();
   };
 }

@@ -104,7 +104,7 @@ app.post('/api/quote', async (req, res) => {
   const catalog = await effectiveServices(); validateVisits(input.serviceIds, input.visits, catalog); res.json(quote(input.serviceIds, input.visits, { dogCount: input.dogCount }, catalog));
 });
 app.get('/api/bookings', requireUser, async (req, res) => res.json({ bookings: await Booking.find({ userId: req.user._id }).sort({ createdAt: -1 }).limit(100).lean() }));
-app.post('/api/bookings', requireUser, rateLimit('booking', 10, 3600000), async (req, res) => res.status(201).json({ booking: await createBooking(req.user._id, req.body) }));
+app.post('/api/bookings', requireUser, rateLimit('booking', req => req.user?.role === 'owner' ? 50 : 10, 3600000), async (req, res) => res.status(201).json({ booking: await createBooking(req.user._id, req.body) }));
 async function ownedBooking(req) {
   if (!/^[a-f\d]{24}$/i.test(req.params.id)) throw Object.assign(new Error('Booking not found.'), { status: 404 });
   const booking = await Booking.findOne({ _id: req.params.id, ...(['staff', 'owner'].includes(req.user.role) ? {} : { userId: req.user._id }) });
