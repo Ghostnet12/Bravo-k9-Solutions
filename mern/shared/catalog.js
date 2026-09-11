@@ -1,9 +1,10 @@
 export const SERVICES = [
-  { id: 'training', name: 'Professional training', cents: 20000, interval: 'month', includes: ['training'], description: 'Private, psychology-based training. We come to you.' },
+  { id: 'training', name: 'Professional training', cents: 20000, interval: 'month', includes: ['training'], description: 'Private mobile training. $200/month for one dog; $100/month for each additional dog.' },
   { id: 'walking', name: 'Dog Walking', cents: 2500, interval: 'walk', durationMinutes: 30, includes: ['walking'], description: 'A focused 30-minute walk, priced per dog.' },
   { id: 'online', name: 'Online training', cents: 5000, interval: 'month', includes: ['online'], description: 'Member lessons, captions, and written transcripts.' },
   { id: 'aggression', name: 'Aggressive-dog intake', cents: 40000, interval: 'once', includes: ['aggression'], description: 'Initial assessment with two trainers.' },
 ];
+export const TRAINING_ADDITIONAL_DOG_CENTS = 10000;
 // Retained only to label historical records. These programs are never exposed
 // to new quotes, bookings, checkout, or owner service controls.
 export const LEGACY_SERVICES = [
@@ -24,11 +25,21 @@ export function quote(ids, visits = [], details = {}, catalog = SERVICES) {
   const items = serviceSelection(ids, catalog);
   const dogCount = Number.isInteger(details.dogCount) && details.dogCount >= 1 ? details.dogCount : 1;
   const walkingVisits = visits.filter(visit => visit.service === 'walking').length;
-  const lines = items.map(item => ({
-    id: item.id, name: item.name, interval: item.interval, unitCents: item.cents,
-    quantity: item.interval === 'walk' ? walkingVisits * dogCount : 1,
-    ...(item.durationMinutes ? { durationMinutes: item.durationMinutes, dogCount } : {}),
-  }));
+  const lines = items.flatMap(item => {
+    const base = {
+      id: item.id, name: item.name, interval: item.interval, unitCents: item.cents,
+      quantity: item.interval === 'walk' ? walkingVisits * dogCount : 1,
+      ...(['training', 'walking'].includes(item.id) ? { dogCount } : {}),
+      ...(item.durationMinutes ? { durationMinutes: item.durationMinutes } : {}),
+    };
+    if (item.id !== 'training' || dogCount === 1) return [base];
+    const additionalDogs = dogCount - 1;
+    return [base, {
+      id: 'training-additional-dogs',
+      name: additionalDogs === 1 ? 'Additional training dog' : 'Additional training dogs',
+      interval: 'month', unitCents: TRAINING_ADDITIONAL_DOG_CENTS, quantity: additionalDogs, dogCount,
+    }];
+  });
   const monthlyCents = lines.filter(l => l.interval === 'month').reduce((n, l) => n + l.unitCents * l.quantity, 0);
   const oneTimeCents = lines.filter(l => l.interval !== 'month').reduce((n, l) => n + l.unitCents * l.quantity, 0);
   return { lines, monthlyCents, oneTimeCents, dueNowCents: monthlyCents + oneTimeCents, currency: 'usd' };

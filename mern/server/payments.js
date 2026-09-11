@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
 import { Booking, User, Subscription, StripeEvent, BillingLock, Lesson } from './models.js';
 import { connectDb, transaction } from './db.js';
-import { ALL_SERVICES, serviceSelection } from '../shared/catalog.js';
+import { ALL_SERVICES, TRAINING_ADDITIONAL_DOG_CENTS, serviceSelection } from '../shared/catalog.js';
 export function stripeMode() {
   const key = process.env.STRIPE_SECRET_KEY || '';
   if (/^(?:sk|rk)_live_/.test(key)) return 'live';
@@ -15,6 +15,17 @@ export function stripeClient() {
   if (mode === 'live' && process.env.STRIPE_LIVE_ENABLED !== 'true') return null;
   if (mode === 'test' && process.env.VERCEL_ENV === 'production' && process.env.STRIPE_TEST_CHECKOUT_ENABLED !== 'true') return null;
   return new Stripe(key, { maxNetworkRetries: 2, timeout: 12000 });
+}
+export function validatedCheckoutPricing(booking) {
+  const pricing = booking.quote;
+  if (!pricing?.lines?.length || pricing.currency !== 'usd') throw new Error('This booking needs a fresh server quote before checkout.');
+  if (booking.serviceIds.includes('training')) {
+    const dogCount = booking.dogCount || 1;
+    const expected = 20000 + (dogCount - 1) * TRAINING_ADDITIONAL_DOG_CENTS;
+    const recorded = pricing.lines.filter(line => line.id === 'training' || line.id === 'training-additional-dogs').reduce((total, line) => total + line.unitCents * line.quantity, 0);
+    if (recorded !== expected) throw Object.assign(new Error('Training pricing changed after this request was saved. Cancel it and create a new request before checkout.'), { status: 409 });
+  }
+  return pricing;
 }
 export async function checkout(booking, user, stripe) {
   if (!stripe) throw Object.assign(new Error('Card payments are not connected yet. Your request is saved; Bravo will contact you.'), { status: 503 });
@@ -46,9 +57,8 @@ export async function checkout(booking, user, stripe) {
     customerId = customer.id;
     await User.updateOne({ _id: user._id }, { $set: { stripeCustomerId: customerId } });
   }
-  const pricing = booking.quote;
-  if (!pricing?.lines?.length || pricing.currency !== 'usd') throw new Error('This booking needs a fresh server quote before checkout.');
-  const metadata = { app: 'bravo-k9', userId: String(user._id), bookingId, serviceIds: JSON.stringify(booking.serviceIds.filter(id => selected.find(s => s.id === id).interval === 'month')) };
+  const pricing = validatedCheckoutPricing(booking);
+  const metadata = { app: 'bravo-k9', userId: String(user._id), bookingId, dogCount: String(booking.dogCount || 1), serviceIds: JSON.stringify(booking.serviceIds.filter(id => selected.find(s => s.id === id).interval === 'month')) };
   const params = {
     mode: pricing.monthlyCents ? 'subscription' : 'payment', customer: customerId,
     client_reference_id: bookingId, metadata,
@@ -83,6 +93,7 @@ export async function processStripeEvent(event, stripe) {
     await StripeEvent.create([{ _id: event.id, type: event.type, processedAt: new Date() }], { session });
     if (sub?.metadata?.app === 'bravo-k9') {
       const ids = JSON.parse(sub.metadata.serviceIds || '[]');
+      const dogCount = Math.max(1, Math.min(10, Number.parseInt(sub.metadata.dogCount || '1', 10) || 1));
       // Historical subscriptions must keep syncing even after a program retires.
       serviceSelection(ids, ALL_SERVICES);
       const user = await User.findById(sub.metadata.userId).session(session);
@@ -91,7 +102,7 @@ export async function processStripeEvent(event, stripe) {
       if (!previous || (previous.lastEventAt || 0) <= event.created) {
         const periods = sub.items.data.map(item => item.current_period_end).filter(Boolean);
         const until = sub.current_period_end || (periods.length ? Math.min(...periods) : 0);
-        await Subscription.updateOne({ stripeId: sub.id }, { $set: { userId: user._id, serviceIds: ids, status: sub.status, validUntil: new Date(until * 1000), lastEventAt: event.created } }, { upsert: true, session });
+        await Subscription.updateOne({ stripeId: sub.id }, { $set: { userId: user._id, serviceIds: ids, dogCount, status: sub.status, validUntil: new Date(until * 1000), lastEventAt: event.created } }, { upsert: true, session });
       }
     }
     if (['checkout.session.completed', 'checkout.session.async_payment_succeeded'].includes(event.type) && object.metadata?.app === 'bravo-k9' && object.payment_status === 'paid') {

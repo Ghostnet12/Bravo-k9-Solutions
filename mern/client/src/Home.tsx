@@ -8,7 +8,7 @@ import { SERVICES, money } from '../../shared/catalog';
 
 const primary = ['training', 'walking', 'aggression', 'online'];
 const serviceDetails: Record<string, { label: string; text: string; features: string[] }> = {
-  training: { label: 'BUILD A BETTER EVERYDAY', text: 'Calmer walks. Clearer boundaries. A dog you can depend on.', features: ['Private professional training', 'Your home. Your real environment.', 'A plan around your dog'] },
+  training: { label: 'BUILD A BETTER EVERYDAY', text: 'Calmer walks. Clearer boundaries. A dog you can depend on.', features: ['$200/month for one dog', '+$100/month each additional dog', 'Private training at your home'] },
   walking: { label: '30 MINUTES. REAL MOVEMENT.', text: 'Reliable dog walking from the Bravo team, scheduled around your day.', features: ['$25 per dog', '30-minute walk', 'Simple multi-dog pricing'] },
   aggression: { label: 'START WITH UNDERSTANDING', text: 'A focused first step for dogs who need a more considered approach.', features: ['Initial assessment with two trainers', 'Behavior and handling review', 'Discuss the next steps with Bravo'] },
   online: { label: 'TRAIN BETWEEN SESSIONS', text: 'Private member lessons from the Bravo team, available when you need them.', features: ['Trainer-uploaded video lessons', 'Captions and written transcripts', 'Learn at your own pace'] },

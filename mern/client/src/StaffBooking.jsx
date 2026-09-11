@@ -23,7 +23,7 @@ export default function StaffBooking({ team, onSaved }) {
     e.preventDefault(); const form = e.currentTarget, fields = Object.fromEntries(new FormData(form));
     setBusy(true); setError(''); setNotice('');
     try {
-      await api('/admin/bookings', { method: 'POST', body: { requestKey, userId: client._id, staffId: fields.staffId || null, serviceIds: [fields.service], visits: [{ date, time, service: fields.service }], dogCount: fields.service === 'walking' ? Number(fields.dogCount) : 1, dogName: fields.dogName, phone: fields.phone, address: fields.address, notes: fields.notes } });
+      await api('/admin/bookings', { method: 'POST', body: { requestKey, userId: client._id, staffId: fields.staffId || null, serviceIds: [fields.service], visits: [{ date, time, service: fields.service }], dogCount: ['training', 'walking'].includes(fields.service) ? Number(fields.dogCount) : 1, dogName: fields.dogName, phone: fields.phone, address: fields.address, notes: fields.notes } });
       setRequestKey(crypto.randomUUID()); setNotice('Visit requested. Review it below and confirm when agreed with the client. No payment was taken.');
       setClient(null); setDate(''); setSlots([]); setTime(''); await onSaved();
     } catch (err) { setError(err.message); } finally { setBusy(false); }
@@ -40,7 +40,7 @@ export default function StaffBooking({ team, onSaved }) {
       <label>Opening (Aberdeen time)<select value={time} required disabled={busy || !slots.length} onChange={e => setTime(e.target.value)}><option value="">{date && !slots.length ? 'No openings that day' : 'Choose a time'}</option>{slots.map(value => <option key={value} value={value}>{formatTime(value)}</option>)}</select></label>
       <label>Dog’s name<input name="dogName" required maxLength="80" defaultValue={client.dogName}/></label>
       <label>Client phone<input type="tel" name="phone" required minLength="7" maxLength="30" defaultValue={client.phone}/></label>
-      <label>Number of dogs<input name="dogCount" type="number" min="1" max="10" defaultValue="1"/></label>
+      <label>Number of dogs<input name="dogCount" type="number" min="1" max="10" defaultValue="1"/><small>Training: $200/month for the first dog, then $100/month per additional dog. Walking: $25 per dog.</small></label>
     </div><label>Visit address<input name="address" required minLength="5" maxLength="300" defaultValue={client.address}/></label><label>Private booking notes<textarea name="notes" maxLength="1500" rows="3"/></label><AppointmentNotice compact/><button className="button" disabled={busy || !time}>{busy ? 'Working…' : 'Add visit request'}</button></form>}
   </details>;
 }

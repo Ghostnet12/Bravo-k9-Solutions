@@ -15,7 +15,16 @@ export async function getEntitlements(userId) {
   const subs = await Subscription.find({ userId, status: { $in: ['active', 'trialing'] }, validUntil: { $gt: new Date() } }).lean();
   const active = new Set(['training', 'walking', 'sitting', 'online', 'aggression']);
   const legacy = { complete: ['training', 'sitting'], 'all-access': ['training', 'sitting', 'online'] };
-  return { subscriptions: subs, services: [...new Set(subs.flatMap(subscription => subscription.serviceIds.flatMap(id => legacy[id] || (active.has(id) ? [id] : []))))] };
+  const services = [...new Set(subs.flatMap(subscription => subscription.serviceIds.flatMap(id => legacy[id] || (active.has(id) ? [id] : []))))];
+  const serviceDogCounts = subs.reduce((counts, subscription) => {
+    for (const service of subscription.serviceIds.flatMap(id => legacy[id] || [id])) counts[service] = Math.max(counts[service] || 0, service === 'training' ? subscription.dogCount || 1 : 1);
+    return counts;
+  }, {});
+  return { subscriptions: subs, services, serviceDogCounts };
+}
+export function bookingCoveredByEntitlements(serviceIds, dogCount, entitlements) {
+  return serviceSelection(serviceIds).every(service => service.interval === 'month' && service.includes.every(id => entitlements.services.includes(id)))
+    && (!serviceIds.includes('training') || (entitlements.serviceDogCounts?.training || 0) >= dogCount);
 }
 export async function getAvailability(from, to) {
   const settings = await Settings.findById('schedule').lean();
@@ -34,7 +43,7 @@ export async function createBooking(userId, payload, assignment = {}) {
   const existing = await Booking.findOne({ userId, requestKey: data.requestKey });
   if (existing) return existing;
   const entitlements = await getEntitlements(userId);
-  const covered = serviceSelection(data.serviceIds).every(s => s.interval !== 'once' && s.includes.every(i => entitlements.services.includes(i)));
+  const covered = bookingCoveredByEntitlements(data.serviceIds, data.dogCount, entitlements);
   let booking;
   try {
     await transaction(async session => {

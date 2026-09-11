@@ -5,9 +5,16 @@ import { quote, serviceSelection } from '../shared/catalog.js';
 import { availability, autoSchedule, dateTime, validateVisits, HOURS, dateRange } from '../server/scheduling.js';
 import { hashPassword, verifyPassword } from '../server/auth.js';
 import { privatePath } from '../server/lessons.js';
-import { stripeClient } from '../server/payments.js';
+import { stripeClient, validatedCheckoutPricing } from '../server/payments.js';
+import { bookingCoveredByEntitlements } from '../server/bookings.js';
 test('Bravo pricing stays exact and recurring charges are separated', () => {
   assert.equal(quote(['training', 'online']).monthlyCents, 25000);
+  const twoDogTraining = quote(['training'], [], { dogCount: 2 });
+  assert.equal(twoDogTraining.monthlyCents, 30000);
+  assert.deepEqual(twoDogTraining.lines.map(line => [line.id, line.unitCents, line.quantity]), [['training', 20000, 1], ['training-additional-dogs', 10000, 1]]);
+  const threeDogTraining = quote(['training'], [], { dogCount: 3 });
+  assert.equal(threeDogTraining.monthlyCents, 40000);
+  assert.equal(threeDogTraining.lines[1].quantity, 2);
   const q = quote(['aggression', 'online']);
   assert.equal(q.monthlyCents, 5000); assert.equal(q.oneTimeCents, 40000);
   const walking = quote(['walking'], [{ date: '2026-10-10', time: '09:00', service: 'walking' }, { date: '2026-10-11', time: '10:00', service: 'walking' }], { dogCount: 3 });
@@ -16,6 +23,17 @@ test('Bravo pricing stays exact and recurring charges are separated', () => {
 test('duplicate programs, unknown services, and conflicting selections are rejected', () => {
   for (const ids of [[], ['training','training'], ['free'], ['sitting'], ['complete'], ['all-access'], ['training','aggression']]) assert.throws(() => serviceSelection(ids));
   assert.doesNotThrow(() => serviceSelection(['walking']));
+});
+test('training coverage never silently extends to unpaid additional dogs', () => {
+  const oneDog = { services: ['training'], serviceDogCounts: { training: 1 } };
+  assert.equal(bookingCoveredByEntitlements(['training'], 1, oneDog), true);
+  assert.equal(bookingCoveredByEntitlements(['training'], 2, oneDog), false);
+  assert.equal(bookingCoveredByEntitlements(['training'], 3, { services: ['training'], serviceDogCounts: { training: 3 } }), true);
+  assert.equal(bookingCoveredByEntitlements(['walking'], 1, { services: ['walking'], serviceDogCounts: { walking: 1 } }), false);
+});
+test('checkout rejects a saved training quote that predates the additional-dog rule', () => {
+  assert.throws(() => validatedCheckoutPricing({ serviceIds: ['training'], dogCount: 2, quote: { currency: 'usd', lines: [{ id: 'training', unitCents: 20000, quantity: 1 }] } }), /pricing changed/);
+  assert.doesNotThrow(() => validatedCheckoutPricing({ serviceIds: ['training'], dogCount: 2, quote: quote(['training'], [], { dogCount: 2 }) }));
 });
 test('dates use Aberdeen timezone and reject impossible dates', () => {
   assert.throws(() => dateTime('2026-02-30')); assert.throws(() => dateTime('2026-10-02','24:00'));
