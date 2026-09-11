@@ -2,7 +2,7 @@ name: Apply and verify Bravo reset fixes
 on:
   push:
     branches: ['fix/bravo-reset-20260911']
-    paths: ['.github/reset_patch.py', '.github/workflows/reset-fix-verification.yml', 'mern/scripts/reset-browser-check.mjs', 'mern/tests/reset.integration.js']
+    paths: ['.github/reset_patch.py', '.github/reset_mocks.py', '.github/workflows/reset-fix-verification.yml', 'mern/scripts/reset-browser-check.mjs', 'mern/tests/reset.integration.js']
 permissions:
   contents: write
 jobs:
@@ -19,14 +19,14 @@ jobs:
           cache: npm
           cache-dependency-path: mern/package-lock.json
       - name: Apply narrowly checked source edits
-        run: python3 .github/reset_patch.py
+        run: python3 .github/reset_patch.py && python3 .github/reset_mocks.py
       - run: npm ci
-        working-directory: mern
-      - name: Existing and new unit regressions
-        run: npm test
         working-directory: mern
       - name: Production build
         run: npm run build
+        working-directory: mern
+      - name: Existing and new unit regressions
+        run: npm test
         working-directory: mern
       - name: Isolated persistent reset and authorization tests
         run: node --test tests/reset.integration.js
@@ -48,7 +48,7 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add mern/client/src mern/server/app.js mern/server/models.js
+          git add mern/client/src mern/server/app.js mern/server/models.js mern/tests/workspace-api.test.js
           git diff --cached --stat
           git commit -m "Fix calendar toggle/reset, mobile date widths, desk clearing and durable chat history"
           git push origin HEAD:fix/bravo-reset-20260911
