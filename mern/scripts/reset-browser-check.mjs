@@ -91,12 +91,12 @@ try {
         await page.locator('.staff-create summary').click();
         await page.getByLabel('Client name or email').fill('Test');
         await page.getByRole('button', { name: 'Find client', exact: true }).click();
-        await page.getByLabel('Choose client', { exact: true }).selectOption(clientId);
+        await page.getByLabel(/^Choose client/).selectOption(clientId);
         await page.getByRole('button', { name: 'Refresh & reset desk', exact: true }).click();
         await page.getByText('Desk selections, filters and unsaved forms reset.', { exact: false }).waitFor();
         assert.equal(await page.getByLabel('Find a client or dog').inputValue(), '');
         assert.equal(await page.getByLabel('Client name or email').inputValue(), '');
-        assert.equal(await page.getByLabel('Choose client', { exact: true }).count(), 0);
+        assert.equal(await page.getByLabel(/^Choose client/).count(), 0);
         assert.equal(await page.locator('.admin-bookings article').count(), 1);
         await page.goto(`${base}/account`);
         await page.getByLabel('Your name', { exact: true }).fill('Unsaved name');
