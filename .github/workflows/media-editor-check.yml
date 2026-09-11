@@ -1,0 +1,28 @@
+name: Media editor checks
+on:
+  push:
+    branches: [media-editor-admin-zoom-20260911, bravo-mern]
+    paths: ['mern/**', '.github/workflows/media-editor-check.yml']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: mern
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: mern/package-lock.json
+      - run: npm ci
+      - name: Unit and existing regression tests
+        run: npm test
+      - name: Isolated media authorization and persistence tests
+        run: node --test tests/media-editor.integration.js
+      - name: Production build
+        run: npm run build
