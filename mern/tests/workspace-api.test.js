@@ -199,6 +199,19 @@ test('owner/staff workspace contracts over HTTP with isolated model mocks', asyn
     assert.equal(data.role, undefined); assert.equal(data.blocked, undefined); assert.equal(data.showPhone, undefined);
     assert.ok(data.passwordHash); assert.equal(result.body.user.passwordHash, undefined);
   });
+  await t.test('owners and delegated administrators can create client-only accounts', async () => {
+    const created = [];
+    const create = t.mock.method(User, 'create', async data => { created.push(data); return { ...data, _id: '444444444444444444444444' }; });
+    await call('staff', 'post', '/api/admin/users', { name: 'Assisted Client', email: 'assisted@example.test' }).expect(403);
+    const ownerResult = await call('owner', 'post', '/api/admin/users', { name: 'Assisted Client', email: 'ASSISTED@example.test', role: 'owner', blocked: true }).expect(201);
+    assert.equal(ownerResult.body.user.role, 'member'); assert.equal(ownerResult.body.user.email, 'assisted@example.test');
+    assert.match(ownerResult.body.temporaryPassword, /^Bravo-[a-f\d]{18}!$/); assert.equal(ownerResult.body.user.passwordHash, undefined);
+    assert.equal(created[0].role, 'member'); assert.equal(created[0].blocked, undefined); assert.ok(created[0].passwordHash);
+    users[ids.other].role = 'owner';
+    const delegateResult = await call('other', 'post', '/api/admin/users', { name: 'Second Client', email: 'second@example.test', phone: '605-555-0100' }).expect(201);
+    assert.equal(delegateResult.body.user.publicRole, 'member'); assert.equal(created[1].phone, '605-555-0100');
+    users[ids.other].role = 'member'; create.mock.restore();
+  });
   await t.test('reviews use the signed-in identity and owner-only moderation', async () => {
     const saved = { _id: ids.other, userId: ids.member, authorName: 'member', rating: 5, body: 'A careful and helpful training experience.', hidden: false };
     const write = t.mock.method(Review, 'findOneAndUpdate', (_filter, change) => query({ ...saved, ...change.$set }));

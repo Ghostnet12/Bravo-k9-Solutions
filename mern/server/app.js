@@ -258,6 +258,21 @@ app.get('/api/admin/users', requireUser, requireOwner, async (req, res) => {
   const users = await User.find(filter).select('name email role phone title bio showPhone mutedUntil blocked').sort({ createdAt: -1 }).limit(100).lean();
   res.json({ users: users.map(user => ({ ...user, _id: String(user._id), isPrimaryOwner: isPrimaryOwner(user) })) });
 });
+app.post('/api/admin/users', requireUser, requireOwner, rateLimit('admin-client', 20, 3600000), async (req, res) => {
+  const input = z.object({
+    email: z.string().trim().email().max(254).transform(value => value.toLowerCase()),
+    name: z.string().trim().min(2).max(80),
+    dogName: z.string().trim().max(80).default(''),
+    phone: z.string().trim().max(30).default(''),
+    address: z.string().trim().max(300).default(''),
+  }).parse(req.body);
+  // This credential is returned once to the authenticated administrator and is
+  // never stored in plaintext. It must be shared with the client privately.
+  const temporaryPassword = `Bravo-${randomUUID().replaceAll('-', '').slice(0, 18)}!`;
+  const user = await User.create({ ...input, role: 'member', passwordHash: await hashPassword(temporaryPassword) });
+  await AuditEvent.create({ actorId: req.user._id, action: 'client.created', targetType: 'user', targetId: String(user._id), details: { assistedOnboarding: true } });
+  res.status(201).json({ user: publicUser(user), temporaryPassword });
+});
 app.patch('/api/admin/users/:id', requireUser, requireOwner, async (req, res) => {
   const target = await User.findById(objectId.parse(req.params.id));
   if (!target) return res.status(404).json({ error: 'Account not found.' });

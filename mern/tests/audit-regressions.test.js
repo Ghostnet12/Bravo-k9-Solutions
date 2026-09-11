@@ -109,6 +109,13 @@ test('billing availability is independent of active membership, without exposing
   const { user } = fixture(); user.role = 'member';
   const result = publicUser(user); assert.equal(result.hasBillingAccount, true); assert.equal(result.stripeCustomerId, undefined);
 });
+test('scheduler exposes distinct available, selected, and unavailable date states', async () => {
+  const source = await readFile(new URL('../client/src/BookingPage.jsx', import.meta.url), 'utf8');
+  assert.match(source, /className={state}/); assert.match(source, /Available days and times/);
+  assert.match(source, /time >= startTime && time <= endTime/); assert.match(source, /date-time-range/);
+  const css = await readFile(new URL('../client/src/professional.css', import.meta.url), 'utf8');
+  for (const state of ['available', 'selected', 'unavailable']) assert.match(css, new RegExp(`date-grid button\\.${state}`));
+});
 test('internal and upstream errors are redacted while input errors stay actionable', () => {
   for (const error of [new TypeError('secret internal variable'), Object.assign(new Error('secret Mongo URI'), { name: 'MongoServerError' }), Object.assign(new Error('secret API key'), { type: 'StripePermissionError' }), Object.assign(new Error('secret object id'), { name: 'CastError' }), Object.assign(new SyntaxError('secret request body'), { type: 'entity.parse.failed' })]) assert.doesNotMatch(clientError(error).message, /secret/);
   assert.equal(clientError(new ReferenceError('internal')).status, 500);

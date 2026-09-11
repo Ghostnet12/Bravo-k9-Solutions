@@ -30,7 +30,7 @@ function PersonCard({ person, currentUserId, onSaved }) {
 }
 
 export default function OwnerPanel({ user }) {
-  const [users, setUsers] = useState([]), [query, setQuery] = useState(''), [error, setError] = useState(''), [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState([]), [query, setQuery] = useState(''), [error, setError] = useState(''), [loading, setLoading] = useState(true), [creating, setCreating] = useState(false), [created, setCreated] = useState(null);
   const requestId = useRef(0);
   const load = async (silent = false) => {
     if (user?.role !== 'owner') return;
@@ -44,6 +44,16 @@ export default function OwnerPanel({ user }) {
     finally { if (current === requestId.current) setLoading(false); }
   };
   useEffect(() => { load(); return () => { requestId.current++; }; }, [user?.id, user?.role]);
+  async function addClient(event) {
+    event.preventDefault(); setCreating(true); setError(''); setCreated(null);
+    const form = event.currentTarget;
+    try {
+      const result = await api('/admin/users', { method: 'POST', body: Object.fromEntries(new FormData(form)) });
+      setCreated(result); form.reset(); setQuery(result.user.email); setUsers([{ ...result.user, _id: result.user.id, membership: {} }]);
+    } catch (e) { setError(e.message); } finally { setCreating(false); }
+  }
   if (user?.role !== 'owner') return null;
-  return <section id="owner-controls"><div className="section-label"><div><p className="kicker gold">ACCESS MANAGEMENT</p><h2>People & permissions.</h2></div></div><p>Find an existing customer by name or email, open their profile, and select <strong>Make Member</strong>. They only need to create an account—no new checkout is required. Member access is separate from Staff and Administrator work permissions.</p><Notice error>{error}</Notice><form className="owner-search panel" onSubmit={e => { e.preventDefault(); load(); }}><label>Find a person<input type="search" value={query} maxLength="100" onChange={e => setQuery(e.target.value)} placeholder="Search name or email"/></label><button className="button button-small" disabled={loading}>Search accounts</button></form>{loading ? <p role="status">Loading accounts…</p> : !users.length ? <div className="panel empty-state"><p>No account matches that search.</p></div> : <div className="owner-people">{users.map(person => <PersonCard key={person._id} person={person} currentUserId={user.id} onSaved={() => load(true)}/>)}</div>}</section>;
+  return <section id="owner-controls"><div className="section-label"><div><p className="kicker gold">ACCESS MANAGEMENT</p><h2>People & permissions.</h2></div></div><p>Find an existing customer by name or email, or use assisted onboarding to create a client account for someone who needs help. Member access is separate from Staff and Administrator work permissions.</p><Notice error>{error}</Notice>
+    <details className="panel add-client-panel"><summary>Add a client</summary><p>Create a client-only account. You can promote it later from People & permissions.</p><form onSubmit={addClient}><div className="form-grid"><label>Client name<input name="name" autoComplete="name" minLength="2" maxLength="80" required/></label><label>Email<input name="email" type="email" autoComplete="email" maxLength="254" required/></label><label>Phone<input name="phone" type="tel" autoComplete="tel" maxLength="30"/></label><label>Dog’s name<input name="dogName" autoComplete="off" maxLength="80"/></label><label className="full-width">Visit address<input name="address" autoComplete="street-address" maxLength="300"/></label></div><button className="button button-small" disabled={creating}>{creating ? 'Creating client…' : 'Create client account'}</button></form>{created && <div className="created-client notice" role="status"><h3>Client account created.</h3><p><strong>{created.user.name}</strong> can sign in with {created.user.email} and the temporary password below.</p><label>Temporary password<input value={created.temporaryPassword} readOnly onFocus={event => event.currentTarget.select()}/></label><p className="helper"><strong>This password is shown only here.</strong> Share it privately and ask the client to change it from their Account page after signing in.</p><button className="quiet-button" type="button" onClick={() => setCreated(null)}>Hide temporary password</button></div>}</details>
+    <form className="owner-search panel" onSubmit={e => { e.preventDefault(); load(); }}><label>Find a person<input type="search" value={query} maxLength="100" onChange={e => setQuery(e.target.value)} placeholder="Search name or email"/></label><button className="button button-small" disabled={loading}>Search accounts</button></form>{loading ? <p role="status">Loading accounts…</p> : !users.length ? <div className="panel empty-state"><p>No account matches that search.</p></div> : <div className="owner-people">{users.map(person => <PersonCard key={person._id} person={person} currentUserId={user.id} onSaved={() => load(true)}/>)}</div>}</section>;
 }
