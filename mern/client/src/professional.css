@@ -71,3 +71,5 @@ html.access-high-contrast :is(.home-price-card,.home-package-row,.home-service-s
 .date-grid button.available:hover,.date-grid button.available:focus-visible{background:#36311f;border-color:#f2d795}
 .date-grid button.unavailable{opacity:.52}
 .date-grid .date-time-range{display:block;font-size:.62rem;line-height:1.35;margin-top:.2rem;color:inherit}
+.booking-schedule-actions{display:flex;align-items:stretch;gap:.75rem;flex-wrap:wrap}.booking-schedule-actions .button{flex:1 1 220px;justify-content:center;margin:0}
+@media(max-width:580px){.booking-schedule-actions{flex-direction:column}.booking-schedule-actions .button{width:100%;flex-basis:auto}}
