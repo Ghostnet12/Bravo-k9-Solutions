@@ -15,9 +15,11 @@ export function privatePath(filename) {
   if (!filename || !/^[a-zA-Z0-9][a-zA-Z0-9._-]*\.(mp4|webm|vtt)$/.test(filename)) throw new Error('Invalid private media filename.');
   return path.join(path.resolve(process.env.PRIVATE_MEDIA_DIR || './private/media'), filename);
 }
-export async function protectedLesson(req, res, type) {
+// manualMember is supplied only by the server after a database lookup; request
+// bodies, query strings and public job titles never grant access.
+export async function protectedLesson(req, res, type, { manualMember = false } = {}) {
   const { services } = await getEntitlements(req.user._id);
-  if (!['staff', 'owner'].includes(req.user.role) && !services.includes('online')) return res.status(403).json({ error: 'An active online membership is required.' });
+  if (!['staff', 'owner'].includes(req.user.role) && !services.includes('online') && manualMember !== true) return res.status(403).json({ error: 'Active Member access or an online membership is required.' });
   const lesson = await Lesson.findOne({ _id: req.params.id, ...(['staff', 'owner'].includes(req.user.role) ? {} : { published: true }) }).select('+videoFile +captionFile +transcript');
   if (!lesson) return res.status(404).json({ error: 'This lesson is not available yet.' });
   if (type === 'transcript') return res.json({ transcript: lesson.transcript });
