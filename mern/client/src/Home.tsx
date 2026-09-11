@@ -19,7 +19,7 @@ export default function Home() {
   const [team, setTeam] = useState<Array<{id: string; name: string; role: string; title: string; bio: string}>>([]);
   const [reviews, setReviews] = useState<{reviews: Array<{_id: string; authorName: string; rating: number; body: string}>; average: number; count: number}>({ reviews: [], average: 0, count: 0 });
   useEffect(() => { api('/team').then(people => setTeam(people.team)).catch(() => {}); api('/reviews').then(feedback => setReviews(feedback)).catch(() => {}); }, []);
-  const portraits: Record<string, string> = { 'David Northrop': 'david-northrop', 'Ashley Leverock': 'ashley-leverock', 'Janet Hughes': 'janet-hughes' };
+  const portraits: Record<string, string> = { 'David Northrop': 'david-northrop', 'Ashley Northrop': 'ashley-northrop', 'Ashley Leverock': 'ashley-northrop', 'Janet Hughes': 'janet-hughes' };
   return <div className="bravo-home"><Header/>
     <main id="main-content" tabIndex={-1}>
       <section className="home-hero" aria-labelledby="home-title">
@@ -55,5 +55,5 @@ export default function Home() {
       <section className="home-section shell home-reviews" id="reviews" aria-labelledby="reviews-title"><div className="home-section-heading"><div><p className="eyebrow">CLIENT REVIEWS</p><h2 id="reviews-title">Work that earns<br/><em>your trust.</em></h2></div><p>{reviews.count ? `${reviews.average} out of 5 from ${reviews.count} verified account ${reviews.count === 1 ? 'review' : 'reviews'}.` : 'Client reviews will appear here after they are shared.'}</p></div>{reviews.reviews.length > 0 && <div className="review-grid">{reviews.reviews.slice(0, 6).map(review => <article key={review._id} className="panel"><div className="review-stars" aria-label={`${review.rating} out of 5 stars`}>{'★'.repeat(review.rating)}<span>{'★'.repeat(5 - review.rating)}</span></div><p>“{review.body}”</p><strong>{review.authorName}</strong></article>)}</div>}<Link className="inline-link" href="/account#your-review">Share your experience →</Link></section>
       <section className="home-close"><div className="shell"><div><p className="eyebrow">THE FIRST STEP IS SIMPLE.</p><h2>Let’s meet<br/><em>your dog.</em></h2></div><div><p>Choose a program, find an opening, and let Bravo know what you need.</p><Link className="button" href="/portal">Request your first visit <span aria-hidden="true">↗</span></Link><a href="tel:+16058242767">Prefer to talk? (605) 824-2767</a></div></div></section>
     </main><Footer/>
-  </div>;
+  </div;
 }
