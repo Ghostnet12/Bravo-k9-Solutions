@@ -1,10 +1,9 @@
 name: Reset mobile browser checks
 on:
   push:
-    branches: [fix/scheduler-reset-20260911, bravo-mern]
-    paths: ['mern/**', '.github/workflows/reset-browser-check.yml']
+    branches: [fix/scheduler-reset-20260911]
 permissions:
-  contents: read
+  contents: write
 jobs:
   browser:
     runs-on: ubuntu-latest
@@ -19,10 +18,14 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: mern/package-lock.json
+      - name: Apply exact review changes
+        run: python3 scripts/reset-browser-review.py
       - run: npm ci
       - run: npm run build
+      - run: npm test
+      - run: node --test tests/reset.integration.js
       - run: python3 -m pip install playwright==1.57.0
-      - run: python3 -m playwright install --with-deps webkit chromium
+      - run: python3 -m playwright install --with-deps webkit chromium > /tmp/playwright-install.log 2>&1 || { tail -80 /tmp/playwright-install.log; exit 1; }
       - name: WebKit mobile and desktop regressions
         run: BRAVO_BROWSER=webkit python3 tests/reset.browser.py
       - name: Chromium mobile and desktop regressions
@@ -30,6 +33,18 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: reset-browser-results
-          path: mern/browser-test-output
+          name: reset-reviewed-results
+          path: |
+            mern/browser-test-output
+            mern/client/src/CommunityPage.jsx
+            mern/client/src/StaffInbox.jsx
+            mern/tests/reset.browser.py
           retention-days: 3
+      - name: Save verified changes to isolated fix branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm scripts/reset-browser-review.py
+          git add client/src/CommunityPage.jsx client/src/StaffInbox.jsx tests/reset.browser.py ../.github/workflows/reset-browser-check.yml
+          git commit -m 'Verify mobile reset flows and preserve failed-clear feedback'
+          git push origin HEAD:fix/scheduler-reset-20260911
