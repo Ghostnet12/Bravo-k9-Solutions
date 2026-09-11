@@ -30,6 +30,7 @@ const bookingSchema = new Schema({
 bookingSchema.index({ userId: 1, requestKey: 1 }, { unique: true });
 export const Booking = model('BravoBooking', bookingSchema);
 export const Slot = model('BravoSlot', new Schema({ _id: String, bookingId: id, date: String, time: String, reason: String }));
+export const TrainerSchedule = model('BravoTrainerSchedule', new Schema({ _id: String, enabled: Boolean, weekdays: [Number], hours: [String], overrides: [new Schema({ date: String, hours: [String] }, { _id: false })], revision: { type: Number, default: 0 } }, { timestamps: true }));
 export const Settings = model('BravoSettings', new Schema({ _id: String, weekdays: [Number], hours: [String], enabled: Boolean, revision: { type: Number, default: 0 } }));
 export const ServiceSetting = model('BravoServiceSetting', new Schema({ _id: String, cents: { type: Number, min: 0, max: 1000000 }, enabled: { type: Boolean, default: true }, updatedBy: id }, { timestamps: true }));
 export const ChatReset = model('BravoChatReset', new Schema({ _id: String, clearedAt: { type: Date, required: true } }, { timestamps: true }));
@@ -54,4 +55,4 @@ export const MediaUpload = model('BravoMediaUpload', new Schema({ _id: String, l
 const mediaChunkSchema = new Schema({ uploadId: { type: String, index: true }, index: Number, size: Number, data: Buffer, expiresAt: { type: Date, expires: 0 } }, { timestamps: true });
 mediaChunkSchema.index({ uploadId: 1, index: 1 }, { unique: true });
 export const MediaChunk = model('BravoMediaChunk', mediaChunkSchema);
-export const ALL_MODELS = [ChatReset, User, Session, RateBucket, Booking, Slot, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Subscription, StripeEvent, Lesson, BillingLock, MediaUpload, MediaChunk];
+export const ALL_MODELS = [TrainerSchedule, ChatReset, User, Session, RateBucket, Booking, Slot, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Subscription, StripeEvent, Lesson, BillingLock, MediaUpload, MediaChunk];

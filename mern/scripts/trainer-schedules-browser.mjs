@@ -5,7 +5,7 @@ const aid='aaaaaaaaaaaaaaaaaaaaaaaa',bid='bbbbbbbbbbbbbbbbbbbbbbbb';const team=[
 const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Chicago'}).format(new Date());const plus=(date,n)=>{const d=new Date(`${date}T12:00:00Z`);d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);};let offDate=plus(today,1);while([0,6].includes(new Date(`${offDate}T12:00:00Z`).getUTCDay()))offDate=plus(offDate,1);
 try{for(const [name,engine]of[['chromium',chromium],['webkit',webkit]]){
  const browser=await engine.launch();const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const errors=[];let saved={revision:0,enabled:true,weekdays:[1,2,3,4,5],hours:['09:00','10:00'],overrides:[]},failFeed=false,feedRequests=0;const writes=[];
- await context.route('**/api/**',async route=>{const req=route.request(),url=new URL(req.url),ep=url.pathname.slice(4);let data={};
+ await context.route('**/api/**',async route=>{const req=route.request(),url=new URL(req.url()),ep=url.pathname.slice(4);let data={};
   if(ep==='/config')data={connected:true,paymentsReady:false,schedule:{enabled:true,weekdays:[1,2,3,4,5],hours:['09:00','10:00']},timezone:'America/Chicago'};
   else if(ep==='/auth/me')data={user:{id:aid,name:'David Northrop',role:'owner',isPrimaryOwner:true},services:[],subscriptions:[],membership:{}};
   else if(ep==='/team')data={team};else if(ep==='/reviews')data={reviews:[],count:0,average:0};

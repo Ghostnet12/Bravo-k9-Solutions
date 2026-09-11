@@ -17,7 +17,7 @@ function editable(stored, team) {
   return { revision: stored?.revision || 0, enabled: stored ? stored.enabled : true, weekdays: stored?.weekdays || team.weekdays.filter(day => day <= 5), hours: stored?.hours || team.hours, overrides: stored?.overrides || [] };
 }
 async function target(req) {
-  const id = objectId.parse(req.params.id);
+  const id = objectId.parse(req.params.id).toLowerCase();
   if (String(req.user._id) !== id && req.user.role !== 'owner') throw fail('You can only edit your own working schedule.', 403);
   if (!await User.exists({ _id: id, role: { $in: ['staff', 'owner'] }, blocked: { $ne: true } })) throw fail('Active trainer not found.', 404);
   return id;
