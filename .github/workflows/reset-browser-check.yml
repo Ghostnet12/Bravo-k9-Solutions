@@ -19,7 +19,9 @@ jobs:
           cache: npm
           cache-dependency-path: mern/package-lock.json
       - name: Apply exact review changes
-        run: python3 scripts/reset-browser-review.py
+        run: |
+          python3 scripts/reset-browser-review.py
+          python3 scripts/reset-review-final.py
       - run: npm ci
       - run: npm run build
       - run: npm test
@@ -44,7 +46,7 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git rm scripts/reset-browser-review.py
+          git rm scripts/reset-browser-review.py scripts/reset-review-final.py
           git add client/src/CommunityPage.jsx client/src/StaffInbox.jsx tests/reset.browser.py ../.github/workflows/reset-browser-check.yml
           git commit -m 'Verify mobile reset flows and preserve failed-clear feedback'
           git push origin HEAD:fix/scheduler-reset-20260911
