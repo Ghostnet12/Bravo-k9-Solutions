@@ -1,0 +1,12 @@
+/* Customer membership is deliberately separate from employee permissions. */
+.member-access-control{margin:1rem 0 1.5rem;padding:1.25rem;border:1px solid var(--line,rgba(215,201,174,.17));border-radius:8px;background:rgba(186,154,100,.06)}
+.member-access-heading{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap}
+.member-access-heading h3{margin:0;font-size:1.2rem}.member-access-heading .kicker{margin:0 0 .3rem}.member-access-control>p{max-width:76ch;line-height:1.7}.member-access-control .button{white-space:normal;min-height:44px}.account-member-access{padding-bottom:1rem;margin-bottom:1rem;border-bottom:1px solid var(--line,rgba(215,201,174,.17))}.account-member-access .badge{white-space:normal}
+/* Higher specificity keeps existing responsive footer rules from re-forming
+   the old crowded three-column baseline. No forced single-line overflow. */
+.bravo-footer .footer-baseline.footer-baseline--split{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:.75rem 2rem;padding:1.3rem 0 1rem}
+.bravo-footer .footer-baseline.footer-baseline--split>span{min-width:0;max-width:100%;text-align:left;line-height:1.7}
+.bravo-footer .footer-baseline.footer-baseline--split>span:last-child{text-align:right}
+.bravo-footer .footer-credit{display:block;border-top:1px solid var(--line,rgba(215,201,174,.17));padding:1rem 0 1.75rem;text-align:center}
+.bravo-footer .footer-credit p{display:block;margin:0;width:100%;max-width:none;color:#b0afa7;font-family:Montserrat,Arial,sans-serif;font-size:.78rem;font-weight:400;line-height:1.8;letter-spacing:0;white-space:normal;overflow-wrap:break-word;text-align:center}
+@media(max-width:640px){.member-access-control{padding:1rem}.member-access-heading{align-items:flex-start}.bravo-footer .footer-baseline.footer-baseline--split{justify-content:center;gap:.6rem}.bravo-footer .footer-baseline.footer-baseline--split>span,.bravo-footer .footer-baseline.footer-baseline--split>span:last-child{text-align:center;width:100%}.bravo-footer .footer-credit{padding:1rem 0 calc(1.5rem + env(safe-area-inset-bottom,0px))}}
