@@ -32,10 +32,13 @@ jobs:
         run: node --test tests/reset.integration.js
         working-directory: mern
       - name: Install disposable browser test tools
-        run: npm install --no-save --package-lock=false playwright && npx playwright --version && npx playwright install --with-deps chromium webkit
+        run: |
+          npm install --no-save --package-lock=false playwright@1.63.0 >/tmp/bravo-browser-install.log 2>&1 || { tail -60 /tmp/bravo-browser-install.log; exit 1; }
+          npx playwright --version
+          npx playwright install --with-deps chromium webkit >/tmp/bravo-browser-deps.log 2>&1 || { tail -60 /tmp/bravo-browser-deps.log; exit 1; }
         working-directory: mern
       - name: Mobile WebKit and Chromium behavior checks
-        run: node scripts/reset-browser-check.mjs
+        run: mkdir -p test-artifacts && node scripts/reset-browser-check.mjs 2>&1 | tee test-artifacts/browser-results.txt
         working-directory: mern
       - name: Save verification screenshots
         if: always()
