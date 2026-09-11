@@ -1,14 +1,17 @@
-name: Apply and verify Bravo reset fixes
+name: Verify Bravo reset fixes
 on:
   push:
     branches: ['fix/bravo-reset-20260911']
-    paths: ['.github/reset_patch.py', '.github/reset_mocks.py', '.github/workflows/reset-fix-verification.yml', 'mern/scripts/reset-browser-check.mjs', 'mern/tests/reset.integration.js']
+    paths: ['.github/workflows/reset-fix-verification.yml', 'mern/**']
 permissions:
   contents: write
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 18
+    timeout-minutes: 12
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
         with:
@@ -18,8 +21,15 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: mern/package-lock.json
-      - name: Apply narrowly checked source edits
-        run: python3 .github/reset_patch.py && python3 .github/reset_mocks.py
+      - name: Match the native select accessible label including its options
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('mern/scripts/reset-browser-check.mjs')
+          text = p.read_text()
+          text = text.replace("getByLabel('Choose client', { exact: true })", "getByLabel(/^Choose client/)")
+          p.write_text(text)
+          PY
       - run: npm ci
         working-directory: mern
       - name: Production build
@@ -38,7 +48,10 @@ jobs:
           npx playwright install --with-deps chromium webkit >/tmp/bravo-browser-deps.log 2>&1 || { tail -60 /tmp/bravo-browser-deps.log; exit 1; }
         working-directory: mern
       - name: Mobile WebKit and Chromium behavior checks
-        run: mkdir -p test-artifacts && node scripts/reset-browser-check.mjs 2>&1 | tee test-artifacts/browser-results.txt
+        run: |
+          set -o pipefail
+          mkdir -p test-artifacts
+          node scripts/reset-browser-check.mjs 2>&1 | tee test-artifacts/browser-results.txt
         working-directory: mern
       - name: Save verification screenshots
         if: always()
@@ -47,11 +60,12 @@ jobs:
           name: bravo-reset-browser-checks
           path: mern/test-artifacts
           retention-days: 3
-      - name: Commit only verified source changes to the isolated fix branch
+      - name: Commit verified browser locator refinement to the isolated fix branch
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add mern/client/src mern/server/app.js mern/server/models.js mern/tests/workspace-api.test.js
-          git diff --cached --stat
-          git commit -m "Fix calendar toggle/reset, mobile date widths, desk clearing and durable chat history"
-          git push origin HEAD:fix/bravo-reset-20260911
+          git add mern/scripts/reset-browser-check.mjs
+          if ! git diff --cached --quiet; then
+            git commit -m "Verify mobile calendar, account resets and stale chat response handling"
+            git push origin HEAD:fix/bravo-reset-20260911
+          fi
