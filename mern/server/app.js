@@ -8,7 +8,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { connectDb, transaction } from './db.js';
 import { User, Session, Booking, Slot, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Lesson, BillingLock, MediaUpload, MediaChunk } from './models.js';
-import { hashPassword, verifyPassword, issueSession, identify, requireUser, requireStaff, requireOwner, signOut, publicUser, sameOrigin, rateLimit } from './auth.js';
+import { hashPassword, verifyPassword, issueSession, identify, requireUser, requireStaff, requireOwner, signOut, publicUser, publicRole, isPrimaryOwner, sameOrigin, rateLimit } from './auth.js';
 import { createBooking, getAvailability, getEntitlements, cancelBooking } from './bookings.js';
 import { stripeClient, stripeMode, stripeWebhook, checkout, refundBooking } from './payments.js';
 import { sendUploadedMedia, CHUNK_SIZE, MEDIA_LIMITS, mediaBytes, validMediaHeader } from './media.js';
@@ -54,7 +54,7 @@ app.get('/api/team', async (_req, res) => {
   if (!process.env.MONGODB_URI) return res.json({ team: [] });
   await connectDb();
   const team = await User.find({ role: { $in: ['owner', 'staff'] }, blocked: { $ne: true } }).select('name role phone title bio showPhone').sort({ role: 1, name: 1 }).lean();
-  res.json({ team: team.map(user => ({ id: String(user._id), name: user.name, role: user.role, title: user.title || (user.role === 'owner' ? 'Owner & Lead Trainer' : 'Bravo Trainer'), bio: user.bio || '', phone: user.showPhone ? user.phone : '' })) });
+  res.json({ team: team.map(user => ({ id: String(user._id), name: user.name, role: publicRole(user), title: user.title || (publicRole(user) === 'owner' ? 'Owner & Lead Trainer' : 'Bravo Trainer'), bio: user.bio || '', phone: user.showPhone ? user.phone : '' })) });
 });
 app.use('/api', sameOrigin, async (_req, _res, next) => { await connectDb(); next(); }, identify);
 app.use('/api', rateLimit('api', 240, 60000));
@@ -160,20 +160,20 @@ app.put('/api/reviews/mine', requireUser, rateLimit('review', 6, 3600000), async
 });
 app.get('/api/community', requireUser, async (_req, res) => {
   const messages = await Message.find({ deleted: false }).sort({ createdAt: -1 }).limit(100).lean();
-  res.json({ messages: messages.reverse().map(({ _id, authorName, role, kind, body, createdAt }) => ({ _id, authorName, role, kind, body, createdAt })) });
+  res.json({ messages: messages.reverse().map(({ _id, userId, authorName, role, kind, body, createdAt }) => ({ _id, authorName, role: publicRole({ _id: userId, role }), kind, body, createdAt })) });
 });
 app.post('/api/community', requireUser, rateLimit('chat', 10, 60000), async (req, res) => {
   if (req.user.mutedUntil && req.user.mutedUntil > new Date()) return res.status(403).json({ error: `Posting is paused until ${req.user.mutedUntil.toLocaleString()}.` });
   const data = z.object({ body: z.string().trim().min(1).max(700), kind: z.enum(['message', 'announcement', 'alert']).default('message') }).parse(req.body);
   if (data.kind !== 'message' && !['staff', 'owner'].includes(req.user.role)) return res.status(403).json({ error: 'Only the Bravo team can post alerts or announcements.' });
-  await Message.create({ ...data, userId: req.user._id, authorName: req.user.name, role: req.user.role });
+  await Message.create({ ...data, userId: req.user._id, authorName: req.user.name, role: publicRole(req.user) });
   res.status(201).json({ ok: true });
 });
 app.delete('/api/community/:id', requireUser, requireOwner, async (req, res) => { await Message.updateOne({ _id: req.params.id }, { $set: { deleted: true } }); res.json({ ok: true }); });
 app.get('/api/direct', requireUser, async (req, res) => {
   const memberId = ['staff', 'owner'].includes(req.user.role) && req.query.memberId ? String(req.query.memberId) : String(req.user._id);
   const messages = await DirectMessage.find({ memberId, deleted: false }).sort({ createdAt: -1, _id: -1 }).limit(200).lean();
-  res.json({ messages: messages.reverse().map(({ _id, senderName, senderRole, recipientName, body, createdAt }) => ({ _id, senderName, senderRole, recipientName, body, createdAt })) });
+  res.json({ messages: messages.reverse().map(({ _id, senderId, senderName, senderRole, recipientName, body, createdAt }) => ({ _id, senderName, senderRole: publicRole({ _id: senderId, role: senderRole }), recipientName, body, createdAt })) });
 });
 app.post('/api/direct', requireUser, rateLimit('direct', 20, 60000), async (req, res) => {
   if (req.user.mutedUntil && req.user.mutedUntil > new Date()) return res.status(403).json({ error: 'Messaging is temporarily paused for this account.' });
@@ -182,13 +182,13 @@ app.post('/api/direct', requireUser, rateLimit('direct', 20, 60000), async (req,
   if (!await User.exists({ _id: memberId, blocked: { $ne: true } })) return res.status(404).json({ error: 'Account not available.' });
   const recipient = data.recipientId ? await User.findOne({ _id: data.recipientId, role: { $in: ['staff', 'owner'] }, blocked: { $ne: true } }).select('name') : null;
   if (data.recipientId && !recipient) throw new Error('This trainer is no longer available. Choose the Bravo team.');
-  await DirectMessage.create({ memberId, senderId: req.user._id, senderName: req.user.name, senderRole: req.user.role, recipientId: recipient?._id, recipientName: recipient?.name, body: data.body });
+  await DirectMessage.create({ memberId, senderId: req.user._id, senderName: req.user.name, senderRole: publicRole(req.user), recipientId: recipient?._id, recipientName: recipient?.name, body: data.body });
   res.status(201).json({ ok: true });
 });
 app.get('/api/groups', requireUser, async (req, res) => {
   const groups = await CommunityGroup.find({ ...(req.user.role === 'owner' ? {} : { members: req.user._id }), archived: false }).lean();
   const people = await User.find({ blocked: { $ne: true } }).select('name role').sort({ name: 1 }).limit(300).lean();
-  res.json({ groups: groups.map(group => ({ ...group, _id: String(group._id), ownerId: String(group.ownerId), members: group.members.map(String) })), people: people.map(person => ({ id: String(person._id), name: person.name, role: person.role })) });
+  res.json({ groups: groups.map(group => ({ ...group, _id: String(group._id), ownerId: String(group.ownerId), members: group.members.map(String) })), people: people.map(person => ({ id: String(person._id), name: person.name, role: publicRole(person) })) });
 });
 app.post('/api/groups', requireUser, rateLimit('groups', 8, 3600000), async (req, res) => {
   if (req.user.mutedUntil > new Date()) return res.status(403).json({ error: 'Group creation is paused while this account is muted.' });
@@ -209,13 +209,14 @@ app.patch('/api/groups/:id', requireUser, async (req, res) => {
 app.get('/api/groups/:id/messages', requireUser, async (req, res) => {
   const group = await CommunityGroup.findOne({ _id: req.params.id, ...(req.user.role === 'owner' ? {} : { members: req.user._id }), archived: false });
   if (!group) return res.status(404).json({ error: 'Group not found.' });
-  const messages = await GroupMessage.find({ groupId: group._id, deleted: false }).sort({ createdAt: -1, _id: -1 }).limit(200).select('authorName role body createdAt').lean(); res.json({ messages: messages.reverse() });
+  const messages = await GroupMessage.find({ groupId: group._id, deleted: false }).sort({ createdAt: -1, _id: -1 }).limit(200).select('userId authorName role body createdAt').lean();
+  res.json({ messages: messages.reverse().map(({ userId, role, ...message }) => ({ ...message, role: publicRole({ _id: userId, role }) })) });
 });
 app.post('/api/groups/:id/messages', requireUser, rateLimit('group-chat', 20, 60000), async (req, res) => {
   if (req.user.mutedUntil && req.user.mutedUntil > new Date()) return res.status(403).json({ error: 'Posting is temporarily paused for this account.' });
   const group = await CommunityGroup.findOne({ _id: req.params.id, ...(req.user.role === 'owner' ? {} : { members: req.user._id }), archived: false }); if (!group) return res.status(404).json({ error: 'Group not found.' });
   const { body } = z.object({ body: z.string().trim().min(1).max(700) }).parse(req.body);
-  await GroupMessage.create({ groupId: group._id, userId: req.user._id, authorName: req.user.name, role: req.user.role, body }); res.status(201).json({ ok: true });
+  await GroupMessage.create({ groupId: group._id, userId: req.user._id, authorName: req.user.name, role: publicRole(req.user), body }); res.status(201).json({ ok: true });
 });
 app.delete('/api/groups/:id/messages/:messageId', requireUser, requireOwner, async (req, res) => {
   await GroupMessage.updateOne({ _id: req.params.messageId, groupId: req.params.id }, { $set: { deleted: true } }); res.json({ ok: true });
@@ -225,7 +226,7 @@ app.get('/api/admin', requireUser, requireStaff, async (req, res) => {
   const [settings, bookings, blocks, inbox] = await Promise.all([Settings.findById('schedule'), Booking.find().sort({ createdAt: -1 }).limit(200).populate({ path: 'userId', model: User, select: 'name email' }), Slot.find({ bookingId: { $exists: false } }).sort({ _id: 1 }).limit(200), DirectMessage.aggregate([{ $sort: { createdAt: -1 } }, { $group: { _id: '$memberId', lastMessage: { $first: '$body' }, updatedAt: { $first: '$createdAt' } } }, { $limit: 100 }])]);
   const names = await User.find({ _id: { $in: inbox.map(thread => thread._id) } }).select('name').lean(); const nameMap = new Map(names.map(person => [String(person._id), person.name]));
   const team = await User.find({ role: { $in: ['staff', 'owner'] }, blocked: { $ne: true } }).select('name role').sort({ name: 1 }).lean();
-  res.json({ settings, bookings, blocks, team, inbox: inbox.map(thread => ({ ...thread, memberName: nameMap.get(String(thread._id)) || 'Client' })), role: req.user.role });
+  res.json({ settings, bookings, blocks, team: team.map(person => ({ ...person, role: publicRole(person) })), inbox: inbox.map(thread => ({ ...thread, memberName: nameMap.get(String(thread._id)) || 'Client' })), role: req.user.role });
 });
 const objectId = z.string().regex(/^[a-f\d]{24}$/i);
 const searchPattern = value => new RegExp(String(value || '').trim().slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
@@ -253,16 +254,30 @@ app.get('/api/admin/bookings/:id', requireUser, requireStaff, async (req, res) =
 app.get('/api/admin/users', requireUser, requireOwner, async (req, res) => {
   const q = String(req.query.q || '').trim(); const filter = q ? { $or: [{ name: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }, { email: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }] } : {};
   const users = await User.find(filter).select('name email role phone title bio showPhone mutedUntil blocked').sort({ createdAt: -1 }).limit(100).lean();
-  res.json({ users: users.map(user => ({ ...user, _id: String(user._id) })) });
+  res.json({ users: users.map(user => ({ ...user, _id: String(user._id), isPrimaryOwner: isPrimaryOwner(user) })) });
 });
 app.patch('/api/admin/users/:id', requireUser, requireOwner, async (req, res) => {
   const target = await User.findById(objectId.parse(req.params.id));
   if (!target) return res.status(404).json({ error: 'Account not found.' });
-  if (target.role === 'owner' && (req.body.role || req.body.blocked || req.body.mutedUntil)) throw new Error('Owner access cannot be removed or muted here.');
-  if (String(req.params.id) === String(req.user._id) && (req.body.role && req.body.role !== 'owner' || req.body.blocked === true)) throw new Error('The owner account cannot remove its own access.');
-  const fields = z.object({ role: z.enum(['member', 'staff']).optional(), name: z.string().trim().min(2).max(80).optional(), phone: z.string().trim().max(30).optional(), title: z.string().trim().max(80).optional(), bio: z.string().trim().max(500).optional(), showPhone: z.boolean().optional(), blocked: z.boolean().optional(), mutedUntil: z.union([z.string().datetime(), z.null()]).optional() }).parse(req.body);
-  const user = await User.findByIdAndUpdate(req.params.id, { $set: fields }, { returnDocument: 'after' }); if (!user) return res.status(404).json({ error: 'Account not found.' });
-  if (fields.blocked) await Session.deleteMany({ userId: user._id }); res.json({ user: publicUser(user) });
+  const { confirmOwnerAccess, ...fields } = z.object({ role: z.enum(['member', 'staff', 'owner']).optional(), confirmOwnerAccess: z.boolean().optional(), name: z.string().trim().min(2).max(80).optional(), phone: z.string().trim().max(30).optional(), title: z.string().trim().max(80).optional(), bio: z.string().trim().max(500).optional(), showPhone: z.boolean().optional(), blocked: z.boolean().optional(), mutedUntil: z.union([z.string().datetime(), z.null()]).optional() }).parse(req.body);
+  const changesRole = fields.role !== undefined && fields.role !== target.role;
+  const removesAccess = (fields.role !== undefined && fields.role !== 'owner') || fields.blocked === true || !!fields.mutedUntil;
+  if (isPrimaryOwner(target) && removesAccess) throw new Error('The primary owner’s access is protected.');
+  if (String(target._id) === String(req.user._id) && removesAccess) throw new Error('You cannot remove your own administrator access.');
+  if (changesRole && fields.role === 'owner') {
+    if (target.role !== 'staff') throw new Error('Promote this customer to staff before granting administrator access.');
+    if (target.blocked || fields.blocked || (target.mutedUntil && target.mutedUntil > new Date()) || fields.mutedUntil) throw new Error('Restore this staff account before granting administrator access.');
+    if (confirmOwnerAccess !== true) throw new Error('Confirm that this staff member should receive full owner-level privileges.');
+  }
+  let updated;
+  await transaction(async session => {
+    // Compare the role so concurrent saves cannot silently overwrite a promotion.
+    updated = await User.findOneAndUpdate({ _id: target._id, role: target.role, blocked: target.blocked }, { $set: fields }, { returnDocument: 'after', runValidators: true, session });
+    if (!updated) throw Object.assign(new Error('This account changed. Refresh it before saving again.'), { status: 409 });
+    if (changesRole) await AuditEvent.create([{ actorId: req.user._id, action: 'user.access.changed', targetType: 'user', targetId: String(target._id), details: { from: target.role, to: fields.role } }], { session });
+    if (fields.blocked) await Session.deleteMany({ userId: updated._id }, { session });
+  });
+  res.json({ user: publicUser(updated) });
 });
 app.get('/api/admin/reviews', requireUser, requireOwner, async (_req, res) => res.json({ reviews: await Review.find().sort({ createdAt: -1 }).limit(200).lean() }));
 app.get('/api/admin/services', requireUser, requireOwner, async (_req, res) => res.json({ services: await effectiveServices({ includeDisabled: true }) }));

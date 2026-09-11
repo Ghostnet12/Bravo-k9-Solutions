@@ -6,7 +6,7 @@ import mongoose from 'mongoose';
 import request from 'supertest';
 import app from '../server/app.js';
 import { digest } from '../server/auth.js';
-import { ALL_MODELS, User, Session, RateBucket, Settings, ServiceSetting, Subscription, CommunityGroup, GroupMessage, DirectMessage, Lesson, MediaUpload, MediaChunk, Booking, Review } from '../server/models.js';
+import { ALL_MODELS, User, Session, RateBucket, Settings, ServiceSetting, Subscription, CommunityGroup, GroupMessage, DirectMessage, Message, Lesson, MediaUpload, MediaChunk, Booking, Review, AuditEvent } from '../server/models.js';
 const origin = 'http://localhost:5173';
 const ids = { owner: '6aa290cbd066f8feb3c1964f', staff: '111111111111111111111111', member: '222222222222222222222222', other: '333333333333333333333333' };
 function query(value) {
@@ -24,6 +24,13 @@ test('owner/staff workspace contracts over HTTP with isolated model mocks', asyn
   const users = Object.fromEntries(Object.entries(ids).map(([role, id]) => [id, { _id: id, role: role === 'other' ? 'member' : role, name: role, email: `${role}@example.test`, blocked: false, save: async function() { return this; } }]));
   t.mock.method(User, 'findById', id => query(users[String(id)] || null));
   t.mock.method(User, 'findByIdAndUpdate', (id, change) => { Object.assign(users[id], change.$set); return query(users[id]); });
+  t.mock.method(User, 'findOneAndUpdate', (filter, change) => {
+    const current = users[String(filter._id)];
+    if (!current || current.role !== filter.role || current.blocked !== filter.blocked) return query(null);
+    const updated = { ...current, ...change.$set }; users[String(filter._id)] = updated;
+    return query(updated);
+  });
+  const accessAudit = t.mock.method(AuditEvent, 'create', async events => events);
   t.mock.method(User, 'exists', filter => query(users[String(filter._id)] && !users[String(filter._id)].blocked ? { _id: filter._id } : null));
   t.mock.method(User, 'find', () => query(Object.values(users)));
   t.mock.method(Session, 'findOne', filter => query(Object.entries(ids).find(([token]) => digest(token) === filter.tokenHash) ? { userId: ids[Object.entries(ids).find(([token]) => digest(token) === filter.tokenHash)[0]] } : null));
@@ -52,6 +59,63 @@ test('owner/staff workspace contracts over HTTP with isolated model mocks', asyn
     const other = await call('other', 'get', '/api/auth/me').expect(200); assert.equal(other.body.user.role, 'member');
     users[ids.owner].role = 'staff';
     const owner = await call('owner', 'get', '/api/auth/me').expect(200); assert.equal(owner.body.user.role, 'owner');
+  });
+  await t.test('staff can receive and lose full administrator privileges without an owner title', async () => {
+    for (const role of ['staff', 'member']) {
+      await call(role, 'patch', `/api/admin/users/${ids.other}`, { role: 'owner', confirmOwnerAccess: true }).expect(403);
+      await call(role, 'get', '/api/admin/users').expect(403);
+    }
+    await call('owner', 'patch', `/api/admin/users/${ids.other}`, { role: 'owner', confirmOwnerAccess: true }).expect(400);
+    await call('owner', 'patch', `/api/admin/users/${ids.other}`, { role: 'staff', title: 'Behavior Specialist' }).expect(200);
+    await call('owner', 'patch', `/api/admin/users/${ids.other}`, { role: 'owner' }).expect(400);
+    const promoted = await call('owner', 'patch', `/api/admin/users/${ids.other}`, { role: 'owner', confirmOwnerAccess: true }).expect(200);
+    assert.equal(promoted.body.user.role, 'owner');
+    assert.equal(promoted.body.user.publicRole, 'staff');
+    assert.equal(promoted.body.user.isPrimaryOwner, false);
+    assert.equal(promoted.body.user.title, 'Behavior Specialist');
+    const event = accessAudit.mock.calls.at(-1).arguments[0][0];
+    assert.equal(String(event.actorId), ids.owner);
+    assert.deepEqual(event.details, { from: 'staff', to: 'owner' });
+    assert.equal(event.targetId, ids.other);
+    await call('other', 'get', '/api/admin/users').expect(200);
+    // Delegates get real management privileges, not just a visible menu.
+    await call('other', 'patch', `/api/admin/users/${ids.member}`, { role: 'staff' }).expect(200);
+    await call('other', 'patch', `/api/admin/users/${ids.member}`, { role: 'owner', confirmOwnerAccess: true }).expect(200);
+    await call('other', 'patch', `/api/admin/users/${ids.member}`, { role: 'member' }).expect(200);
+    await call('other', 'patch', `/api/admin/users/${ids.owner}`, { role: 'member' }).expect(400);
+    await call('other', 'patch', `/api/admin/users/${ids.owner}`, { blocked: true }).expect(400);
+    await call('other', 'patch', `/api/admin/users/${ids.owner}`, { mutedUntil: new Date(Date.now() + 60000).toISOString() }).expect(400);
+    await call('other', 'patch', `/api/admin/users/${ids.other}`, { role: 'staff' }).expect(400);
+    await call('other', 'patch', `/api/admin/users/${ids.other}`, { blocked: true }).expect(400);
+    const self = await call('other', 'get', '/api/auth/me').expect(200);
+    assert.equal(self.body.user.publicRole, 'staff');
+    const team = await call(null, 'get', '/api/team').expect(200);
+    const delegate = team.body.team.find(person => person.id === ids.other);
+    assert.equal(delegate.role, 'staff'); assert.equal(delegate.title, 'Behavior Specialist');
+    assert.equal(team.body.team.find(person => person.id === ids.owner).role, 'owner');
+
+    // Community/support role snapshots never publish delegated owner privileges.
+    const roomCreate = t.mock.method(Message, 'create', async () => ({}));
+    await call('other', 'post', '/api/community', { body: 'An administrator announcement.', kind: 'announcement' }).expect(201);
+    assert.equal(roomCreate.mock.calls.at(-1).arguments[0].role, 'staff'); roomCreate.mock.restore();
+    const directCreate = t.mock.method(DirectMessage, 'create', async () => ({}));
+    await call('other', 'post', '/api/direct', { body: 'A private staff response.' }).expect(201);
+    assert.equal(directCreate.mock.calls.at(-1).arguments[0].senderRole, 'staff'); directCreate.mock.restore();
+    const groupLookup = t.mock.method(CommunityGroup, 'findOne', () => query({ _id: ids.member }));
+    const groupCreate = t.mock.method(GroupMessage, 'create', async () => ({}));
+    await call('other', 'post', `/api/groups/${ids.member}/messages`, { body: 'A group staff response.' }).expect(201);
+    assert.equal(groupCreate.mock.calls.at(-1).arguments[0].role, 'staff'); groupCreate.mock.restore(); groupLookup.mock.restore();
+    await call('owner', 'patch', `/api/admin/users/${ids.other}`, { role: 'staff' }).expect(200);
+    await call('other', 'get', '/api/admin/users').expect(403);
+    await call('owner', 'patch', `/api/admin/users/${ids.other}`, { role: 'member' }).expect(200);
+  });
+  await t.test('blocked staff cannot gain administrator access and profile edits cannot escalate roles', async () => {
+    await call('owner', 'patch', `/api/admin/users/${ids.other}`, { role: 'staff', blocked: true }).expect(200);
+    await call('owner', 'patch', `/api/admin/users/${ids.other}`, { role: 'owner', confirmOwnerAccess: true }).expect(400);
+    await call('owner', 'patch', `/api/admin/users/${ids.other}`, { role: 'member', blocked: false }).expect(200);
+    const fields = { name: users[ids.member].name, dogName: '', phone: '', address: '', role: 'owner', isPrimaryOwner: true, confirmOwnerAccess: true };
+    await call('member', 'patch', '/api/auth/profile', fields).expect(200);
+    assert.equal(users[ids.member].role, 'member');
   });
   await t.test('block revokes protected access and mute stops room and group posting', async () => {
     await call('owner', 'patch', `/api/admin/users/${ids.other}`, { blocked: true }).expect(200);
