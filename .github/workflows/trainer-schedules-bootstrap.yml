@@ -22,7 +22,7 @@ jobs:
           cache: npm
           cache-dependency-path: mern/package-lock.json
       - name: Apply exact integration changes
-        run: python3 mern/scripts/apply-trainer-schedules.py
+        run: python3 mern/scripts/apply-trainer-schedules.py && python3 mern/scripts/trainer-schedule-review.py
       - run: npm ci
         working-directory: mern
       - run: npm run build
@@ -60,7 +60,7 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git rm mern/scripts/apply-trainer-schedules.py .github/workflows/trainer-schedules-bootstrap.yml
+          git rm mern/scripts/apply-trainer-schedules.py mern/scripts/trainer-schedule-review.py .github/workflows/trainer-schedules-bootstrap.yml
           git add mern/server mern/client/src mern/tests/workspace-api.test.js
           git commit -m 'Publish individual trainer schedules below homepage photos and enforce working days'
           git push origin HEAD:feature/public-trainer-availability-20260911
