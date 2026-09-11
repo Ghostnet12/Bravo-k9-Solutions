@@ -2,11 +2,12 @@ import { z } from 'zod';
 import { Booking, Settings, Slot, Subscription } from './models.js';
 import { transaction } from './db.js';
 import { availability, validateVisits, dateTime, dateRange } from './scheduling.js';
-import { quote, serviceSelection } from '../shared/catalog.js';
+import { quote, serviceSelection, TRAINING_FOCUSES } from '../shared/catalog.js';
 import { effectiveServices } from './services.js';
 export const bookingInput = z.object({
   requestKey: z.string().uuid(), serviceIds: z.array(z.string()).min(1).max(4),
   visits: z.array(z.object({ date: z.string(), time: z.string(), service: z.string() })).max(62),
+  trainingFocus: z.enum(TRAINING_FOCUSES.map(focus => focus.id)).optional(),
   dogCount: z.number().int().min(1).max(10).default(1),
   dogName: z.string().trim().min(1).max(80), phone: z.string().trim().min(7).max(30),
   address: z.string().trim().max(300), notes: z.string().trim().max(1500).default(''),
@@ -34,6 +35,8 @@ export async function getAvailability(from, to) {
 }
 export async function createBooking(userId, payload, assignment = {}) {
   const data = bookingInput.parse(payload);
+  if (data.serviceIds.includes('training')) data.trainingFocus ||= 'basic-obedience';
+  else delete data.trainingFocus;
   const catalog = await effectiveServices();
   serviceSelection(data.serviceIds, catalog);
   validateVisits(data.serviceIds, data.visits, catalog);

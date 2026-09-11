@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DateTime } from 'luxon';
-import { quote, serviceSelection } from '../shared/catalog.js';
+import { quote, serviceSelection, TRAINING_FOCUSES } from '../shared/catalog.js';
 import { availability, autoSchedule, dateTime, validateVisits, HOURS, dateRange } from '../server/scheduling.js';
 import { hashPassword, verifyPassword } from '../server/auth.js';
 import { privatePath } from '../server/lessons.js';
@@ -23,6 +23,11 @@ test('Bravo pricing stays exact and recurring charges are separated', () => {
 test('duplicate programs, unknown services, and conflicting selections are rejected', () => {
   for (const ids of [[], ['training','training'], ['free'], ['sitting'], ['complete'], ['all-access'], ['training','aggression']]) assert.throws(() => serviceSelection(ids));
   assert.doesNotThrow(() => serviceSelection(['walking']));
+});
+test('professional training exposes the complete focus menu with stable unique values', () => {
+  const names = TRAINING_FOCUSES.map(focus => focus.name);
+  for (const expected of ['Basic obedience', 'Advanced obedience', 'Job-specific working-dog training', 'Service dog training', 'Law-enforcement K9 training', 'Search-and-rescue training', 'Executive protection training']) assert.ok(names.includes(expected));
+  assert.equal(new Set(TRAINING_FOCUSES.map(focus => focus.id)).size, TRAINING_FOCUSES.length);
 });
 test('training coverage never silently extends to unpaid additional dogs', () => {
   const oneDog = { services: ['training'], serviceDogCounts: { training: 1 } };

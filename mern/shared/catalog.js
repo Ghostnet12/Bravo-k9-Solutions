@@ -5,6 +5,18 @@ export const SERVICES = [
   { id: 'aggression', name: 'Aggressive-dog intake', cents: 40000, interval: 'once', includes: ['aggression'], description: 'Initial assessment with two trainers.' },
 ];
 export const TRAINING_ADDITIONAL_DOG_CENTS = 10000;
+export const TRAINING_FOCUSES = [
+  { id: 'basic-obedience', name: 'Basic obedience' },
+  { id: 'advanced-obedience', name: 'Advanced obedience' },
+  { id: 'puppy-foundations', name: 'Puppy foundations' },
+  { id: 'behavior-modification', name: 'Behavior modification' },
+  { id: 'job-specific', name: 'Job-specific working-dog training' },
+  { id: 'service-dog', name: 'Service dog training' },
+  { id: 'law-enforcement', name: 'Law-enforcement K9 training' },
+  { id: 'search-and-rescue', name: 'Search-and-rescue training' },
+  { id: 'executive-protection', name: 'Executive protection training' },
+];
+export const trainingFocusName = id => TRAINING_FOCUSES.find(focus => focus.id === id)?.name || 'Professional training';
 // Retained only to label historical records. These programs are never exposed
 // to new quotes, bookings, checkout, or owner service controls.
 export const LEGACY_SERVICES = [

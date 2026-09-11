@@ -1,4 +1,5 @@
 import { DateTime } from 'luxon';
+import { trainingFocusName } from './catalog.js';
 const escapeText = value => String(value || '').replaceAll('\\', '\\\\').replaceAll('\n', '\\n').replaceAll('\r', '').replaceAll(';', '\\;').replaceAll(',', '\\,');
 const stamp = date => date.toUTC().toFormat("yyyyMMdd'T'HHmmss'Z'");
 // Fold by UTF-8 octets, without splitting a Unicode character (RFC 5545).
@@ -18,7 +19,8 @@ export function bookingCalendar(booking, now = DateTime.utc()) {
     const start = DateTime.fromISO(`${visit.date}T${visit.time}`, { zone: 'America/Chicago' });
     if (!start.isValid) throw new Error('Invalid appointment date.');
     const end = start.plus({ minutes: visit.service === 'walking' ? 30 : 60 });
-    lines.push('BEGIN:VEVENT', `UID:${escapeText(booking._id)}-${visit.date}-${visit.time.replace(':', '')}@bravo-k9`, `DTSTAMP:${stamp(now)}`, `DTSTART:${stamp(start)}`, `DTEND:${stamp(end)}`, `SUMMARY:${escapeText(`Bravo K9: ${visit.service} for ${booking.dogName}`)}`, `LOCATION:${escapeText(booking.address)}`, 'DESCRIPTION:Confirmed Bravo visit. Please provide at least 24 hours notice for changes. Call (605) 824-2767. This calendar entry does not update automatically.', 'STATUS:CONFIRMED', 'END:VEVENT');
+    const serviceName = visit.service === 'training' ? trainingFocusName(booking.trainingFocus) : visit.service;
+    lines.push('BEGIN:VEVENT', `UID:${escapeText(booking._id)}-${visit.date}-${visit.time.replace(':', '')}@bravo-k9`, `DTSTAMP:${stamp(now)}`, `DTSTART:${stamp(start)}`, `DTEND:${stamp(end)}`, `SUMMARY:${escapeText(`Bravo K9: ${serviceName} for ${booking.dogName}`)}`, `LOCATION:${escapeText(booking.address)}`, 'DESCRIPTION:Confirmed Bravo visit. Please provide at least 24 hours notice for changes. Call (605) 824-2767. This calendar entry does not update automatically.', 'STATUS:CONFIRMED', 'END:VEVENT');
   }
   return lines.map(fold).join('\r\n') + '\r\n';
 }
