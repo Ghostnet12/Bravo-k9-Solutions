@@ -48,7 +48,7 @@ export async function checkout(booking, user, stripe) {
     })),
     ...(pricing.monthlyCents ? { subscription_data: { metadata } } : {}),
     expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
-    success_url: `${origin}/account?payment=verifying`, cancel_url: `${origin}/account?payment=cancelled`,
+    success_url: `${origin}/account?payment=verifying&booking=${encodeURIComponent(bookingId)}&session_id={CHECKOUT_SESSION_ID}`, cancel_url: `${origin}/account?payment=cancelled&booking=${encodeURIComponent(bookingId)}`,
   };
   // Persist identical parameters before calling Stripe, including the expiry timestamp.
   // A network retry must not change parameters under the same idempotency key.
@@ -85,7 +85,7 @@ export async function processStripeEvent(event, stripe) {
         await Subscription.updateOne({ stripeId: sub.id }, { $set: { userId: user._id, serviceIds: ids, status: sub.status, validUntil: new Date(until * 1000), lastEventAt: event.created } }, { upsert: true, session });
       }
     }
-    if (event.type === 'checkout.session.completed' && object.metadata?.app === 'bravo-k9' && object.payment_status === 'paid') {
+    if (['checkout.session.completed', 'checkout.session.async_payment_succeeded'].includes(event.type) && object.metadata?.app === 'bravo-k9' && object.payment_status === 'paid') {
       const booking = await Booking.findById(object.metadata.bookingId).session(session);
       if (!booking || String(booking.userId) !== object.metadata.userId) throw new Error('Booking owner mismatch.');
       if (object.currency !== 'usd' || object.amount_total !== booking.quote.dueNowCents) throw new Error('Checkout amount mismatch.');
@@ -93,6 +93,10 @@ export async function processStripeEvent(event, stripe) {
       await BillingLock.deleteOne({ _id: object.metadata.userId, bookingId: String(booking._id) }, { session });
     }
     if (event.type === 'checkout.session.expired' && object.metadata?.app === 'bravo-k9') {
+      await BillingLock.deleteOne({ _id: object.metadata.userId, bookingId: object.metadata.bookingId }, { session });
+    }
+    if (event.type === 'checkout.session.async_payment_failed' && object.metadata?.app === 'bravo-k9') {
+      await Booking.updateOne({ _id: object.metadata.bookingId, userId: object.metadata.userId, paymentStatus: 'unpaid' }, { $set: { checkoutStarting: false } }, { session });
       await BillingLock.deleteOne({ _id: object.metadata.userId, bookingId: object.metadata.bookingId }, { session });
     }
   }).catch(async error => { if (error.code !== 11000 || !await StripeEvent.exists({ _id: event.id })) throw error; });

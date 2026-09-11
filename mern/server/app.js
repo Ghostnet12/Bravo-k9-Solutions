@@ -140,7 +140,7 @@ app.post('/api/bookings/:id/checkout', requireUser, rateLimit('checkout', 20, 36
   if (String(booking.userId) !== String(req.user._id)) return res.status(403).json({ error: 'Only the customer can open their checkout.' });
   res.json(await checkout(booking, req.user, stripe));
 });
-app.post('/api/billing/portal', requireUser, async (req, res) => {
+app.post('/api/billing/portal', requireUser, rateLimit('billing-portal', 10, 3600000), async (req, res) => {
   const stripe = stripeClient();
   if (!stripe || !req.user.stripeCustomerId) return paymentsUnavailable(res);
   const portal = await stripe.billingPortal.sessions.create({ customer: req.user.stripeCustomerId, return_url: `${process.env.APP_ORIGIN}/account` });
