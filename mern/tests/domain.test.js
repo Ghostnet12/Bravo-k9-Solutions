@@ -51,8 +51,14 @@ test('private media cannot use path traversal or public URLs', () => {
   for(const file of ['../secrets.mp4','https://example.com/a.mp4','/etc/password','nested/file.mp4']) assert.throws(() => privatePath(file));
 });
 test('live Stripe keys require an explicit launch switch', () => {
-  const old = { key:process.env.STRIPE_SECRET_KEY, secret:process.env.STRIPE_WEBHOOK_SECRET, enabled:process.env.STRIPE_LIVE_ENABLED };
+  const old = { key:process.env.STRIPE_SECRET_KEY, secret:process.env.STRIPE_WEBHOOK_SECRET, enabled:process.env.STRIPE_LIVE_ENABLED, vercel:process.env.VERCEL_ENV, testEnabled:process.env.STRIPE_TEST_CHECKOUT_ENABLED };
   process.env.STRIPE_SECRET_KEY='sk_live_not_real'; process.env.STRIPE_WEBHOOK_SECRET='whsec_not_real'; delete process.env.STRIPE_LIVE_ENABLED;
   assert.equal(stripeClient(),null);
-  for(const [key,value] of Object.entries({STRIPE_SECRET_KEY:old.key,STRIPE_WEBHOOK_SECRET:old.secret,STRIPE_LIVE_ENABLED:old.enabled})) value === undefined ? delete process.env[key] : process.env[key]=value;
+  process.env.STRIPE_SECRET_KEY='rk_live_not_real';
+  assert.equal(stripeClient(),null);
+  process.env.STRIPE_SECRET_KEY='sk_test_not_real'; process.env.VERCEL_ENV='production'; delete process.env.STRIPE_TEST_CHECKOUT_ENABLED;
+  assert.equal(stripeClient(),null);
+  process.env.STRIPE_TEST_CHECKOUT_ENABLED='true';
+  assert.ok(stripeClient());
+  for(const [key,value] of Object.entries({STRIPE_SECRET_KEY:old.key,STRIPE_WEBHOOK_SECRET:old.secret,STRIPE_LIVE_ENABLED:old.enabled,VERCEL_ENV:old.vercel,STRIPE_TEST_CHECKOUT_ENABLED:old.testEnabled})) value === undefined ? delete process.env[key] : process.env[key]=value;
 });

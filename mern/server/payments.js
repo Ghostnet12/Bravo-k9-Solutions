@@ -2,9 +2,18 @@ import Stripe from 'stripe';
 import { Booking, User, Subscription, StripeEvent, BillingLock, Lesson } from './models.js';
 import { connectDb, transaction } from './db.js';
 import { ALL_SERVICES, serviceSelection } from '../shared/catalog.js';
+export function stripeMode() {
+  const key = process.env.STRIPE_SECRET_KEY || '';
+  if (/^(?:sk|rk)_live_/.test(key)) return 'live';
+  if (/^(?:sk|rk)_test_/.test(key)) return 'test';
+  return null;
+}
 export function stripeClient() {
   const key = process.env.STRIPE_SECRET_KEY;
-  if (!key || !process.env.STRIPE_WEBHOOK_SECRET || (key.startsWith('sk_live_') && process.env.STRIPE_LIVE_ENABLED !== 'true')) return null;
+  const mode = stripeMode();
+  if (!key || !mode || !process.env.STRIPE_WEBHOOK_SECRET) return null;
+  if (mode === 'live' && process.env.STRIPE_LIVE_ENABLED !== 'true') return null;
+  if (mode === 'test' && process.env.VERCEL_ENV === 'production' && process.env.STRIPE_TEST_CHECKOUT_ENABLED !== 'true') return null;
   return new Stripe(key, { maxNetworkRetries: 2, timeout: 12000 });
 }
 export async function checkout(booking, user, stripe) {

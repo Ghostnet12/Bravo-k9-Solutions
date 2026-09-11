@@ -10,7 +10,7 @@ import { connectDb, transaction } from './db.js';
 import { User, Session, Booking, Slot, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Lesson, BillingLock, MediaUpload, MediaChunk } from './models.js';
 import { hashPassword, verifyPassword, issueSession, identify, requireUser, requireStaff, requireOwner, signOut, publicUser, sameOrigin, rateLimit } from './auth.js';
 import { createBooking, getAvailability, getEntitlements, cancelBooking } from './bookings.js';
-import { stripeClient, stripeWebhook, checkout, refundBooking } from './payments.js';
+import { stripeClient, stripeMode, stripeWebhook, checkout, refundBooking } from './payments.js';
 import { sendUploadedMedia, CHUNK_SIZE, MEDIA_LIMITS, mediaBytes, validMediaHeader } from './media.js';
 import { LESSON_PREVIEWS, privatePath, protectedLesson } from './lessons.js';
 import { DEFAULT_SCHEDULE, HOURS, autoSchedule, validateVisits, availability, dateTime } from './scheduling.js';
@@ -38,8 +38,9 @@ app.get('/api/config', async (_req, res) => {
     connectionIssue = error.databaseIssue || 'unavailable';
   }
   const paymentsReady = connected && !!stripeClient();
+  const paymentsMode = paymentsReady ? stripeMode() : 'paused';
   const services = connected ? await effectiveServices({ includeDisabled: true }) : SERVICES.map(service => ({ ...service, enabled: true }));
-  res.json({ connected, connectionIssue, paymentsReady, paymentsPaused: !paymentsReady, workspaceVersion: 'owner-staff-3', schedule, timezone: 'America/Chicago', services });
+  res.json({ connected, connectionIssue, paymentsReady, paymentsPaused: !paymentsReady, paymentsMode, workspaceVersion: 'owner-staff-3', schedule, timezone: 'America/Chicago', services });
 });
 app.get('/api/lessons', async (_req, res) => {
   if (!process.env.MONGODB_URI) return res.json({ lessons: LESSON_PREVIEWS });
