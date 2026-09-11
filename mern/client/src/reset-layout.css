@@ -1,0 +1,10 @@
+/* Keep native date inputs inside their grid cell, including iOS WebKit. */
+.app-page .form-grid, .booking-main, .booking-fields, .app-page .form-grid > *, .app-page label { min-width: 0; min-inline-size: 0; }
+.app-page input:not([type="checkbox"]):not([type="radio"]), .app-page select, .app-page textarea { box-sizing: border-box; max-width: 100%; min-width: 0; }
+.app-page input[type="date"], .app-page input[type="datetime-local"], .app-page input[type="time"] { display: block; width: 100%; inline-size: 100%; min-inline-size: 0; max-inline-size: 100%; box-sizing: border-box; -webkit-appearance: none; appearance: none; text-align: left; }
+.app-page input::-webkit-date-and-time-value { min-width: 0; text-align: left; }
+.app-page input::-webkit-datetime-edit { min-width: 0; padding: 0; }
+.booking-schedule-actions, .reset-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
+.booking-schedule-actions > button, .reset-actions > button { min-height: 44px; max-width: 100%; white-space: normal; }
+.desk-reset { margin-bottom: 1rem; }
+@media(max-width: 600px) { .booking-schedule-actions > button { width: 100%; } .thread-tools { flex-wrap: wrap; } }
