@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { api } from './api';
 import { Notice } from './ui';
+import { useBravo } from './context';
+import { isImageEditor } from '../../shared/site-images';
 
 const emptyLesson = () => ({ _id: '', title: '', category: 'Foundations', instructor: 'David Northrop', image: '/images/training-education.webp', videoFile: '', captionFile: '', transcript: '', published: false, media: {} });
 const images = ['training-education', 'hero-bravo-k9', 'obedience-real-world', 'tracking-training', 'service-dog-training'];
@@ -9,10 +11,22 @@ const mediaRules = { video: { accept: 'video/mp4,video/webm', label: 'Lesson vid
 function base64(bytes) { let value = ''; const view = new Uint8Array(bytes); for (let index = 0; index < view.length; index += 8192) value += String.fromCharCode(...view.subarray(index, index + 8192)); return btoa(value); }
 
 export default function LessonEditor() {
+  const { user } = useBravo();
+  return isImageEditor(user) ? <LessonStudio/> : null;
+}
+function LessonStudio() {
   const [lessons, setLessons] = useState([]), [draft, setDraft] = useState(null), [isNew, setNew] = useState(false);
   const [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false), [dirty, setDirty] = useState(false), [progress, setProgress] = useState('');
   const load = () => api('/admin/lessons').then(data => { setLessons(data.lessons); return data.lessons; });
   useEffect(() => { load().catch(e => setError(e.message)); }, []);
+  useEffect(() => {
+    const updated = () => load().then(rows => {
+      if (!dirty) setDraft(current => current ? { ...emptyLesson(), ...(rows.find(row => row._id === current._id) || current) } : current);
+      setNotice('Video updated through the media editor. Review captions and transcript before publishing the lesson.');
+    }).catch(e => setError(e.message));
+    window.addEventListener('bravo-media-updated', updated);
+    return () => window.removeEventListener('bravo-media-updated', updated);
+  }, [dirty]);
   useEffect(() => { if (!dirty) return; const warn = e => { e.preventDefault(); e.returnValue = ''; }; window.addEventListener('beforeunload', warn); return () => window.removeEventListener('beforeunload', warn); }, [dirty]);
   function choose(lesson, fresh = false) { if (dirty && !window.confirm('Discard the unsaved lesson changes?')) return; setDraft({ ...emptyLesson(), ...lesson }); setNew(fresh); setDirty(false); setError(''); setNotice(''); }
   function field(name, value) { setDraft(current => ({ ...current, [name]: value })); setDirty(true); }
@@ -40,7 +54,7 @@ export default function LessonEditor() {
   }
   async function removeMedia(kind) { if (dirty) return setError('Save your lesson changes before removing media.'); if (!window.confirm(`Permanently remove this ${mediaRules[kind].label.toLowerCase()}? Keep a copy of your original file.`)) return; setBusy(true); try { await api(`/admin/lessons/${draft._id}/media/${kind}`, { method: 'DELETE', body: {} }); const next = await load(); setDraft({ ...emptyLesson(), ...next.find(lesson => lesson._id === draft._id) }); setNotice('Media removed.'); } catch (e) { setError(e.message); } finally { setBusy(false); } }
   return <section id="lesson-editor" className="panel lesson-studio">
-    <div className="section-label"><div><p className="kicker gold">STAFF CONTENT TOOLS</p><h2>Lesson studio.</h2></div><button className="button button-small button-ghost" disabled={busy} onClick={() => choose(emptyLesson(), true)}>New lesson</button></div>
+    <div className="section-label"><div><p className="kicker gold">ADMINISTRATOR CONTENT TOOLS</p><h2>Lesson studio.</h2></div><button className="button button-small button-ghost" disabled={busy} onClick={() => choose(emptyLesson(), true)}>New lesson</button></div>
     <p>Create the lesson first, then upload its cover, video, and captions. New lesson videos stay private until you publish. Replacing a video or captions returns that lesson to draft.</p><Notice error>{error}</Notice><Notice>{notice || progress}</Notice>
     <label>Choose a lesson<select value={draft?._id || ''} disabled={busy} onChange={e => { const lesson = lessons.find(l => l._id === e.target.value); if (lesson) choose(lesson); }}><option value="">Select a lesson to edit</option>{lessons.map(l => <option key={l._id} value={l._id}>{l.title} — {l.published ? 'Published' : 'Draft'}</option>)}</select></label>
     {draft && <form onSubmit={e => { e.preventDefault(); save(false); }}><fieldset disabled={busy} className="editor-fields"><div className="form-grid"><label>Lesson ID<input value={draft._id} disabled={!isNew || busy} onChange={e => field('_id', e.target.value)} pattern="[a-z0-9-]{1,80}" maxLength="80" required placeholder="loose-leash-basics"/></label><label>Title<input value={draft.title} onChange={e => field('title', e.target.value)} maxLength="120" required/></label><label>Topic<input value={draft.category} onChange={e => field('category', e.target.value)} maxLength="40" required/></label><label>Instructor<input value={draft.instructor} onChange={e => field('instructor', e.target.value)} maxLength="80" required/></label><label>Built-in cover<select value={draft.image.startsWith('/images/') ? draft.image : '/images/training-education.webp'} onChange={e => field('image', e.target.value)}>{images.map(i => <option key={i} value={`/images/${i}.webp`}>{i.replaceAll('-', ' ')}</option>)}</select></label></div>
