@@ -39,44 +39,66 @@ export async function checkout(booking, user, stripe) {
   if (subscriptions.some(sub => serviceSelection(sub.serviceIds, ALL_SERVICES).some(s => s.includes.some(i => recurring.includes(i))))) throw Object.assign(new Error('An existing membership overlaps this purchase. Manage it in Billing or contact Bravo before changing plans.'), { status: 409 });
   const lockId = String(user._id), bookingId = String(booking._id);
   // One purchase at a time per customer. Never expire a local lock before Stripe's session expires.
+  let lockAcquired = false;
   try {
     await BillingLock.findOneAndUpdate({ _id: lockId, $or: [{ bookingId }, { expiresAt: { $lt: new Date() } }] }, { $set: { bookingId, expiresAt: new Date(Date.now() + 31 * 60 * 1000) } }, { upsert: true });
+    lockAcquired = true;
   } catch (error) {
-    if (error.code === 11000) throw Object.assign(new Error('You already have a checkout in progress. Finish or cancel that request first.'), { status: 409 });
+    if (error.code !== 11000) throw error;
+    // Recover a lock left by an attempt that failed before Stripe created a session.
+    const existingLock = await BillingLock.findById(lockId).lean();
+    const lockedBooking = existingLock?.bookingId
+      ? await Booking.findById(existingLock.bookingId).select('stripeSessionId checkoutStarting').lean()
+      : null;
+    if (existingLock && lockedBooking && !lockedBooking.stripeSessionId && !lockedBooking.checkoutStarting) {
+      const cleared = await BillingLock.deleteOne({ _id: lockId, bookingId: existingLock.bookingId });
+      if (cleared.deletedCount) {
+        await BillingLock.findOneAndUpdate({ _id: lockId }, { $set: { bookingId, expiresAt: new Date(Date.now() + 31 * 60 * 1000) } }, { upsert: true });
+        lockAcquired = true;
+      }
+    }
+    if (!lockAcquired) throw Object.assign(new Error('You already have a checkout in progress. Finish or cancel that request first.'), { status: 409 });
+  }
+  try {
+    if (booking.stripeSessionId) {
+      const current = await stripe.checkout.sessions.retrieve(booking.stripeSessionId);
+      if (current.status === 'open') return { url: current.url };
+      if (current.status === 'complete') throw Object.assign(new Error('Payment is being verified. Please refresh your account shortly.'), { status: 409 });
+      throw Object.assign(new Error('This checkout expired. Cancel this request and create a new one to pay.'), { status: 409 });
+    }
+    let customerId = user.stripeCustomerId;
+    if (!customerId) {
+      const customer = await stripe.customers.create({ email: user.email, name: user.name, metadata: { app: 'bravo-k9', userId: String(user._id) } }, { idempotencyKey: `bravo-customer-${user._id}` });
+      customerId = customer.id;
+      await User.updateOne({ _id: user._id }, { $set: { stripeCustomerId: customerId } });
+    }
+    const pricing = validatedCheckoutPricing(booking);
+    const metadata = { app: 'bravo-k9', userId: String(user._id), bookingId, dogCount: String(booking.dogCount || 1), serviceIds: JSON.stringify(booking.serviceIds.filter(id => selected.find(s => s.id === id).interval === 'month')) };
+    const params = {
+      mode: pricing.monthlyCents ? 'subscription' : 'payment', customer: customerId,
+      client_reference_id: bookingId, metadata,
+      line_items: pricing.lines.filter(l => l.quantity > 0).map(line => ({
+        quantity: line.quantity, price_data: { currency: 'usd', unit_amount: line.unitCents, product_data: { name: `Bravo K9 — ${line.name}` }, ...(line.interval === 'month' ? { recurring: { interval: 'month' } } : {}) },
+      })),
+      ...(pricing.monthlyCents ? { subscription_data: { metadata } } : {}),
+      expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
+      success_url: `${origin}/account?payment=verifying&booking=${encodeURIComponent(bookingId)}&session_id={CHECKOUT_SESSION_ID}`, cancel_url: `${origin}/account?payment=cancelled&booking=${encodeURIComponent(bookingId)}`,
+    };
+    // Persist identical parameters before calling Stripe, including the expiry timestamp.
+    // A network retry must not change parameters under the same idempotency key.
+    await Booking.updateOne({ _id: booking._id, status: { $ne: 'cancelled' }, checkoutParams: { $exists: false } }, { $set: { checkoutParams: params, checkoutStarting: true } });
+    const attempt = await Booking.findById(booking._id).select('+checkoutParams');
+    if (!attempt?.checkoutParams || attempt.status === 'cancelled') throw new Error('This booking was cancelled before checkout began.');
+    const session = await stripe.checkout.sessions.create(attempt.checkoutParams, { idempotencyKey: `bravo-checkout-${bookingId}` });
+    await Booking.updateOne({ _id: booking._id }, { $set: { stripeSessionId: session.id, checkoutUrl: session.url, checkoutExpiresAt: new Date(session.expires_at * 1000), checkoutStarting: false } });
+    return { url: session.url };
+  } catch (error) {
+    await Promise.allSettled([
+      BillingLock.deleteOne({ _id: lockId, bookingId }),
+      Booking.updateOne({ _id: bookingId, stripeSessionId: { $exists: false } }, { $set: { checkoutStarting: false } }),
+    ]);
     throw error;
   }
-  if (booking.stripeSessionId) {
-    const current = await stripe.checkout.sessions.retrieve(booking.stripeSessionId);
-    if (current.status === 'open') return { url: current.url };
-    if (current.status === 'complete') throw Object.assign(new Error('Payment is being verified. Please refresh your account shortly.'), { status: 409 });
-    throw Object.assign(new Error('This checkout expired. Cancel this request and create a new one to pay.'), { status: 409 });
-  }
-  let customerId = user.stripeCustomerId;
-  if (!customerId) {
-    const customer = await stripe.customers.create({ email: user.email, name: user.name, metadata: { app: 'bravo-k9', userId: String(user._id) } }, { idempotencyKey: `bravo-customer-${user._id}` });
-    customerId = customer.id;
-    await User.updateOne({ _id: user._id }, { $set: { stripeCustomerId: customerId } });
-  }
-  const pricing = validatedCheckoutPricing(booking);
-  const metadata = { app: 'bravo-k9', userId: String(user._id), bookingId, dogCount: String(booking.dogCount || 1), serviceIds: JSON.stringify(booking.serviceIds.filter(id => selected.find(s => s.id === id).interval === 'month')) };
-  const params = {
-    mode: pricing.monthlyCents ? 'subscription' : 'payment', customer: customerId,
-    client_reference_id: bookingId, metadata,
-    line_items: pricing.lines.filter(l => l.quantity > 0).map(line => ({
-      quantity: line.quantity, price_data: { currency: 'usd', unit_amount: line.unitCents, product_data: { name: `Bravo K9 — ${line.name}` }, ...(line.interval === 'month' ? { recurring: { interval: 'month' } } : {}) },
-    })),
-    ...(pricing.monthlyCents ? { subscription_data: { metadata } } : {}),
-    expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
-    success_url: `${origin}/account?payment=verifying&booking=${encodeURIComponent(bookingId)}&session_id={CHECKOUT_SESSION_ID}`, cancel_url: `${origin}/account?payment=cancelled&booking=${encodeURIComponent(bookingId)}`,
-  };
-  // Persist identical parameters before calling Stripe, including the expiry timestamp.
-  // A network retry must not change parameters under the same idempotency key.
-  await Booking.updateOne({ _id: booking._id, status: { $ne: 'cancelled' }, checkoutParams: { $exists: false } }, { $set: { checkoutParams: params, checkoutStarting: true } });
-  const attempt = await Booking.findById(booking._id).select('+checkoutParams');
-  if (!attempt?.checkoutParams || attempt.status === 'cancelled') throw new Error('This booking was cancelled before checkout began.');
-  const session = await stripe.checkout.sessions.create(attempt.checkoutParams, { idempotencyKey: `bravo-checkout-${bookingId}` });
-  await Booking.updateOne({ _id: booking._id }, { $set: { stripeSessionId: session.id, checkoutUrl: session.url, checkoutExpiresAt: new Date(session.expires_at * 1000), checkoutStarting: false } });
-  return { url: session.url };
 }
 function subscriptionId(object) {
   const value = object.subscription || object.parent?.subscription_details?.subscription;

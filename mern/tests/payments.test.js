@@ -48,3 +48,41 @@ test('checkout uses the verified server quote and safe Stripe return flow', asyn
   assert.match(received.params.cancel_url, /payment=cancelled&booking=68c20f8f5c734fa0f944ad10$/);
   assert.equal(received.options.idempotencyKey, `bravo-checkout-${booking._id}`);
 });
+
+test('checkout recovers an abandoned lock that has no Stripe session', async t => {
+  const previousOrigin = process.env.APP_ORIGIN;
+  process.env.APP_ORIGIN = 'https://bravounleashed.com';
+  t.after(() => previousOrigin === undefined ? delete process.env.APP_ORIGIN : process.env.APP_ORIGIN = previousOrigin);
+
+  const booking = {
+    _id: '68c20f8f5c734fa0f944ad20', userId: '68c20f8f5c734fa0f944ad21', status: 'requested', paymentStatus: 'unpaid',
+    serviceIds: ['walking'], dogCount: 1,
+    visits: [{ date: '2026-09-22', time: '10:00', service: 'walking' }],
+  };
+  booking.quote = quote(booking.serviceIds, booking.visits, { dogCount: 1 });
+  const user = { _id: booking.userId, email: 'client@example.test', name: 'Bravo Client', stripeCustomerId: 'cus_live_bravo' };
+  let lockAttempts = 0, lockDeleted = false, persistedParams;
+  t.mock.method(Subscription, 'find', () => query([]));
+  t.mock.method(BillingLock, 'findOneAndUpdate', async () => {
+    lockAttempts += 1;
+    if (lockAttempts === 1) throw Object.assign(new Error('duplicate'), { code: 11000 });
+    return {};
+  });
+  t.mock.method(BillingLock, 'findById', () => query({ _id: String(user._id), bookingId: '68c20f8f5c734fa0f944ad19' }));
+  t.mock.method(BillingLock, 'deleteOne', async () => { lockDeleted = true; return { deletedCount: 1 }; });
+  let bookingReads = 0;
+  t.mock.method(Booking, 'findById', id => {
+    bookingReads += 1;
+    return query(bookingReads === 1 ? { _id: id, checkoutStarting: false } : { ...booking, checkoutParams: persistedParams });
+  });
+  t.mock.method(Booking, 'updateOne', async (_filter, change) => {
+    if (change.$set?.checkoutParams) persistedParams = change.$set.checkoutParams;
+    return { matchedCount: 1, modifiedCount: 1 };
+  });
+  const stripe = { checkout: { sessions: { create: async () => ({ id: 'cs_live_bravo', url: 'https://checkout.stripe.com/session', expires_at: 1789999999 }) } } };
+
+  const result = await checkout(booking, user, stripe);
+  assert.equal(result.url, 'https://checkout.stripe.com/session');
+  assert.equal(lockAttempts, 2);
+  assert.equal(lockDeleted, true);
+});
