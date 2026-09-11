@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { connectDb, transaction } from './db.js';
 import { User, Session, Booking, Slot, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Lesson, BillingLock, MediaUpload, MediaChunk } from './models.js';
 import { hashPassword, verifyPassword, issueSession, identify, requireUser, requireStaff, requireOwner, signOut, publicUser, publicRole, isPrimaryOwner, sameOrigin, rateLimit } from './auth.js';
-import { createBooking, getAvailability, getEntitlements, cancelBooking } from './bookings.js';
+import { createBooking, getAvailability, getEntitlements, cancelBooking, trainerCapacity, assignTrainer, TRAINER_DOG_LIMIT } from './bookings.js';
 import { stripeClient, stripeMode, stripeWebhook, checkout, refundBooking } from './payments.js';
 import { sendUploadedMedia, CHUNK_SIZE, MEDIA_LIMITS, mediaBytes, validMediaHeader } from './media.js';
 import { LESSON_PREVIEWS, privatePath, protectedLesson } from './lessons.js';
@@ -105,6 +105,11 @@ app.post('/api/quote', async (req, res) => {
   const catalog = await effectiveServices(); validateVisits(input.serviceIds, input.visits, catalog); res.json(quote(input.serviceIds, input.visits, { dogCount: input.dogCount }, catalog));
 });
 app.get('/api/bookings', requireUser, async (req, res) => res.json({ bookings: await Booking.find({ userId: req.user._id }).sort({ createdAt: -1 }).limit(100).lean() }));
+app.get('/api/trainers', requireUser, async (_req, res) => {
+  const people = await User.find({ role: { $in: ['staff', 'owner'] }, blocked: { $ne: true } }).select('name role title').sort({ name: 1 }).lean();
+  const trainers = await Promise.all(people.map(async person => ({ id: String(person._id), name: person.name, title: person.title || 'Bravo Trainer', ...(await trainerCapacity(person._id)), limit: TRAINER_DOG_LIMIT })));
+  res.json({ trainers });
+});
 app.post('/api/bookings', requireUser, rateLimit('booking', req => req.user?.role === 'owner' ? 50 : 10, 3600000), async (req, res) => res.status(201).json({ booking: await createBooking(req.user._id, req.body) }));
 async function ownedBooking(req) {
   if (!/^[a-f\d]{24}$/i.test(req.params.id)) throw Object.assign(new Error('Booking not found.'), { status: 404 });
@@ -120,6 +125,7 @@ app.post('/api/bookings/:id/cancel', requireUser, async (req, res) => {
 app.patch('/api/bookings/:id/visits', requireUser, async (req, res) => {
   const record = await ownedBooking(req);
   const booking = await Booking.findById(record._id).select('+checkoutParams');
+  if (booking.status === 'waitlisted') throw new Error('Waiting-list dates are preferences only. Choose another trainer with room or contact Bravo before changing dates.');
   if (booking.status === 'cancelled' || booking.stripeSessionId || booking.checkoutStarting || booking.checkoutParams) throw new Error('Contact Bravo to change a cancelled or checkout-linked booking.');
   const visits = z.array(z.object({ date: z.string(), time: z.string(), service: z.string() })).max(62).parse(req.body.visits);
   validateVisits(booking.serviceIds, visits);
@@ -250,7 +256,7 @@ app.patch('/api/admin/bookings/:id/assignment', requireUser, requireStaff, async
   const booking = await ownedBooking(req);
   const { staffId } = z.object({ staffId: objectId.nullable() }).parse(req.body);
   if (booking.status === 'cancelled') throw new Error('A cancelled visit cannot be reassigned.');
-  await validStaff(staffId); booking.staffId = staffId; await booking.save(); res.json({ ok: true });
+  await validStaff(staffId); await assignTrainer(booking, staffId); res.json({ ok: true });
 });
 app.get('/api/admin/bookings/:id', requireUser, requireStaff, async (req, res) => res.json({ booking: await ownedBooking(req) }));
 app.get('/api/admin/users', requireUser, requireOwner, async (req, res) => {
@@ -335,6 +341,7 @@ app.patch('/api/admin/bookings/:id', requireUser, requireStaff, async (req, res)
   const status = z.enum(['confirmed', 'cancelled']).parse(req.body.status);
   if (status === 'cancelled') await cancelBooking(booking, stripeClient());
   else if (booking.status === 'cancelled') throw new Error('A cancelled booking cannot be confirmed.');
+  else if (booking.status === 'waitlisted') throw new Error('Assign this waiting-list request to a trainer with room before confirming it.');
   else {
     const result = await Booking.updateOne({ _id: booking._id, status: { $ne: 'cancelled' } }, { $set: { status } });
     if (!result.matchedCount) throw Object.assign(new Error('This booking was cancelled before confirmation. Refresh the desk.'), { status: 409 });

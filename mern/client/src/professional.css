@@ -72,4 +72,6 @@ html.access-high-contrast :is(.home-price-card,.home-package-row,.home-service-s
 .date-grid button.unavailable{opacity:.52}
 .date-grid .date-time-range{display:block;font-size:.62rem;line-height:1.35;margin-top:.2rem;color:inherit}
 .booking-schedule-actions{display:flex;align-items:stretch;gap:.75rem;flex-wrap:wrap}.booking-schedule-actions .button{flex:1 1 220px;justify-content:center;margin:0}
+.trainer-choice{margin-top:1rem;padding:1rem 1.1rem;border:1px solid var(--line);border-radius:11px;background:#121410}.trainer-choice label{display:grid;gap:.45rem}.trainer-choice .notice{margin-top:.75rem}
 @media(max-width:580px){.booking-schedule-actions{flex-direction:column}.booking-schedule-actions .button{width:100%;flex-basis:auto}}
+.app-page .badge.waitlisted{background:#302819;border-color:#8f7448;color:#f0d49d}

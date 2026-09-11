@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import mongoose from 'mongoose';
 import { checkout, refundBooking, processStripeEvent } from '../server/payments.js';
 import { Booking, User, Subscription, StripeEvent, BillingLock, Settings, Slot } from '../server/models.js';
-import { cancelBooking, getAvailability } from '../server/bookings.js';
+import { cancelBooking, getAvailability, trainerCapacity, TRAINER_DOG_LIMIT } from '../server/bookings.js';
 import { quote, rescheduledQuote, SERVICES } from '../shared/catalog.js';
 import { publicUser } from '../server/auth.js';
 import { clientError } from '../server/errors.js';
@@ -89,6 +89,19 @@ test('paid, covered, refunded and review bookings cannot start another checkout'
     const { booking, user } = fixture(); booking.paymentStatus = paymentStatus;
     await assert.rejects(checkout(booking, user, {}), /does not need another payment/);
   }
+});
+test('waitlisted training requests cannot open checkout', async () => {
+  const { booking, user } = fixture(); booking.status = 'waitlisted';
+  await assert.rejects(checkout(booking, user, {}), /waiting list/);
+});
+test('trainer capacity counts each client once and enforces five dogs', async t => {
+  t.mock.method(Booking, 'find', () => query([
+    { userId: 'client-a', dogCount: 2 }, { userId: 'client-a', dogCount: 2 },
+    { userId: 'client-b', dogCount: 3 }
+  ]));
+  const capacity = await trainerCapacity('trainer-a');
+  assert.equal(TRAINER_DOG_LIMIT, 5);
+  assert.deepEqual(capacity, { activeDogs: 5, spotsRemaining: 0, full: true });
 });
 test('cancellation uses the freshly read checkout and guards against concurrent changes', async t => {
   const { booking } = fixture();

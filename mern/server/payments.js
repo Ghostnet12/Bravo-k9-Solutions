@@ -28,6 +28,7 @@ export function validatedCheckoutPricing(booking) {
   return pricing;
 }
 export async function checkout(booking, user, stripe) {
+  if (booking.status === 'waitlisted') throw Object.assign(new Error('This request is on the trainer waiting list. No payment is due until a spot opens.'), { status: 409 });
   if (!stripe) throw Object.assign(new Error('Card payments are not connected yet. Your request is saved; Bravo will contact you.'), { status: 503 });
   if (booking.status === 'cancelled' || booking.paymentStatus !== 'unpaid') throw new Error('This booking does not need another payment.');
   const origin = process.env.APP_ORIGIN;

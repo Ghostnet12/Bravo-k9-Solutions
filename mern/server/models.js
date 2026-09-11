@@ -19,9 +19,9 @@ export const RateBucket = model('BravoRateBucket', new Schema({ _id: String, cou
 const visitSchema = new Schema({ date: String, time: String, service: String }, { _id: false });
 const bookingSchema = new Schema({
   userId: { type: id, required: true, index: true }, requestKey: String,
-  staffId: { type: id, default: null, index: true }, createdBy: id,
+  staffId: { type: id, default: null, index: true }, requestedStaffId: { type: id, default: null, index: true }, createdBy: id,
   serviceIds: [String], visits: [visitSchema], trainingFocus: { type: String, enum: TRAINING_FOCUSES.map(focus => focus.id) }, dogCount: { type: Number, min: 1, max: 10, default: 1 }, dogName: String, phone: String, address: String, notes: String,
-  status: { type: String, enum: ['requested', 'confirmed', 'cancelled'], default: 'requested' },
+  status: { type: String, enum: ['requested', 'confirmed', 'waitlisted', 'cancelled'], default: 'requested' }, waitlistedAt: Date,
   paymentStatus: { type: String, enum: ['unpaid', 'paid', 'covered', 'review', 'refunded'], default: 'unpaid' },
   quote: Schema.Types.Mixed, stripeSessionId: String, stripePaymentIntentId: String, checkoutUrl: String, checkoutExpiresAt: Date,
   refundId: String, refundStatus: String, refundAmountCents: Number, refundedAt: Date, refundedBy: id,

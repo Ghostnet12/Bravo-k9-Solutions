@@ -21,7 +21,7 @@ export default function AccountPage() {
   const load = useCallback(async () => {
     if (!user) return;
     const [records, membership, feedback] = await Promise.all([api('/bookings'), api('/auth/me'), api('/reviews/mine')]);
-    setBookings(records.bookings); setSubscriptions(membership.subscriptions); setMembershipAccess(membership.membership || { active: false, manual: false, onlineAccess: false }); if (feedback.review) setReview({ rating: feedback.review.rating, body: feedback.review.body });
+    setBookings(records.bookings.map(booking => booking.status === 'waitlisted' ? { ...booking, stripeSessionId: booking.stripeSessionId || 'trainer-waitlist' } : booking)); setSubscriptions(membership.subscriptions); setMembershipAccess(membership.membership || { active: false, manual: false, onlineAccess: false }); if (feedback.review) setReview({ rating: feedback.review.rating, body: feedback.review.body });
   }, [user]);
   useEffect(() => { if (user) { setLoading(true); load().catch(e => setError(e.message)).finally(() => setLoading(false)); setProfile({ name: user.name, dogName: user.dogName || '', phone: user.phone || '', address: user.address || '', title: user.title || '', bio: user.bio || '', showPhone: !!user.showPhone }); } }, [user, load]);
   useEffect(() => {
