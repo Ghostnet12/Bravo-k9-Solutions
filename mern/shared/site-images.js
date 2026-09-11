@@ -6,14 +6,30 @@ export const MEDIA_CHUNK_BYTES = 400 * 1024;
 export const isImageEditor = user => user?.role === 'owner' && !user?.blocked;
 export const DAVID_IMAGE = '/images/hero-bravo-launch.webp';
 export function defaultSiteImage(source) { return source; }
+// Explicit photo locations: raster logos and UI artwork must never become
+// editable just because they use an <img> or live in /images.
+const PHOTO_ASSETS = new Set([
+  'hero-bravo-k9.webp', 'hero-bravo-launch.webp', 'training-education.webp',
+  'protection-training.webp', 'team-trainers.webp', 'tracking-training.webp',
+  'david-northrop.webp', 'obedience-real-world.webp', 'service-dog-training.webp',
+  'dog-sitting-care.webp', 'ashley-northrop.webp', 'ashley-leverock.webp', 'janet-hughes.webp',
+]);
+const PHOTO_SLOTS = new Set(['home-hero', 'home-method', 'home-learning', 'learning-banner']);
+export function isEditableMediaKey(key) {
+  return typeof key === 'string' && SITE_IMAGE_KEY.test(key) && (
+    PHOTO_SLOTS.has(key) || PHOTO_ASSETS.has(key.replace(/^asset-/, '')) && key.startsWith('asset-') ||
+    /^(?:team|lesson)-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(key) || !!videoTarget(key)
+  );
+}
 export function sourceImageKey(source, origin) {
   try {
     const url = new URL(source, origin);
     if (url.origin !== new URL(origin).origin) return null;
     const file = /^\/images\/([a-z0-9._-]+)$/i.exec(url.pathname);
     const lesson = /^\/api\/lessons\/([a-z0-9-]+)\/image$/.exec(url.pathname);
-    const key = file ? `asset-${file[1].toLowerCase()}` : lesson ? `lesson-${lesson[1]}` : null;
-    return key && SITE_IMAGE_KEY.test(key) ? key : null;
+    const saved = /^\/api\/site-images\/([a-z0-9._-]+)\/image$/.exec(url.pathname);
+    const key = file && PHOTO_ASSETS.has(file[1].toLowerCase()) ? `asset-${file[1].toLowerCase()}` : lesson ? `lesson-${lesson[1]}` : saved?.[1];
+    return isEditableMediaKey(key) && !key.startsWith('video-') ? key : null;
   } catch { return null; }
 }
 export function sourceVideoKey(source, origin) {

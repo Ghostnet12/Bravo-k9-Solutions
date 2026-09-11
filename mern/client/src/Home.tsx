@@ -19,9 +19,9 @@ export default function Home() {
   const [team, setTeam] = useState<Array<{id: string; name: string; role: string; title: string; bio: string}>>([]);
   const [reviews, setReviews] = useState<{reviews: Array<{_id: string; authorName: string; rating: number; body: string}>; average: number; count: number}>({ reviews: [], average: 0, count: 0 });
   useEffect(() => { api('/team').then(people => setTeam(people.team)).catch(() => {}); api('/reviews').then(feedback => setReviews(feedback)).catch(() => {}); }, []);
-  const portraits: Record<string, string> = { 'David Northrop': 'david-northrop', 'Ashley Leverock': 'ashley-leverock', 'Janet Hughes': 'janet-hughes' };
+  const portraits: Record<string, string> = { 'David Northrop': 'david-northrop', 'Ashley Northrop': 'ashley-northrop', 'Ashley Leverock': 'ashley-leverock', 'Janet Hughes': 'janet-hughes' };
   return <div className="bravo-home"><Header/>
-    <main id="main-content" tabIndex={-1}>
+    <main id="main-content" tabIndex={-1}><div className="shell site-media-tools-slot site-media-tools-slot--home" data-site-media-tools=""/>
       <section className="home-hero" aria-labelledby="home-title">
         <img className="home-hero-image" src="/images/hero-bravo-launch.webp" width="1774" height="887" fetchPriority="high" alt="Professional Bravo K9 trainer working with an attentive Belgian Malinois near Aberdeen"/>
         <div className="home-hero-shade"/>

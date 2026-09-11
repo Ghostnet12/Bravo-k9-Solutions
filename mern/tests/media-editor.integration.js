@@ -48,10 +48,11 @@ test('media editor persistence and server authorization (isolated MongoDB)', { t
     });
     await t.test('adjusting an uploaded photo retains the same stored bytes', async () => {
       const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aU1cAAAAASUVORK5CYII=';
-      await call('owner', 'put', '/api/site-images/test-photo', { ...edit, filename: 'test.png', contentType: 'image/png', data: png }).expect(200);
-      const id = (await SiteImage.findById('test-photo')).current.uploadId, count = await MediaChunk.countDocuments();
-      await call('owner', 'patch', '/api/site-images/test-photo', { ...edit, expectedRevision: 1, y: 50.1, zoom: 1.5 }).expect(200);
-      assert.equal((await SiteImage.findById('test-photo')).current.uploadId, id); assert.equal(await MediaChunk.countDocuments(), count);
+      const key = 'asset-training-education.webp';
+      await call('owner', 'put', `/api/site-images/${key}`, { ...edit, filename: 'test.png', contentType: 'image/png', data: png }).expect(200);
+      const id = (await SiteImage.findById(key)).current.uploadId, count = await MediaChunk.countDocuments();
+      await call('owner', 'patch', `/api/site-images/${key}`, { ...edit, expectedRevision: 1, y: 50.1, zoom: 1.5 }).expect(200);
+      assert.equal((await SiteImage.findById(key)).current.uploadId, id); assert.equal(await MediaChunk.countDocuments(), count);
     });
     await Lesson.create({ _id: 'sample', title: 'Sample', category: 'Test', instructor: 'Owner', image: '/images/training-education.webp', published: true });
     await t.test('video framing does not unpublish or expose a lesson', async () => {
@@ -71,7 +72,8 @@ test('media editor persistence and server authorization (isolated MongoDB)', { t
     });
     await t.test('revocation and cross-origin writes fail server-side', async () => {
       await User.updateOne({ _id: users.administrator._id }, { $set: { role: 'staff' } });
-      await call('administrator', 'patch', '/api/site-images/revoked', edit).expect(403);
+      await call('administrator', 'patch', '/api/site-images/home-hero', edit).expect(403);
+      await call('owner', 'patch', '/api/site-images/asset-bravo-logo-small.webp', edit).expect(400);
       await request(app).patch('/api/site-images/home-method').set('Cookie', cookies.owner).set('Origin', 'https://unrelated.example').send(edit).expect(403);
       assert.ok(await AuditEvent.countDocuments({ action: 'site-media.reframed' }) >= 3);
     });

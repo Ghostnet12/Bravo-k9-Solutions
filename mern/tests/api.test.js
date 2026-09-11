@@ -15,7 +15,7 @@ test('cross-origin writes and missing database fail closed', async () => {
 });
 test('unconfigured webhook does not claim successful payment', async () => { await request(app).post('/api/stripe/webhook').send({ type:'checkout.session.completed' }).expect(503); });
 test('production files and all routes are served without broken imports', async () => {
-  for (const route of ['/', '/portal', '/account', '/learn', '/community', '/admin', '/contact']) {
+  for (const route of ['/', '/portal', '/account', '/learn', '/community', '/admin', '/contact', '/accessibility']) {
     const res = await request(app).get(route).expect(200); assert.match(res.text,/Bravo K9/);
   }
   for(const name of ['bravo-logo-small','hero-bravo-k9','david-northrop','ashley-leverock','janet-hughes','training-education']) await request(app).get(`/images/${name}.webp`).expect(200);

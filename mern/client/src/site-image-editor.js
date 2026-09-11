@@ -1,5 +1,5 @@
 import { api } from './api.js';
-import { SITE_IMAGE_KEY, SITE_IMAGE_MAX_BYTES, SITE_VIDEO_MAX_BYTES, MEDIA_CHUNK_BYTES, defaultSiteImage, sourceImageKey, sourceVideoKey, videoTarget, normalizeFraming, mediaSettingsChanged } from '../../shared/site-images.js';
+import { isEditableMediaKey, SITE_IMAGE_MAX_BYTES, SITE_VIDEO_MAX_BYTES, MEDIA_CHUNK_BYTES, defaultSiteImage, sourceImageKey, sourceVideoKey, videoTarget, normalizeFraming, mediaSettingsChanged } from '../../shared/site-images.js';
 import { applyFraming, videoControls } from './media-framing.js';
 let cachedImages = {};
 const slug = value => value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 90);
@@ -33,6 +33,7 @@ export function mountSiteImages({ canEdit = false } = {}) {
   const framed = saved => saved?.framed ?? !!saved?.src;
   function keyFor(element, source) {
     if (element.tagName === 'VIDEO') return element.dataset.siteMediaKey || sourceVideoKey(source, location.origin);
+    if (!sourceImageKey(source, location.origin)) return null;
     const person = element.closest('.home-team-grid article')?.querySelector('.home-person h3')?.textContent;
     if (person) return `team-${slug(person)}`;
     if (element.matches('.home-hero-image')) return 'home-hero';
@@ -50,7 +51,16 @@ export function mountSiteImages({ canEdit = false } = {}) {
       if (element.closest('[data-site-image-editor],[data-site-image-ignore]')) continue;
       const source = sourceOf(element), old = records.get(element);
       const original = old && source === old.applied ? old.original : element.dataset.siteImageOriginal && !old ? element.dataset.siteImageOriginal : source;
-      const key = keyFor(element, original); if (!key || !SITE_IMAGE_KEY.test(key)) continue;
+      const key = keyFor(element, original);
+      if (!isEditableMediaKey(key)) {
+        old?.cleanup?.(); records.delete(element);
+        element.removeAttribute('data-site-image-editable');
+        if (old) {
+          element.removeAttribute('aria-keyshortcuts');
+          if (old.tabIndex == null) element.removeAttribute('tabindex'); else element.setAttribute('tabindex', old.tabIndex);
+        }
+        continue;
+      }
       let record = old;
       if (!record || record.key !== key || (source !== record.applied && source !== record.original)) {
         record?.cleanup?.();
@@ -79,6 +89,15 @@ export function mountSiteImages({ canEdit = false } = {}) {
       element.dataset.siteImageKey = key; element.dataset.siteImageCustom = String(custom);
       element.toggleAttribute('data-site-image-editable', allowed);
       if (allowed) { element.setAttribute('tabindex', '0'); element.setAttribute('aria-keyshortcuts', 'F2'); }
+    }
+    if (toolbar) {
+      const slot = document.querySelector('[data-site-media-tools]');
+      if (slot && toolbar.parentElement !== slot) slot.appendChild(toolbar);
+      toolbar.hidden = !allowed || !slot || !records.size;
+      if (toolbar.hidden && editMode) {
+        editMode = false; document.documentElement.classList.remove('site-photo-edit-mode');
+        const toggle = toolbar.querySelector('button'); toggle.setAttribute('aria-pressed', 'false'); toggle.textContent = 'Edit photos & videos';
+      }
     }
   }
   const schedule = () => { if (!disposed && !frame) frame = requestAnimationFrame(scan); };
@@ -201,13 +220,14 @@ export function mountSiteImages({ canEdit = false } = {}) {
   function hit(event) {
     const target = event.target instanceof Element ? event.target : null;
     if (!target || target.closest('[data-site-image-editor],[data-site-image-ignore]')) return null;
-    const direct = target.closest('img[data-site-image-key],video[data-site-image-key]'); if (direct) return direct;
+    const direct = target.closest('img[data-site-image-key],video[data-site-image-key]'); if (direct && records.has(direct)) return direct;
     if (target.closest('button,input,textarea,select,summary,a,[role="button"]')) return null;
     return [...records.keys()].reverse().find(element => { const r = element.getBoundingClientRect(); return element.parentElement?.contains(target) && event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top && event.clientY <= r.bottom; }) || null;
   }
   if (allowed) {
     toolbar = document.createElement('div'); toolbar.className = 'site-photo-tools'; toolbar.dataset.siteImageEditor = '';
-    toolbar.innerHTML = '<button type="button" class="site-photo-toggle" aria-pressed="false">Edit photos & videos</button><span class="site-photo-hint">Hold media to edit · F2 on keyboard</span><span class="site-photo-status" role="status" aria-live="polite"></span>'; document.body.appendChild(toolbar);
+    toolbar.hidden = true;
+    toolbar.innerHTML = '<button type="button" class="site-photo-toggle" aria-pressed="false" aria-describedby="site-photo-help">Edit photos & videos</button><span id="site-photo-help" class="site-photo-hint">Turn on editing, then select a photo or video. Keyboard: focus the media and press F2.</span><span class="site-photo-status" role="status" aria-live="polite"></span>';
     dialog = document.createElement('dialog'); dialog.className = 'site-photo-dialog'; dialog.dataset.siteImageEditor = ''; dialog.setAttribute('aria-labelledby', 'site-photo-title');
     dialog.innerHTML = `<div class="site-photo-heading"><div><p>BRAVO · ADMINISTRATOR MEDIA EDITOR</p><h2 id="site-photo-title" data-field="title">Edit media</h2></div><button type="button" data-field="close" aria-label="Close media editor">×</button></div>
       <p class="site-photo-intro">Even a small slider adjustment can be published—no replacement file needed.</p>

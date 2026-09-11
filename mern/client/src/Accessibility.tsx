@@ -67,6 +67,7 @@ export default function AccessibilityTools() {
         <button type="button" aria-pressed={preferences.largeText} onClick={() => toggle("largeText", "Larger text")}>Larger text <span>{preferences.largeText ? "On" : "Off"}</span></button>
         <button type="button" aria-pressed={preferences.highContrast} onClick={() => toggle("highContrast", "High contrast")}>High contrast <span>{preferences.highContrast ? "On" : "Off"}</span></button>
         <button type="button" aria-pressed={preferences.reducedMotion} onClick={() => toggle("reducedMotion", "Reduced motion")}>Reduce motion <span>{preferences.reducedMotion ? "On" : "Off"}</span></button>
+        <Link href="/accessibility">Accessibility statement</Link>
         <Link href="/learn#accessible-media">Captions & transcripts</Link>
         <small>These settings stay on this device.</small>
       </div>

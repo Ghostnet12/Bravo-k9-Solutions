@@ -5,6 +5,7 @@ export const PAGE_METADATA = {
   '/portal': { title: 'Book Dog Training & Walking | Bravo K9 Solutions', description: 'Choose Bravo dog training or dog walking, review Aberdeen appointment availability, and save a visit request.' },
   '/learn': { title: 'Online Dog Training Lessons | Bravo K9 Solutions', description: 'Browse Bravo dog training topics. Published member lessons include private video, English captions, and a written transcript.' },
   '/contact': { title: 'Contact Bravo K9 Solutions | Aberdeen Dog Training', description: 'Call Bravo K9 Solutions at (605) 824-2767 for mobile training, booking help, and account support in Aberdeen, SD.' },
+  '/accessibility': { title: 'Accessibility Statement | Bravo K9 Solutions', description: 'Read Bravo K9 Solutions’ website accessibility commitment, available features, review status, and ways to request assistance.' },
   '/account': { title: 'Your Account | Bravo K9 Solutions', description: 'Manage your Bravo account, visit requests, and care details.', private: true },
   '/community': { title: 'Bravo Room | Bravo K9 Solutions', description: 'Member conversations and updates from the Bravo team.', private: true },
   '/admin': { title: 'Owner & Staff Desk | Bravo K9 Solutions', description: 'Bravo scheduling, lesson publishing, messages, and account management.', private: true },

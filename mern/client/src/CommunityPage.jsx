@@ -3,8 +3,8 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useBravo } from './context';
 import { api } from './api';
 import { Page, Notice, SetupNotice } from './ui';
+import MessageCard from './MessageCard';
 
-const stamp = value => new Date(value).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 function Conversation({ path, user, body, setBody, direct = false, team = [], initialRecipient = '' }) {
   const [messages, setMessages] = useState([]), [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [error, setError] = useState('');
   const [kind, setKind] = useState('message'), [recipientId, setRecipient] = useState(initialRecipient);
@@ -35,12 +35,10 @@ function Conversation({ path, user, body, setBody, direct = false, team = [], in
   return <>
     <Notice error>{error}</Notice>
     <div className="thread-tools"><p className="helper">Latest {direct || path !== '/community' ? '200' : '100'} messages · Updates every 10 seconds</p><button className="quiet-button" disabled={busy} onClick={() => load().catch(err => setError(err.message))}>Refresh messages</button></div>
-    <div className="chat-history panel" aria-label="Conversation">
-      {loading ? <p role="status">Loading messages…</p> : messages.length ? messages.map(message => <article className={`chat-message ${message.kind || 'message'}`} key={message._id}>
-        <header><strong>{message.authorName || message.senderName}</strong>{['staff', 'owner'].includes(message.role || message.senderRole) && <span className="badge">{message.role || message.senderRole}</span>}<time dateTime={message.createdAt}>{stamp(message.createdAt)}</time></header>
-        {message.recipientName && <small>For {message.recipientName}</small>}<p>{message.body}</p>
+    <div className="chat-history panel" role="region" tabIndex={0} aria-label="Conversation">
+      {loading ? <p role="status">Loading messages…</p> : messages.length ? messages.map(message => <MessageCard message={message} key={message._id}>
         {user.role === 'owner' && !direct && <button className="quiet-button" disabled={busy} onClick={() => hide(message._id)}>Hide message</button>}
-      </article>) : <div className="empty-state"><h3>Start the conversation.</h3><p>No messages yet. Say hello or ask a question.</p></div>}
+      </MessageCard>) : <div className="empty-state"><h3>Start the conversation.</h3><p>No messages yet. Say hello or ask a question.</p></div>}
     </div>
     <form className="panel chat-composer" onSubmit={send}>
       {direct && <label>Who would you like to reach?<select value={recipientId} disabled={busy} onChange={e => setRecipient(e.target.value)}><option value="">Any available Bravo team member</option>{team.map(person => <option key={person.id} value={person.id}>{person.name} · {person.role}</option>)}</select></label>}

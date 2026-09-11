@@ -1,0 +1,43 @@
+/* Message content does not use the old avatar/sidebar chat grid. */
+.conversation-message{display:block;min-width:0;padding:1.2rem 0;border-bottom:1px solid var(--line)}
+.conversation-message:first-child{padding-top:0}
+.conversation-message-heading{display:flex;flex-flow:row wrap;align-items:center;justify-content:flex-start;gap:.4rem .65rem}
+.conversation-message-heading strong{min-width:0;max-width:100%;font-size:1rem;letter-spacing:normal;overflow-wrap:break-word}
+.conversation-message-heading .badge{flex:none;margin:0;white-space:nowrap}
+.conversation-message-heading time{flex:0 0 100%;color:#beb9ad;font-size:.875rem;white-space:normal}
+.conversation-recipient{display:block;margin-top:.35rem;color:#beb9ad;font-size:.875rem;overflow-wrap:anywhere}
+.conversation-message p,.conversation-preview{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8}
+.conversation-message p{margin:.85rem 0 .2rem;font-size:1rem}
+.conversation-message--announcement,.conversation-message--alert{padding:1rem;margin-bottom:.75rem;background:#211e17;border:1px solid #776543;border-radius:5px}
+.conversation-message--alert{background:#2d1f1b;border-color:#af7160}
+.record-actions>*{max-width:100%}
+.record-actions>.button{flex:0 1 auto;min-width:min(100%,14rem);white-space:normal;word-break:normal;overflow-wrap:normal}
+.record-actions>.quiet-button{min-height:44px;white-space:normal;word-break:normal}
+.owner-person summary{line-height:1.7}
+.owner-person summary .badge{display:inline-block;white-space:nowrap}
+.app-page .section-label>div{min-width:0}
+.app-page .section-label>.quiet-button{flex:none;min-height:44px}
+.chat-history:focus-visible,.direct-history:focus-visible{outline:3px solid #f5d27f;outline-offset:3px}
+.accessibility-statement{max-width:800px}
+.accessibility-statement a{text-decoration:underline;text-underline-offset:.2em}
+.accessibility-statement h2{margin-top:2rem}
+.accessibility-statement li{margin-block:.5rem;line-height:1.8}
+.accessibility-panel{max-height:calc(100dvh - 160px);overflow:auto;overscroll-behavior:contain}
+html.access-high-contrast .accessibility-panel{background:#000;color:#fff}
+html.access-high-contrast .accessibility-panel>small{color:#fff}
+html.access-high-contrast .conversation-message{background:#000;color:#fff;border-color:#fff}
+html.access-high-contrast .conversation-message time{color:#fff}
+/* The visible hero must use the same image that the photo editor updates. */
+.home-hero{background-image:none}
+.home-hero-image{display:block;object-position:50% 50%}
+.home-hero-shade{display:block;pointer-events:none;background:linear-gradient(90deg,rgba(10,12,10,.96) 0%,rgba(10,12,10,.82) 30%,rgba(10,12,10,.18) 64%,rgba(10,12,10,.03) 100%),linear-gradient(0deg,rgba(8,9,8,.34),transparent 58%)}
+.site-photo-edit-mode .home-hero-image{z-index:3}
+@media(max-width:700px){
+  .record-actions>.button{flex:1 1 100%;width:100%}
+  .record-actions>.quiet-button{flex:0 1 auto;text-align:left}
+  .conversation-message-heading strong{flex-basis:100%}
+  .conversation-message-heading time{flex-basis:100%}
+  .home-hero-image{object-position:64% 50%}
+  .home-hero-shade{background:linear-gradient(90deg,rgba(10,12,10,.93),rgba(10,12,10,.58) 58%,rgba(10,12,10,.12)),linear-gradient(0deg,rgba(10,12,10,.45),transparent 60%)}
+}
+@media(max-width:380px){.header-inner{gap:.75rem}.app-header .brand-lockup{gap:7px}.app-header .brand-lockup strong{font-size:24px}.app-header .menu-toggle{gap:.45rem;padding:.45rem .6rem}}

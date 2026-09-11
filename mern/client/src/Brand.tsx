@@ -7,7 +7,7 @@ type BrandLockupProps = {
 
 export default function BrandLockup({ className = "" }: BrandLockupProps) {
   return (
-    <Link className={`brand-lockup ${className}`.trim()} href="/" aria-label="Bravo K9 Solutions home">
+    <Link className={`brand-lockup ${className}`.trim()} href="/" aria-label="Bravo K9 Solutions home" data-site-image-ignore="">
       <img src="/images/bravo-logo-small.webp" width="128" height="144" loading="eager" decoding="async" alt="" aria-hidden="true" />
       <span>
         <strong>BRAVO K9</strong>

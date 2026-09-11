@@ -9,7 +9,7 @@ import { connectDb, transaction } from './db.js';
 import { MediaUpload, MediaChunk, AuditEvent } from './models.js';
 import { identify, requireUser, requireOwner, sameOrigin, rateLimit } from './auth.js';
 import { CHUNK_SIZE, validMediaHeader, sendUploadedMedia } from './media.js';
-import { SITE_IMAGE_KEY, SITE_IMAGE_MAX_BYTES } from '../shared/site-images.js';
+import { isEditableMediaKey, SITE_IMAGE_MAX_BYTES } from '../shared/site-images.js';
 
 // Existing collection and image URLs remain compatible with saved portraits.
 // Video records store framing only; actual video bytes still use the protected
@@ -34,10 +34,10 @@ function mediaError(error, _req, res, _next) {
 const connect = async (_req, _res, next) => { await connectDb(); next(); };
 const router = express.Router();
 router.use(helmet(), (_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
-router.param('key', (_req, _res, next, key) => { if (!SITE_IMAGE_KEY.test(key)) throw fail('Invalid media location.'); next(); });
+router.param('key', (_req, _res, next, key) => { if (!isEditableMediaKey(key)) throw fail('Only website photos and videos can be edited.', 400); next(); });
 router.get('/', connect, async (_req, res) => {
   const images = await SiteImage.find().select('_id current revision previous.uploadId').limit(1000).lean();
-  res.json({ images: Object.fromEntries(images.map(image => [image._id, publicImage(image)])) });
+  res.json({ images: Object.fromEntries(images.filter(image => isEditableMediaKey(image._id)).map(image => [image._id, publicImage(image)])) });
 });
 router.get('/:key/image', connect, async (req, res) => {
   if (req.params.key.startsWith('video-')) return res.status(404).end();

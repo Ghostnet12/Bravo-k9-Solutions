@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { SITE_IMAGE_KEY, SITE_IMAGE_MAX_BYTES, isImageEditor, sourceImageKey, sourceVideoKey, videoTarget, defaultSiteImage, normalizeFraming, mediaSettingsChanged, framingStyle } from '../shared/site-images.js';
+import { SITE_IMAGE_KEY, SITE_IMAGE_MAX_BYTES, isImageEditor, isEditableMediaKey, sourceImageKey, sourceVideoKey, videoTarget, defaultSiteImage, normalizeFraming, mediaSettingsChanged, framingStyle } from '../shared/site-images.js';
 test('only owner and delegated administrator capabilities can edit media', () => {
   assert.equal(isImageEditor({ role: 'owner', isPrimaryOwner: true }), true);
   assert.equal(isImageEditor({ role: 'owner', isPrimaryOwner: false, publicRole: 'staff' }), true);
@@ -14,9 +14,14 @@ test('image keys reject traversal and unsafe URL contents', () => {
 });
 test('source keys cannot redirect to external or private account resources', () => {
   const origin = 'https://bravounleashed.com';
-  assert.equal(sourceImageKey('/images/bravo-logo-small.webp', origin), 'asset-bravo-logo-small.webp');
+  assert.equal(sourceImageKey('/images/bravo-logo-small.webp', origin), null);
+  assert.equal(sourceImageKey('/images/training-education.webp', origin), 'asset-training-education.webp');
   assert.equal(sourceImageKey('/api/lessons/heel/image', origin), 'lesson-heel');
   for (const path of ['https://example.com/images/a.webp', '//example.com/images/a.webp', 'data:image/svg+xml,<svg/>', '/api/auth/me', '/images/../../api/auth/me']) assert.equal(sourceImageKey(path, origin), null);
+});
+test('media editor accepts photos and videos but excludes logos and UI artwork', () => {
+  for (const key of ['home-hero', 'home-method', 'team-ashley-northrop', 'lesson-loose-leash', 'asset-training-education.webp', 'video-lesson-heel']) assert.equal(isEditableMediaKey(key), true);
+  for (const key of ['asset-bravo-logo-small.webp', 'asset-bravo-logo.png', 'icon-phone', 'favicon.ico', '../hero']) assert.equal(isEditableMediaKey(key), false);
 });
 test('all original section photos, hero and approved portraits stay unchanged', () => {
   for (const name of ['hero-bravo-launch', 'david-northrop', 'ashley-northrop', 'janet-hughes', 'obedience-real-world', 'training-education', 'protection-training', 'service-dog-training', 'tracking-training', 'hero-bravo-k9', 'dog-sitting-care', 'bravo-logo-small']) {
