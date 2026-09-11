@@ -26,6 +26,7 @@ export default function AccessibilityTools() {
   const [announcement, setAnnouncement] = useState("");
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const toolsRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const restorePreferences = window.setTimeout(() => {
@@ -62,6 +63,15 @@ export default function AccessibilityTools() {
     panelRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    function closeFromOutside(event: PointerEvent) {
+      if (!toolsRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+    document.addEventListener("pointerdown", closeFromOutside);
+    return () => document.removeEventListener("pointerdown", closeFromOutside);
+  }, [open]);
+
   function closePanel(returnFocus = false) {
     setOpen(false);
     if (returnFocus) window.requestAnimationFrame(() => triggerRef.current?.focus());
@@ -76,9 +86,7 @@ export default function AccessibilityTools() {
   }
 
   return (
-    <aside className="accessibility-tools" aria-label="Accessibility options" onBlur={(event) => {
-      if (open && !event.currentTarget.contains(event.relatedTarget as Node | null)) closePanel();
-    }} onKeyDown={(event) => {
+    <aside ref={toolsRef} className="accessibility-tools" aria-label="Accessibility options" onKeyDown={(event) => {
       if (event.key === "Escape" && open) {
         event.preventDefault();
         closePanel(true);
@@ -88,7 +96,10 @@ export default function AccessibilityTools() {
         <span aria-hidden="true">Aa</span> Accessibility
       </button>
       <div ref={panelRef} className="accessibility-panel" id="accessibility-panel" role="region" aria-labelledby="accessibility-panel-title" hidden={!open}>
-        <strong id="accessibility-panel-title">Make this site easier to use</strong>
+        <div className="accessibility-panel-heading">
+          <strong id="accessibility-panel-title">Make this site easier to use</strong>
+          <button className="accessibility-panel-close" type="button" aria-label="Close accessibility options" onClick={() => closePanel(true)}>Close</button>
+        </div>
         <button type="button" aria-pressed={preferences.largeText} onClick={() => toggle("largeText", "Larger text")}>Larger text <span>{preferences.largeText ? "On" : "Off"}</span></button>
         <button type="button" aria-pressed={preferences.highContrast} onClick={() => toggle("highContrast", "High contrast")}>High contrast <span>{preferences.highContrast ? "On" : "Off"}</span></button>
         <button type="button" aria-pressed={preferences.reducedMotion} onClick={() => toggle("reducedMotion", "Reduced motion")}>Reduce motion <span>{preferences.reducedMotion ? "On" : "Off"}</span></button>

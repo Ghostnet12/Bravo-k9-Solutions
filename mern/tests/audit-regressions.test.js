@@ -149,12 +149,19 @@ test('webhook rejects mismatched customer/session and preserves refunded state o
 });
 
 test('accessibility controls support focus management, Escape, and route changes', async () => {
-  const source = await readFile(new URL('../client/src/Accessibility.tsx', import.meta.url), 'utf8');
+  const [source, css] = await Promise.all([
+    readFile(new URL('../client/src/Accessibility.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../client/src/accessibility-layout.css', import.meta.url), 'utf8')
+  ]);
   assert.match(source, /useLocation/);
   assert.match(source, /event\.key === "Escape"/);
   assert.match(source, /triggerRef\.current\?\.focus/);
   assert.match(source, /aria-labelledby="accessibility-panel-title"/);
   assert.match(source, /location\.pathname, location\.search, location\.hash/);
+  assert.match(source, /pointerdown/);
+  assert.doesNotMatch(source, /onBlur=/);
+  assert.match(source, /Close accessibility options/);
+  assert.match(css, /html\.access-large-text\{font-size:125%\}/);
 });
 
 test('personal-information fields expose recognized autofill purposes', async () => {

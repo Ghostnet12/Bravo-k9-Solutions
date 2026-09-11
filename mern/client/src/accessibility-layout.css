@@ -29,12 +29,18 @@
 .accessibility-statement h2{margin-top:2rem}
 .accessibility-statement li{margin-block:.5rem;line-height:1.8}
 .accessibility-panel{max-height:calc(100dvh - 160px);overflow:auto;overscroll-behavior:contain}
+.accessibility-panel-heading{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:.35rem}
+.accessibility-panel-heading>strong{margin:0}
+.accessibility-panel .accessibility-panel-close{width:auto;min-height:44px;margin:0;padding:.35rem .55rem;border:0;background:transparent;color:#111;text-decoration:underline;text-underline-offset:.2em}
+html.access-large-text{font-size:125%}
+html.access-large-text .accessibility-panel{font-size:1rem}
 html{scroll-padding-block:7rem 8rem}
 :where(main,footer) :where(a,button,input,select,textarea,summary,[tabindex]):focus{scroll-margin-block:7rem}
 .app-page :where(input,select,textarea){border-color:#8b7b63}
 .bravo-footer a{min-height:44px}
 html.access-high-contrast .accessibility-panel{background:#000;color:#fff}
 html.access-high-contrast .accessibility-panel>small{color:#fff}
+html.access-high-contrast .accessibility-panel .accessibility-panel-close{color:#fff}
 html.access-high-contrast .conversation-message{background:#000;color:#fff;border-color:#fff}
 html.access-high-contrast .conversation-message time{color:#fff}
 /* The visible hero must use the same image that the photo editor updates. */
