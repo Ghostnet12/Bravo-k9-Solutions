@@ -46,7 +46,5 @@ export function validateVisits(ids, visits, catalog) {
   }
   const keys = visits.map(v => `${v.date}|${v.time}`);
   if (new Set(keys).size !== keys.length) throw new Error('Two visits cannot use the same time slot.');
-  const sittingDates = visits.filter(v => v.service === 'sitting').map(v => v.date);
-  if (new Set(sittingDates).size !== sittingDates.length) throw new Error('Dog sitting is one scheduled visit per care day; contact Bravo for extra visits.');
   for (const service of included) if (service !== 'online' && !visits.some(v => v.service === service)) throw new Error(`Choose at least one ${service} visit.`);
 }

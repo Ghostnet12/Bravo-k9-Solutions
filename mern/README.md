@@ -55,9 +55,9 @@ only for accessibility preferences.
   **not connected**. Never grant staff access based solely on a claimed email.
 - Real-date scheduling in `America/Chicago` with DST handling, past-slot rejection,
   9 AM–9 PM starting times, configured weekdays, and shared slot availability.
-- Trip auto-scheduling with first-arrival / return cutoffs, per-day times, editable
-  visits, explicit care-gap warnings, and no silently partial schedules.
-- Training and sitting visits are selected independently inside packages.
+- Automatic scheduling with date/time cutoffs, editable visits, and no silently
+  partial schedules.
+- Training, walking, and aggression visits are scheduled independently.
 - Server-calculated pricing, idempotent booking requests, transactional slot claims,
   cancellation, editable unpaid schedules, and account history.
 - Authenticated community messages; server-enforced staff announcements, alerts,
@@ -73,15 +73,13 @@ only for accessibility preferences.
 | Program | Price |
 | --- | --- |
 | Professional training | $200/month |
-| Dog sitting | $20/selected care day |
+| Dog Walking | $25/dog per 30-minute walk |
 | Online training | $50/month |
 | Aggressive-dog assessment | $400 initial intake |
 | Training + online | $250/month |
-| Training + sitting | $350/month |
-| Training + sitting + online | $400/month |
 
-Packages are exclusive to avoid duplicate billing. Recurring charges and one-time
-intake/care charges are displayed separately. Follow-on aggression pricing is not
+Recurring charges and one-time walking/intake charges are displayed separately.
+Follow-on aggression pricing is not
 automatically enrolled; Bravo determines that transition with the client.
 
 ## Activate operations deliberately
@@ -95,10 +93,7 @@ automatically enrolled; Bravo determines that transition with the client.
 4. Review staffing capacity before launch. This version uses one shared visit per
    hourly slot across all services. Block travel times explicitly. Aggression
    appointments still require staff to confirm both trainers can attend.
-5. The $20/day sitting flow schedules one visit per selected care day. It is not
-   continuous supervision or overnight boarding. Confirm additional care needs
-   with clients; the trip screen flags dates with no visit.
-6. Submitted requests reserve their slots and remain pending until staff reviews
+5. Submitted requests reserve their slots and remain pending until staff reviews
    them. There is no automatic expiry of unpaid requests; staff must manage them.
    Cancelling a visit does not cancel recurring billing or automatically refund a
    charge. Use Stripe and your business policy for billing decisions.
@@ -132,7 +127,7 @@ side from the approved catalog. The app uses hosted Checkout and never handles r
 card details. A browser success URL does not grant access; verified webhook events
 do. Identical Checkout parameters are saved before the network call for safe retries.
 
-Test a one-time sitting charge, each recurring package, duplicate webhook delivery,
+Test a Dog Walking charge, each recurring program, duplicate webhook delivery,
 payment failure, renewal, cancellation, and member access removal. Confirm Stripe
 webhook API compatibility with the installed SDK. Only after these pass should the
 owner configure live keys and explicitly set `STRIPE_LIVE_ENABLED=true`.

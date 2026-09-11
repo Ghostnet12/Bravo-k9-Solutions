@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
 import { Booking, User, Subscription, StripeEvent, BillingLock, Lesson } from './models.js';
 import { connectDb, transaction } from './db.js';
-import { serviceSelection } from '../shared/catalog.js';
+import { ALL_SERVICES, serviceSelection } from '../shared/catalog.js';
 export function stripeClient() {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key || !process.env.STRIPE_WEBHOOK_SECRET || (key.startsWith('sk_live_') && process.env.STRIPE_LIVE_ENABLED !== 'true')) return null;
@@ -16,7 +16,7 @@ export async function checkout(booking, user, stripe) {
   if (selected.some(s => s.includes.includes('online')) && !(await Lesson.exists({ published: true }))) throw Object.assign(new Error('Online enrollment opens once the lesson library is ready. Please contact Bravo for updates.'), { status: 409 });
   const subscriptions = await Subscription.find({ userId: user._id, status: { $nin: ['canceled', 'incomplete_expired'] } }).lean();
   const recurring = selected.filter(s => s.interval === 'month').flatMap(s => s.includes);
-  if (subscriptions.some(sub => serviceSelection(sub.serviceIds).some(s => s.includes.some(i => recurring.includes(i))))) throw Object.assign(new Error('An existing membership overlaps this purchase. Manage it in Billing or contact Bravo before changing plans.'), { status: 409 });
+  if (subscriptions.some(sub => serviceSelection(sub.serviceIds, ALL_SERVICES).some(s => s.includes.some(i => recurring.includes(i))))) throw Object.assign(new Error('An existing membership overlaps this purchase. Manage it in Billing or contact Bravo before changing plans.'), { status: 409 });
   const lockId = String(user._id), bookingId = String(booking._id);
   // One purchase at a time per customer. Never expire a local lock before Stripe's session expires.
   try {
@@ -74,7 +74,8 @@ export async function processStripeEvent(event, stripe) {
     await StripeEvent.create([{ _id: event.id, type: event.type, processedAt: new Date() }], { session });
     if (sub?.metadata?.app === 'bravo-k9') {
       const ids = JSON.parse(sub.metadata.serviceIds || '[]');
-      serviceSelection(ids);
+      // Historical subscriptions must keep syncing even after a program retires.
+      serviceSelection(ids, ALL_SERVICES);
       const user = await User.findById(sub.metadata.userId).session(session);
       if (!user || user.stripeCustomerId !== (typeof sub.customer === 'string' ? sub.customer : sub.customer.id)) throw new Error('Subscription owner mismatch.');
       const previous = await Subscription.findOne({ stripeId: sub.id }).session(session);

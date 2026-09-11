@@ -94,7 +94,7 @@ app.post('/api/auth/password', requireUser, rateLimit('password', 5, 900000), as
 });
 app.get('/api/availability', async (req, res) => res.json(await getAvailability(String(req.query.from), String(req.query.to))));
 app.post('/api/availability/auto', async (req, res) => {
-  const input = z.object({ count: z.number().int().min(1).max(31), startDate: z.string(), startTime: z.string(), endDate: z.string(), endTime: z.string(), preference: z.enum(['any', 'morning', 'afternoon', 'evening']), service: z.enum(['training', 'walking', 'sitting', 'aggression']) }).parse(req.body);
+  const input = z.object({ count: z.number().int().min(1).max(31), startDate: z.string(), startTime: z.string(), endDate: z.string(), endTime: z.string(), preference: z.enum(['any', 'morning', 'afternoon', 'evening']), service: z.enum(['training', 'walking', 'aggression']) }).parse(req.body);
   const { days } = await getAvailability(input.startDate, input.endDate);
   res.json(autoSchedule(days, input));
 });

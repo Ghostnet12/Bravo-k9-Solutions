@@ -503,22 +503,6 @@ footer { padding-top:100px; background:#080909; }
 .portal-help-actions { min-width:270px; display:grid; gap:18px; justify-items:start; }
 .portal-footer { min-height:90px; display:flex; align-items:center; justify-content:space-between; color:#aaa69e; font-size:10px; text-transform:uppercase; letter-spacing:.1em; }
 
-/* Dedicated dog sitting scheduler */
-.sitting-portal-hero { grid-template-columns:1fr 330px; }
-.sitting-rate-card { position:relative; min-height:390px; overflow:hidden; border:1px solid rgba(186,154,100,.42); border-radius:22px; background:#111; box-shadow:0 24px 70px rgba(0,0,0,.3); }
-.sitting-rate-card>img { position:absolute; inset:0; height:100%; object-fit:cover; object-position:62% center; filter:saturate(.72) contrast(1.06); }
-.sitting-rate-shade { position:absolute; inset:0; background:linear-gradient(90deg,rgba(8,9,9,.94),rgba(8,9,9,.44) 78%),linear-gradient(0deg,rgba(8,9,9,.85),transparent 70%); }
-.sitting-rate-content { position:relative; z-index:1; min-height:390px; padding:38px; display:flex; flex-direction:column; justify-content:flex-end; }
-.sitting-rate-content>span { color:var(--gold-light); font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
-.sitting-rate-content strong { margin-top:18px; color:white; font-family:"Arial Narrow",Impact,sans-serif; font-size:94px; line-height:.8; }
-.sitting-rate-content b { margin-top:18px; color:var(--gold-light); font-size:16px; text-transform:uppercase; letter-spacing:.1em; }
-.sitting-rate-content small { max-width:210px; margin-top:18px; color:#d2cec5; font-size:12px; line-height:1.6; }
-.sitting-scheduler { padding-top:80px; }
-.sitting-scheduler .auto-scheduler { margin-bottom:64px; grid-template-columns:.8fr 1.2fr; align-items:start; }
-.sitting-auto-controls { grid-template-columns:1fr 1fr; }
-.sitting-auto-controls input { width:100%; height:48px; margin-top:8px; padding:0 14px; border:1px solid rgba(255,255,255,.15); border-radius:10px; outline:none; background:#0c0d0d; color:white; color-scheme:dark; font-size:11px; }
-.sitting-auto-controls input:focus { border-color:var(--gold); }
-.sitting-auto-controls .button { grid-column:1/-1; }
 .booking-days .in-travel-window:not(.selected) { box-shadow:inset 0 0 0 1px rgba(222,196,143,.32); }
 
 .online-access-card { margin:40px 0 28px; padding:42px; display:grid; grid-template-columns:1fr auto; align-items:center; gap:60px; border:1px solid rgba(186,154,100,.38); border-radius:18px; background:radial-gradient(circle at 86% 25%,rgba(186,154,100,.14),transparent 28%),linear-gradient(145deg,#171817,#0c0d0d); }
@@ -583,9 +567,8 @@ footer { padding-top:100px; background:#080909; }
 .lesson-cta { min-height:330px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); }.lesson-cta h2 { font-size:61px; }
 
 @media (max-width:980px) {
-  .portal-hero,.signin-card,.featured-lesson,.library-title,.membership-grid,.sitting-portal-hero,.care-feature { grid-template-columns:1fr; }
+  .portal-hero,.signin-card,.featured-lesson,.library-title,.membership-grid,.care-feature { grid-template-columns:1fr; }
   .care-feature-image { min-height:520px; }
-  .sitting-rate-card { min-height:0; }
   .portal-steps { justify-content:flex-start; }.scheduler { grid-template-columns:1fr; }.booking-summary { position:relative; top:auto; }.lesson-grid { grid-template-columns:repeat(2,1fr); }.library-hero { grid-template-columns:1.15fr .85fr; }.featured-lesson aside { padding:55px; }
   .online-access-card { grid-template-columns:1fr; gap:32px; }.online-access-card>div:last-child { padding:28px 0 0; border-left:0; border-top:1px solid rgba(186,154,100,.35); }
 }
@@ -600,7 +583,6 @@ footer { padding-top:100px; background:#080909; }
   .signin-card { width:calc(100% - 30px); padding:35px 24px; gap:35px; }.signin-card form { grid-template-columns:1fr; }.signin-card label,.signin-card .button,.signin-card form>small { grid-column:1; }
   .scheduler { width:calc(100% - 30px); padding-block:80px; }.scheduler-heading { align-items:flex-start; flex-direction:column; }.service-option { grid-template-columns:18px 1fr; }.service-option>b { grid-column:2; text-align:left; }.program-selection-summary { grid-template-columns:1fr; gap:12px; }.program-selection-summary>b { text-align:left; }.auto-scheduler { grid-template-columns:1fr; padding:24px 20px; gap:24px; }.auto-scheduler h2 { font-size:30px; }.booking-days .day,.booking-days .empty-day { min-height:58px; padding:7px; }.booking-days .day small { font-size:8px; letter-spacing:0; }.booking-weekdays span { font-size:8px; }.selected-appointments { grid-template-columns:1fr; padding:20px; }.appointment-row { grid-template-columns:1fr 130px; }.appointment-row>button { grid-column:1/-1; }.time-section>div:first-child { display:block; }.time-options { grid-template-columns:repeat(2,1fr); }.booking-summary { padding:34px 24px; }
   .portal-help { min-height:310px; flex-direction:column; align-items:flex-start; justify-content:center; gap:28px; }.portal-help h2 { font-size:45px; }.portal-help-actions { min-width:0; width:100%; }.portal-help-actions .button { width:100%; }.portal-footer { min-height:120px; flex-direction:column; align-items:flex-start; justify-content:center; gap:8px; }
-  .sitting-rate-card { min-height:340px; }.sitting-rate-content { min-height:340px; padding:28px 24px; }.sitting-rate-content strong { font-size:76px; }.sitting-auto-controls { grid-template-columns:1fr; }.sitting-auto-controls .button { grid-column:1; }
   .library-hero { min-height:760px; grid-template-columns:1fr; }.library-hero-copy { width:calc(100% - 30px); margin-inline:auto; padding-top:120px; }.library-visual { min-height:250px; padding:30px 24px; }.lesson-ring { width:270px; left:70%; top:37%; }.library-visual strong { font-size:34px; }
   .featured-lesson { width:calc(100% - 30px); margin-top:0; }.featured-video { min-height:420px; padding:25px; }.featured-lesson aside { padding:45px 25px; }.featured-lesson aside h2 { font-size:44px; }
   .lesson-library { padding-block:90px; }.library-title { gap:25px; }.library-title h2 { font-size:51px; }.lesson-grid { grid-template-columns:1fr; }.lesson-art { min-height:225px; }
