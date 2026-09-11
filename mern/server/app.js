@@ -7,15 +7,16 @@ import { access } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { connectDb, transaction } from './db.js';
-import { User, Session, Booking, Slot, Settings, Message, DirectMessage, CommunityGroup, GroupMessage, Lesson, BillingLock, MediaUpload, MediaChunk } from './models.js';
+import { User, Session, Booking, Slot, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Lesson, BillingLock, MediaUpload, MediaChunk } from './models.js';
 import { hashPassword, verifyPassword, issueSession, identify, requireUser, requireStaff, requireOwner, signOut, publicUser, sameOrigin, rateLimit } from './auth.js';
 import { createBooking, getAvailability, getEntitlements, cancelBooking } from './bookings.js';
-import { stripeClient, stripeWebhook } from './payments.js';
+import { stripeClient, stripeWebhook, checkout, refundBooking } from './payments.js';
 import { sendUploadedMedia, CHUNK_SIZE, MEDIA_LIMITS, mediaBytes, validMediaHeader } from './media.js';
 import { LESSON_PREVIEWS, privatePath, protectedLesson } from './lessons.js';
 import { DEFAULT_SCHEDULE, HOURS, autoSchedule, validateVisits, availability, dateTime } from './scheduling.js';
 import { PAGE_METADATA } from '../shared/page-metadata.js';
 import { SERVICES, quote } from '../shared/catalog.js';
+import { effectiveServices } from './services.js';
 
 const app = express();
 app.disable('x-powered-by');
@@ -36,7 +37,9 @@ app.get('/api/config', async (_req, res) => {
     // Fixed diagnostic categories only; never return driver errors or env values.
     connectionIssue = error.databaseIssue || 'unavailable';
   }
-  res.json({ connected, connectionIssue, paymentsReady: false, paymentsPaused: true, workspaceVersion: 'owner-staff-2', schedule, timezone: 'America/Chicago', services: SERVICES });
+  const paymentsReady = connected && !!stripeClient();
+  const services = connected ? await effectiveServices({ includeDisabled: true }) : SERVICES.map(service => ({ ...service, enabled: true }));
+  res.json({ connected, connectionIssue, paymentsReady, paymentsPaused: !paymentsReady, workspaceVersion: 'owner-staff-3', schedule, timezone: 'America/Chicago', services });
 });
 app.get('/api/lessons', async (_req, res) => {
   if (!process.env.MONGODB_URI) return res.json({ lessons: LESSON_PREVIEWS });
@@ -78,7 +81,7 @@ app.post('/api/auth/logout', async (req, res) => { await signOut(req, res); res.
 app.get('/api/auth/me', async (req, res) => res.json({ user: req.user ? publicUser(req.user) : null, ...(req.user ? await getEntitlements(req.user._id) : { services: [], subscriptions: [] }) }));
 app.patch('/api/auth/profile', requireUser, async (req, res) => {
   const fields = z.object({ name: z.string().trim().min(2).max(80), dogName: z.string().trim().max(80), phone: z.string().trim().max(30), address: z.string().trim().max(300), title: z.string().trim().max(80).optional(), bio: z.string().trim().max(500).optional(), showPhone: z.boolean().optional() }).parse(req.body);
-  const user = await User.findByIdAndUpdate(req.user._id, { $set: fields }, { new: true });
+  const user = await User.findByIdAndUpdate(req.user._id, { $set: fields }, { returnDocument: 'after' });
   res.json({ user: publicUser(user) });
 });
 app.post('/api/auth/password', requireUser, rateLimit('password', 5, 900000), async (req, res) => {
@@ -91,11 +94,14 @@ app.post('/api/auth/password', requireUser, rateLimit('password', 5, 900000), as
 });
 app.get('/api/availability', async (req, res) => res.json(await getAvailability(String(req.query.from), String(req.query.to))));
 app.post('/api/availability/auto', async (req, res) => {
-  const input = z.object({ count: z.number().int().min(1).max(31), startDate: z.string(), startTime: z.string(), endDate: z.string(), endTime: z.string(), preference: z.enum(['any', 'morning', 'afternoon', 'evening']), service: z.enum(['training', 'aggression']) }).parse(req.body);
+  const input = z.object({ count: z.number().int().min(1).max(31), startDate: z.string(), startTime: z.string(), endDate: z.string(), endTime: z.string(), preference: z.enum(['any', 'morning', 'afternoon', 'evening']), service: z.enum(['training', 'walking', 'sitting', 'aggression']) }).parse(req.body);
   const { days } = await getAvailability(input.startDate, input.endDate);
   res.json(autoSchedule(days, input));
 });
-app.post('/api/quote', (req, res) => { validateVisits(req.body.serviceIds, req.body.visits); res.json(quote(req.body.serviceIds, req.body.visits)); });
+app.post('/api/quote', async (req, res) => {
+  const input = z.object({ serviceIds: z.array(z.string()).min(1).max(4), visits: z.array(z.object({ date: z.string(), time: z.string(), service: z.string() })).max(62), dogCount: z.number().int().min(1).max(10).default(1) }).parse(req.body);
+  const catalog = await effectiveServices(); validateVisits(input.serviceIds, input.visits, catalog); res.json(quote(input.serviceIds, input.visits, { dogCount: input.dogCount }, catalog));
+});
 app.get('/api/bookings', requireUser, async (req, res) => res.json({ bookings: await Booking.find({ userId: req.user._id }).sort({ createdAt: -1 }).limit(100).lean() }));
 app.post('/api/bookings', requireUser, rateLimit('booking', 10, 3600000), async (req, res) => res.status(201).json({ booking: await createBooking(req.user._id, req.body) }));
 async function ownedBooking(req) {
@@ -117,19 +123,40 @@ app.patch('/api/bookings/:id/visits', requireUser, async (req, res) => {
   const dates = visits.map(v => v.date).sort();
   if (dates.some(d => dateTime(d).diff(dateTime(new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })), 'days').days > 92)) throw new Error('Book within the next 92 days.');
   await transaction(async session => {
-    const settings = await Settings.findOneAndUpdate({ _id: 'schedule' }, { $inc: { revision: 1 } }, { new: true, session }).lean();
+    const settings = await Settings.findOneAndUpdate({ _id: 'schedule' }, { $inc: { revision: 1 } }, { returnDocument: 'after', session }).lean();
     const open = dates.length ? availability({ from: dates[0], to: dates.at(-1), settings }) : [];
     if (visits.some(v => !open.find(d => d.date === v.date)?.slots.includes(v.time))) throw new Error('Selected dates are outside current availability.');
     await Slot.deleteMany({ bookingId: booking._id }, { session });
     if (visits.length) await Slot.insertMany(visits.map(v => ({ _id: `${v.date}|${v.time}`, bookingId: booking._id, date: v.date, time: v.time })), { session });
-    const result = await Booking.updateOne({ _id: booking._id, status: { $ne: 'cancelled' }, checkoutStarting: { $ne: true }, stripeSessionId: { $exists: false } }, { $set: { visits, quote: quote(booking.serviceIds, visits), status: 'requested' } }, { session });
+    const result = await Booking.updateOne({ _id: booking._id, status: { $ne: 'cancelled' }, checkoutStarting: { $ne: true }, stripeSessionId: { $exists: false } }, { $set: { visits, quote: quote(booking.serviceIds, visits, { dogCount: booking.dogCount || 1 }), status: 'requested' } }, { session });
     if (!result.matchedCount) throw new Error('This booking changed while you were editing it. Refresh your account.');
   });
   res.json({ ok: true });
 });
-const paymentsPaused = (_req, res) => res.status(503).json({ error: 'Online checkout and refunds are paused while Bravo completes payment setup. Contact the owner for billing help.' });
-app.post('/api/bookings/:id/checkout', requireUser, paymentsPaused);
-app.post('/api/billing/portal', requireUser, paymentsPaused);
+const paymentsUnavailable = res => res.status(503).json({ error: 'Online checkout and refunds are paused while Bravo completes payment setup. Contact the owner for billing help.' });
+app.post('/api/bookings/:id/checkout', requireUser, rateLimit('checkout', 20, 3600000), async (req, res) => {
+  const stripe = stripeClient(); if (!stripe) return paymentsUnavailable(res);
+  const booking = await ownedBooking(req);
+  if (String(booking.userId) !== String(req.user._id)) return res.status(403).json({ error: 'Only the customer can open their checkout.' });
+  res.json(await checkout(booking, req.user, stripe));
+});
+app.post('/api/billing/portal', requireUser, async (req, res) => {
+  const stripe = stripeClient();
+  if (!stripe || !req.user.stripeCustomerId) return paymentsUnavailable(res);
+  const portal = await stripe.billingPortal.sessions.create({ customer: req.user.stripeCustomerId, return_url: `${process.env.APP_ORIGIN}/account` });
+  res.json({ url: portal.url });
+});
+app.get('/api/reviews', async (_req, res) => {
+  const reviews = await Review.find({ hidden: false }).select('authorName rating body createdAt updatedAt').sort({ createdAt: -1 }).limit(100).lean();
+  const average = reviews.length ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length : 0;
+  res.json({ reviews, average: Number(average.toFixed(1)), count: reviews.length });
+});
+app.get('/api/reviews/mine', requireUser, async (req, res) => res.json({ review: await Review.findOne({ userId: req.user._id }).select('rating body hidden createdAt updatedAt').lean() }));
+app.put('/api/reviews/mine', requireUser, rateLimit('review', 6, 3600000), async (req, res) => {
+  const data = z.object({ rating: z.number().int().min(1).max(5), body: z.string().trim().min(10).max(1200) }).parse(req.body);
+  const review = await Review.findOneAndUpdate({ userId: req.user._id }, { $set: { ...data, authorName: req.user.name, hidden: false }, $unset: { moderatedAt: 1, moderatedBy: 1 } }, { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true });
+  res.json({ review });
+});
 app.get('/api/community', requireUser, async (_req, res) => {
   const messages = await Message.find({ deleted: false }).sort({ createdAt: -1 }).limit(100).lean();
   res.json({ messages: messages.reverse().map(({ _id, authorName, role, kind, body, createdAt }) => ({ _id, authorName, role, kind, body, createdAt })) });
@@ -233,10 +260,33 @@ app.patch('/api/admin/users/:id', requireUser, requireOwner, async (req, res) =>
   if (target.role === 'owner' && (req.body.role || req.body.blocked || req.body.mutedUntil)) throw new Error('Owner access cannot be removed or muted here.');
   if (String(req.params.id) === String(req.user._id) && (req.body.role && req.body.role !== 'owner' || req.body.blocked === true)) throw new Error('The owner account cannot remove its own access.');
   const fields = z.object({ role: z.enum(['member', 'staff']).optional(), name: z.string().trim().min(2).max(80).optional(), phone: z.string().trim().max(30).optional(), title: z.string().trim().max(80).optional(), bio: z.string().trim().max(500).optional(), showPhone: z.boolean().optional(), blocked: z.boolean().optional(), mutedUntil: z.union([z.string().datetime(), z.null()]).optional() }).parse(req.body);
-  const user = await User.findByIdAndUpdate(req.params.id, { $set: fields }, { new: true }); if (!user) return res.status(404).json({ error: 'Account not found.' });
+  const user = await User.findByIdAndUpdate(req.params.id, { $set: fields }, { returnDocument: 'after' }); if (!user) return res.status(404).json({ error: 'Account not found.' });
   if (fields.blocked) await Session.deleteMany({ userId: user._id }); res.json({ user: publicUser(user) });
 });
-app.post('/api/admin/bookings/:id/refund', requireUser, requireOwner, paymentsPaused);
+app.get('/api/admin/reviews', requireUser, requireOwner, async (_req, res) => res.json({ reviews: await Review.find().sort({ createdAt: -1 }).limit(200).lean() }));
+app.get('/api/admin/services', requireUser, requireOwner, async (_req, res) => res.json({ services: await effectiveServices({ includeDisabled: true }) }));
+app.patch('/api/admin/services/:id', requireUser, requireOwner, async (req, res) => {
+  const service = SERVICES.find(item => item.id === req.params.id); if (!service) return res.status(404).json({ error: 'Service not found.' });
+  const fields = z.object({ cents: z.number().int().min(0).max(1000000), enabled: z.boolean() }).parse(req.body);
+  if (service.id === 'training' && fields.cents !== 20000) throw new Error('The primary training price is fixed at $200/month by the current business directive.');
+  const setting = await ServiceSetting.findOneAndUpdate({ _id: service.id }, { $set: { ...fields, updatedBy: req.user._id } }, { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true });
+  await AuditEvent.create({ actorId: req.user._id, action: 'service.updated', targetType: 'service', targetId: service.id, details: fields });
+  res.json({ service: { ...service, cents: setting.cents, enabled: setting.enabled } });
+});
+app.patch('/api/admin/reviews/:id', requireUser, requireOwner, async (req, res) => {
+  const { hidden } = z.object({ hidden: z.boolean() }).parse(req.body);
+  const review = await Review.findByIdAndUpdate(objectId.parse(req.params.id), { $set: { hidden, moderatedAt: new Date(), moderatedBy: req.user._id } }, { returnDocument: 'after' });
+  if (!review) return res.status(404).json({ error: 'Review not found.' });
+  await AuditEvent.create({ actorId: req.user._id, action: hidden ? 'review.hidden' : 'review.restored', targetType: 'review', targetId: String(review._id) });
+  res.json({ ok: true });
+});
+app.post('/api/admin/bookings/:id/refund', requireUser, requireOwner, rateLimit('refund', 8, 3600000), async (req, res) => {
+  const stripe = stripeClient(); if (!stripe) return paymentsUnavailable(res);
+  const booking = await ownedBooking(req);
+  const result = await refundBooking(booking, req.user, stripe);
+  await AuditEvent.create({ actorId: req.user._id, action: 'payment.refunded', targetType: 'booking', targetId: String(booking._id), details: { amountCents: result.amountCents, refundId: result.refundId } });
+  res.json(result);
+});
 app.put('/api/admin/schedule', requireUser, requireStaff, async (req, res) => {
   const settings = z.object({ enabled: z.boolean(), weekdays: z.array(z.number().int().min(1).max(7)).min(1).max(7), hours: z.array(z.enum(HOURS)).min(1).max(13) }).parse(req.body);
   await Settings.updateOne({ _id: 'schedule' }, { $set: settings, $inc: { revision: 1 } }); res.json({ ok: true });
@@ -277,7 +327,7 @@ app.put('/api/admin/media/:id/chunks/:index', requireUser, requireStaff, rateLim
   const bytes = Buffer.from(data, 'base64');
   await transaction(async session => {
     // Serialize chunk writes and completion on the same upload record.
-    const upload = await MediaUpload.findOneAndUpdate({ _id: req.params.id, uploadedBy: req.user._id, completed: false, expiresAt: { $gt: new Date() } }, { $set: { updatedAt: new Date() } }, { new: true, session });
+    const upload = await MediaUpload.findOneAndUpdate({ _id: req.params.id, uploadedBy: req.user._id, completed: false, expiresAt: { $gt: new Date() } }, { $set: { updatedAt: new Date() } }, { returnDocument: 'after', session });
     if (!upload) throw Object.assign(new Error('Upload not found or expired.'), { status: 404 });
     const index = Number(req.params.index); if (!Number.isInteger(index) || index < 0 || index >= upload.chunks) throw new Error('Invalid upload chunk.');
     if (bytes.length !== Math.min(CHUNK_SIZE, upload.size - index * CHUNK_SIZE)) throw new Error('Upload chunk has an invalid size.');

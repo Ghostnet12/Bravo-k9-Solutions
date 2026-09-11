@@ -17,7 +17,8 @@ export function bookingCalendar(booking, now = DateTime.utc()) {
   for (const visit of booking.visits) {
     const start = DateTime.fromISO(`${visit.date}T${visit.time}`, { zone: 'America/Chicago' });
     if (!start.isValid) throw new Error('Invalid appointment date.');
-    lines.push('BEGIN:VEVENT', `UID:${escapeText(booking._id)}-${visit.date}-${visit.time.replace(':', '')}@bravo-k9`, `DTSTAMP:${stamp(now)}`, `DTSTART:${stamp(start)}`, `SUMMARY:${escapeText(`Bravo K9: ${visit.service} for ${booking.dogName}`)}`, `LOCATION:${escapeText(booking.address)}`, 'DESCRIPTION:Confirmed Bravo visit. Call (605) 824-2767 for changes. This calendar entry does not update automatically.', 'STATUS:CONFIRMED', 'END:VEVENT');
+    const end = start.plus({ minutes: visit.service === 'walking' ? 30 : 60 });
+    lines.push('BEGIN:VEVENT', `UID:${escapeText(booking._id)}-${visit.date}-${visit.time.replace(':', '')}@bravo-k9`, `DTSTAMP:${stamp(now)}`, `DTSTART:${stamp(start)}`, `DTEND:${stamp(end)}`, `SUMMARY:${escapeText(`Bravo K9: ${visit.service} for ${booking.dogName}`)}`, `LOCATION:${escapeText(booking.address)}`, 'DESCRIPTION:Confirmed Bravo visit. Please provide at least 24 hours notice for changes. Call (605) 824-2767. This calendar entry does not update automatically.', 'STATUS:CONFIRMED', 'END:VEVENT');
   }
   return lines.map(fold).join('\r\n') + '\r\n';
 }

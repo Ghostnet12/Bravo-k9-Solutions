@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 const [email, role] = process.argv.slice(2);
 if (!email || !['staff', 'member'].includes(role)) throw new Error('Usage: npm run staff -- exact-email@example.com staff|member');
 await connectDb();
-const user = await User.findOneAndUpdate({ email: email.toLowerCase() }, { $set: { role } }, { new: true });
+const user = await User.findOneAndUpdate({ email: email.toLowerCase() }, { $set: { role } }, { returnDocument: 'after' });
 if (!user) throw new Error('Create the account first, then verify this is the intended person before granting staff access.');
 console.log(`Role updated to ${user.role}. No password or session values were printed.`);
 await mongoose.disconnect();

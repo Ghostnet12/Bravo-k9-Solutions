@@ -10,9 +10,12 @@ test('Bravo pricing stays exact and recurring charges are separated', () => {
   assert.equal(quote(['training', 'online']).monthlyCents, 25000);
   const q = quote(['aggression', 'online']);
   assert.equal(q.monthlyCents, 5000); assert.equal(q.oneTimeCents, 40000);
+  const walking = quote(['walking'], [{ date: '2026-10-10', time: '09:00', service: 'walking' }, { date: '2026-10-11', time: '10:00', service: 'walking' }], { dogCount: 3 });
+  assert.equal(walking.oneTimeCents, 15000); assert.equal(walking.lines[0].quantity, 6); assert.equal(walking.lines[0].durationMinutes, 30);
 });
-test('duplicate programs, retired services, and conflicting intakes are rejected', () => {
-  for (const ids of [[], ['training','training'], ['free'], ['sitting'], ['all-access'], ['training','aggression']]) assert.throws(() => serviceSelection(ids));
+test('duplicate programs, unknown services, and conflicting selections are rejected', () => {
+  for (const ids of [[], ['training','training'], ['free'], ['all-access','walking'], ['training','aggression']]) assert.throws(() => serviceSelection(ids));
+  for (const ids of [['walking'], ['sitting'], ['all-access']]) assert.doesNotThrow(() => serviceSelection(ids));
 });
 test('dates use Aberdeen timezone and reject impossible dates', () => {
   assert.throws(() => dateTime('2026-02-30')); assert.throws(() => dateTime('2026-10-02','24:00'));

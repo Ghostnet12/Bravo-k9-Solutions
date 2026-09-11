@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
 import { Booking, User, Subscription, StripeEvent, BillingLock, Lesson } from './models.js';
 import { connectDb, transaction } from './db.js';
-import { serviceSelection, quote } from '../shared/catalog.js';
+import { serviceSelection } from '../shared/catalog.js';
 export function stripeClient() {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key || !process.env.STRIPE_WEBHOOK_SECRET || (key.startsWith('sk_live_') && process.env.STRIPE_LIVE_ENABLED !== 'true')) return null;
@@ -37,11 +37,12 @@ export async function checkout(booking, user, stripe) {
     customerId = customer.id;
     await User.updateOne({ _id: user._id }, { $set: { stripeCustomerId: customerId } });
   }
-  const pricing = quote(booking.serviceIds, booking.visits);
+  const pricing = booking.quote;
+  if (!pricing?.lines?.length || pricing.currency !== 'usd') throw new Error('This booking needs a fresh server quote before checkout.');
   const metadata = { app: 'bravo-k9', userId: String(user._id), bookingId, serviceIds: JSON.stringify(booking.serviceIds.filter(id => selected.find(s => s.id === id).interval === 'month')) };
   const params = {
     mode: pricing.monthlyCents ? 'subscription' : 'payment', customer: customerId,
-    payment_method_types: ['card'], client_reference_id: bookingId, metadata,
+    client_reference_id: bookingId, metadata,
     line_items: pricing.lines.filter(l => l.quantity > 0).map(line => ({
       quantity: line.quantity, price_data: { currency: 'usd', unit_amount: line.unitCents, product_data: { name: `Bravo K9 — ${line.name}` }, ...(line.interval === 'month' ? { recurring: { interval: 'month' } } : {}) },
     })),
@@ -87,13 +88,32 @@ export async function processStripeEvent(event, stripe) {
       const booking = await Booking.findById(object.metadata.bookingId).session(session);
       if (!booking || String(booking.userId) !== object.metadata.userId) throw new Error('Booking owner mismatch.');
       if (object.currency !== 'usd' || object.amount_total !== booking.quote.dueNowCents) throw new Error('Checkout amount mismatch.');
-      await Booking.updateOne({ _id: booking._id }, { $set: { paymentStatus: booking.status === 'cancelled' ? 'review' : 'paid', stripeSessionId: object.id, checkoutStarting: false } }, { session });
+      await Booking.updateOne({ _id: booking._id }, { $set: { paymentStatus: booking.status === 'cancelled' ? 'review' : 'paid', stripeSessionId: object.id, stripePaymentIntentId: typeof object.payment_intent === 'string' ? object.payment_intent : object.payment_intent?.id, checkoutStarting: false } }, { session });
       await BillingLock.deleteOne({ _id: object.metadata.userId, bookingId: String(booking._id) }, { session });
     }
     if (event.type === 'checkout.session.expired' && object.metadata?.app === 'bravo-k9') {
       await BillingLock.deleteOne({ _id: object.metadata.userId, bookingId: object.metadata.bookingId }, { session });
     }
   }).catch(async error => { if (error.code !== 11000 || !await StripeEvent.exists({ _id: event.id })) throw error; });
+}
+export async function refundBooking(booking, owner, stripe) {
+  if (booking.paymentStatus === 'refunded' || booking.refundId) throw Object.assign(new Error('This booking already has a refund recorded.'), { status: 409 });
+  if (booking.paymentStatus !== 'paid' || !booking.stripeSessionId) throw new Error('Only a verified paid booking can be refunded.');
+  const reserved = await Booking.updateOne({ _id: booking._id, paymentStatus: 'paid', refundId: { $exists: false } }, { $set: { refundId: 'pending', refundedBy: owner._id } });
+  if (!reserved.modifiedCount) throw Object.assign(new Error('A refund is already in progress or completed.'), { status: 409 });
+  try {
+    const session = await stripe.checkout.sessions.retrieve(booking.stripeSessionId, { expand: ['payment_intent', 'invoice.payment_intent'] });
+    const intent = booking.stripePaymentIntentId || (typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id) || (typeof session.invoice?.payment_intent === 'string' ? session.invoice.payment_intent : session.invoice?.payment_intent?.id);
+    if (!intent) throw new Error('Stripe has no refundable payment attached to this booking. Review the transaction in Stripe.');
+    const amountCents = Number(booking.quote?.dueNowCents || session.amount_total);
+    if (!Number.isInteger(amountCents) || amountCents <= 0) throw new Error('The verified refund amount is unavailable.');
+    const refund = await stripe.refunds.create({ payment_intent: intent, amount: amountCents, metadata: { app: 'bravo-k9', bookingId: String(booking._id), ownerId: String(owner._id) } }, { idempotencyKey: `bravo-refund-${booking._id}` });
+    await Booking.updateOne({ _id: booking._id, refundId: 'pending' }, { $set: { refundId: refund.id, refundAmountCents: amountCents, refundedAt: new Date(), paymentStatus: 'refunded' } });
+    return { ok: true, refundId: refund.id, amountCents, message: 'Refund submitted through Stripe. Any subscription remains active until separately changed in billing.' };
+  } catch (error) {
+    await Booking.updateOne({ _id: booking._id, refundId: 'pending' }, { $unset: { refundId: 1, refundedBy: 1 } });
+    throw error;
+  }
 }
 export async function stripeWebhook(req, res) {
   const stripe = stripeClient();

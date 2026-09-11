@@ -61,10 +61,10 @@ export function rateLimit(scope, limit, milliseconds) {
     const key = digest(`${scope}:${identity}:${bucket}`);
     let doc;
     try {
-      doc = await RateBucket.findOneAndUpdate({ _id: key }, { $inc: { count: 1 }, $setOnInsert: { expiresAt: new Date((bucket + 1) * milliseconds) } }, { upsert: true, new: true });
+      doc = await RateBucket.findOneAndUpdate({ _id: key }, { $inc: { count: 1 }, $setOnInsert: { expiresAt: new Date((bucket + 1) * milliseconds) } }, { upsert: true, returnDocument: 'after' });
     } catch (error) {
       if (error.code !== 11000) throw error;
-      doc = await RateBucket.findOneAndUpdate({ _id: key }, { $inc: { count: 1 } }, { new: true });
+      doc = await RateBucket.findOneAndUpdate({ _id: key }, { $inc: { count: 1 } }, { returnDocument: 'after' });
     }
     if (doc.count > limit) throw Object.assign(new Error('Too many attempts. Please wait and try again.'), { status: 429 });
     next();

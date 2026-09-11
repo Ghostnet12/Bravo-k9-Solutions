@@ -6,7 +6,7 @@ import mongoose from 'mongoose';
 import request from 'supertest';
 import app from '../server/app.js';
 import { digest } from '../server/auth.js';
-import { ALL_MODELS, User, Session, RateBucket, Settings, Subscription, CommunityGroup, GroupMessage, DirectMessage, Lesson, MediaUpload, MediaChunk, Booking } from '../server/models.js';
+import { ALL_MODELS, User, Session, RateBucket, Settings, ServiceSetting, Subscription, CommunityGroup, GroupMessage, DirectMessage, Lesson, MediaUpload, MediaChunk, Booking, Review } from '../server/models.js';
 const origin = 'http://localhost:5173';
 const ids = { owner: '6aa290cbd066f8feb3c1964f', staff: '111111111111111111111111', member: '222222222222222222222222', other: '333333333333333333333333' };
 function query(value) {
@@ -31,6 +31,7 @@ test('owner/staff workspace contracts over HTTP with isolated model mocks', asyn
   t.mock.method(RateBucket, 'findOneAndUpdate', async () => ({ count: 1 }));
   t.mock.method(Settings, 'updateOne', async () => ({}));
   t.mock.method(Settings, 'findById', () => query({ enabled: true, weekdays: [1, 2, 3, 4, 5], hours: ['09:00'] }));
+  t.mock.method(ServiceSetting, 'find', () => query([]));
   t.mock.method(Subscription, 'find', () => query([]));
   const call = (role, method, path, body) => {
     const req = request(app)[method](path).set('Origin', origin);
@@ -133,6 +134,19 @@ test('owner/staff workspace contracts over HTTP with isolated model mocks', asyn
     const data = create.mock.calls[0].arguments[0];
     assert.equal(data.role, undefined); assert.equal(data.blocked, undefined); assert.equal(data.showPhone, undefined);
     assert.ok(data.passwordHash); assert.equal(result.body.user.passwordHash, undefined);
+  });
+  await t.test('reviews use the signed-in identity and owner-only moderation', async () => {
+    const saved = { _id: ids.other, userId: ids.member, authorName: 'member', rating: 5, body: 'A careful and helpful training experience.', hidden: false };
+    const write = t.mock.method(Review, 'findOneAndUpdate', (_filter, change) => query({ ...saved, ...change.$set }));
+    const result = await call('member', 'put', '/api/reviews/mine', { rating: 5, body: saved.body, authorName: 'Fake owner', userId: ids.owner }).expect(200);
+    assert.equal(write.mock.calls[0].arguments[0].userId, ids.member);
+    assert.equal(write.mock.calls[0].arguments[1].$set.authorName, 'member');
+    assert.equal(result.body.review.rating, 5);
+    await call('staff', 'patch', `/api/admin/reviews/${ids.other}`, { hidden: true }).expect(403);
+  });
+  await t.test('service pricing is owner-only and primary training stays fixed', async () => {
+    for (const role of ['member', 'staff']) await call(role, 'patch', '/api/admin/services/walking', { cents: 1, enabled: true }).expect(403);
+    await call('owner', 'patch', '/api/admin/services/training', { cents: 19999, enabled: true }).expect(400);
   });
   await t.test('upload completion attaches media atomically and removes expiry', async () => {
     const upload = { _id: 'finished-upload', lessonId: 'test', uploadedBy: ids.staff, size: 8, chunks: 1, kind: 'image', filename: 'cover.png', contentType: 'image/png', completed: false, expiresAt: new Date(Date.now() + 60000), save: async function() { return this; } };

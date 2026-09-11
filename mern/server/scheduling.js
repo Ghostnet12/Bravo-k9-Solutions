@@ -37,8 +37,8 @@ export function autoSchedule(days, { count, startDate, startTime = '09:00', endD
   const uncoveredDates = dateRange(startDate, endDate).filter(date => !result.some(v => v.date === date));
   return { visits: result, uncoveredDates, boundaryWarning: !result.some(v => v.date === startDate) || !result.some(v => v.date === endDate) };
 }
-export function validateVisits(ids, visits) {
-  const included = new Set(serviceSelection(ids).flatMap(s => s.includes));
+export function validateVisits(ids, visits, catalog) {
+  const included = new Set(serviceSelection(ids, catalog).flatMap(s => s.includes));
   if (!Array.isArray(visits) || visits.length > 62) throw new Error('Choose up to 62 visits.');
   for (const visit of visits) {
     if (!included.has(visit.service) || visit.service === 'online' || !HOURS.includes(visit.time)) throw new Error('Visit does not match your selected programs or hours.');
@@ -46,5 +46,7 @@ export function validateVisits(ids, visits) {
   }
   const keys = visits.map(v => `${v.date}|${v.time}`);
   if (new Set(keys).size !== keys.length) throw new Error('Two visits cannot use the same time slot.');
+  const sittingDates = visits.filter(v => v.service === 'sitting').map(v => v.date);
+  if (new Set(sittingDates).size !== sittingDates.length) throw new Error('Dog sitting is one scheduled visit per care day; contact Bravo for extra visits.');
   for (const service of included) if (service !== 'online' && !visits.some(v => v.service === service)) throw new Error(`Choose at least one ${service} visit.`);
 }

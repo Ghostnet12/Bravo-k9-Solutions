@@ -19,17 +19,21 @@ const visitSchema = new Schema({ date: String, time: String, service: String }, 
 const bookingSchema = new Schema({
   userId: { type: id, required: true, index: true }, requestKey: String,
   staffId: { type: id, default: null, index: true }, createdBy: id,
-  serviceIds: [String], visits: [visitSchema], dogName: String, phone: String, address: String, notes: String,
+  serviceIds: [String], visits: [visitSchema], dogCount: { type: Number, min: 1, max: 10, default: 1 }, dogName: String, phone: String, address: String, notes: String,
   status: { type: String, enum: ['requested', 'confirmed', 'cancelled'], default: 'requested' },
   paymentStatus: { type: String, enum: ['unpaid', 'paid', 'covered', 'review', 'refunded'], default: 'unpaid' },
-  quote: Schema.Types.Mixed, stripeSessionId: String, checkoutUrl: String, checkoutExpiresAt: Date,
+  quote: Schema.Types.Mixed, stripeSessionId: String, stripePaymentIntentId: String, checkoutUrl: String, checkoutExpiresAt: Date,
+  refundId: String, refundAmountCents: Number, refundedAt: Date, refundedBy: id,
   checkoutParams: { type: Schema.Types.Mixed, select: false }, checkoutStarting: { type: Boolean, default: false },
 }, { timestamps: true });
 bookingSchema.index({ userId: 1, requestKey: 1 }, { unique: true });
 export const Booking = model('BravoBooking', bookingSchema);
 export const Slot = model('BravoSlot', new Schema({ _id: String, bookingId: id, date: String, time: String, reason: String }));
 export const Settings = model('BravoSettings', new Schema({ _id: String, weekdays: [Number], hours: [String], enabled: Boolean, revision: { type: Number, default: 0 } }));
+export const ServiceSetting = model('BravoServiceSetting', new Schema({ _id: String, cents: { type: Number, min: 0, max: 1000000 }, enabled: { type: Boolean, default: true }, updatedBy: id }, { timestamps: true }));
 export const Message = model('BravoMessage', new Schema({ userId: id, authorName: String, role: String, kind: { type: String, enum: ['message', 'announcement', 'alert'] }, body: String, deleted: { type: Boolean, default: false } }, { timestamps: true }));
+export const Review = model('BravoReview', new Schema({ userId: { type: id, required: true, unique: true, index: true }, authorName: String, rating: { type: Number, min: 1, max: 5 }, body: String, hidden: { type: Boolean, default: false }, moderatedAt: Date, moderatedBy: id }, { timestamps: true }));
+export const AuditEvent = model('BravoAuditEvent', new Schema({ actorId: id, action: String, targetType: String, targetId: String, details: Schema.Types.Mixed }, { timestamps: true }));
 export const DirectMessage = model('BravoDirectMessage', new Schema({ memberId: { type: id, required: true, index: true }, senderId: { type: id, required: true }, senderName: String, senderRole: String, recipientId: id, recipientName: String, body: String, deleted: { type: Boolean, default: false } }, { timestamps: true }));
 export const CommunityGroup = model('BravoCommunityGroup', new Schema({ name: { type: String, required: true }, ownerId: { type: id, required: true }, members: [{ type: id }], archived: { type: Boolean, default: false } }, { timestamps: true }));
 export const GroupMessage = model('BravoGroupMessage', new Schema({ groupId: { type: id, required: true, index: true }, userId: { type: id, required: true }, authorName: String, role: String, body: String, deleted: { type: Boolean, default: false } }, { timestamps: true }));
@@ -48,4 +52,4 @@ export const MediaUpload = model('BravoMediaUpload', new Schema({ _id: String, l
 const mediaChunkSchema = new Schema({ uploadId: { type: String, index: true }, index: Number, size: Number, data: Buffer, expiresAt: { type: Date, expires: 0 } }, { timestamps: true });
 mediaChunkSchema.index({ uploadId: 1, index: 1 }, { unique: true });
 export const MediaChunk = model('BravoMediaChunk', mediaChunkSchema);
-export const ALL_MODELS = [User, Session, RateBucket, Booking, Slot, Settings, Message, DirectMessage, CommunityGroup, GroupMessage, Subscription, StripeEvent, Lesson, BillingLock, MediaUpload, MediaChunk];
+export const ALL_MODELS = [User, Session, RateBucket, Booking, Slot, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Subscription, StripeEvent, Lesson, BillingLock, MediaUpload, MediaChunk];

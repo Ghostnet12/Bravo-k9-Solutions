@@ -28,6 +28,6 @@ test('public search files have route-specific metadata and private routes are no
   const account = await request(app).get('/account').expect(200);
   assert.match(account.headers['x-robots-tag'], /noindex/);
   const sitemap = await request(app).get('/sitemap.xml').expect(200);
-  assert.match(sitemap.text, /\/contact/); assert.doesNotMatch(sitemap.text, /\/admin|\/account|\/community/);
+  assert.match(sitemap.text, /\/contact/); assert.match(sitemap.text, /\/dog-walking/); assert.doesNotMatch(sitemap.text, /\/admin|\/account|\/community/);
   await request(app).get('/not-a-bravo-page').expect(404);
 });

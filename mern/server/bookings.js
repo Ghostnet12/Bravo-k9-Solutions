@@ -3,16 +3,18 @@ import { Booking, Settings, Slot, Subscription } from './models.js';
 import { transaction } from './db.js';
 import { availability, validateVisits, dateTime } from './scheduling.js';
 import { quote, serviceSelection } from '../shared/catalog.js';
+import { effectiveServices } from './services.js';
 export const bookingInput = z.object({
   requestKey: z.string().uuid(), serviceIds: z.array(z.string()).min(1).max(4),
   visits: z.array(z.object({ date: z.string(), time: z.string(), service: z.string() })).max(62),
+  dogCount: z.number().int().min(1).max(10).default(1),
   dogName: z.string().trim().min(1).max(80), phone: z.string().trim().min(7).max(30),
   address: z.string().trim().max(300), notes: z.string().trim().max(1500).default(''),
 });
 export async function getEntitlements(userId) {
   const subs = await Subscription.find({ userId, status: { $in: ['active', 'trialing'] }, validUntil: { $gt: new Date() } }).lean();
-  const active = new Set(['training', 'online', 'aggression']);
-  const legacy = { complete: ['training'], 'all-access': ['training', 'online'] };
+  const active = new Set(['training', 'walking', 'sitting', 'online', 'aggression']);
+  const legacy = { complete: ['training', 'sitting'], 'all-access': ['training', 'sitting', 'online'] };
   return { subscriptions: subs, services: [...new Set(subs.flatMap(subscription => subscription.serviceIds.flatMap(id => legacy[id] || (active.has(id) ? [id] : []))))] };
 }
 export async function getAvailability(from, to) {
@@ -22,7 +24,9 @@ export async function getAvailability(from, to) {
 }
 export async function createBooking(userId, payload, assignment = {}) {
   const data = bookingInput.parse(payload);
-  validateVisits(data.serviceIds, data.visits);
+  const catalog = await effectiveServices();
+  serviceSelection(data.serviceIds, catalog);
+  validateVisits(data.serviceIds, data.visits, catalog);
   if (data.visits.length && data.address.length < 5) throw new Error('Enter the address where Bravo should visit.');
   const dates = data.visits.map(v => v.date).sort();
   const maximum = dateTime(new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })).plus({ days: 92 });
@@ -35,12 +39,12 @@ export async function createBooking(userId, payload, assignment = {}) {
   try {
     await transaction(async session => {
       // Schedule updates and reservations share a write lock; closures cannot race a booking.
-      const settings = await Settings.findOneAndUpdate({ _id: 'schedule' }, { $inc: { revision: 1 } }, { new: true, session }).lean();
+      const settings = await Settings.findOneAndUpdate({ _id: 'schedule' }, { $inc: { revision: 1 } }, { returnDocument: 'after', session }).lean();
       if (dates.length) {
         const open = availability({ from: dates[0], to: dates.at(-1), settings });
         if (data.visits.some(v => !open.find(d => d.date === v.date)?.slots.includes(v.time))) throw Object.assign(new Error('One or more visits are no longer available. Refresh the schedule.'), { status: 409 });
       }
-      [booking] = await Booking.create([{ ...data, userId, staffId: assignment.staffId || null, createdBy: assignment.createdBy || userId, quote: quote(data.serviceIds, data.visits), paymentStatus: covered ? 'covered' : 'unpaid' }], { session });
+      [booking] = await Booking.create([{ ...data, userId, staffId: assignment.staffId || null, createdBy: assignment.createdBy || userId, quote: quote(data.serviceIds, data.visits, { dogCount: data.dogCount }, catalog), paymentStatus: covered ? 'covered' : 'unpaid' }], { session });
       if (data.visits.length) await Slot.insertMany(data.visits.map(v => ({ _id: `${v.date}|${v.time}`, date: v.date, time: v.time, bookingId: booking._id })), { session });
     });
   } catch (error) {
