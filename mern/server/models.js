@@ -23,7 +23,7 @@ const bookingSchema = new Schema({
   status: { type: String, enum: ['requested', 'confirmed', 'cancelled'], default: 'requested' },
   paymentStatus: { type: String, enum: ['unpaid', 'paid', 'covered', 'review', 'refunded'], default: 'unpaid' },
   quote: Schema.Types.Mixed, stripeSessionId: String, stripePaymentIntentId: String, checkoutUrl: String, checkoutExpiresAt: Date,
-  refundId: String, refundAmountCents: Number, refundedAt: Date, refundedBy: id,
+  refundId: String, refundStatus: String, refundAmountCents: Number, refundedAt: Date, refundedBy: id,
   checkoutParams: { type: Schema.Types.Mixed, select: false }, checkoutStarting: { type: Boolean, default: false },
 }, { timestamps: true });
 bookingSchema.index({ userId: 1, requestKey: 1 }, { unique: true });

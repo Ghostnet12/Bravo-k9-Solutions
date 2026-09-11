@@ -68,7 +68,7 @@ test('checkout recovers an abandoned lock that has no Stripe session', async t =
     if (lockAttempts === 1) throw Object.assign(new Error('duplicate'), { code: 11000 });
     return {};
   });
-  t.mock.method(BillingLock, 'findById', () => query({ _id: String(user._id), bookingId: '68c20f8f5c734fa0f944ad19' }));
+  t.mock.method(BillingLock, 'findById', () => query({ _id: String(user._id), bookingId: '68c20f8f5c734fa0f944ad19', expiresAt: new Date(Date.now() + 29 * 60 * 1000) }));
   t.mock.method(BillingLock, 'deleteOne', async () => { lockDeleted = true; return { deletedCount: 1 }; });
   let bookingReads = 0;
   t.mock.method(Booking, 'findById', id => {
@@ -84,5 +84,5 @@ test('checkout recovers an abandoned lock that has no Stripe session', async t =
   const result = await checkout(booking, user, stripe);
   assert.equal(result.url, 'https://checkout.stripe.com/session');
   assert.equal(lockAttempts, 2);
-  assert.equal(lockDeleted, true);
+  assert.equal(lockDeleted, false); // Recovery is atomic; it must never delete/recreate a live lock.
 });

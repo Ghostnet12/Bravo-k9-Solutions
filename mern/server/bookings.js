@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { Booking, Settings, Slot, Subscription } from './models.js';
 import { transaction } from './db.js';
-import { availability, validateVisits, dateTime } from './scheduling.js';
+import { availability, validateVisits, dateTime, dateRange } from './scheduling.js';
 import { quote, serviceSelection } from '../shared/catalog.js';
 import { effectiveServices } from './services.js';
 export const bookingInput = z.object({
@@ -27,6 +27,7 @@ export function bookingCoveredByEntitlements(serviceIds, dogCount, entitlements)
     && (!serviceIds.includes('training') || (entitlements.serviceDogCounts?.training || 0) >= dogCount);
 }
 export async function getAvailability(from, to) {
+  dateRange(from, to); // Validate bounded dates before issuing a database range query.
   const settings = await Settings.findById('schedule').lean();
   const slots = await Slot.find({ date: { $gte: from, $lte: to } }, { _id: 1 }).lean();
   return { days: availability({ from, to, settings, occupied: slots.map(s => s._id) }), enabled: settings.enabled };
@@ -68,14 +69,15 @@ export async function createBooking(userId, payload, assignment = {}) {
 }
 export async function cancelBooking(booking, stripe) {
   const current = await Booking.findById(booking._id);
+  if (!current) throw Object.assign(new Error('Booking not found.'), { status: 404 });
   if (current.checkoutStarting) throw Object.assign(new Error('Checkout is still starting. Retry checkout from your account, then cancel after it finishes opening.'), { status: 409 });
-  if (booking.stripeSessionId) {
+  if (current.stripeSessionId) {
     if (!stripe) throw Object.assign(new Error('Contact Bravo to cancel this checkout-linked booking.'), { status: 503 });
-    const checkout = await stripe.checkout.sessions.retrieve(booking.stripeSessionId);
+    const checkout = await stripe.checkout.sessions.retrieve(current.stripeSessionId);
     if (checkout.status === 'open') await stripe.checkout.sessions.expire(checkout.id);
   }
   await transaction(async session => {
-    const result = await Booking.updateOne({ _id: booking._id, checkoutStarting: { $ne: true } }, { $set: { status: 'cancelled' } }, { session });
+    const result = await Booking.updateOne({ _id: booking._id, checkoutStarting: { $ne: true }, stripeSessionId: current.stripeSessionId || { $exists: false } }, { $set: { status: 'cancelled' } }, { session });
     if (!result.matchedCount) throw Object.assign(new Error('Checkout is starting. Wait for it to open before cancelling.'), { status: 409 });
     await Slot.deleteMany({ bookingId: booking._id }, { session });
   });

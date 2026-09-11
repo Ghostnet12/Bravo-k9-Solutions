@@ -24,7 +24,7 @@ test('production files and all routes are served without broken imports', async 
 test('public search files have route-specific metadata and private routes are noindex', async () => {
   const contact = await request(app).get('/contact').expect(200);
   assert.match(contact.text, /Contact Bravo K9 Solutions/);
-  assert.match(contact.text, /rel="canonical" href="https:\/\/bravo-k9-mern.vercel.app\/contact"/);
+  assert.match(contact.text, /rel="canonical" href="https:\/\/bravounleashed.com\/contact"/);
   const account = await request(app).get('/account').expect(200);
   assert.match(account.headers['x-robots-tag'], /noindex/);
   const sitemap = await request(app).get('/sitemap.xml').expect(200);

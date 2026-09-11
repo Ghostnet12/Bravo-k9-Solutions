@@ -212,6 +212,19 @@ test('owner/staff workspace contracts over HTTP with isolated model mocks', asyn
     for (const role of ['member', 'staff']) await call(role, 'patch', '/api/admin/services/walking', { cents: 1, enabled: true }).expect(403);
     await call('owner', 'patch', '/api/admin/services/training', { cents: 19999, enabled: true }).expect(400);
   });
+  await t.test('editing a hidden review cannot bypass owner moderation', async () => {
+    const write = t.mock.method(Review, 'findOneAndUpdate', (_filter, change) => query({ hidden: true, ...change.$set }));
+    const result = await call('member', 'put', '/api/reviews/mine', { rating: 4, body: 'An updated review that must stay moderated.', hidden: false }).expect(200);
+    assert.equal(result.body.review.hidden, true);
+    assert.equal(write.mock.calls[0].arguments[1].$set.hidden, undefined);
+    assert.equal(write.mock.calls[0].arguments[1].$unset, undefined);
+  });
+  await t.test('confirmation cannot resurrect a concurrently cancelled booking', async () => {
+    t.mock.method(Booking, 'findOne', () => query({ _id: ids.other, status: 'requested' }));
+    const write = t.mock.method(Booking, 'updateOne', async () => ({ matchedCount: 0 }));
+    await call('staff', 'patch', `/api/admin/bookings/${ids.other}`, { status: 'confirmed' }).expect(409);
+    assert.deepEqual(write.mock.calls[0].arguments[0].status, { $ne: 'cancelled' });
+  });
   await t.test('upload completion attaches media atomically and removes expiry', async () => {
     const upload = { _id: 'finished-upload', lessonId: 'test', uploadedBy: ids.staff, size: 8, chunks: 1, kind: 'image', filename: 'cover.png', contentType: 'image/png', completed: false, expiresAt: new Date(Date.now() + 60000), save: async function() { return this; } };
     const lesson = { _id: 'test', published: false, save: async function() { return this; } };

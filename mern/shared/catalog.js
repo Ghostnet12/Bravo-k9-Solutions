@@ -45,3 +45,12 @@ export function quote(ids, visits = [], details = {}, catalog = SERVICES) {
   return { lines, monthlyCents, oneTimeCents, dueNowCents: monthlyCents + oneTimeCents, currency: 'usd' };
 }
 export const money = cents => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: cents % 100 ? 2 : 0 }).format(cents / 100);
+
+// Rescheduling changes visit quantities, never the prices agreed when saved.
+export function rescheduledQuote(booking, visits) {
+  if (!booking.quote?.lines?.length) throw new Error('The saved price is unavailable. Contact Bravo before changing this request.');
+  const lines = booking.quote.lines.map(line => ({ ...line, quantity: line.interval === 'walk' ? visits.filter(visit => visit.service === line.id).length * (booking.dogCount || 1) : line.quantity }));
+  const monthlyCents = lines.filter(line => line.interval === 'month').reduce((sum, line) => sum + line.unitCents * line.quantity, 0);
+  const oneTimeCents = lines.filter(line => line.interval !== 'month').reduce((sum, line) => sum + line.unitCents * line.quantity, 0);
+  return { ...booking.quote, lines, monthlyCents, oneTimeCents, dueNowCents: monthlyCents + oneTimeCents };
+}

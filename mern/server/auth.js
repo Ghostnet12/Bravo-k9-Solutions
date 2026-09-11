@@ -48,7 +48,7 @@ export function isPrimaryOwner(user) { return String(user?._id) === (process.env
 // Access roles are private capabilities, not public job titles. Only the founder
 // is presented as Owner; delegated owner access still appears publicly as staff.
 export function publicRole(user) { return user.role === 'owner' && !isPrimaryOwner(user) ? 'staff' : user.role; }
-export function publicUser(user) { return { id: String(user._id), email: user.email, name: user.name, role: user.role, isPrimaryOwner: isPrimaryOwner(user), publicRole: publicRole(user), dogName: user.dogName, phone: user.phone, address: user.address, title: user.title, bio: user.bio, showPhone: user.showPhone }; }
+export function publicUser(user) { return { id: String(user._id), email: user.email, name: user.name, role: user.role, isPrimaryOwner: isPrimaryOwner(user), publicRole: publicRole(user), hasBillingAccount: !!user.stripeCustomerId, dogName: user.dogName, phone: user.phone, address: user.address, title: user.title, bio: user.bio, showPhone: user.showPhone }; }
 export function sameOrigin(req, _res, next) {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
   const allowed = process.env.APP_ORIGIN || (process.env.NODE_ENV !== 'production' ? 'http://localhost:5173' : '');

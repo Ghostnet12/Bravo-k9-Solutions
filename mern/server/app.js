@@ -15,8 +15,9 @@ import { sendUploadedMedia, CHUNK_SIZE, MEDIA_LIMITS, mediaBytes, validMediaHead
 import { LESSON_PREVIEWS, privatePath, protectedLesson } from './lessons.js';
 import { DEFAULT_SCHEDULE, HOURS, autoSchedule, validateVisits, availability, dateTime } from './scheduling.js';
 import { PAGE_METADATA } from '../shared/page-metadata.js';
-import { SERVICES, quote } from '../shared/catalog.js';
+import { SERVICES, quote, rescheduledQuote } from '../shared/catalog.js';
 import { effectiveServices } from './services.js';
+import { clientError } from './errors.js';
 
 const app = express();
 app.disable('x-powered-by');
@@ -117,8 +118,9 @@ app.post('/api/bookings/:id/cancel', requireUser, async (req, res) => {
   res.json({ ok: true, message: 'Booking cancelled. This does not refund a payment or cancel a monthly subscription; contact Bravo for billing help.' });
 });
 app.patch('/api/bookings/:id/visits', requireUser, async (req, res) => {
-  const booking = await ownedBooking(req);
-  if (booking.status === 'cancelled' || booking.stripeSessionId || booking.checkoutStarting) throw new Error('Contact Bravo to change a cancelled or checkout-linked booking.');
+  const record = await ownedBooking(req);
+  const booking = await Booking.findById(record._id).select('+checkoutParams');
+  if (booking.status === 'cancelled' || booking.stripeSessionId || booking.checkoutStarting || booking.checkoutParams) throw new Error('Contact Bravo to change a cancelled or checkout-linked booking.');
   const visits = z.array(z.object({ date: z.string(), time: z.string(), service: z.string() })).max(62).parse(req.body.visits);
   validateVisits(booking.serviceIds, visits);
   const dates = visits.map(v => v.date).sort();
@@ -129,7 +131,7 @@ app.patch('/api/bookings/:id/visits', requireUser, async (req, res) => {
     if (visits.some(v => !open.find(d => d.date === v.date)?.slots.includes(v.time))) throw new Error('Selected dates are outside current availability.');
     await Slot.deleteMany({ bookingId: booking._id }, { session });
     if (visits.length) await Slot.insertMany(visits.map(v => ({ _id: `${v.date}|${v.time}`, bookingId: booking._id, date: v.date, time: v.time })), { session });
-    const result = await Booking.updateOne({ _id: booking._id, status: { $ne: 'cancelled' }, checkoutStarting: { $ne: true }, stripeSessionId: { $exists: false } }, { $set: { visits, quote: quote(booking.serviceIds, visits, { dogCount: booking.dogCount || 1 }), status: 'requested' } }, { session });
+    const result = await Booking.updateOne({ _id: booking._id, status: { $ne: 'cancelled' }, checkoutStarting: { $ne: true }, checkoutParams: { $exists: false }, stripeSessionId: { $exists: false }, updatedAt: booking.updatedAt }, { $set: { visits, quote: rescheduledQuote(booking, visits), status: 'requested' } }, { session });
     if (!result.matchedCount) throw new Error('This booking changed while you were editing it. Refresh your account.');
   });
   res.json({ ok: true });
@@ -155,7 +157,7 @@ app.get('/api/reviews', async (_req, res) => {
 app.get('/api/reviews/mine', requireUser, async (req, res) => res.json({ review: await Review.findOne({ userId: req.user._id }).select('rating body hidden createdAt updatedAt').lean() }));
 app.put('/api/reviews/mine', requireUser, rateLimit('review', 6, 3600000), async (req, res) => {
   const data = z.object({ rating: z.number().int().min(1).max(5), body: z.string().trim().min(10).max(1200) }).parse(req.body);
-  const review = await Review.findOneAndUpdate({ userId: req.user._id }, { $set: { ...data, authorName: req.user.name, hidden: false }, $unset: { moderatedAt: 1, moderatedBy: 1 } }, { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true });
+  const review = await Review.findOneAndUpdate({ userId: req.user._id }, { $set: { ...data, authorName: req.user.name }, $setOnInsert: { hidden: false } }, { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true });
   res.json({ review });
 });
 app.get('/api/community', requireUser, async (_req, res) => {
@@ -318,7 +320,10 @@ app.patch('/api/admin/bookings/:id', requireUser, requireStaff, async (req, res)
   const status = z.enum(['confirmed', 'cancelled']).parse(req.body.status);
   if (status === 'cancelled') await cancelBooking(booking, stripeClient());
   else if (booking.status === 'cancelled') throw new Error('A cancelled booking cannot be confirmed.');
-  else { booking.status = status; await booking.save(); }
+  else {
+    const result = await Booking.updateOne({ _id: booking._id, status: { $ne: 'cancelled' } }, { $set: { status } });
+    if (!result.matchedCount) throw Object.assign(new Error('This booking was cancelled before confirmation. Refresh the desk.'), { status: 409 });
+  }
   res.json({ ok: true });
 });
 app.get('/api/admin/lessons', requireUser, requireStaff, async (_req, res) => {
@@ -389,14 +394,17 @@ app.delete('/api/admin/lessons/:id/media/:kind', requireUser, requireStaff, asyn
 app.put('/api/admin/lessons/:id', requireUser, requireStaff, async (req, res) => {
   const data = z.object({ title: z.string().trim().min(1).max(120), category: z.string().trim().min(1).max(40), instructor: z.string().trim().min(1).max(80), image: z.string().regex(/^\/(images\/[a-z0-9-]+\.webp|api\/lessons\/[a-z0-9-]+\/image)$/), videoFile: z.string().max(160).optional().default(''), captionFile: z.string().max(160).optional().default(''), transcript: z.string().max(20000), published: z.boolean() }).parse(req.body);
   if (!/^[a-z0-9-]{1,80}$/.test(req.params.id)) throw new Error('Use a simple lesson slug.');
+  await transaction(async session => {
   if (data.published) {
     if (!data.transcript.trim()) throw new Error('Add a transcript before publishing.');
-    const current = await Lesson.findById(req.params.id).select('+videoFile +captionFile');
+    const current = await Lesson.findById(req.params.id).select('+videoFile +captionFile').session(session);
     const storedUploads = current?.videoUpload && current?.captionUpload;
     if (!storedUploads && (!/\.(mp4|webm)$/.test(data.videoFile) || !/\.vtt$/.test(data.captionFile))) throw new Error('Upload a video and English VTT captions before publishing.');
     if (!storedUploads) { try { await access(privatePath(data.videoFile)); await access(privatePath(data.captionFile)); } catch { throw new Error('Upload a video and English captions before publishing.'); } }
   }
-  await Lesson.updateOne({ _id: req.params.id }, { $set: data }, { upsert: true }); res.json({ ok: true });
+  await Lesson.updateOne({ _id: req.params.id }, { $set: data }, { upsert: true, session });
+  });
+  res.json({ ok: true });
 });
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Endpoint not found.' }));
 const clientDir = fileURLToPath(new URL('../client/dist/', import.meta.url));
@@ -408,12 +416,10 @@ app.get('/{*path}', (req, res) => {
   if (!known) res.status(404);
   res.sendFile(path.join(clientDir, known && req.path !== '/' ? req.path.slice(1) + '.html' : 'index.html'), { maxAge: 0 });
 });
-app.use((error, _req, res, _next) => {
+app.use((error, req, res, _next) => {
   if (res.headersSent) return res.end();
-  const status = error instanceof z.ZodError ? 400 : error.status || (error.code === 11000 ? 409 : error.name === 'CastError' ? 400 : 400);
-  let message = error instanceof z.ZodError ? error.issues[0]?.message : error.message;
-  if (error.code === 11000) message = 'That account or time slot already exists. Sign in or choose another opening.';
-  if (status >= 500 || ['MongoServerError', 'MongoNetworkError'].includes(error.name)) message = 'The service is temporarily unavailable. Please try again or call Bravo.';
-  res.status(status).json({ error: message || 'The request could not be completed.' });
+  const { status, message } = clientError(error);
+  if (status >= 500) console.error('Bravo request failed', { status, method: req.method, route: req.route?.path || 'middleware' });
+  res.status(status).json({ error: message });
 });
 export default app;

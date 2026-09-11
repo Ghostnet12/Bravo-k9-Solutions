@@ -57,7 +57,7 @@ test('persistent accounts, conflict protection, ownership, staff tools, and bill
     const online=await post(bob,'/api/bookings',{...payload(),visits:[],serviceIds:['online']}).expect(201);
     const sub={id:'sub_test',customer:'cus_test_bob',status:'active',metadata:{app:'bravo-k9',userId:String(bobUser._id),serviceIds:'["online"]'},items:{data:[{current_period_end:Math.floor(Date.now()/1000)+86400}]}};
     const stripe={subscriptions:{retrieve:async()=>sub}};
-    const event={id:'evt_paid_test',type:'checkout.session.completed',created:1000,data:{object:{id:'cs_test',subscription:sub.id,payment_status:'paid',currency:'usd',amount_total:5000,metadata:{app:'bravo-k9',userId:String(bobUser._id),bookingId:online.body.booking._id}}}};
+    const event={id:'evt_paid_test',type:'checkout.session.completed',created:1000,data:{object:{id:'cs_test',customer:'cus_test_bob',client_reference_id:online.body.booking._id,subscription:sub.id,payment_status:'paid',currency:'usd',amount_total:5000,metadata:{app:'bravo-k9',userId:String(bobUser._id),bookingId:online.body.booking._id}}}};
     await processStripeEvent(event,stripe); await processStripeEvent(event,stripe);
     assert.equal(await StripeEvent.countDocuments({_id:event.id}),1); assert.equal((await Booking.findById(online.body.booking._id)).paymentStatus,'paid');
     const privateRead=await bob.get('/api/lessons/test-lesson/transcript').expect(200); assert.equal(privateRead.body.transcript,'Private transcript.');

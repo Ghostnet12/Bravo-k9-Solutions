@@ -1,7 +1,7 @@
-export const SITE_ORIGIN = 'https://bravo-k9-mern.vercel.app';
+export const SITE_ORIGIN = 'https://bravounleashed.com';
 export const PAGE_METADATA = {
   '/': { title: 'Mobile Dog Training in Aberdeen, SD | Bravo K9 Solutions', description: 'Professional mobile dog training in Aberdeen, South Dakota. Explore Bravo programs, request visits, and learn with our team.' },
-  '/dog-walking': { title: 'Dog Walking in Aberdeen, SD | Bravo K9 Solutions', description: 'Book a professional 30-minute dog walk in Aberdeen, South Dakota. Clear pricing at $25 per dog from Bravo K9 Solutions.' },
+  '/dog-walking': { title: 'Dog Walking in Aberdeen, SD | Bravo K9 Solutions', description: 'Book a professional 30-minute dog walk in Aberdeen, South Dakota. Review current per-dog pricing and available visits with Bravo K9 Solutions.' },
   '/portal': { title: 'Book Dog Training & Walking | Bravo K9 Solutions', description: 'Choose Bravo dog training or dog walking, review Aberdeen appointment availability, and save a visit request.' },
   '/learn': { title: 'Online Dog Training Lessons | Bravo K9 Solutions', description: 'Browse Bravo dog training topics. Published member lessons include private video, English captions, and a written transcript.' },
   '/contact': { title: 'Contact Bravo K9 Solutions | Aberdeen Dog Training', description: 'Call Bravo K9 Solutions at (605) 824-2767 for mobile training, booking help, and account support in Aberdeen, SD.' },

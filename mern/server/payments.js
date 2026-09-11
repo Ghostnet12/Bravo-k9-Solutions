@@ -14,7 +14,7 @@ export function stripeClient() {
   if (!key || !mode || !process.env.STRIPE_WEBHOOK_SECRET) return null;
   if (mode === 'live' && process.env.STRIPE_LIVE_ENABLED !== 'true') return null;
   if (mode === 'test' && process.env.VERCEL_ENV === 'production' && process.env.STRIPE_TEST_CHECKOUT_ENABLED !== 'true') return null;
-  return new Stripe(key, { maxNetworkRetries: 2, timeout: 12000 });
+  return new Stripe(key, { maxNetworkRetries: 1, timeout: 8000 });
 }
 export function validatedCheckoutPricing(booking) {
   const pricing = booking.quote;
@@ -29,7 +29,7 @@ export function validatedCheckoutPricing(booking) {
 }
 export async function checkout(booking, user, stripe) {
   if (!stripe) throw Object.assign(new Error('Card payments are not connected yet. Your request is saved; Bravo will contact you.'), { status: 503 });
-  if (booking.status === 'cancelled' || ['paid', 'covered'].includes(booking.paymentStatus)) throw new Error('This booking does not need another payment.');
+  if (booking.status === 'cancelled' || booking.paymentStatus !== 'unpaid') throw new Error('This booking does not need another payment.');
   const origin = process.env.APP_ORIGIN;
   if (!origin) throw Object.assign(new Error('Checkout is not configured yet.'), { status: 503 });
   const selected = serviceSelection(booking.serviceIds);
@@ -50,15 +50,14 @@ export async function checkout(booking, user, stripe) {
     const lockedBooking = existingLock?.bookingId
       ? await Booking.findById(existingLock.bookingId).select('stripeSessionId checkoutStarting').lean()
       : null;
-    if (existingLock && lockedBooking && !lockedBooking.stripeSessionId && !lockedBooking.checkoutStarting) {
-      const cleared = await BillingLock.deleteOne({ _id: lockId, bookingId: existingLock.bookingId });
-      if (cleared.deletedCount) {
-        await BillingLock.findOneAndUpdate({ _id: lockId }, { $set: { bookingId, expiresAt: new Date(Date.now() + 31 * 60 * 1000) } }, { upsert: true });
-        lockAcquired = true;
-      }
+    if (existingLock && new Date(existingLock.expiresAt).getTime() <= Date.now() + 30 * 60 * 1000 && lockedBooking && !lockedBooking.stripeSessionId && !lockedBooking.checkoutStarting) {
+      // Compare-and-swap: never delete a lock and then overwrite another buyer's acquisition.
+      const recovered = await BillingLock.findOneAndUpdate({ _id: lockId, bookingId: existingLock.bookingId, expiresAt: existingLock.expiresAt }, { $set: { bookingId, expiresAt: new Date(Date.now() + 31 * 60 * 1000) } });
+      lockAcquired = !!recovered;
     }
     if (!lockAcquired) throw Object.assign(new Error('You already have a checkout in progress. Finish or cancel that request first.'), { status: 409 });
   }
+  let requestSent = false;
   try {
     if (booking.stripeSessionId) {
       const current = await stripe.checkout.sessions.retrieve(booking.stripeSessionId);
@@ -86,17 +85,25 @@ export async function checkout(booking, user, stripe) {
     };
     // Persist identical parameters before calling Stripe, including the expiry timestamp.
     // A network retry must not change parameters under the same idempotency key.
-    await Booking.updateOne({ _id: booking._id, status: { $ne: 'cancelled' }, checkoutParams: { $exists: false } }, { $set: { checkoutParams: params, checkoutStarting: true } });
+    await Booking.updateOne({ _id: booking._id, status: { $ne: 'cancelled' }, paymentStatus: 'unpaid', updatedAt: booking.updatedAt, checkoutParams: { $exists: false } }, { $set: { checkoutParams: params, checkoutStarting: true } });
+    // Every retry must restore the guard, even when its immutable parameters already exist.
+    const guarded = await Booking.updateOne({ _id: booking._id, status: { $ne: 'cancelled' }, paymentStatus: 'unpaid', checkoutParams: { $exists: true } }, { $set: { checkoutStarting: true } });
+    if (!guarded.matchedCount) throw Object.assign(new Error('This request changed before checkout began. Refresh your account and try again.'), { status: 409 });
     const attempt = await Booking.findById(booking._id).select('+checkoutParams');
-    if (!attempt?.checkoutParams || attempt.status === 'cancelled') throw new Error('This booking was cancelled before checkout began.');
+    if (!attempt?.checkoutParams || attempt.status === 'cancelled' || attempt.paymentStatus !== 'unpaid') throw new Error('This booking changed before checkout began.');
+    requestSent = true;
     const session = await stripe.checkout.sessions.create(attempt.checkoutParams, { idempotencyKey: `bravo-checkout-${bookingId}` });
     await Booking.updateOne({ _id: booking._id }, { $set: { stripeSessionId: session.id, checkoutUrl: session.url, checkoutExpiresAt: new Date(session.expires_at * 1000), checkoutStarting: false } });
     return { url: session.url };
   } catch (error) {
-    await Promise.allSettled([
+    // A timeout can mean Stripe created the session but its response was lost.
+    // Keep the guard and identical idempotency key so retrying safely recovers it.
+    const uncertain = requestSent && !['StripeInvalidRequestError', 'StripeAuthenticationError', 'StripePermissionError', 'StripeCardError'].includes(error.type);
+    if (!uncertain) await Promise.allSettled([
       BillingLock.deleteOne({ _id: lockId, bookingId }),
       Booking.updateOne({ _id: bookingId, stripeSessionId: { $exists: false } }, { $set: { checkoutStarting: false } }),
     ]);
+    if (uncertain) throw Object.assign(new Error('Stripe is still confirming this checkout. Retry secure checkout from the same saved request; do not create another booking.'), { status: 409 });
     throw error;
   }
 }
@@ -131,6 +138,11 @@ export async function processStripeEvent(event, stripe) {
       const booking = await Booking.findById(object.metadata.bookingId).session(session);
       if (!booking || String(booking.userId) !== object.metadata.userId) throw new Error('Booking owner mismatch.');
       if (object.currency !== 'usd' || object.amount_total !== booking.quote.dueNowCents) throw new Error('Checkout amount mismatch.');
+      const user = await User.findById(booking.userId).session(session);
+      if (!user?.stripeCustomerId || user.stripeCustomerId !== (typeof object.customer === 'string' ? object.customer : object.customer?.id) || object.client_reference_id !== String(booking._id)) throw new Error('Checkout customer mismatch.');
+      if (booking.stripeSessionId && booking.stripeSessionId !== object.id) throw new Error('Checkout session mismatch.');
+      // A late, distinct completion event must never undo a refund already recorded.
+      if (booking.refundId || booking.paymentStatus === 'refunded') return;
       await Booking.updateOne({ _id: booking._id }, { $set: { paymentStatus: booking.status === 'cancelled' ? 'review' : 'paid', stripeSessionId: object.id, stripePaymentIntentId: typeof object.payment_intent === 'string' ? object.payment_intent : object.payment_intent?.id, checkoutStarting: false } }, { session });
       await BillingLock.deleteOne({ _id: object.metadata.userId, bookingId: String(booking._id) }, { session });
     }
@@ -144,21 +156,34 @@ export async function processStripeEvent(event, stripe) {
   }).catch(async error => { if (error.code !== 11000 || !await StripeEvent.exists({ _id: event.id })) throw error; });
 }
 export async function refundBooking(booking, owner, stripe) {
-  if (booking.paymentStatus === 'refunded' || booking.refundId) throw Object.assign(new Error('This booking already has a refund recorded.'), { status: 409 });
-  if (booking.paymentStatus !== 'paid' || !booking.stripeSessionId) throw new Error('Only a verified paid booking can be refunded.');
-  const reserved = await Booking.updateOne({ _id: booking._id, paymentStatus: 'paid', refundId: { $exists: false } }, { $set: { refundId: 'pending', refundedBy: owner._id } });
-  if (!reserved.modifiedCount) throw Object.assign(new Error('A refund is already in progress or completed.'), { status: 409 });
+  if (!stripe) throw Object.assign(new Error('Refunds are temporarily unavailable.'), { status: 503 });
+  if (booking.paymentStatus === 'refunded') throw Object.assign(new Error('This booking already has a refund recorded.'), { status: 409 });
+  if (!['paid', 'review'].includes(booking.paymentStatus) || !booking.stripeSessionId) throw new Error('Only a verified payment can be refunded.');
+  const reserved = await Booking.updateOne({ _id: booking._id, paymentStatus: { $in: ['paid', 'review'] }, $or: [{ refundId: { $exists: false } }, { refundId: booking.refundId || 'pending' }] }, { $set: { refundId: booking.refundId || 'pending', refundedBy: owner._id } });
+  if (!reserved.matchedCount) throw Object.assign(new Error('This refund changed. Refresh the desk.'), { status: 409 });
+  let requestSent = false;
   try {
-    const session = await stripe.checkout.sessions.retrieve(booking.stripeSessionId, { expand: ['payment_intent', 'invoice.payment_intent'] });
-    const intent = booking.stripePaymentIntentId || (typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id) || (typeof session.invoice?.payment_intent === 'string' ? session.invoice.payment_intent : session.invoice?.payment_intent?.id);
+    const session = await stripe.checkout.sessions.retrieve(booking.stripeSessionId);
+    let intent = booking.stripePaymentIntentId || (typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id);
+    if (!intent && session.invoice) {
+      // Current Stripe APIs map invoices to intents through Invoice Payments.
+      const payments = await stripe.invoicePayments.list({ invoice: typeof session.invoice === 'string' ? session.invoice : session.invoice.id, status: 'paid', limit: 100 });
+      const candidates = payments.data.filter(payment => payment.payment?.type === 'payment_intent');
+      if (!payments.has_more && candidates.length === 1) intent = typeof candidates[0].payment.payment_intent === 'string' ? candidates[0].payment.payment_intent : candidates[0].payment.payment_intent?.id;
+    }
     if (!intent) throw new Error('Stripe has no refundable payment attached to this booking. Review the transaction in Stripe.');
     const amountCents = Number(booking.quote?.dueNowCents || session.amount_total);
     if (!Number.isInteger(amountCents) || amountCents <= 0) throw new Error('The verified refund amount is unavailable.');
-    const refund = await stripe.refunds.create({ payment_intent: intent, amount: amountCents, metadata: { app: 'bravo-k9', bookingId: String(booking._id), ownerId: String(owner._id) } }, { idempotencyKey: `bravo-refund-${booking._id}` });
-    await Booking.updateOne({ _id: booking._id, refundId: 'pending' }, { $set: { refundId: refund.id, refundAmountCents: amountCents, refundedAt: new Date(), paymentStatus: 'refunded' } });
-    return { ok: true, refundId: refund.id, amountCents, message: 'Refund submitted through Stripe. Any subscription remains active until separately changed in billing.' };
+    requestSent = true;
+    const refund = booking.refundId && booking.refundId !== 'pending'
+      ? await stripe.refunds.retrieve(booking.refundId)
+      : await stripe.refunds.create({ payment_intent: intent, amount: amountCents, metadata: { app: 'bravo-k9', bookingId: String(booking._id) } }, { idempotencyKey: `bravo-refund-${booking._id}` });
+    if (refund.amount !== amountCents || refund.currency !== 'usd') throw new Error('Refund verification mismatch. Review the transaction in Stripe.');
+    await Booking.updateOne({ _id: booking._id, paymentStatus: { $ne: 'refunded' }, refundId: { $in: ['pending', refund.id] } }, { $set: { refundId: refund.id, refundStatus: refund.status, refundAmountCents: amountCents, ...(refund.status === 'succeeded' ? { refundedAt: new Date() } : {}), paymentStatus: refund.status === 'succeeded' ? 'refunded' : 'review' } });
+    return { ok: true, refundId: refund.id, amountCents, message: `${refund.status === 'succeeded' ? 'Refund succeeded through Stripe.' : `Stripe refund status: ${refund.status}. Check its status again before taking further action.`} Any subscription remains active until separately changed in billing.` };
   } catch (error) {
-    await Booking.updateOne({ _id: booking._id, refundId: 'pending' }, { $unset: { refundId: 1, refundedBy: 1 } });
+    // Keep ambiguous requests recoverable with the same immutable idempotency key.
+    if (!requestSent) await Booking.updateOne({ _id: booking._id, refundId: 'pending' }, { $unset: { refundId: 1, refundedBy: 1 } });
     throw error;
   }
 }
