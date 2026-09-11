@@ -1,0 +1,74 @@
+// Disposable database only. Never uses production credentials or user records.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import mongoose from 'mongoose';
+import request from 'supertest';
+import { MongoMemoryReplSet } from 'mongodb-memory-server';
+import app from '../server/app.js';
+import { User, Message, DirectMessage, GroupMessage, CommunityGroup, Booking, Slot, AuditEvent } from '../server/models.js';
+const origin = 'http://localhost:5173';
+test('history clear is durable, scoped, authorized and separate from permanent deletion', { timeout: 180000 }, async t => {
+  const replica = await MongoMemoryReplSet.create({ replSet: { count: 1 }, binary: { version: '8.0.5' } });
+  process.env.MONGODB_URI = replica.getUri(); process.env.MONGODB_DB = 'bravo_reset_disposable'; process.env.APP_ORIGIN = origin;
+  t.after(async () => { await mongoose.disconnect(); await replica.stop(); });
+  const alice = request.agent(app), bob = request.agent(app), staff = request.agent(app), owner = request.agent(app);
+  const post = (agent, path, body) => agent.post(path).set('Origin', origin).send(body);
+  const register = async (agent, name) => (await post(agent, '/api/auth/register', { name, email: `${name.toLowerCase()}@example.test`, password: 'reset-test-password-1234' }).expect(201)).body.user.id;
+  const aliceId = await register(alice, 'Alice'), bobId = await register(bob, 'Bobby'), staffId = await register(staff, 'Staff'), ownerId = await register(owner, 'Owner');
+  await User.updateOne({ _id: staffId }, { $set: { role: 'staff' } });
+  await User.updateOne({ _id: ownerId }, { $set: { role: 'owner' } });
+  await Booking.create({ userId: aliceId, requestKey: 'untouched-booking', visits: [], serviceIds: ['online'] });
+  await Slot.create({ _id: '2030-01-01|09:00', date: '2030-01-01', time: '09:00', reason: 'untouched' });
+  const old = new Date(Date.now() - 60000);
+  await t.test('personal room clear persists across requests and leaves other viewers intact', async () => {
+    await Message.create({ userId: aliceId, authorName: 'Alice', role: 'member', kind: 'message', body: 'Old room message', createdAt: old });
+    await post(alice, '/api/chat/reset', { scope: 'room' }).expect(200);
+    assert.equal((await alice.get('/api/community')).body.messages.length, 0);
+    assert.equal((await alice.get('/api/community')).body.messages.length, 0);
+    assert.equal((await bob.get('/api/community')).body.messages.length, 1);
+    assert.equal(await Message.countDocuments(), 1);
+    await new Promise(resolve => setTimeout(resolve, 5));
+    await post(bob, '/api/community', { body: 'New message after clear' }).expect(201);
+    assert.equal((await alice.get('/api/community')).body.messages.length, 1);
+  });
+  await t.test('client cannot clear another client or use team or permanent-delete controls', async () => {
+    await post(alice, '/api/chat/reset', { scope: 'direct', targetId: bobId }).expect(403);
+    await post(alice, '/api/chat/reset', { scope: 'inbox' }).expect(403);
+    await post(staff, '/api/chat/reset', { scope: 'room', mode: 'delete', confirmDelete: true }).expect(403);
+    await post(owner, '/api/chat/reset', { scope: 'room', mode: 'delete' }).expect(400);
+    await post(owner, '/api/chat/reset', { scope: 'inbox', mode: 'delete', confirmDelete: true }).expect(400);
+    await request(app).post('/api/chat/reset').set('Origin', origin).send({ scope: 'room' }).expect(401);
+  });
+  await t.test('cleared direct history and previews stay out of that staff account only', async () => {
+    await DirectMessage.create({ memberId: aliceId, senderId: aliceId, senderName: 'Alice', senderRole: 'member', body: 'Old private', createdAt: old });
+    await DirectMessage.create({ memberId: bobId, senderId: bobId, senderName: 'Bobby', senderRole: 'member', body: 'Other client', createdAt: old });
+    await post(staff, '/api/chat/reset', { scope: 'direct', targetId: aliceId }).expect(200);
+    assert.equal((await staff.get(`/api/direct?memberId=${aliceId}`)).body.messages.length, 0);
+    assert.equal((await staff.get('/api/admin')).body.inbox.some(thread => thread._id === aliceId), false);
+    assert.equal((await owner.get('/api/admin')).body.inbox.length, 2);
+    assert.equal((await alice.get('/api/direct')).body.messages.length, 1);
+    await post(staff, '/api/chat/reset', { scope: 'inbox' }).expect(200);
+    assert.equal((await staff.get('/api/admin')).body.inbox.length, 0);
+    assert.equal((await staff.get(`/api/direct?memberId=${bobId}`)).body.messages.length, 0);
+    await new Promise(resolve => setTimeout(resolve, 5));
+    await post(bob, '/api/direct', { body: 'New private message' }).expect(201);
+    assert.equal((await staff.get('/api/admin')).body.inbox.length, 1);
+    assert.equal((await staff.get(`/api/direct?memberId=${bobId}`)).body.messages.length, 1);
+  });
+  await t.test('group clear checks membership; owner deletion is scoped and audited', async () => {
+    const group = await CommunityGroup.create({ name: 'Private test', ownerId: aliceId, members: [aliceId] });
+    await GroupMessage.create({ groupId: group._id, userId: aliceId, authorName: 'Alice', role: 'member', body: 'Group history', createdAt: old });
+    await post(bob, '/api/chat/reset', { scope: 'group', targetId: String(group._id) }).expect(404);
+    await post(alice, '/api/chat/reset', { scope: 'group', targetId: String(group._id) }).expect(200);
+    assert.equal((await alice.get(`/api/groups/${group._id}/messages`)).body.messages.length, 0);
+    assert.equal(await GroupMessage.countDocuments(), 1);
+    const result = await post(owner, '/api/chat/reset', { scope: 'room', mode: 'delete', confirmDelete: true }).expect(200);
+    assert.equal(result.body.deletedCount, 2);
+    assert.equal(await Message.countDocuments(), 0);
+    assert.equal(await GroupMessage.countDocuments(), 1);
+    assert.equal(await DirectMessage.countDocuments(), 3);
+    assert.equal(await AuditEvent.countDocuments({ action: 'chat.history.delete' }), 1);
+    assert.equal(await Booking.countDocuments(), 1);
+    assert.equal(await Slot.countDocuments(), 1);
+  });
+});

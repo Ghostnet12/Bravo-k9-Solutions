@@ -14,6 +14,7 @@ import './styles.css';
 import './professional.css';
 import './site-image-editor.css';
 import './accessibility-layout.css';
+import './reset-layout.css';
 const BookingPage = lazy(() => import('./BookingPage'));
 const AccountPage = lazy(() => import('./AccountPage'));
 const LearnPage = lazy(() => import('./LearnPage'));
