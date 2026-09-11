@@ -16,9 +16,19 @@ test('source keys never permit arbitrary external or private resources', () => {
   assert.equal(sourceImageKey('/api/lessons/heel/image', origin), 'lesson-heel');
   for (const path of ['https://example.com/images/a.webp', '//example.com/images/a.webp', 'data:image/svg+xml,<svg/>', '/api/auth/me', '/images/../../api/auth/me']) assert.equal(sourceImageKey(path, origin), null);
 });
-test('generic trainer scenes use the approved David image, not Ashley or branding', () => {
-  for (const name of ['obedience-real-world', 'training-education', 'protection-training', 'service-dog-training', 'tracking-training', 'hero-bravo-k9']) assert.equal(defaultSiteImage(`/images/${name}.webp`), DAVID_IMAGE);
-  for (const source of ['/images/ashley-northrop.webp', '/images/janet-hughes.webp', '/images/bravo-logo-small.webp', '/images/dog-sitting-care.webp', '/api/lessons/heel/image']) assert.equal(defaultSiteImage(source), source);
+test('training sections keep their original photographs rather than repeating the hero', () => {
+  for (const name of ['obedience-real-world', 'training-education', 'protection-training', 'service-dog-training', 'tracking-training', 'hero-bravo-k9']) {
+    const source = `/images/${name}.webp`;
+    assert.equal(defaultSiteImage(source), source);
+    assert.notEqual(defaultSiteImage(source), DAVID_IMAGE);
+  }
+});
+test('hero, Ashley, David and other untouched assets retain their sources', () => {
+  assert.equal(DAVID_IMAGE, '/images/hero-bravo-launch.webp');
+  for (const source of [DAVID_IMAGE, '/images/david-northrop.webp', '/images/ashley-northrop.webp', '/images/janet-hughes.webp', '/images/bravo-logo-small.webp', '/images/dog-sitting-care.webp', '/images/team-trainers.webp']) assert.equal(defaultSiteImage(source), source);
+});
+test('manual staff replacements are not remapped by photo defaults', () => {
+  for (const source of ['/api/site-images/team-ashley-northrop/image?v=1', '/api/site-images/home-hero/image?v=2', '/api/site-images/team-david-northrop/image?v=3', '/api/lessons/heel/image']) assert.equal(defaultSiteImage(source), source);
 });
 test('3 MB encoded photo fits beneath a 4.5 MB serverless request envelope', () => {
   assert.ok(Math.ceil(SITE_IMAGE_MAX_BYTES / 3) * 4 + 2048 < 4500000);
