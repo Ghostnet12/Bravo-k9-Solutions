@@ -1,7 +1,8 @@
 import Link from './Link';
 import { useEffect, useState } from 'react';
 import { api } from './api';
-import { Header, Footer } from './ui';
+import { Header, Footer, AppointmentNotice } from './ui';
+import ServiceIcon from './ServiceIcon';
 import { useBravo } from './context';
 import { SERVICES, money } from '../../shared/catalog';
 
@@ -26,17 +27,17 @@ export default function Home() {
         <div className="home-hero-shade"/>
         <div className="shell home-hero-inner"><div className="home-hero-copy">
           <p className="eyebrow">ABERDEEN, SOUTH DAKOTA <span> / </span> MOBILE DOG TRAINING</p>
-          <h1 id="home-title">Good dogs.<br/>Real work.<br/><em>Everyday life.</em></h1>
-          <p className="home-intro">Training that holds up in the real world. Professional, psychology-based guidance—at your home, with your dog.</p>
-          <div className="home-hero-actions"><Link className="button" href="/portal">Find your program <span aria-hidden="true">↗</span></Link><a className="home-text-link" href="#method">Meet the Bravo method</a></div>
-          <div className="hero-service-note"><span>PRIVATE TRAINING</span><span>WE COME TO YOU</span><span>NO GROUP CLASSES</span></div>
+          <h1 id="home-title">Real training.<br/><em>Real life.</em></h1>
+          <p className="home-intro">Practical training and real-world support for a stronger, calmer, happier life with your dog.</p>
+          <div className="home-hero-actions"><Link className="button" href="/portal">Find your program <span aria-hidden="true">→</span></Link><a className="button button-ghost" href="#team">Meet the team</a></div>
+          <div className="hero-service-note"><span>STRONGER RELATIONSHIPS</span><span>REAL-WORLD RESULTS</span><span>SUPPORT EVERY STEP</span></div>
         </div><div className="hero-field-note"><span>THE BRAVO STANDARD</span><p>Trust.<br/>Train.<br/><em>Deploy.</em></p></div></div>
       </section>
       <div className="home-service-strip"><div className="shell"><p><strong>A professional on your team.</strong><span>Private sessions. Clear communication. Practical structure.</span></p><a href="tel:+16058242767">Talk to Bravo <span>(605) 824-2767</span></a></div></div>
       <section className="home-section shell" id="training" aria-labelledby="program-title">
-        <div className="home-section-heading"><div><p className="eyebrow">01 / FIND YOUR FIT</p><h2 id="program-title">Your dog.<br/><em>Your way forward.</em></h2></div><p>Choose the support you need. Review real availability before sending your request.</p></div>
+        <div className="home-section-heading service-heading"><div><p className="eyebrow">01 / OUR SERVICES</p><h2 id="program-title">Training. Support.<br/><em>Real progress.</em></h2></div><AppointmentNotice compact/></div>
         <div className="home-pricing-grid">{primary.map(id => { const service = catalog.find(s => s.id === id); const detail = serviceDetails[id]; return service?.enabled !== false ? <article className={`home-price-card ${id === 'training' ? 'featured' : ''}`} key={id}>
-          <p className="eyebrow">{detail.label}</p><h3>{service.name}</h3><p className="service-description">{detail.text}</p>
+          <ServiceIcon service={id}/><p className="eyebrow">{detail.label}</p><h3>{service.name}</h3><p className="service-description">{detail.text}</p>
           <div className="home-price">{money(service.cents)}<span>{service.interval === 'month' ? '/ month' : service.interval === 'walk' ? '/ dog' : 'initial intake'}</span></div>
           <ul>{detail.features.map(feature => <li key={feature}>{feature}</li>)}</ul><Link className={`button ${id === 'training' ? '' : 'button-ghost'}`} href={id === 'online' ? '/learn' : id === 'walking' ? '/dog-walking' : `/portal?program=${id}`}>{id === 'online' ? 'Explore online lessons' : id === 'aggression' ? 'Request an assessment' : id === 'walking' ? 'Explore Dog Walking' : 'Choose training'}<span aria-hidden="true">↗</span></Link>
         </article> : null; })}</div>
@@ -51,7 +52,7 @@ export default function Home() {
       ].map(([title, copy], index) => <article key={title}><span className="eyebrow">0{index + 1}</span><h3>{title}</h3><p>{copy}</p></article>)}</div></section>
       <section className="home-team-section" id="team"><div className="shell"><div className="home-section-heading"><div><p className="eyebrow">03 / YOUR BRAVO TEAM</p><h2>People behind<br/><em>the progress.</em></h2></div><p>Professional trainers who care about the work—and what happens after the session ends.</p></div><div className="home-team-grid">{team.map(person => <article key={person.id}><div className="home-portrait"><img src={`/images/${portraits[person.name] || 'bravo-logo-small'}.webp`} width="1000" height="1400" loading="lazy" alt={`${person.name}, ${person.role}`}/></div><div className="home-person"><p className="eyebrow">{person.role === "owner" ? "OWNER" : "STAFF"}</p><h3>{person.name}</h3><p>{person.title}</p><p>{person.bio}</p><Link className="inline-link" href="/contact">Contact trainer →</Link></div></article>)}</div></div></section>
       <section className="home-section shell home-learning"><div><p className="eyebrow">KEEP LEARNING WITH BRAVO</p><h2>The work behind<br/><em>the progress.</em></h2><p>Members can learn from staff-published video lessons with captions and readable transcripts—at home and at their own pace.</p><div className="home-learning-price"><strong>$50 <span>/ month online</span></strong><span>A focused library built by your trainers.</span></div><Link className="button button-ghost" href="/learn">Explore the lesson catalog <span aria-hidden="true">↗</span></Link></div><Link className="home-lesson-preview" href="/learn"><img src="/images/training-education.webp" width="1600" height="900" loading="lazy" alt="Handler demonstrating a lesson with a Belgian Malinois"/><div><span className="badge">MEMBER LEARNING</span><h3>Leash pressure:<br/>timing over force.</h3><span className="home-text-link">Explore training topics <span aria-hidden="true">↗</span></span></div></Link></section>
-      <section className="home-section shell home-reviews" aria-labelledby="reviews-title"><div className="home-section-heading"><div><p className="eyebrow">CLIENT REVIEWS</p><h2 id="reviews-title">Work that earns<br/><em>your trust.</em></h2></div><p>{reviews.count ? `${reviews.average} out of 5 from ${reviews.count} verified account ${reviews.count === 1 ? 'review' : 'reviews'}.` : 'Client reviews will appear here after they are shared.'}</p></div>{reviews.reviews.length > 0 && <div className="review-grid">{reviews.reviews.slice(0, 6).map(review => <article key={review._id} className="panel"><div className="review-stars" aria-label={`${review.rating} out of 5 stars`}>{'★'.repeat(review.rating)}<span>{'★'.repeat(5 - review.rating)}</span></div><p>“{review.body}”</p><strong>{review.authorName}</strong></article>)}</div>}<Link className="inline-link" href="/account#your-review">Share your experience →</Link></section>
+      <section className="home-section shell home-reviews" id="reviews" aria-labelledby="reviews-title"><div className="home-section-heading"><div><p className="eyebrow">CLIENT REVIEWS</p><h2 id="reviews-title">Work that earns<br/><em>your trust.</em></h2></div><p>{reviews.count ? `${reviews.average} out of 5 from ${reviews.count} verified account ${reviews.count === 1 ? 'review' : 'reviews'}.` : 'Client reviews will appear here after they are shared.'}</p></div>{reviews.reviews.length > 0 && <div className="review-grid">{reviews.reviews.slice(0, 6).map(review => <article key={review._id} className="panel"><div className="review-stars" aria-label={`${review.rating} out of 5 stars`}>{'★'.repeat(review.rating)}<span>{'★'.repeat(5 - review.rating)}</span></div><p>“{review.body}”</p><strong>{review.authorName}</strong></article>)}</div>}<Link className="inline-link" href="/account#your-review">Share your experience →</Link></section>
       <section className="home-close"><div className="shell"><div><p className="eyebrow">THE FIRST STEP IS SIMPLE.</p><h2>Let’s meet<br/><em>your dog.</em></h2></div><div><p>Choose a program, find an opening, and let Bravo know what you need.</p><Link className="button" href="/portal">Request your first visit <span aria-hidden="true">↗</span></Link><a href="tel:+16058242767">Prefer to talk? (605) 824-2767</a></div></div></section>
     </main><Footer/>
   </div>;
