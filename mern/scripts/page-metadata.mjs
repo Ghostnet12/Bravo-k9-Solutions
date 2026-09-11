@@ -10,7 +10,7 @@ for (const [route, data] of Object.entries(PAGE_METADATA)) {
     .replace(/<meta name="description"[^>]*>/, `<meta name="description" content="${escape(data.description)}"/>`)
     .replace(/<meta property="og:title"[^>]*>/, `<meta property="og:title" content="${escape(data.title)}"/>`)
     .replace(/<meta property="og:description"[^>]*>/, `<meta property="og:description" content="${escape(data.description)}"/>`)
-    .replace('content="/images/hero-bravo-k9.webp"', `content="${SITE_ORIGIN}/images/hero-bravo-k9.webp"`)
+    .replace('content="/images/hero-bravo-launch.webp"', `content="${SITE_ORIGIN}/images/hero-bravo-launch.webp"`)
     .replace('</head>', `<link rel="canonical" href="${url}"/><meta property="og:url" content="${url}"/><meta name="robots" content="${data.private ? 'noindex, nofollow' : 'index, follow'}"/></head>`);
   const filename = new URL(route === '/' ? 'index.html' : route.slice(1) + '.html', directory);
   await mkdir(path.dirname(filename.pathname), { recursive: true });

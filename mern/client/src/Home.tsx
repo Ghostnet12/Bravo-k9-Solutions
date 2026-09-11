@@ -23,7 +23,7 @@ export default function Home() {
   return <div className="bravo-home"><Header/>
     <main id="main-content" tabIndex={-1}>
       <section className="home-hero" aria-labelledby="home-title">
-        <img className="home-hero-image" src="/images/hero-bravo-k9.webp" width="1782" height="883" fetchPriority="high" alt="Handler and Belgian Malinois in a prairie training field"/>
+        <img className="home-hero-image" src="/images/hero-bravo-launch.webp" width="1774" height="887" fetchPriority="high" alt="Professional Bravo K9 trainer working with an attentive Belgian Malinois near Aberdeen"/>
         <div className="home-hero-shade"/>
         <div className="shell home-hero-inner"><div className="home-hero-copy">
           <p className="eyebrow">ABERDEEN, SOUTH DAKOTA <span> / </span> MOBILE DOG TRAINING</p>
