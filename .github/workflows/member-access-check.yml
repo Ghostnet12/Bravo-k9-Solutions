@@ -1,0 +1,36 @@
+name: Member access and footer checks
+on:
+  push:
+    branches: [member-access-footer-20260911, bravo-mern]
+    paths: ['mern/**', '.github/workflows/member-access-check.yml']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: mern
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: mern/package-lock.json
+      - run: npm ci
+      - name: Production build
+        run: npm run build
+      - name: Existing regression suite
+        run: npm test
+      - name: Media authorization and persistence regression
+        run: node --test tests/media-editor.integration.js
+      - name: Member activation, revocation and billing separation
+        run: node --test tests/member-access.integration.js
+      - name: Save exact build for browser verification
+        uses: actions/upload-artifact@v4
+        with:
+          name: member-footer-build
+          path: mern/client/dist
+          retention-days: 2
