@@ -4,6 +4,7 @@
       /^Ashley Northrop,/i.test(img.alt || '')
     );
     if (!image) return false;
+    if (image.dataset.siteImageCustom === 'true') return true;
     image.src = '/images/ashley-northrop.webp';
     return true;
   };
