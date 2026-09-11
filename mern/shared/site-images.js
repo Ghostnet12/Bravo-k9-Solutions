@@ -2,14 +2,10 @@ export const SITE_IMAGE_KEY = /^[a-z0-9][a-z0-9._-]{0,119}$/;
 export const SITE_IMAGE_MAX_BYTES = 3 * 1024 * 1024;
 export const isImageEditor = user => ['staff', 'owner'].includes(user?.role);
 export const DAVID_IMAGE = '/images/hero-bravo-launch.webp';
-// Reuse the owner-approved hero; do not invent a new likeness or replace named
-// women, customer photos, dog-only photos, or the immutable Bravo branding.
-const trainerScenes = new Set([
-  '/images/hero-bravo-k9.webp', '/images/obedience-real-world.webp',
-  '/images/training-education.webp', '/images/protection-training.webp',
-  '/images/service-dog-training.webp', '/images/tracking-training.webp',
-]);
-export function defaultSiteImage(source) { return trainerScenes.has(source) ? DAVID_IMAGE : source; }
+// Restore each section's original photograph instead of reusing the hero.
+// The hero, David and Ashley portraits, and saved staff replacements are untouched.
+// This changes photo defaults only; the staff/owner editor stays enabled.
+export function defaultSiteImage(source) { return source; }
 export function sourceImageKey(source, origin) {
   try {
     const url = new URL(source, origin);
