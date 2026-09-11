@@ -18,6 +18,7 @@ import { PAGE_METADATA } from '../shared/page-metadata.js';
 import { SERVICES, quote, rescheduledQuote } from '../shared/catalog.js';
 import { effectiveServices } from './services.js';
 import { clientError } from './errors.js';
+import { installChatClear, chatVisibility, visibleInbox } from './chat-clear.js';
 
 const app = express();
 app.disable('x-powered-by');
@@ -59,6 +60,7 @@ app.get('/api/team', async (_req, res) => {
 });
 app.use('/api', sameOrigin, async (_req, _res, next) => { await connectDb(); next(); }, identify);
 app.use('/api', rateLimit('api', 240, 60000));
+installChatClear(app);
 app.get('/api/lessons/:id/image', async (req, res) => {
   const lesson = await Lesson.findOne({ _id: req.params.id, ...(['staff', 'owner'].includes(req.user?.role) ? {} : { published: true }) }).lean();
   if (!lesson?.imageUpload) return res.status(404).end();
@@ -166,8 +168,8 @@ app.put('/api/reviews/mine', requireUser, rateLimit('review', 6, 3600000), async
   const review = await Review.findOneAndUpdate({ userId: req.user._id }, { $set: { ...data, authorName: req.user.name }, $setOnInsert: { hidden: false } }, { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true });
   res.json({ review });
 });
-app.get('/api/community', requireUser, async (_req, res) => {
-  const messages = await Message.find({ deleted: false }).sort({ createdAt: -1 }).limit(100).lean();
+app.get('/api/community', requireUser, async (req, res) => {
+  const messages = await Message.find({ deleted: false, ...await chatVisibility(req.user, 'community') }).sort({ createdAt: -1 }).limit(100).lean();
   res.json({ messages: messages.reverse().map(({ _id, userId, authorName, role, kind, body, createdAt }) => ({ _id, authorName, role: publicRole({ _id: userId, role }), kind, body, createdAt })) });
 });
 app.post('/api/community', requireUser, rateLimit('chat', 10, 60000), async (req, res) => {
@@ -180,7 +182,7 @@ app.post('/api/community', requireUser, rateLimit('chat', 10, 60000), async (req
 app.delete('/api/community/:id', requireUser, requireOwner, async (req, res) => { await Message.updateOne({ _id: req.params.id }, { $set: { deleted: true } }); res.json({ ok: true }); });
 app.get('/api/direct', requireUser, async (req, res) => {
   const memberId = ['staff', 'owner'].includes(req.user.role) && req.query.memberId ? String(req.query.memberId) : String(req.user._id);
-  const messages = await DirectMessage.find({ memberId, deleted: false }).sort({ createdAt: -1, _id: -1 }).limit(200).lean();
+  const messages = await DirectMessage.find({ memberId, deleted: false, ...await chatVisibility(req.user, `direct:${memberId}`) }).sort({ createdAt: -1, _id: -1 }).limit(200).lean();
   res.json({ messages: messages.reverse().map(({ _id, senderId, senderName, senderRole, recipientName, body, createdAt }) => ({ _id, senderName, senderRole: publicRole({ _id: senderId, role: senderRole }), recipientName, body, createdAt })) });
 });
 app.post('/api/direct', requireUser, rateLimit('direct', 20, 60000), async (req, res) => {
@@ -217,7 +219,7 @@ app.patch('/api/groups/:id', requireUser, async (req, res) => {
 app.get('/api/groups/:id/messages', requireUser, async (req, res) => {
   const group = await CommunityGroup.findOne({ _id: req.params.id, ...(req.user.role === 'owner' ? {} : { members: req.user._id }), archived: false });
   if (!group) return res.status(404).json({ error: 'Group not found.' });
-  const messages = await GroupMessage.find({ groupId: group._id, deleted: false }).sort({ createdAt: -1, _id: -1 }).limit(200).select('userId authorName role body createdAt').lean();
+  const messages = await GroupMessage.find({ groupId: group._id, deleted: false, ...await chatVisibility(req.user, `group:${group._id}`) }).sort({ createdAt: -1, _id: -1 }).limit(200).select('userId authorName role body createdAt').lean();
   res.json({ messages: messages.reverse().map(({ userId, role, ...message }) => ({ ...message, role: publicRole({ _id: userId, role }) })) });
 });
 app.post('/api/groups/:id/messages', requireUser, rateLimit('group-chat', 20, 60000), async (req, res) => {
@@ -231,7 +233,8 @@ app.delete('/api/groups/:id/messages/:messageId', requireUser, requireOwner, asy
 });
 for (const type of ['video', 'captions', 'transcript']) app.get(`/api/lessons/:id/${type}`, requireUser, (req, res) => protectedLesson(req, res, type));
 app.get('/api/admin', requireUser, requireStaff, async (req, res) => {
-  const [settings, bookings, blocks, inbox] = await Promise.all([Settings.findById('schedule'), Booking.find().sort({ createdAt: -1 }).limit(200).populate({ path: 'userId', model: User, select: 'name email' }), Slot.find({ bookingId: { $exists: false } }).sort({ _id: 1 }).limit(200), DirectMessage.aggregate([{ $sort: { createdAt: -1 } }, { $group: { _id: '$memberId', lastMessage: { $first: '$body' }, updatedAt: { $first: '$createdAt' } } }, { $limit: 100 }])]);
+  const [settings, bookings, blocks, inboxAll] = await Promise.all([Settings.findById('schedule'), Booking.find().sort({ createdAt: -1 }).limit(200).populate({ path: 'userId', model: User, select: 'name email' }), Slot.find({ bookingId: { $exists: false } }).sort({ _id: 1 }).limit(200), DirectMessage.aggregate([{ $match: { deleted: false, ...await chatVisibility(req.user, 'inbox') } }, { $sort: { createdAt: -1 } }, { $group: { _id: '$memberId', lastMessage: { $first: '$body' }, updatedAt: { $first: '$createdAt' } } }, { $limit: 100 }])]);
+  const inbox = await visibleInbox(req.user, inboxAll);
   const names = await User.find({ _id: { $in: inbox.map(thread => thread._id) } }).select('name').lean(); const nameMap = new Map(names.map(person => [String(person._id), person.name]));
   const team = await User.find({ role: { $in: ['staff', 'owner'] }, blocked: { $ne: true } }).select('name role').sort({ name: 1 }).lean();
   res.json({ settings, bookings, blocks, team: team.map(person => ({ ...person, role: publicRole(person) })), inbox: inbox.map(thread => ({ ...thread, memberName: nameMap.get(String(thread._id)) || 'Client' })), role: req.user.role });

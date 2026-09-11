@@ -21,6 +21,16 @@ export default function StaffInbox({ inbox = [], refreshInbox }) {
     load(); const timer = setInterval(load, 10000);
     return () => { active = false; clearInterval(timer); };
   }, [memberId, version]);
+  useEffect(() => {
+    let active = true, pending = false;
+    const timer = setInterval(async () => {
+      if (!active || document.hidden || paused.current || pending) return;
+      pending = true;
+      try { await refreshInbox(); } catch (err) { if (active && alive.current && !paused.current) setError(err.message); }
+      finally { pending = false; }
+    }, 10000);
+    return () => { active = false; clearInterval(timer); };
+  }, [refreshInbox]);
   async function clearInbox(all = true) {
     if (paused.current || (!all && !memberId)) return;
     if (!window.confirm(all ? 'Clear earlier inbox conversations and reply drafts from YOUR view? Other people keep their copies. New messages will still arrive.' : 'Clear earlier messages in this conversation from YOUR view? Other people keep their copies.')) return;

@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import mongoose from 'mongoose';
 import request from 'supertest';
 import app from '../server/app.js';
+import { ChatClear } from '../server/chat-clear.js';
 import { digest } from '../server/auth.js';
 import { ALL_MODELS, User, Session, RateBucket, Settings, ServiceSetting, Subscription, CommunityGroup, GroupMessage, DirectMessage, Message, Lesson, MediaUpload, MediaChunk, Booking, Review, AuditEvent } from '../server/models.js';
 const origin = 'http://localhost:5173';
@@ -40,6 +41,8 @@ test('owner/staff workspace contracts over HTTP with isolated model mocks', asyn
   t.mock.method(Settings, 'findById', () => query({ enabled: true, weekdays: [1, 2, 3, 4, 5], hours: ['09:00'] }));
   t.mock.method(ServiceSetting, 'find', () => query([]));
   t.mock.method(Subscription, 'find', () => query([]));
+  t.mock.method(ChatClear, 'findOne', () => query(null));
+  t.mock.method(ChatClear, 'find', () => query([]));
   const call = (role, method, path, body) => {
     const req = request(app)[method](path).set('Origin', origin);
     if (role) req.set('Cookie', `bravo_session=${role}`);

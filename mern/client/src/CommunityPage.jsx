@@ -8,16 +8,21 @@ import MessageCard from './MessageCard';
 function Conversation({ path, user, body, setBody, direct = false, team = [], initialRecipient = '' }) {
   const [messages, setMessages] = useState([]), [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [error, setError] = useState('');
   const [kind, setKind] = useState('message'), [recipientId, setRecipient] = useState(initialRecipient);
-  const alive = useRef(true);
+  const alive = useRef(true), generation = useRef(0), clearing = useRef(false);
+  const [notice, setNotice] = useState('');
   const load = useCallback(async () => {
-    const result = await api(path);
-    if (alive.current) { setMessages(result.messages); setLoading(false); setError(''); }
+    if (clearing.current) return;
+    const request = ++generation.current;
+    try {
+      const result = await api(path);
+      if (alive.current && request === generation.current && !clearing.current) { setMessages(result.messages); setLoading(false); setError(''); }
+    } catch (err) { if (alive.current && request === generation.current && !clearing.current) { setError(err.message); setLoading(false); } }
   }, [path]);
   useEffect(() => {
     alive.current = true;
     const refresh = () => { if (!document.hidden) load().catch(err => { if (alive.current) { setError(err.message); setLoading(false); } }); };
     refresh(); const timer = setInterval(refresh, 10000);
-    return () => { alive.current = false; clearInterval(timer); };
+    return () => { alive.current = false; generation.current++; clearInterval(timer); };
   }, [load]);
   async function send(e) {
     e.preventDefault(); if (!body.trim()) return; setBusy(true); setError('');
@@ -26,6 +31,18 @@ function Conversation({ path, user, body, setBody, direct = false, team = [], in
       setBody(''); await load();
     } catch (err) { if (alive.current) setError(err.message); } finally { if (alive.current) setBusy(false); }
   }
+  async function clearConversation() {
+    if (clearing.current || !window.confirm('Clear earlier messages and your draft from YOUR view? This stays cleared after reload. Other people keep their copies, and new messages will still appear.')) return;
+    clearing.current = true; generation.current++; setBusy(true); setError(''); setNotice('');
+    try {
+      const channel = path === '/community' ? 'community' : direct ? 'direct' : 'group';
+      await api('/chat/clear', { method: 'POST', body: { channel, ...(channel === 'group' ? { groupId: path.split('/')[2] } : {}), confirm: true } });
+      if (!alive.current) return;
+      setMessages([]); setBody(''); setKind('message'); setRecipient(''); setLoading(false);
+      setNotice('Earlier messages and your draft are cleared from your view. New messages will still arrive.');
+    } catch (err) { if (alive.current) setError(err.message); }
+    finally { clearing.current = false; if (alive.current) { setBusy(false); await load(); } }
+  }
   async function hide(id) {
     if (!window.confirm('Hide this message from the conversation?')) return;
     setBusy(true);
@@ -33,12 +50,12 @@ function Conversation({ path, user, body, setBody, direct = false, team = [], in
     catch (err) { setError(err.message); } finally { setBusy(false); }
   }
   return <>
-    <Notice error>{error}</Notice>
-    <div className="thread-tools"><p className="helper">Latest {direct || path !== '/community' ? '200' : '100'} messages · Updates every 10 seconds</p><button className="quiet-button" disabled={busy} onClick={() => load().catch(err => setError(err.message))}>Refresh messages</button></div>
+    <Notice error>{error}</Notice><Notice>{notice}</Notice>
+    <div className="thread-tools"><p className="helper">Updates every 10 seconds · Clear removes earlier messages from your view only</p><button className="quiet-button" disabled={busy} type="button" onClick={clearConversation}>Refresh & clear my chat</button></div>
     <div className="chat-history panel" role="region" tabIndex={0} aria-label="Conversation">
       {loading ? <p role="status">Loading messages…</p> : messages.length ? messages.map(message => <MessageCard message={message} key={message._id}>
         {user.role === 'owner' && !direct && <button className="quiet-button" disabled={busy} onClick={() => hide(message._id)}>Hide message</button>}
-      </MessageCard>) : <div className="empty-state"><h3>Start the conversation.</h3><p>No messages yet. Say hello or ask a question.</p></div>}
+      </MessageCard>) : <div className="empty-state"><h3>Start the conversation.</h3><p>No uncleared messages. Say hello or ask a question.</p></div>}
     </div>
     <form className="panel chat-composer" onSubmit={send}>
       {direct && <label>Who would you like to reach?<select value={recipientId} disabled={busy} onChange={e => setRecipient(e.target.value)}><option value="">Any available Bravo team member</option>{team.map(person => <option key={person.id} value={person.id}>{person.name} · {person.role}</option>)}</select></label>}
@@ -54,8 +71,9 @@ export default function CommunityPage() {
   const tab = ['room', 'direct', 'groups'].includes(params.get('tab')) ? params.get('tab') : 'room';
   const [groups, setGroups] = useState([]), [people, setPeople] = useState([]), [team, setTeam] = useState([]), [groupId, setGroupId] = useState('');
   const [drafts, setDrafts] = useState({}), [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false);
+  const [groupResetVersion, setGroupResetVersion] = useState(0);
   const activeGroup = groups.find(group => group._id === groupId);
-  const refreshGroups = useCallback(async () => { const data = await api('/groups'); setGroups(data.groups); setPeople(data.people); setGroupId(id => data.groups.some(group => group._id === id) ? id : data.groups[0]?._id || ''); }, []);
+  const refreshGroups = useCallback(async (reset = false) => { const data = await api('/groups'); setGroups(data.groups); setPeople(data.people); setGroupId(id => reset ? '' : data.groups.some(group => group._id === id) ? id : data.groups[0]?._id || ''); }, []);
   useEffect(() => {
     if (!user) { setDrafts({}); return; }
     api('/team').then(data => setTeam(data.team)).catch(e => setError(e.message));
@@ -76,13 +94,13 @@ export default function CommunityPage() {
     catch (err) { setError(err.message); } finally { setBusy(false); }
   }
   const path = tab === 'room' ? '/community' : tab === 'direct' ? '/direct' : activeGroup ? `/groups/${groupId}/messages` : null;
-  return <Page className="community-page" title="The Bravo community." eyebrow="CONVERSATION, GROUPS & SUPPORT" intro="Meet other owners, keep your group together, or ask the Bravo team for help."><SetupNotice/><Notice error>{error}</Notice><Notice>{notice}</Notice>
+  return <Page key={groupResetVersion} className="community-page" title="The Bravo community." eyebrow="CONVERSATION, GROUPS & SUPPORT" intro="Meet other owners, keep your group together, or ask the Bravo team for help."><SetupNotice/><Notice error>{error}</Notice><Notice>{notice}</Notice>
     {!authReady ? <p role="status">Checking your account…</p> : !user ? <div className="panel empty-state"><h2>You’re welcome here.</h2><p>Create a profile or sign in to join the conversation.</p><Link className="button" to="/account">Sign in to Bravo</Link></div> : <>
       <nav className="community-tabs" aria-label="Community sections">{[['room', 'Bravo Room'], ['direct', 'Message Bravo'], ['groups', user.role === 'owner' ? 'Groups & moderation' : 'My groups']].map(([id, label]) => <button key={id} disabled={busy} aria-pressed={tab === id} onClick={() => { setParams({ tab: id }); setNotice(''); setError(''); }}>{label}</button>)}</nav>
       <div className="community-layout"><section>
         {tab === 'room' && <div className="panel thread-intro"><h2>Open to every Bravo member.</h2><p>Share progress, ask questions, and encourage each other. Messages show your profile name. Open 24/7; staff are not always online.</p></div>}
         {tab === 'direct' && <div className="panel thread-intro"><p className="kicker gold">PRIVATE SUPPORT</p><h2>Message the Bravo team.</h2><p>This is your shared support thread with Bravo. Only you and the Bravo team can read it, including messages addressed to a particular trainer. For urgent needs, <Link to="/contact">call a trainer</Link>.</p></div>}
-        {tab === 'groups' && <><div className="panel"><h2>Your group conversations.</h2><p>Groups are visible to their members and Bravo administrators. Administrators can review and moderate every group. Do not share sensitive personal details.</p><button className="quiet-button" disabled={busy} onClick={() => refreshGroups().catch(e => setError(e.message))}>Refresh groups</button></div><div className="group-switcher">{groups.map(group => <button key={group._id} aria-pressed={groupId === group._id} className={groupId === group._id ? 'selected' : ''} onClick={() => setGroupId(group._id)}>{group.name}</button>)}</div>{activeGroup && <h2>{activeGroup.name}</h2>}{!activeGroup && <div className="panel empty-state"><h3>Bring your people together.</h3><p>Create a group using the form below.</p></div>}</>}
+        {tab === 'groups' && <><div className="panel"><h2>Your group conversations.</h2><p>Groups are visible to their members and Bravo administrators. Administrators can review and moderate every group. Do not share sensitive personal details.</p><button className="quiet-button" disabled={busy} onClick={() => { setGroupResetVersion(value => value + 1); setDrafts({}); setGroupId(''); setNotice('Group selection and message drafts cleared.'); refreshGroups(true).catch(e => setError(e.message)); }}>Refresh & reset groups</button></div><div className="group-switcher">{groups.map(group => <button key={group._id} aria-pressed={groupId === group._id} className={groupId === group._id ? 'selected' : ''} onClick={() => setGroupId(group._id)}>{group.name}</button>)}</div>{activeGroup && <h2>{activeGroup.name}</h2>}{!activeGroup && <div className="panel empty-state"><h3>Bring your people together.</h3><p>Create a group using the form below.</p></div>}</>}
         {path && <Conversation key={user.id + path} path={path} user={user} direct={tab === 'direct'} team={team} initialRecipient={params.get('to') || ''} body={drafts[path] || ''} setBody={value => setDrafts(current => ({ ...current, [path]: value }))}/>}
       </section><aside>
         {tab === 'groups' ? <>

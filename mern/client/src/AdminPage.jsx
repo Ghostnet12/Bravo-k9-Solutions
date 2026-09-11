@@ -3,7 +3,7 @@ import OwnerPanel from './OwnerPanel';
 import StaffInbox from './StaffInbox';
 import StaffBooking from './StaffBooking';
 import { downloadCalendar } from './calendar';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useBravo } from './context';
 import { api } from './api';
@@ -15,12 +15,23 @@ import { deskLabel } from '../../shared/access';
 const hours = Array.from({ length: 13 }, (_, i) => `${i + 9}:00`.padStart(5, '0'));
 const serviceName = id => ALL_SERVICES.find(service => service.id === id)?.name || 'Legacy Bravo program';
 export default function AdminPage() {
-  const { user, config, refreshConfig, authReady } = useBravo();
+  const { user, config, refreshConfig, authReady, setBookingDraft } = useBravo();
+  const loadRequest = useRef(0);
+  const [resetVersion, setResetVersion] = useState(0);
   const [data, setData] = useState(null), [schedule, setSchedule] = useState(null), [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false);
   const [tab, setTab] = useState('schedule'), [query, setQuery] = useState(''), [statusFilter, setStatusFilter] = useState('active'), [visitDate, setVisitDate] = useState(''), [trainer, setTrainer] = useState('all');
-  const load = useCallback(async () => { const result = await api('/admin'); const [reviews, services] = result.role === 'owner' ? await Promise.all([api('/admin/reviews').then(data => data.reviews), api('/admin/services').then(data => data.services)]) : [[], []]; setData({ ...result, reviews, services }); setSchedule(result.settings); }, []);
+  const load = useCallback(async () => { const request = ++loadRequest.current; const result = await api('/admin'); const [reviews, services] = result.role === 'owner' ? await Promise.all([api('/admin/reviews').then(data => data.reviews), api('/admin/services').then(data => data.services)]) : [[], []]; if (request !== loadRequest.current) return; setData({ ...result, reviews, services }); setSchedule(result.settings); }, []);
   useEffect(() => { if (['staff', 'owner'].includes(user?.role)) load().catch(e => setError(e.message)); }, [user, load]);
   async function action(work) { setBusy(true); setError(''); setNotice(''); try { await work(); await load(); } catch (e) { setError(e.message); } finally { setBusy(false); } }
+  async function resetDesk() {
+    if (busy) return;
+    loadRequest.current++; setBusy(true); setError(''); setNotice('');
+    setQuery(''); setStatusFilter('active'); setVisitDate(''); setTrainer('all');
+    setBookingDraft(null); setResetVersion(value => value + 1);
+    if (data?.settings) setSchedule({ ...data.settings, weekdays: [...data.settings.weekdays], hours: [...data.settings.hours] });
+    try { await Promise.all([load(), refreshConfig()]); setNotice('Filters, selections and unsaved forms reset. Saved bookings, accounts and payments are unchanged.'); }
+    catch (e) { setError(e.message); } finally { setBusy(false); }
+  }
   function toggle(field, value) { setSchedule(s => ({ ...s, [field]: s[field].includes(value) ? s[field].filter(v => v !== value) : [...s[field], value].sort() })); }
   const mine = b => trainer === 'all' || (trainer === 'unassigned' ? !b.staffId && !b.requestedStaffId : (b.staffId || b.requestedStaffId) === trainer);
   const visible = (data?.bookings || []).filter(b => mine(b) &&
@@ -30,13 +41,13 @@ export default function AdminPage() {
   const agenda = (data?.bookings || []).filter(b => mine(b) && !['cancelled', 'waitlisted'].includes(b.status)).flatMap(b => b.visits.filter(v => v.date === today()).map(v => ({ ...v, booking: b }))).sort((a,b) => a.time.localeCompare(b.time));
   const allowed = ['staff', 'owner'].includes(user?.role);
   const tabs = [['schedule', 'Schedule'], ['lessons', 'Lesson studio'], ['messages', 'Messages'], ...(user?.role === 'owner' ? [['people', 'People & access'], ['services', 'Services & pricing'], ['reviews', 'Reviews']] : [])];
-  return <Page className="staff-page" title={`Your ${deskLabel(user).toLowerCase()}.`} eyebrow={user?.isPrimaryOwner ? 'BRAVO OWNERSHIP' : 'BRAVO OPERATIONS'} intro="Choose a task. Keep your day, your clients, and your lessons in one place.">
+  return <Page key={resetVersion} className="staff-page" title={`Your ${deskLabel(user).toLowerCase()}.`} eyebrow={user?.isPrimaryOwner ? 'BRAVO OWNERSHIP' : 'BRAVO OPERATIONS'} intro="Choose a task. Keep your day, your clients, and your lessons in one place.">
     <Notice error>{error}</Notice><Notice>{notice}</Notice>
     {!authReady ? <p role="status">Checking access…</p> : !allowed ? <div className="panel"><h2>Team access required.</h2><p>The owner assigns staff privileges to registered accounts.</p><Link className="button" to="/account">Open your account</Link></div> : !data ? <p role="status">Loading your desk…</p> : <>
-      <nav className="community-tabs desk-tabs" aria-label="Desk sections">{tabs.map(([id, label]) => <button key={id} aria-pressed={tab === id} onClick={() => { setTab(id); setError(''); setNotice(''); }}>{label}</button>)}</nav>
+      <div className="desk-reset-actions"><p className="helper">Reset clears selections and unsaved forms, not saved business records.</p><button type="button" className="button button-ghost" disabled={busy} onClick={resetDesk}>Reset desk</button></div><nav className="community-tabs desk-tabs" aria-label="Desk sections">{tabs.map(([id, label]) => <button key={id} aria-pressed={tab === id} onClick={() => { setTab(id); setError(''); setNotice(''); }}>{label}</button>)}</nav>
       {tab === 'schedule' && <>
         <AppointmentNotice/>
-        <section className="panel"><div className="section-label"><h2>Today’s visits.</h2><button className="quiet-button" disabled={busy} onClick={() => action(async () => {})}>Refresh</button></div>
+        <section className="panel"><div className="section-label"><h2>Today’s visits.</h2><button className="quiet-button" disabled={busy} onClick={resetDesk}>Refresh & reset view</button></div>
           <div className="form-grid"><p>{formatDate(today())} · Aberdeen time</p><label>View schedule<select value={trainer} onChange={e => setTrainer(e.target.value)}><option value="all">Whole team</option><option value={user.id}>My visits</option><option value="unassigned">Unassigned visits</option>{data.team.filter(person => person._id !== user.id).map(person => <option key={person._id} value={person._id}>{person.name}</option>)}</select></label></div>
           {agenda.length ? agenda.map(v => <div className="appointment-line" key={`${v.booking._id}-${v.time}`}><strong>{formatTime(v.time)} · {v.booking.dogName}</strong><span>{v.booking.userId?.name} · {v.booking.status}</span><a className="inline-link" href={`tel:${v.booking.phone.replace(/[^+0-9]/g, '')}`}>Call client</a></div>) : <p>No visits today for this view.</p>}
           <p className="helper">Requests need confirmation. Each hourly opening is shared across the team.</p>
@@ -64,7 +75,7 @@ export default function AdminPage() {
       </>}
       {tab === 'messages' && <StaffInbox inbox={data.inbox} refreshInbox={load}/>}
       {tab === 'lessons' && <LessonEditor/>}
-      {tab === 'people' && user.role === 'owner' && <><OwnerPanel user={user}/><section className="panel"><h2>Community moderation.</h2><p>Review public and group conversations. Hide messages in context, or mute/block accounts in People & access.</p><Link className="button button-ghost" to="/community?tab=groups">Review groups</Link><Link className="inline-link" to="/community">Open Bravo Room</Link><p className="helper">{config?.paymentsReady ? 'Verified Stripe checkout and refund controls are available from booking records.' : 'Checkout and refunds remain safely paused until verified Stripe setup is enabled.'}</p></section></>}
+      {tab === 'people' && user.role === 'owner' && <><OwnerPanel user={user} onReset={resetDesk}/><section className="panel"><h2>Community moderation.</h2><p>Review public and group conversations. Hide messages in context, or mute/block accounts in People & access.</p><Link className="button button-ghost" to="/community?tab=groups">Review groups</Link><Link className="inline-link" to="/community">Open Bravo Room</Link><p className="helper">{config?.paymentsReady ? 'Verified Stripe checkout and refund controls are available from booking records.' : 'Checkout and refunds remain safely paused until verified Stripe setup is enabled.'}</p></section></>}
       {tab === 'services' && user.role === 'owner' && <section><div className="section-label"><div><p className="kicker gold">ADMIN ACCESS</p><h2>Services & pricing.</h2></div></div><p>Changes apply to new server-generated quotes. Existing bookings keep the price recorded when they were created.</p><div className="owner-people">{data.services.map(service => <form className="panel owner-person" key={service.id} onSubmit={event => { event.preventDefault(); const fields = Object.fromEntries(new FormData(event.currentTarget)); action(async () => { await api(`/admin/services/${service.id}`, { method: 'PATCH', body: { cents: Math.round(Number(fields.price) * 100), enabled: fields.enabled === 'on' } }); await refreshConfig(); setNotice(`${service.name} updated.`); }); }}><div className="record-top"><span className="badge">{service.interval}</span><span className="badge">{service.enabled ? 'Active' : 'Paused'}</span></div><h3>{service.name}</h3><label>Price in dollars<input name="price" type="number" min="0" max="10000" step="0.01" defaultValue={(service.cents / 100).toFixed(2)} readOnly={service.id === 'training'}/></label><label className="check-label"><input name="enabled" type="checkbox" defaultChecked={service.enabled}/>Offer this service for new bookings</label>{service.id === 'training' && <p className="helper">Training is fixed at $200/month for the first dog and $100/month for each additional dog.</p>}<button className="button button-small" disabled={busy}>Save service</button></form>)}</div></section>}
       {tab === 'reviews' && user.role === 'owner' && <section><div className="section-label"><div><p className="kicker gold">MODERATION</p><h2>Customer reviews.</h2></div></div><p>Hide inappropriate content without rewriting a customer’s words. Restoring a review publishes the original text unchanged.</p>{!data.reviews.length ? <div className="panel"><p>No customer reviews yet.</p></div> : <div className="admin-bookings">{data.reviews.map(review => <article className="panel" key={review._id}><div className="record-top"><span className="badge">{review.rating} / 5 stars</span>{review.hidden && <span className="badge">Hidden</span>}</div><h3>{review.authorName}</h3><p>{review.body}</p><button className="quiet-button" disabled={busy} onClick={() => action(() => api(`/admin/reviews/${review._id}`, { method: 'PATCH', body: { hidden: !review.hidden } }))}>{review.hidden ? 'Restore original review' : 'Hide review'}</button></article>)}</div>}</section>}
     </>}
