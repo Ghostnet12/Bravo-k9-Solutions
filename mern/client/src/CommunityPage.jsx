@@ -4,23 +4,26 @@ import { useBravo } from './context';
 import { api } from './api';
 import { Page, Notice, SetupNotice } from './ui';
 import MessageCard from './MessageCard';
+import { useChatHistory } from './chat-history';
 
 function Conversation({ path, user, body, setBody, direct = false, team = [], initialRecipient = '' }) {
-  const [messages, setMessages] = useState([]), [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [error, setError] = useState('');
+  const [busy, setBusy] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState('');
   const [kind, setKind] = useState('message'), [recipientId, setRecipient] = useState(initialRecipient);
+  const history = useChatHistory(path);
+  const { messages, loading, load, clearing } = history;
   const alive = useRef(true);
-  const load = useCallback(async () => {
-    const result = await api(path);
-    if (alive.current) { setMessages(result.messages); setLoading(false); setError(''); }
-  }, [path]);
-  useEffect(() => {
-    alive.current = true;
-    const refresh = () => { if (!document.hidden) load().catch(err => { if (alive.current) { setError(err.message); setLoading(false); } }); };
-    refresh(); const timer = setInterval(refresh, 10000);
-    return () => { alive.current = false; clearInterval(timer); };
-  }, [load]);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+  async function resetHistory(mode = 'clear') {
+    const prompt = mode === 'delete' ? 'Permanently DELETE all messages in this conversation for EVERYONE? This cannot be undone. Bookings, accounts and payments are not affected.' : 'Clear the old messages and unsent draft from YOUR history? This stays cleared after signing in again. Other people keep their copies, and new messages will still arrive.';
+    if (!window.confirm(prompt)) return;
+    setError(''); setNotice('');
+    if (await history.clear(mode)) {
+      setBody(''); setKind('message'); setRecipient(initialRecipient);
+      setNotice(mode === 'delete' ? 'Conversation history permanently deleted.' : 'History and draft cleared for your account. New messages will still arrive.');
+    }
+  }
   async function send(e) {
-    e.preventDefault(); if (!body.trim()) return; setBusy(true); setError('');
+    e.preventDefault(); if (clearing || !body.trim()) return; setBusy(true); setError('');
     try {
       await api(path, { method: 'POST', body: { body, ...(path === '/community' ? { kind } : {}), ...(direct && recipientId ? { recipientId } : {}) } });
       setBody(''); await load();
@@ -33,18 +36,18 @@ function Conversation({ path, user, body, setBody, direct = false, team = [], in
     catch (err) { setError(err.message); } finally { setBusy(false); }
   }
   return <>
-    <Notice error>{error}</Notice>
-    <div className="thread-tools"><p className="helper">Latest {direct || path !== '/community' ? '200' : '100'} messages · Updates every 10 seconds</p><button className="quiet-button" disabled={busy} onClick={() => load().catch(err => setError(err.message))}>Refresh messages</button></div>
+    <Notice error>{error || history.error}</Notice><Notice>{notice}</Notice>
+    <div className="thread-tools"><p className="helper">Latest {direct || path !== '/community' ? '200' : '100'} messages · Updates every 10 seconds</p><div className="reset-actions"><button type="button" className="quiet-button" disabled={busy || clearing} onClick={() => resetHistory()}>Refresh & clear history</button>{user.role === 'owner' && <button type="button" className="quiet-button danger-link" disabled={busy || clearing} onClick={() => resetHistory('delete')}>Delete conversation history</button>}</div></div>
     <div className="chat-history panel" role="region" tabIndex={0} aria-label="Conversation">
       {loading ? <p role="status">Loading messages…</p> : messages.length ? messages.map(message => <MessageCard message={message} key={message._id}>
-        {user.role === 'owner' && !direct && <button className="quiet-button" disabled={busy} onClick={() => hide(message._id)}>Hide message</button>}
-      </MessageCard>) : <div className="empty-state"><h3>Start the conversation.</h3><p>No messages yet. Say hello or ask a question.</p></div>}
+        {user.role === 'owner' && !direct && <button className="quiet-button" disabled={busy || clearing} onClick={() => hide(message._id)}>Hide message</button>}
+      </MessageCard>) : <div className="empty-state"><h3>Start the conversation.</h3><p>No messages in your current history. New messages will appear here.</p></div>}
     </div>
     <form className="panel chat-composer" onSubmit={send}>
-      {direct && <label>Who would you like to reach?<select value={recipientId} disabled={busy} onChange={e => setRecipient(e.target.value)}><option value="">Any available Bravo team member</option>{team.map(person => <option key={person.id} value={person.id}>{person.name} · {person.role}</option>)}</select></label>}
-      {path === '/community' && ['staff', 'owner'].includes(user.role) && <label>Post type<select value={kind} disabled={busy} onChange={e => setKind(e.target.value)}><option value="message">Conversation</option><option value="announcement">Team announcement</option><option value="alert">Urgent alert</option></select></label>}
-      <label>Your message<textarea rows="3" maxLength={direct ? 1200 : 700} required disabled={busy} value={body} onChange={e => setBody(e.target.value)} placeholder={direct ? 'How can Bravo help?' : 'Write a useful, respectful message…'}/></label>
-      <button className="button button-small" disabled={busy || !body.trim()}>{busy ? 'Sending…' : 'Send message'}</button>
+      {direct && <label>Who would you like to reach?<select value={recipientId} disabled={busy || clearing} onChange={e => setRecipient(e.target.value)}><option value="">Any available Bravo team member</option>{team.map(person => <option key={person.id} value={person.id}>{person.name} · {person.role}</option>)}</select></label>}
+      {path === '/community' && ['staff', 'owner'].includes(user.role) && <label>Post type<select value={kind} disabled={busy || clearing} onChange={e => setKind(e.target.value)}><option value="message">Conversation</option><option value="announcement">Team announcement</option><option value="alert">Urgent alert</option></select></label>}
+      <label>Your message<textarea rows="3" maxLength={direct ? 1200 : 700} required disabled={busy || clearing} value={body} onChange={e => setBody(e.target.value)} placeholder={direct ? 'How can Bravo help?' : 'Write a useful, respectful message…'}/></label>
+      <button className="button button-small" disabled={busy || clearing || !body.trim()}>{busy ? 'Sending…' : 'Send message'}</button>
     </form>
   </>;
 }
