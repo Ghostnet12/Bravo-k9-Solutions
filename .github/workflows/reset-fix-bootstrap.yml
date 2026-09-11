@@ -19,19 +19,21 @@ jobs:
           cache: npm
           cache-dependency-path: mern/package-lock.json
       - name: Apply exact source changes
-        run: python3 mern/scripts/apply-reset-fixes.py
+        run: |
+          python3 mern/scripts/apply-reset-fixes.py
+          python3 mern/scripts/reset-followup.py
       - run: npm ci
-        working-directory: mern
-      - name: Existing and new unit tests
-        run: npm test
         working-directory: mern
       - name: Production build
         run: npm run build
         working-directory: mern
+      - name: Existing and new unit tests
+        run: npm test
+        working-directory: mern
       - name: Isolated database and authorization regression
         run: node --test tests/reset.integration.js
         working-directory: mern
-      - name: Save verified source and build
+      - name: Save source and build for verification
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -46,7 +48,7 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git rm mern/scripts/apply-reset-fixes.py .github/workflows/reset-fix-bootstrap.yml
-          git add mern/client/src mern/server/app.js
+          git rm mern/scripts/apply-reset-fixes.py mern/scripts/reset-followup.py .github/workflows/reset-fix-bootstrap.yml
+          git add mern/client/src mern/server/app.js mern/tests/workspace-api.test.js
           git commit -m 'Fix scheduler toggles, mobile date sizing, desk reset and durable personal chat clear'
           git push origin HEAD:fix/scheduler-reset-20260911
