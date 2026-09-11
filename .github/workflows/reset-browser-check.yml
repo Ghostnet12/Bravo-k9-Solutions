@@ -1,0 +1,35 @@
+name: Reset mobile browser checks
+on:
+  push:
+    branches: [fix/scheduler-reset-20260911, bravo-mern]
+    paths: ['mern/**', '.github/workflows/reset-browser-check.yml']
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: mern
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: mern/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: python3 -m pip install playwright==1.57.0
+      - run: python3 -m playwright install --with-deps webkit chromium
+      - name: WebKit mobile and desktop regressions
+        run: BRAVO_BROWSER=webkit python3 tests/reset.browser.py
+      - name: Chromium mobile and desktop regressions
+        run: BRAVO_BROWSER=chromium python3 tests/reset.browser.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reset-browser-results
+          path: mern/browser-test-output
+          retention-days: 3
