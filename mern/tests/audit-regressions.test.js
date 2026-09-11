@@ -180,6 +180,19 @@ test('accessibility statement names the current target, methods, and ongoing rev
   assert.match(source, /not a government certification/);
 });
 
+test('accessibility audit is available to read and download as structured HTML', async () => {
+  const [page, report] = await Promise.all([
+    readFile(new URL('../client/src/AccessibilityPage.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../client/public/reports/bravo-k9-accessibility-audit-2026-09-11.html', import.meta.url), 'utf8')
+  ]);
+  assert.match(page, /href="\/reports\/bravo-k9-accessibility-audit-2026-09-11\.html"/);
+  assert.match(page, /download="Bravo-K9-Accessibility-Audit-2026-09-11\.html"/);
+  assert.match(report, /<html lang="en">/);
+  assert.match(report, /<main id="main">/);
+  assert.match(report, /<caption>/);
+  assert.match(report, /not a legal opinion, government certification/);
+});
+
 test('sticky controls leave focus clearance and form boundaries meet contrast target', async () => {
   const css = await readFile(new URL('../client/src/accessibility-layout.css', import.meta.url), 'utf8');
   assert.match(css, /scroll-padding-block:7rem 8rem/);

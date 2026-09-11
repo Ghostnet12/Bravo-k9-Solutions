@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Bravo K9 Solutions website accessibility audit dated September 11, 2026.">
+  <title>Bravo K9 Solutions Accessibility Audit — September 11, 2026</title>
+  <style>
+    :root{color-scheme:light;--ink:#171815;--muted:#4f504a;--gold:#806532;--line:#b8a684;--paper:#fff;--soft:#f3efe7}
+    *{box-sizing:border-box}
+    html{font:100%/1.65 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;scroll-behavior:smooth}
+    body{margin:0;background:var(--paper);color:var(--ink)}
+    a{color:#5f4519;text-decoration-thickness:.12em;text-underline-offset:.18em}
+    a:focus-visible{outline:3px solid #1b5eaa;outline-offset:4px;border-radius:2px}
+    .skip-link{position:absolute;left:1rem;top:-5rem;padding:.7rem 1rem;background:#fff;color:#000;border:2px solid #000;z-index:2}
+    .skip-link:focus{top:1rem}
+    header,main,footer{width:min(72rem,calc(100% - 2rem));margin-inline:auto}
+    header{padding:3rem 0 2rem;border-bottom:4px solid var(--gold)}
+    main{padding:2rem 0 4rem}
+    footer{padding:1.5rem 0 3rem;border-top:1px solid var(--line);color:var(--muted)}
+    h1,h2,h3{line-height:1.18;text-wrap:balance}
+    h1{font-size:clamp(2.25rem,7vw,4.6rem);margin:.35rem 0 1rem}
+    h2{font-size:clamp(1.5rem,4vw,2.15rem);margin:2.5rem 0 .7rem;padding-top:.25rem}
+    h3{font-size:1.15rem;margin:1.5rem 0 .35rem}
+    p,li{max-width:76ch}
+    .eyebrow{font-weight:800;letter-spacing:.13em;color:var(--gold)}
+    .summary{font-size:1.15rem;color:var(--muted)}
+    .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));gap:.75rem;margin:1.5rem 0 0;padding:0;list-style:none}
+    .meta li{padding:.8rem;background:var(--soft);border-left:4px solid var(--gold)}
+    .meta strong{display:block}
+    table{width:100%;border-collapse:collapse;margin:1rem 0 1.5rem}
+    caption{text-align:left;font-weight:700;margin-bottom:.5rem}
+    th,td{padding:.7rem;text-align:left;vertical-align:top;border:1px solid #777}
+    th{background:#20211e;color:#fff}
+    tbody tr:nth-child(odd){background:var(--soft)}
+    .notice{padding:1rem 1.2rem;border:2px solid var(--gold);background:var(--soft)}
+    .sources li{margin:.55rem 0}
+    @media(max-width:42rem){
+      header{padding-top:2rem}
+      table,thead,tbody,tr,th,td{display:block}
+      thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+      tr{margin-bottom:1rem;border:1px solid #777}
+      td{border:0;border-bottom:1px solid #aaa}
+      td:last-child{border-bottom:0}
+      td::before{content:attr(data-label);display:block;font-weight:800;margin-bottom:.2rem}
+    }
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+    @media print{.skip-link{display:none}body{font-size:10.5pt}header,main,footer{width:auto}a{color:inherit}h2{break-after:avoid}table{break-inside:avoid}}
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to report</a>
+  <header>
+    <p class="eyebrow">BRAVO K9 SOLUTIONS</p>
+    <h1>Website Accessibility Audit</h1>
+    <p class="summary">WCAG 2.2 Level AA engineering baseline with practical improvements beyond the minimum.</p>
+    <ul class="meta">
+      <li><strong>Website</strong> bravounleashed.com</li>
+      <li><strong>Evaluation date</strong> September 11, 2026</li>
+      <li><strong>Pages sampled</strong> 8 public routes plus signed-in code paths</li>
+      <li><strong>Overall position</strong> Strong technical baseline with continuing content and assistive-technology review</li>
+    </ul>
+  </header>
+
+  <main id="main">
+    <section aria-labelledby="summary-heading">
+      <h2 id="summary-heading">Executive summary</h2>
+      <p>Bravo K9 Solutions reviewed its public marketing, booking, account, learning, messaging, and accessibility-statement experiences. The reviewed production release passed 78 automated regression and security tests, compiled successfully, loaded on all eight sampled public routes without horizontal overflow, and produced no recent runtime errors during the review window.</p>
+      <p class="notice"><strong>Important:</strong> This is an engineering and operational accessibility report, not a legal opinion, government certification, or guarantee that every future page state and third-party service will be barrier-free.</p>
+    </section>
+
+    <section aria-labelledby="standard-heading">
+      <h2 id="standard-heading">Standard and approach</h2>
+      <p>Bravo uses the Web Content Accessibility Guidelines (WCAG) 2.2, Levels A and AA, as its primary design and testing goal. Practical enhancements include larger important controls, stronger form boundaries, reduced-motion support, and user-selectable contrast and text sizing.</p>
+      <p>The review used WCAG-EM concepts: define the scope, explore the website, select representative pages and processes, evaluate them, and document the results. Automated checks were paired with code inspection, live keyboard checks, contrast measurement, zoom and responsive-layout testing.</p>
+    </section>
+
+    <section aria-labelledby="scope-heading">
+      <h2 id="scope-heading">Pages and processes sampled</h2>
+      <table>
+        <caption>Representative website areas included in the review</caption>
+        <thead><tr><th scope="col">Route or area</th><th scope="col">Primary task</th><th scope="col">Coverage</th></tr></thead>
+        <tbody>
+          <tr><td data-label="Route or area">Home</td><td data-label="Primary task">Understand services and pricing</td><td data-label="Coverage">Headings, images, reviews, navigation</td></tr>
+          <tr><td data-label="Route or area">Booking portal</td><td data-label="Primary task">Select and request a visit</td><td data-label="Coverage">Controls, dates, forms, sticky actions</td></tr>
+          <tr><td data-label="Route or area">Dog walking</td><td data-label="Primary task">Review walking service</td><td data-label="Coverage">Content hierarchy, links, reflow</td></tr>
+          <tr><td data-label="Route or area">Learning</td><td data-label="Primary task">Find and use lessons</td><td data-label="Coverage">Media alternatives and protected content</td></tr>
+          <tr><td data-label="Route or area">Contact</td><td data-label="Primary task">Reach a trainer</td><td data-label="Coverage">Phone links, details, public team data</td></tr>
+          <tr><td data-label="Route or area">Account</td><td data-label="Primary task">Register, sign in, manage a profile</td><td data-label="Coverage">Authentication, input purpose, status</td></tr>
+          <tr><td data-label="Route or area">Community</td><td data-label="Primary task">Read and send messages</td><td data-label="Coverage">Thread layouts, selectors, wrapping</td></tr>
+          <tr><td data-label="Route or area">Accessibility</td><td data-label="Primary task">Find support and report barriers</td><td data-label="Coverage">Statement, contacts, guidance</td></tr>
+          <tr><td data-label="Route or area">Owner and staff code</td><td data-label="Primary task">Manage people and media</td><td data-label="Coverage">Permissions, labels, media scope</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section aria-labelledby="results-heading">
+      <h2 id="results-heading">Observed production results</h2>
+      <table>
+        <caption>Results after the September 11 remediation release</caption>
+        <thead><tr><th scope="col">Check</th><th scope="col">Result</th><th scope="col">Evidence or note</th></tr></thead>
+        <tbody>
+          <tr><td data-label="Check">Page titles and primary headings</td><td data-label="Result">Pass</td><td data-label="Evidence or note">Meaningful titles and exactly one H1 on every sampled public route</td></tr>
+          <tr><td data-label="Check">Landmarks and accessible names</td><td data-label="Result">Pass</td><td data-label="Evidence or note">Main landmark present; no unnamed buttons, links, inputs, selects, or textareas detected</td></tr>
+          <tr><td data-label="Check">Keyboard focus</td><td data-label="Result">Pass</td><td data-label="Evidence or note">Visible focus; accessibility panel focus entry, Escape dismissal, and focus return verified</td></tr>
+          <tr><td data-label="Check">Horizontal reflow</td><td data-label="Result">Pass</td><td data-label="Evidence or note">No viewport overflow detected on sampled routes</td></tr>
+          <tr><td data-label="Check">Image alternatives</td><td data-label="Result">Pass; monitor</td><td data-label="Evidence or note">Meaningful images named and decorative images silent; future uploads require review</td></tr>
+          <tr><td data-label="Check">Forms and authentication</td><td data-label="Result">Pass</td><td data-label="Evidence or note">Labels, input types, autofill and password-manager support; paste is not blocked</td></tr>
+          <tr><td data-label="Check">Motion</td><td data-label="Result">Pass</td><td data-label="Evidence or note">System reduced-motion preference respected and a manual setting is available</td></tr>
+          <tr><td data-label="Check">Training media</td><td data-label="Result">Supported; monitor</td><td data-label="Evidence or note">Caption and transcript controls exist; accuracy remains an editorial responsibility</td></tr>
+          <tr><td data-label="Check">Third-party checkout</td><td data-label="Result">External</td><td data-label="Evidence or note">Stripe hosts checkout and billing; Bravo provides assistance when a hosted step creates a barrier</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section aria-labelledby="changes-heading">
+      <h2 id="changes-heading">Improvements published</h2>
+      <ul>
+        <li>Added predictable focus entry, Escape-to-close, focus return, route-change close, and focus-leave behavior to the accessibility panel.</li>
+        <li>Added scroll clearance so sticky headers and controls are less likely to obscure keyboard focus.</li>
+        <li>Raised form-control boundary contrast from 2.73:1 to 4.71:1.</li>
+        <li>Standardized 44-pixel footer link targets.</li>
+        <li>Added recognized input-purpose tokens for names, telephone numbers, addresses, and passwords.</li>
+        <li>Made star ratings announce once as a rating while keeping repeated star glyphs silent.</li>
+        <li>Expanded the public accessibility statement with measures, limitations, and a direct barrier-reporting route.</li>
+        <li>Restricted the website editor to approved photos and videos. Logos, brand marks, decorative icons, service icons, accessibility controls, and interface artwork are excluded.</li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="content-heading">
+      <h2 id="content-heading">Continuing content responsibilities</h2>
+      <ul>
+        <li>Write concise, purpose-based alternative text for meaningful photos and leave decorative images silent.</li>
+        <li>Add accurate synchronized captions to prerecorded video and identify speakers and meaningful sounds.</li>
+        <li>Provide transcripts for instructional media and describe important visual actions not conveyed in speech.</li>
+        <li>Keep links descriptive, form labels visible, errors programmatic, and status information available without relying on color alone.</li>
+        <li>Re-test hosted payment and billing flows after material Stripe changes and maintain a staff-assisted alternative.</li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="maintenance-heading">
+      <h2 id="maintenance-heading">Maintenance schedule</h2>
+      <ul>
+        <li><strong>Every content publish:</strong> check alternative text, captions, transcripts, heading order, descriptive links, and mobile presentation.</li>
+        <li><strong>Every code release:</strong> run regression tests, build verification, a keyboard smoke test, and runtime review.</li>
+        <li><strong>Monthly:</strong> test booking, sign-in, profiles, messaging, learning, and the accessibility contact path.</li>
+        <li><strong>Quarterly:</strong> perform a representative WCAG review at narrow widths and 200% zoom, including contrast and focus.</li>
+        <li><strong>Twice yearly:</strong> test complete journeys with screen readers and voice-control software.</li>
+        <li><strong>Periodically:</strong> involve people with disabilities in usability testing and remediation priorities.</li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="sources-heading">
+      <h2 id="sources-heading">Authoritative sources</h2>
+      <ul class="sources">
+        <li><a href="https://www.ada.gov/resources/web-guidance/">U.S. Department of Justice — Guidance on Web Accessibility and the ADA</a></li>
+        <li><a href="https://www.w3.org/TR/WCAG22/">W3C — Web Content Accessibility Guidelines (WCAG) 2.2</a></li>
+        <li><a href="https://www.w3.org/WAI/test-evaluate/">W3C WAI — Evaluating Web Accessibility</a></li>
+        <li><a href="https://www.w3.org/WAI/test-evaluate/conformance/wcag-em/">W3C WAI — WCAG Evaluation Methodology</a></li>
+        <li><a href="https://www.w3.org/WAI/planning/statements/">W3C WAI — Developing an Accessibility Statement</a></li>
+        <li><a href="https://www.w3.org/WAI/media/av/">W3C WAI — Making Audio and Video Media Accessible</a></li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    <p>Bravo K9 Solutions, LLC · Audit dated September 11, 2026 · <a href="/accessibility">Return to the accessibility page</a></p>
+  </footer>
+</body>
+</html>

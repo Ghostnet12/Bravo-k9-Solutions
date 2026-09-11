@@ -3,6 +3,16 @@ import { Page } from './ui';
 
 export default function AccessibilityPage() {
   return <Page title="Accessibility at Bravo." eyebrow="ACCESS & SUPPORT" intro="We want everyone to be able to explore our services, request care, and manage their account.">
+    <section className="panel accessibility-audit-download" aria-labelledby="accessibility-audit-title">
+      <p className="kicker gold">ACCESSIBILITY AUDIT</p>
+      <h2 id="accessibility-audit-title">Read our accessibility review.</h2>
+      <p id="accessibility-audit-description">Our September 11, 2026 report explains the WCAG 2.2 Level AA goal, pages reviewed, improvements published, remaining responsibilities, and ongoing testing schedule.</p>
+      <div className="accessibility-audit-actions" aria-describedby="accessibility-audit-description">
+        <a className="button" href="/reports/bravo-k9-accessibility-audit-2026-09-11.html">Read audit report</a>
+        <a className="button button-ghost" href="/reports/bravo-k9-accessibility-audit-2026-09-11.html" download="Bravo-K9-Accessibility-Audit-2026-09-11.html">Download audit report</a>
+      </div>
+      <p className="helper">Accessible HTML document · opens or downloads on your device</p>
+    </section>
     <section className="panel prose accessibility-statement" aria-label="Website accessibility statement">
       <p>Bravo K9 Solutions is committed to providing people with disabilities equal access to our services, including through this website, consistent with the Americans with Disabilities Act (ADA). Accessibility is part of how we design, test, publish, and maintain this site.</p>
       <h2>Our accessibility goal</h2>

@@ -19,6 +19,12 @@
 .app-page .section-label>.quiet-button{flex:none;min-height:44px}
 .chat-history:focus-visible,.direct-history:focus-visible{outline:3px solid #f5d27f;outline-offset:3px}
 .accessibility-statement{max-width:800px}
+.accessibility-audit-download{max-width:800px;border-color:#8b744c;background:linear-gradient(135deg,#1c1d19,#151616)}
+.accessibility-audit-download h2{margin:.25rem 0 .75rem}
+.accessibility-audit-download>p:not(.kicker){max-width:680px;line-height:1.8}
+.accessibility-audit-actions{display:flex;flex-wrap:wrap;gap:.75rem;margin-top:1.2rem}
+.accessibility-audit-actions .button{display:inline-flex;align-items:center;justify-content:center;min-width:12.5rem}
+.accessibility-audit-download .helper{margin:.75rem 0 0}
 .accessibility-statement a{text-decoration:underline;text-underline-offset:.2em}
 .accessibility-statement h2{margin-top:2rem}
 .accessibility-statement li{margin-block:.5rem;line-height:1.8}
@@ -37,6 +43,8 @@ html.access-high-contrast .conversation-message time{color:#fff}
 .home-hero-shade{display:block;pointer-events:none;background:linear-gradient(90deg,rgba(10,12,10,.96) 0%,rgba(10,12,10,.82) 30%,rgba(10,12,10,.18) 64%,rgba(10,12,10,.03) 100%),linear-gradient(0deg,rgba(8,9,8,.34),transparent 58%)}
 .site-photo-edit-mode .home-hero-image{z-index:3}
 @media(max-width:700px){
+  .accessibility-audit-actions{flex-direction:column;align-items:stretch}
+  .accessibility-audit-actions .button{width:100%}
   .record-actions>.button{flex:1 1 100%;width:100%}
   .record-actions>.quiet-button{flex:0 1 auto;text-align:left}
   .conversation-message-heading strong{flex-basis:100%}
