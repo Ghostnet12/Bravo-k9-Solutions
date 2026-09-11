@@ -9,10 +9,11 @@ import { useBravo } from './context';
 import { api } from './api';
 import { Page, Notice, AppointmentNotice, formatDate, formatTime } from './ui';
 import { today } from './BookingPage';
-import { money } from '../../shared/catalog';
+import { ALL_SERVICES, money } from '../../shared/catalog';
 import { deskLabel } from '../../shared/access';
 
 const hours = Array.from({ length: 13 }, (_, i) => `${i + 9}:00`.padStart(5, '0'));
+const serviceName = id => ALL_SERVICES.find(service => service.id === id)?.name || 'Legacy Bravo program';
 export default function AdminPage() {
   const { user, config, refreshConfig, authReady } = useBravo();
   const [data, setData] = useState(null), [schedule, setSchedule] = useState(null), [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false);
