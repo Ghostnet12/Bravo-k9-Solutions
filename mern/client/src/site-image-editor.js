@@ -1,244 +1,250 @@
 import { api } from './api.js';
-import { SITE_IMAGE_KEY, SITE_IMAGE_MAX_BYTES, defaultSiteImage, sourceImageKey } from '../../shared/site-images.js';
-
+import { SITE_IMAGE_KEY, SITE_IMAGE_MAX_BYTES, SITE_VIDEO_MAX_BYTES, MEDIA_CHUNK_BYTES, defaultSiteImage, sourceImageKey, sourceVideoKey, videoTarget, normalizeFraming, mediaSettingsChanged } from '../../shared/site-images.js';
+import { applyFraming, videoControls } from './media-framing.js';
 let cachedImages = {};
-const slug = text => text.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 90);
-const readFile = file => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(new Error('This file could not be read. Try another photo.')); reader.readAsDataURL(file); });
+const slug = value => value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 90);
+const readFile = file => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(new Error('This file could not be read.')); reader.readAsDataURL(file); });
 export async function optimizeSitePhoto(file) {
-  if (!file || !file.size || file.size > 32 * 1024 * 1024) throw new Error('Choose a photo smaller than 32 MB.');
-  if (/svg/i.test(file.type) || /\.svgz?$/i.test(file.name) || !(/^image\//.test(file.type) || /\.(jpe?g|png|webp|gif|avif|heic|heif)$/i.test(file.name))) throw new Error('Choose a photo, not a document. JPEG, PNG and WebP work best.');
-  const source = await readFile(file), image = new Image();
-  await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = () => reject(new Error('Your browser could not open this format. Export the photo as JPEG or PNG and try again.')); image.src = source; });
-  if (!image.naturalWidth || !image.naturalHeight || image.naturalWidth * image.naturalHeight > 80000000) throw new Error('This photo is too large to process. Choose a smaller copy.');
-  const scale = Math.min(1, 2400 / Math.max(image.naturalWidth, image.naturalHeight));
-  const canvas = document.createElement('canvas');
+  if (!file?.size || file.size > 32 * 1024 * 1024) throw new Error('Choose a photo smaller than 32 MB.');
+  if (/svg/i.test(file.type) || /\.svgz?$/i.test(file.name) || !(/^image\//.test(file.type) || /\.(jpe?g|png|webp|gif|avif|heic|heif)$/i.test(file.name))) throw new Error('Choose a photo. JPEG, PNG and WebP work best.');
+  const image = new Image(), source = await readFile(file);
+  await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = () => reject(new Error('Export this photo as JPEG or PNG and try again.')); image.src = source; });
+  if (!image.naturalWidth || image.naturalWidth * image.naturalHeight > 80000000) throw new Error('Choose a smaller copy of this photo.');
+  const canvas = document.createElement('canvas'), scale = Math.min(1, 2400 / Math.max(image.naturalWidth, image.naturalHeight));
   canvas.width = Math.max(1, Math.round(image.naturalWidth * scale)); canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-  let dataURL;
   for (let attempt = 0; attempt < 6; attempt++) {
-    const context = canvas.getContext('2d');
-    if (!context) throw new Error('Photo processing is unavailable in this browser.');
+    const context = canvas.getContext('2d'); if (!context) throw new Error('Photo processing is unavailable.');
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    // Re-encoding strips embedded location metadata and never publishes raw SVG.
-    dataURL = canvas.toDataURL('image/webp', Math.max(0.65, 0.88 - attempt * 0.04));
-    const data = dataURL.split(',')[1], bytes = Math.floor(data.length * 3 / 4) - (data.endsWith('==') ? 2 : data.endsWith('=') ? 1 : 0);
-    if (bytes <= SITE_IMAGE_MAX_BYTES) return { dataURL, data, contentType: dataURL.slice(5, dataURL.indexOf(';')), filename: `${(file.name.replace(/\.[^.]*$/, '') || 'photo').slice(0, 140)}.${dataURL.startsWith('data:image/webp;') ? 'webp' : 'png'}` };
+    const dataURL = canvas.toDataURL('image/webp', Math.max(0.65, 0.88 - attempt * 0.04)), data = dataURL.split(',')[1];
+    if (data.length * 3 / 4 <= SITE_IMAGE_MAX_BYTES) return { dataURL, data, contentType: dataURL.slice(5, dataURL.indexOf(';')), filename: `${(file.name.replace(/\.[^.]*$/, '') || 'photo').slice(0, 140)}.${dataURL.startsWith('data:image/webp;') ? 'webp' : 'png'}` };
     canvas.width = Math.max(1, Math.round(canvas.width * 0.8)); canvas.height = Math.max(1, Math.round(canvas.height * 0.8));
   }
-  throw new Error('The optimized photo is still too large. Choose a smaller image.');
+  throw new Error('Choose a smaller photo.');
 }
-
+function base64(buffer) { let value = ''; const bytes = new Uint8Array(buffer); for (let i = 0; i < bytes.length; i += 8192) value += String.fromCharCode(...bytes.subarray(i, i + 8192)); return btoa(value); }
+const styleKeys = ['objectFit', 'objectPosition', 'transform', 'transformOrigin', 'clipPath'];
 export function mountSiteImages({ canEdit = false } = {}) {
-  let disposed = false, images = cachedImages, ready = false, loadError = '', refreshInFlight = null, frame = 0;
-  let selected = null, preview = null, busy = false, generation = 0, editMode = false, gesture = null, suppressClickUntil = 0;
-  const records = new WeakMap(), lifecycle = new AbortController();
-  const on = (target, type, handler, options = {}) => target.addEventListener(type, handler, { ...options, signal: lifecycle.signal });
-  let dialog, toolbar, status, fields;
-
-  function imageKey(image) {
-    if (SITE_IMAGE_KEY.test(image.dataset.siteImageKey || '')) return image.dataset.siteImageKey;
-    const person = image.closest('.home-team-grid article')?.querySelector('.home-person h3')?.textContent;
+  let allowed = canEdit, disposed = false, images = cachedImages, ready = false, loading = null, frame = 0, gesture, suppressUntil = 0, editMode = false;
+  let selected = null, pending = null, busy = false, preparing = false, generation = 0, previewCleanup = null, blobURL = null;
+  const abort = new AbortController(), records = new Map();
+  let dialog, toolbar, fields;
+  const on = (target, type, fn, options = {}) => target.addEventListener(type, fn, { ...options, signal: abort.signal });
+  const sourceOf = element => element.getAttribute('src') || element.querySelector('source')?.getAttribute('src') || '';
+  const framed = saved => saved?.framed ?? !!saved?.src;
+  function keyFor(element, source) {
+    if (element.tagName === 'VIDEO') return element.dataset.siteMediaKey || sourceVideoKey(source, location.origin);
+    const person = element.closest('.home-team-grid article')?.querySelector('.home-person h3')?.textContent;
     if (person) return `team-${slug(person)}`;
-    if (image.matches('.home-hero-image')) return 'home-hero';
-    if (image.closest('.home-method-photo')) return 'home-method';
-    if (image.closest('.home-lesson-preview')) return 'home-learning';
-    if (image.closest('.learn-banner')) return 'learning-banner';
-    const lesson = image.closest('.member-lesson')?.querySelector('h3')?.textContent;
+    if (element.matches('.home-hero-image')) return 'home-hero';
+    if (element.closest('.home-method-photo')) return 'home-method';
+    if (element.closest('.home-lesson-preview')) return 'home-learning';
+    if (element.closest('.learn-banner')) return 'learning-banner';
+    const lesson = element.closest('.member-lesson')?.querySelector('h3')?.textContent;
     if (lesson) return `lesson-${slug(lesson)}`;
-    return sourceImageKey(image.getAttribute('src'), location.origin);
+    return element.dataset.siteImageKey || sourceImageKey(source, location.origin);
   }
   function scan() {
     frame = 0; if (disposed) return;
-    for (const image of document.querySelectorAll('img')) {
-      if (image.closest('[data-site-image-editor], [data-site-image-ignore]')) continue;
-      let record = records.get(image);
-      const key = imageKey(image); if (!key) continue;
-      if (!record || record.key !== key) {
-        if (!image.dataset.siteImageOriginal) {
-          image.dataset.siteImageOriginal = image.getAttribute('src');
-          image.dataset.siteImageOriginalAlt = image.getAttribute('alt') || '';
-          image.dataset.siteImageOriginalPosition = image.style.objectPosition;
-          image.dataset.siteImageOriginalFit = image.style.objectFit;
-        }
-        record = { key, original: image.dataset.siteImageOriginal, srcset: image.getAttribute('srcset'), alt: image.dataset.siteImageOriginalAlt, position: image.dataset.siteImageOriginalPosition, fit: image.dataset.siteImageOriginalFit, tabIndex: image.getAttribute('tabindex'), lastApplied: image.getAttribute('src') };
-        records.set(image, record);
-      } else if (image.getAttribute('src') !== record.lastApplied && image.getAttribute('src') !== record.original && !image.getAttribute('src')?.startsWith('/api/site-images/')) {
-        // React may legitimately supply a new lesson thumbnail without remounting.
-        record.original = image.getAttribute('src'); record.alt = image.getAttribute('alt') || '';
-        image.dataset.siteImageOriginal = record.original; image.dataset.siteImageOriginalAlt = record.alt;
+    for (const [element, record] of records) if (!element.isConnected) { record.cleanup?.(); records.delete(element); }
+    for (const element of document.querySelectorAll('img,video')) {
+      if (element.closest('[data-site-image-editor],[data-site-image-ignore]')) continue;
+      const source = sourceOf(element), old = records.get(element);
+      const original = old && source === old.applied ? old.original : element.dataset.siteImageOriginal && !old ? element.dataset.siteImageOriginal : source;
+      const key = keyFor(element, original); if (!key || !SITE_IMAGE_KEY.test(key)) continue;
+      let record = old;
+      if (!record || record.key !== key || (source !== record.applied && source !== record.original)) {
+        record?.cleanup?.();
+        const styles = element.dataset.siteMediaOriginalStyles ? JSON.parse(element.dataset.siteMediaOriginalStyles) : Object.fromEntries(styleKeys.map(k => [k, element.style[k]]));
+        const alt = element.dataset.siteImageOriginalAlt ?? element.getAttribute('alt') ?? element.getAttribute('aria-label') ?? '';
+        record = { key, original, alt, styles, srcset: element.getAttribute('srcset'), tabIndex: element.getAttribute('tabindex'), isVideo: element.tagName === 'VIDEO' };
+        records.set(element, record); element.dataset.siteImageOriginal = original; element.dataset.siteImageOriginalAlt = alt; element.dataset.siteMediaOriginalStyles = JSON.stringify(styles);
       }
-      const override = images[key];
-      const ashley = /^Ashley Northrop,/i.test(record.alt) ? '/images/ashley-northrop.webp' : null;
-      const fallback = ashley || defaultSiteImage(record.original);
-      const source = override?.src || fallback;
-      record.lastApplied = source;
-      if (image.getAttribute('src') !== source) image.setAttribute('src', source);
-      const custom = !!override?.src, changed = source !== record.original;
-      image.dataset.siteImageKey = key; image.dataset.siteImageCustom = String(custom);
-      if (changed) image.removeAttribute('srcset'); else if (record.srcset) image.setAttribute('srcset', record.srcset);
-      const alt = custom ? override.alt : fallback !== record.original && !ashley ? 'David Northrop with a Bravo K9 dog' : record.alt;
-      if (image.getAttribute('alt') !== alt) image.setAttribute('alt', alt);
-      const position = custom ? `${override.x}% ${override.y}%` : fallback !== record.original && !ashley ? '75% 50%' : record.position;
-      const fit = custom ? override.fit : record.fit;
-      if (image.style.objectPosition !== position) image.style.objectPosition = position;
-      if (image.style.objectFit !== fit) image.style.objectFit = fit;
-      image.toggleAttribute('data-site-image-editable', canEdit);
-      if (canEdit) { image.setAttribute('tabindex', '0'); image.setAttribute('aria-keyshortcuts', 'F2'); }
-      else { image.removeAttribute('aria-keyshortcuts'); if (record.tabIndex === null) image.removeAttribute('tabindex'); else image.setAttribute('tabindex', record.tabIndex); }
+      const saved = images[key], custom = framed(saved);
+      const fallback = key === 'team-ashley-northrop' ? '/images/ashley-northrop.webp' : defaultSiteImage(record.original);
+      const next = !record.isVideo && saved?.src ? saved.src : fallback;
+      if (source !== next) element.setAttribute('src', next);
+      record.applied = next;
+      if (!record.isVideo) {
+        if (next !== record.original) element.removeAttribute('srcset'); else if (record.srcset && element.getAttribute('srcset') !== record.srcset) element.setAttribute('srcset', record.srcset);
+        const alt = custom ? saved.alt : record.alt;
+        if (element.alt !== alt) element.alt = alt;
+      } else { const label = custom ? saved.alt : record.alt; if (label) element.setAttribute('aria-label', label); else element.removeAttribute('aria-label'); }
+      const signature = JSON.stringify([next, custom ? normalizeFraming(saved) : null]);
+      if (record.signature !== signature) {
+        if (custom) applyFraming(element, saved); else Object.assign(element.style, record.styles);
+        if (record.isVideo && custom && (saved.zoom || 1) > 1 && !record.cleanup) record.cleanup = videoControls(element);
+        if ((!custom || (saved.zoom || 1) === 1) && record.cleanup) { record.cleanup(); record.cleanup = null; }
+        record.signature = signature;
+      }
+      element.dataset.siteImageKey = key; element.dataset.siteImageCustom = String(custom);
+      element.toggleAttribute('data-site-image-editable', allowed);
+      if (allowed) { element.setAttribute('tabindex', '0'); element.setAttribute('aria-keyshortcuts', 'F2'); }
     }
   }
-  function scheduleScan() { if (!frame && !disposed) frame = requestAnimationFrame(scan); }
+  const schedule = () => { if (!disposed && !frame) frame = requestAnimationFrame(scan); };
   async function refresh() {
-    if (refreshInFlight) return refreshInFlight;
-    refreshInFlight = api('/site-images').then(data => {
-      if (disposed) return;
-      images = data.images || {}; cachedImages = images; ready = true; loadError = '';
-      if (selected?.needsRevision) { selected.revision = images[selected.key]?.revision || 0; selected.needsRevision = false; fields.undo.hidden = !images[selected.key]?.canUndo; }
-      scheduleScan();
-    }).catch(error => { if (!disposed) { loadError = error.message; if (selected) showError(loadError); } }).finally(() => { refreshInFlight = null; });
-    return refreshInFlight;
+    if (loading) return loading;
+    loading = api('/site-images').then(data => { if (disposed) return; images = data.images || {}; cachedImages = images; ready = true; schedule(); sync(); }).catch(error => { if (selected) showError(error.message); }).finally(() => { loading = null; });
+    return loading;
+  }
+  function values() { return normalizeFraming({ alt: fields.alt.value, x: fields.x.value, y: fields.y.value, zoom: fields.zoom.value, fit: fields.fit.value }); }
+  function sync() {
+    if (!fields) return;
+    fields.publish.disabled = !allowed || !ready || busy || preparing || !selected || !(pending || mediaSettingsChanged(selected.baseline, values()));
+    fields.publish.textContent = busy ? 'Saving…' : 'Publish changes';
+    for (const name of ['x', 'y', 'zoom']) fields[`${name}Value`].textContent = name === 'zoom' ? `${Number(fields[name].value).toFixed(2)}×` : `${Number(fields[name].value).toFixed(1)}%`;
   }
   function showError(message) { if (fields) { fields.error.textContent = message; fields.error.hidden = !message; } }
-  function announce(message) { if (status) status.textContent = message; }
-  function cancelGesture() { if (gesture) clearTimeout(gesture.timer); gesture = null; }
-  function hitImage(event) {
-    const target = event.target instanceof Element ? event.target : null;
-    if (!target || target.closest('[data-site-image-editor]')) return null;
-    const direct = target.closest('img[data-site-image-key]'); if (direct) return direct;
-    if (target.closest('button, input, textarea, select, summary, a, [role="button"]')) return null;
-    // Hero shading/copy sits above its image: a hold in that image area still works.
-    return [...document.querySelectorAll('img[data-site-image-key]')].reverse().find(image => {
-      const rect = image.getBoundingClientRect();
-      return image.parentElement?.contains(target) && event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom && rect.width > 0 && rect.height > 0;
-    }) || null;
+  function setBusy(value) { busy = value; if (fields) { for (const el of dialog.querySelectorAll('button,input,select')) el.disabled = value; dialog.setAttribute('aria-busy', String(value)); sync(); } }
+  function clearPreview() { previewCleanup?.(); previewCleanup = null; fields?.preview?.pause?.(); if (blobURL) URL.revokeObjectURL(blobURL); blobURL = null; }
+  function previewFraming() {
+    if (!selected || !fields.preview) return;
+    const settings = values(); applyFraming(fields.preview, settings);
+    if (selected.isVideo && settings.zoom > 1 && !previewCleanup) previewCleanup = videoControls(fields.preview, fields.frame);
+    if (selected.isVideo && settings.zoom === 1 && previewCleanup) { previewCleanup(); previewCleanup = null; }
+    sync();
   }
-  function setBusy(value) {
-    busy = value;
-    if (!fields) return;
-    for (const element of dialog.querySelectorAll('button,input,select')) element.disabled = value;
-    fields.publish.disabled = value || !preview;
-    fields.publish.textContent = value ? 'Saving…' : 'Publish photo';
-    dialog.setAttribute('aria-busy', String(value));
+  function makePreview(source) {
+    previewCleanup?.(); previewCleanup = null; fields.preview?.pause?.();
+    fields.frame.replaceChildren(); fields.preview = document.createElement(selected.isVideo ? 'video' : 'img');
+    fields.preview.className = 'site-media-preview';
+    if (selected.isVideo) { fields.preview.controls = true; fields.preview.muted = true; fields.preview.playsInline = true; fields.preview.preload = 'metadata'; }
+    else fields.preview.alt = 'Photo crop preview';
+    fields.frame.appendChild(fields.preview); fields.preview.src = source;
+    previewFraming();
   }
-  function updatePreview() {
-    if (!selected) return;
-    fields.preview.src = preview?.dataURL || selected.source;
-    fields.preview.style.objectFit = fields.fit.value;
-    fields.preview.style.objectPosition = `${fields.x.value}% ${fields.y.value}%`;
+  function close(force = false) {
+    if (busy && !force) return;
+    generation++; clearPreview(); const element = selected?.element;
+    selected = null; pending = null; preparing = false; dialog?.close(); element?.focus({ preventScroll: true });
   }
-  function closeEditor() {
-    if (busy) return;
-    const image = selected?.element;
-    generation++; selected = null; preview = null;
-    if (dialog.open) dialog.close();
-    image?.focus({ preventScroll: true });
+  function cancelGesture() { clearTimeout(gesture?.timer); gesture = null; }
+  async function open(element) {
+    if (!allowed || busy || dialog.open) return;
+    if (!ready) { await refresh(); if (!ready || disposed || !allowed || dialog.open) return; }
+    cancelGesture(); scan(); const record = records.get(element); if (!record) return;
+    const saved = images[record.key], style = getComputedStyle(element), position = style.objectPosition.split(' ').map(Number.parseFloat);
+    const baseline = normalizeFraming(framed(saved) ? saved : { alt: record.alt, fit: style.objectFit, x: position[0], y: position[1] });
+    selected = { ...record, element, baseline, revision: saved?.revision || 0, source: sourceOf(element) };
+    pending = null; generation++; clearPreview(); showError(''); preparing = false;
+    for (const name of ['alt', 'x', 'y', 'zoom', 'fit']) fields[name].value = baseline[name];
+    const rect = element.getBoundingClientRect(); fields.frame.style.aspectRatio = String(Math.max(0.3, Math.min(4, rect.width / (rect.height || 1))));
+    fields.title.textContent = record.isVideo ? 'Edit this video' : 'Edit this photo';
+    fields.undo.textContent = record.isVideo ? 'Restore previous framing' : 'Restore previous edit'; fields.undo.hidden = !saved?.canUndo;
+    fields.library.accept = record.isVideo ? 'video/mp4,video/webm' : 'image/*';
+    fields.library.value = ''; fields.files.value = ''; fields.filename.textContent = 'Adjust the existing media, or choose a replacement.';
+    fields.note.textContent = record.isVideo ? 'Framing changes keep the existing video and its publication status. A replacement MP4/WebM (up to 80 MB) is saved as a lesson draft for caption/transcript review. Keep your original video; Restore previous framing does not undo a video-file replacement.' : 'Slider changes save without uploading or recompressing the photo. A replacement stays private until you publish.';
+    const replaceable = !record.isVideo || !!videoTarget(record.key)?.lessonId; fields.pickers.hidden = !replaceable;
+    setBusy(false); makePreview(selected.source); dialog.showModal(); fields.close.focus();
+    if (!ready) { await refresh(); if (selected) { selected.revision = images[record.key]?.revision || 0; sync(); } }
   }
-  function openEditor(image) {
-    if (!canEdit || busy || dialog?.open) return;
-    const record = records.get(image); if (!record) return;
-    cancelGesture();
-    const saved = images[record.key];
-    selected = { key: record.key, element: image, source: image.getAttribute('src'), revision: saved?.revision || 0, needsRevision: !ready };
-    preview = null; generation++;
-    const rect = image.getBoundingClientRect();
-    fields.frame.style.aspectRatio = String(Math.max(0.3, Math.min(4, rect.width / (rect.height || 1))));
-    fields.alt.value = image.alt || ''; fields.x.value = saved?.x ?? 50; fields.y.value = saved?.y ?? 50; fields.fit.value = saved?.fit || (getComputedStyle(image).objectFit === 'contain' ? 'contain' : 'cover');
-    fields.undo.hidden = !saved?.canUndo; fields.filename.textContent = 'Choose a replacement to preview it here.';
-    fields.library.value = ''; fields.files.value = '';
-    setBusy(false); showError(loadError); updatePreview();
-    dialog.showModal();
-    fields.close.focus();
-    if (!ready) refresh();
-  }
-  async function choosePhoto(event) {
-    const file = event.target.files?.[0]; event.target.value = '';
-    if (!file || !selected || busy) return;
-    const operation = ++generation;
-    preview = null; fields.publish.disabled = true; showError('');
-    fields.filename.textContent = 'Preparing your photo…';
+  async function choose(event) {
+    const file = event.target.files?.[0]; event.target.value = ''; if (!file || !selected || busy) return;
+    const operation = ++generation; pending = null; preparing = true; clearPreview(); showError(''); fields.filename.textContent = 'Preparing preview…'; sync();
     try {
-      const result = await optimizeSitePhoto(file);
-      if (disposed || operation !== generation || !selected) return;
-      preview = result; fields.filename.textContent = file.name;
-      fields.publish.disabled = false; updatePreview();
-    } catch (error) { if (!disposed && operation === generation) { fields.filename.textContent = 'Choose another photo.'; showError(error.message); } }
+      if (selected.isVideo) {
+        const type = file.type || (/\.webm$/i.test(file.name) ? 'video/webm' : /\.mp4$/i.test(file.name) ? 'video/mp4' : '');
+        if (!file.size || file.size > SITE_VIDEO_MAX_BYTES || !['video/mp4', 'video/webm'].includes(type)) throw new Error('Choose an MP4 or WebM video no larger than 80 MB.');
+        blobURL = URL.createObjectURL(file); makePreview(blobURL);
+        const video = fields.preview;
+        await new Promise((resolve, reject) => {
+          const done = error => { clearTimeout(timer); video.removeEventListener('loadedmetadata', loaded); video.removeEventListener('error', failed); error ? reject(error) : resolve(); };
+          const loaded = () => done();
+          const failed = () => done(new Error('This browser cannot preview that video. Choose a supported MP4 or WebM file.'));
+          const timer = setTimeout(() => done(new Error('Video preview timed out. Choose a smaller or supported MP4/WebM file.')), 15000);
+          video.addEventListener('loadedmetadata', loaded, { once: true }); video.addEventListener('error', failed, { once: true });
+          if (video.readyState >= 1) loaded();
+        });
+        if (disposed || generation !== operation || !selected) return;
+        pending = { file, contentType: type };
+      } else {
+        const photo = await optimizeSitePhoto(file); if (disposed || generation !== operation || !selected) return;
+        pending = photo; makePreview(photo.dataURL);
+      }
+      fields.filename.textContent = file.name;
+    } catch (error) { if (generation === operation && selected) { pending = null; makePreview(selected.source); showError(error.message); } }
+    finally { if (generation === operation) { preparing = false; sync(); } }
   }
   async function publish(undo = false) {
-    if (!selected || busy || (!undo && !preview)) return;
-    if (undo && !window.confirm('Restore the previous image for everyone on the website?')) return;
-    const target = selected, photo = preview;
-    if (!ready) { await refresh(); if (!ready) { showError(loadError || 'Image storage is not connected. Try again.'); return; } }
+    if (!selected || busy || preparing || !allowed || !ready) return;
+    if (undo && !window.confirm(selected.isVideo ? 'Restore the previous video framing?' : 'Restore the previous photo edit for everyone?')) return;
+    const target = selected, replacement = pending, settings = values(); let videoUploaded = false;
     setBusy(true); showError('');
     try {
-      const result = await api(`/site-images/${target.key}${undo ? '/undo' : ''}`, { method: undo ? 'POST' : 'PUT', body: undo ? { expectedRevision: target.revision } : { expectedRevision: target.revision, data: photo.data, contentType: photo.contentType, filename: photo.filename, alt: fields.alt.value, x: Number(fields.x.value), y: Number(fields.y.value), fit: fields.fit.value } });
+      if (!undo && target.isVideo && replacement) {
+        const lessonId = videoTarget(target.key)?.lessonId;
+        if (!lessonId) throw new Error('This video has no lesson upload destination.');
+        const { file, contentType } = replacement, chunks = Math.ceil(file.size / MEDIA_CHUNK_BYTES);
+        const start = await api('/admin/media/start', { method: 'POST', body: { lessonId, kind: 'video', filename: file.name.slice(0, 160), contentType, size: file.size, chunks } });
+        for (let i = 0; i < chunks; i++) {
+          const data = base64(await file.slice(i * MEDIA_CHUNK_BYTES, (i + 1) * MEDIA_CHUNK_BYTES).arrayBuffer());
+          await api(`/admin/media/${start.uploadId}/chunks/${i}`, { method: 'PUT', body: { data } });
+          if (disposed) return;
+          fields.filename.textContent = `Uploading video: ${Math.round((i + 1) / chunks * 100)}%`;
+        }
+        await api(`/admin/media/${start.uploadId}/complete`, { method: 'POST', body: {} }); videoUploaded = true; pending = null;
+        for (const [element, record] of records) if (record.key === target.key) { element.load(); }
+        window.dispatchEvent(new CustomEvent('bravo-media-updated', { detail: { lessonId } }));
+      }
+      const body = undo ? { expectedRevision: target.revision } : { ...settings, expectedRevision: target.revision, ...(!target.isVideo && replacement ? { data: replacement.data, contentType: replacement.contentType, filename: replacement.filename } : {}) };
+      const result = await api(`/site-images/${target.key}${undo ? '/undo' : ''}`, { method: undo ? 'POST' : !target.isVideo && replacement ? 'PUT' : 'PATCH', body });
       if (disposed) return;
-      images[target.key] = result.image; cachedImages = images; scan(); setBusy(false); closeEditor();
-      announce(undo ? 'Previous image restored for everyone.' : 'Photo published. Everyone sees this replacement.');
+      images[target.key] = result.image; cachedImages = images; scan(); setBusy(false); close();
+      toolbar.querySelector('[role="status"]').textContent = videoUploaded ? 'Video replaced and saved as a lesson draft. Review captions/transcript in Lesson studio before publishing the lesson.' : undo ? 'Previous edit restored.' : 'Changes published for everyone.';
     } catch (error) {
       if (disposed) return;
-      setBusy(false); showError(error.message);
-      if ([401, 403].includes(error.status)) { fields.publish.disabled = true; fields.undo.disabled = true; }
+      setBusy(false); showError(videoUploaded ? `Video uploaded as a draft, but framing was not saved. ${error.message}` : error.message);
+      if ([401, 403].includes(error.status)) { allowed = false; toolbar.hidden = true; sync(); }
       await refresh();
     }
   }
-
-  if (canEdit) {
-    toolbar = document.createElement('div'); toolbar.className = 'site-photo-tools'; toolbar.dataset.siteImageEditor = '';
-    toolbar.innerHTML = '<button type="button" class="site-photo-toggle" aria-pressed="false">Edit photos</button><span class="site-photo-hint">Hold a photo to replace it</span><span class="site-photo-status" role="status" aria-live="polite"></span>';
-    document.body.appendChild(toolbar); status = toolbar.querySelector('[role="status"]');
-    dialog = document.createElement('dialog'); dialog.className = 'site-photo-dialog'; dialog.dataset.siteImageEditor = '';
-    dialog.setAttribute('aria-labelledby', 'site-photo-title');
-    dialog.innerHTML = `<div class="site-photo-heading"><div><p>BRAVO · STAFF PHOTO EDITOR</p><h2 id="site-photo-title">Replace this photo</h2></div><button type="button" data-field="close" aria-label="Close photo editor">×</button></div>
-      <p class="site-photo-intro">Choose a photo, check the crop, then publish it for everyone.</p>
-      <div class="site-photo-pickers"><label>Photo Library<input data-field="library" type="file" accept="image/*" aria-label="Choose a replacement from Photo Library"></label><label>Browse Files<input data-field="files" type="file" aria-label="Choose a replacement from files or folders"></label></div>
-      <p class="site-photo-filename" data-field="filename"></p><div class="site-photo-frame" data-field="frame"><img data-field="preview" alt="Replacement crop preview"></div>
-      <div class="site-photo-crop"><label>Fit<select data-field="fit"><option value="cover">Fill the frame</option><option value="contain">Show the whole photo</option></select></label><label>Left / right<input data-field="x" type="range" min="0" max="100" value="50"></label><label>Up / down<input data-field="y" type="range" min="0" max="100" value="50"></label></div>
-      <label class="site-photo-description">Photo description<input data-field="alt" type="text" maxlength="240" placeholder="Describe the photo for screen readers"></label>
-      <p class="site-photo-note">Your current photo stays live until you publish. Photos are optimized; animated images become still photos.</p><p class="site-photo-error" data-field="error" role="alert" hidden></p>
-      <div class="site-photo-actions"><button type="button" data-field="undo" hidden>Restore previous</button><button type="button" data-field="cancel">Cancel</button><button type="button" data-field="publish" class="site-photo-publish" disabled>Publish photo</button></div>`;
-    document.body.appendChild(dialog);
-    fields = Object.fromEntries([...dialog.querySelectorAll('[data-field]')].map(element => [element.dataset.field, element]));
-    on(toolbar.querySelector('button'), 'click', event => {
-      editMode = !editMode; event.currentTarget.setAttribute('aria-pressed', String(editMode));
-      event.currentTarget.textContent = editMode ? 'Done editing' : 'Edit photos';
-      document.documentElement.classList.toggle('site-photo-edit-mode', editMode);
-      toolbar.querySelector('.site-photo-hint').textContent = editMode ? 'Tap a photo to replace it' : 'Hold a photo to replace it';
-    });
-    on(fields.library, 'change', choosePhoto); on(fields.files, 'change', choosePhoto);
-    on(fields.x, 'input', updatePreview); on(fields.y, 'input', updatePreview); on(fields.fit, 'change', updatePreview);
-    on(fields.close, 'click', closeEditor); on(fields.cancel, 'click', closeEditor);
-    on(fields.publish, 'click', () => publish()); on(fields.undo, 'click', () => publish(true));
-    on(dialog, 'cancel', event => { event.preventDefault(); closeEditor(); });
-    on(document, 'pointerdown', event => {
-      cancelGesture(); if (event.button !== 0 || event.isPrimary === false || dialog.open) return;
-      const image = hitImage(event); if (!image) return;
-      gesture = { x: event.clientX, y: event.clientY, pointerId: event.pointerId, timer: setTimeout(() => { suppressClickUntil = Date.now() + 1000; openEditor(image); }, 600) };
-    }, { capture: true, passive: true });
-    on(document, 'pointermove', event => { if (gesture && (event.pointerId !== gesture.pointerId || Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > 12)) cancelGesture(); }, { capture: true, passive: true });
-    on(document, 'pointerup', cancelGesture, { capture: true, passive: true }); on(document, 'pointercancel', cancelGesture, { capture: true, passive: true });
-    on(document, 'scroll', cancelGesture, { capture: true, passive: true }); on(window, 'blur', cancelGesture);
-    on(document, 'contextmenu', event => { const image = hitImage(event); if (image) { event.preventDefault(); suppressClickUntil = Date.now() + 1000; openEditor(image); } }, { capture: true });
-    on(document, 'click', event => {
-      if (event.target.closest?.('[data-site-image-editor]')) return;
-      const image = hitImage(event); if (!image) return;
-      if (Date.now() < suppressClickUntil || editMode) { event.preventDefault(); event.stopPropagation(); if (editMode) openEditor(image); }
-    }, { capture: true });
-    on(document, 'keydown', event => {
-      const image = event.target.closest?.('img[data-site-image-key]');
-      if (image && (event.key === 'F2' || editMode && ['Enter', ' '].includes(event.key))) { event.preventDefault(); openEditor(image); }
-    }, { capture: true });
+  function hit(event) {
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target || target.closest('[data-site-image-editor],[data-site-image-ignore]')) return null;
+    const direct = target.closest('img[data-site-image-key],video[data-site-image-key]'); if (direct) return direct;
+    if (target.closest('button,input,textarea,select,summary,a,[role="button"]')) return null;
+    return [...records.keys()].reverse().find(element => { const r = element.getBoundingClientRect(); return element.parentElement?.contains(target) && event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top && event.clientY <= r.bottom; }) || null;
   }
-  const observer = new MutationObserver(scheduleScan);
-  observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['src', 'srcset', 'alt'] });
-  scan(); refresh();
-  on(window, 'focus', refresh);
-  on(document, 'visibilitychange', () => { if (!document.hidden) refresh(); else cancelGesture(); });
+  if (allowed) {
+    toolbar = document.createElement('div'); toolbar.className = 'site-photo-tools'; toolbar.dataset.siteImageEditor = '';
+    toolbar.innerHTML = '<button type="button" class="site-photo-toggle" aria-pressed="false">Edit photos & videos</button><span class="site-photo-hint">Hold media to edit · F2 on keyboard</span><span class="site-photo-status" role="status" aria-live="polite"></span>'; document.body.appendChild(toolbar);
+    dialog = document.createElement('dialog'); dialog.className = 'site-photo-dialog'; dialog.dataset.siteImageEditor = ''; dialog.setAttribute('aria-labelledby', 'site-photo-title');
+    dialog.innerHTML = `<div class="site-photo-heading"><div><p>BRAVO · ADMINISTRATOR MEDIA EDITOR</p><h2 id="site-photo-title" data-field="title">Edit media</h2></div><button type="button" data-field="close" aria-label="Close media editor">×</button></div>
+      <p class="site-photo-intro">Even a small slider adjustment can be published—no replacement file needed.</p>
+      <div class="site-photo-pickers" data-field="pickers"><label>Photo / Video Library<input data-field="library" type="file" aria-label="Choose a replacement from your library"></label><label>Browse Files<input data-field="files" type="file" aria-label="Choose a replacement from files"></label></div>
+      <p class="site-photo-filename" data-field="filename"></p><div class="site-photo-frame" data-field="frame"></div>
+      <div class="site-photo-crop"><label>Fit<select data-field="fit"><option value="cover">Fill the frame</option><option value="contain">Show whole image / video</option></select></label>
+      <label>Left / right <output data-field="xValue"></output><input data-field="x" type="range" min="0" max="100" step="0.1" value="50"></label>
+      <label>Up / down <output data-field="yValue"></output><input data-field="y" type="range" min="0" max="100" step="0.1" value="50"></label>
+      <label class="site-photo-zoom">Zoom out / in <output data-field="zoomValue"></output><input data-field="zoom" type="range" min="1" max="3" step="0.01" value="1"></label></div>
+      <label class="site-photo-description">Description<input data-field="alt" type="text" maxlength="240" placeholder="Describe this photo or video"></label>
+      <p class="site-photo-note" data-field="note"></p><p class="site-photo-error" data-field="error" role="alert" hidden></p>
+      <div class="site-photo-actions"><button type="button" data-field="undo" hidden>Restore previous edit</button><button type="button" data-field="cancel">Cancel</button><button type="button" data-field="publish" class="site-photo-publish" disabled>Publish changes</button></div>`;
+    document.body.appendChild(dialog); fields = Object.fromEntries([...dialog.querySelectorAll('[data-field]')].map(el => [el.dataset.field, el]));
+    for (const name of ['x', 'y', 'zoom', 'fit', 'alt']) { on(fields[name], 'input', previewFraming); on(fields[name], 'change', previewFraming); }
+    on(fields.library, 'change', choose); on(fields.files, 'change', choose);
+    on(fields.close, 'click', () => close()); on(fields.cancel, 'click', () => close()); on(fields.publish, 'click', () => publish()); on(fields.undo, 'click', () => publish(true));
+    on(dialog, 'cancel', e => { e.preventDefault(); close(); });
+    on(toolbar.querySelector('button'), 'click', e => { editMode = !editMode; e.currentTarget.setAttribute('aria-pressed', String(editMode)); e.currentTarget.textContent = editMode ? 'Done editing' : 'Edit photos & videos'; document.documentElement.classList.toggle('site-photo-edit-mode', editMode); });
+    on(document, 'pointerdown', e => {
+      cancelGesture(); if (!allowed || e.button !== 0 || e.isPrimary === false || dialog.open) return;
+      const element = hit(e); if (!element) return;
+      if (element.tagName === 'VIDEO' && !editMode && e.clientY > element.getBoundingClientRect().bottom - 48) return;
+      gesture = { x: e.clientX, y: e.clientY, id: e.pointerId, timer: setTimeout(() => { suppressUntil = Date.now() + 1000; open(element); }, 600) };
+    }, { capture: true, passive: true });
+    on(document, 'pointermove', e => { if (gesture && (e.pointerId !== gesture.id || Math.hypot(e.clientX - gesture.x, e.clientY - gesture.y) > 12)) cancelGesture(); }, { capture: true, passive: true });
+    for (const type of ['pointerup', 'pointercancel', 'scroll']) on(document, type, cancelGesture, { capture: true, passive: true });
+    on(window, 'blur', cancelGesture);
+    on(document, 'contextmenu', e => { const element = allowed && hit(e); if (element) { e.preventDefault(); suppressUntil = Date.now() + 1000; open(element); } }, { capture: true });
+    on(document, 'click', e => { if (!allowed) return; const element = hit(e); if (element && (Date.now() < suppressUntil || editMode)) { e.preventDefault(); e.stopPropagation(); if (editMode) open(element); } }, { capture: true });
+    on(document, 'keydown', e => { if (!allowed) return; const element = e.target.closest?.('[data-site-image-key]'); if (element && (e.key === 'F2' || editMode && ['Enter', ' '].includes(e.key))) { e.preventDefault(); open(element); } }, { capture: true });
+  }
+  const observer = new MutationObserver(schedule); observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['src', 'srcset'] });
+  scan(); refresh(); on(window, 'focus', refresh); on(document, 'visibilitychange', () => { if (!document.hidden) refresh(); else cancelGesture(); });
   const interval = setInterval(() => { if (!document.hidden && !selected) refresh(); }, 60000);
   return () => {
-    disposed = true; generation++; cancelGesture(); lifecycle.abort(); observer.disconnect(); clearInterval(interval); cancelAnimationFrame(frame);
+    disposed = true; generation++; cancelGesture(); abort.abort(); observer.disconnect(); clearInterval(interval); cancelAnimationFrame(frame); clearPreview();
     dialog?.remove(); toolbar?.remove(); document.documentElement.classList.remove('site-photo-edit-mode');
-    for (const image of document.querySelectorAll('[data-site-image-editable]')) {
-      image.removeAttribute('data-site-image-editable'); image.removeAttribute('aria-keyshortcuts');
-      const record = records.get(image); if (record?.tabIndex === null) image.removeAttribute('tabindex'); else if (record) image.setAttribute('tabindex', record.tabIndex);
-    }
+    for (const [element, record] of records) { record.cleanup?.(); element.removeAttribute('data-site-image-editable'); element.removeAttribute('aria-keyshortcuts'); if (record.tabIndex == null) element.removeAttribute('tabindex'); else element.setAttribute('tabindex', record.tabIndex); }
   };
 }
