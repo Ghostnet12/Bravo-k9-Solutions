@@ -4,6 +4,7 @@ import { transaction } from './db.js';
 import { availability, validateVisits, dateTime, dateRange } from './scheduling.js';
 import { quote, serviceSelection, TRAINING_FOCUSES } from '../shared/catalog.js';
 import { effectiveServices } from './services.js';
+import { filterTrainerAvailability, checkTrainerVisits } from './trainer-schedules.js';
 export const bookingInput = z.object({
   requestKey: z.string().uuid(), serviceIds: z.array(z.string()).min(1).max(4),
   preferredTrainerId: z.string().regex(/^[a-f\d]{24}$/i).nullable().optional(),
@@ -50,11 +51,12 @@ export function bookingCoveredByEntitlements(serviceIds, dogCount, entitlements)
   return serviceSelection(serviceIds).every(service => service.interval === 'month' && service.includes.every(id => entitlements.services.includes(id)))
     && (!serviceIds.includes('training') || (entitlements.serviceDogCounts?.training || 0) >= dogCount);
 }
-export async function getAvailability(from, to) {
+export async function getAvailability(from, to, staffId = null) {
+  if (staffId) { z.string().regex(/^[a-f\d]{24}$/i).parse(staffId); await activeTrainer(staffId); }
   dateRange(from, to); // Validate bounded dates before issuing a database range query.
   const settings = await Settings.findById('schedule').lean();
   const slots = await Slot.find({ date: { $gte: from, $lte: to } }, { _id: 1 }).lean();
-  return { days: availability({ from, to, settings, occupied: slots.map(s => s._id) }), enabled: settings.enabled };
+  return { days: await filterTrainerAvailability(availability({ from, to, settings, occupied: slots.map(s => s._id) }), staffId, settings), enabled: settings.enabled };
 }
 export async function createBooking(userId, payload, assignment = {}) {
   const data = bookingInput.parse(payload);
@@ -79,6 +81,7 @@ export async function createBooking(userId, payload, assignment = {}) {
     await transaction(async session => {
       // Schedule updates and reservations share a write lock; closures cannot race a booking.
       const settings = await Settings.findOneAndUpdate({ _id: 'schedule' }, { $inc: { revision: 1 } }, { returnDocument: 'after', session }).lean();
+      await checkTrainerVisits(chosenTrainerId, data.visits, settings, session);
       const capacity = data.serviceIds.includes('training') && chosenTrainerId ? await trainerCapacity(chosenTrainerId, { session, excludeUserId: userId }) : null;
       const waitlisted = !!capacity && capacity.activeDogs + data.dogCount > TRAINER_DOG_LIMIT;
       if (dates.length && !waitlisted) {
@@ -107,10 +110,18 @@ export async function assignTrainer(booking, staffId) {
     return booking;
   }
   await activeTrainer(staffId);
-  if (!booking.serviceIds?.includes('training')) { booking.staffId = staffId; booking.requestedStaffId ||= staffId; await booking.save(); return booking; }
+  if (!booking.serviceIds?.includes('training')) {
+    await transaction(async session => {
+      const settings = await Settings.findOneAndUpdate({ _id: 'schedule' }, { $inc: { revision: 1 } }, { returnDocument: 'after', session }).lean();
+      await checkTrainerVisits(staffId, booking.visits || [], settings, session);
+      booking.staffId = staffId; booking.requestedStaffId ||= staffId; await booking.save({ session });
+    });
+    return booking;
+  }
   const previous = booking.staffId;
   await transaction(async session => {
     const settings = await Settings.findOneAndUpdate({ _id: 'schedule' }, { $inc: { revision: 1 } }, { returnDocument: 'after', session }).lean();
+    await checkTrainerVisits(staffId, booking.visits || [], settings, session);
     const capacity = await trainerCapacity(staffId, { session, excludeUserId: booking.userId });
     if (capacity.activeDogs + (booking.dogCount || 1) > TRAINER_DOG_LIMIT) throw Object.assign(new Error('That trainer is at the five-dog limit. This client must remain on the waiting list or choose another trainer.'), { status: 409 });
     if (booking.status === 'waitlisted' && booking.visits.length) {

@@ -26,7 +26,7 @@ export default function BookingPage() {
   const [ids, setIds] = useState(resume?.ids || [program]);
   const [visits, setVisits] = useState(resume?.visits || []), [kind, setKind] = useState(resume?.kind || (program === 'aggression' ? 'aggression' : program));
   const [trainingFocus, setTrainingFocus] = useState(resume?.trainingFocus || 'basic-obedience');
-  const [trainerId, setTrainerId] = useState(resume?.trainerId || ''), [trainers, setTrainers] = useState([]), [trainersLoading, setTrainersLoading] = useState(false);
+  const [trainerId, setTrainerId] = useState(resume?.trainerId || (/^[a-f\d]{24}$/i.test(params.get('trainer') || '') ? params.get('trainer') : '')), [trainers, setTrainers] = useState([]), [trainersLoading, setTrainersLoading] = useState(false);
   const [from, setFrom] = useState(resume?.from || today()), [to, setTo] = useState(resume?.to || addDays(today(), 13));
   const [startTime, setStartTime] = useState(resume?.startTime || '09:00'), [endTime, setEndTime] = useState(resume?.endTime || '21:00');
   const [count, setCount] = useState(resume?.count || 4), [preference, setPreference] = useState(resume?.preference || 'any');
@@ -72,7 +72,7 @@ export default function BookingPage() {
       const booking = bookings.find(b => b._id === editId);
       if (!booking) throw new Error('Booking not found.');
       if (booking.serviceIds.some(id => !SERVICES.some(service => service.id === id))) throw new Error('Contact Bravo to change visits for a retired program.');
-      setEditingBooking(booking); setIds(booking.serviceIds); setVisits(booking.visits); setKind(booking.visits[0]?.service || 'training'); setTrainingFocus(booking.trainingFocus || 'basic-obedience'); setTrainerId(booking.requestedStaffId || booking.staffId || ''); setDogCount(booking.dogCount || 1);
+      setEditingBooking(booking); setIds(booking.serviceIds); setVisits(booking.visits); setKind(booking.visits[0]?.service || 'training'); setTrainingFocus(booking.trainingFocus || 'basic-obedience'); setTrainerId(booking.staffId || booking.requestedStaffId || ''); setDogCount(booking.dogCount || 1);
       setForm({ dogName: booking.dogName, phone: booking.phone, address: booking.address, notes: booking.notes });
       if (booking.visits.length) { const dates = booking.visits.map(v => v.date).sort(); setFrom(dates[0]); setTo(dates.at(-1)); }
     }).catch(e => setError(e.message));
@@ -81,9 +81,9 @@ export default function BookingPage() {
     let cancelled = false;
     if (!config?.connected || !from || !to) { setDays([]); return; }
     setLoadingDays(true);
-    api(`/availability?from=${from}&to=${to}`).then(data => { if (!cancelled) setDays(data.days); }).catch(e => { if (!cancelled) { setError(e.message); setDays([]); } }).finally(() => { if (!cancelled) setLoadingDays(false); });
+    api(`/availability?from=${from}&to=${to}${trainerId ? `&staffId=${encodeURIComponent(trainerId)}` : ''}`).then(data => { if (!cancelled) setDays(data.days); }).catch(e => { if (!cancelled) { setError(e.message); setDays([]); } }).finally(() => { if (!cancelled) setLoadingDays(false); });
     return () => { cancelled = true; };
-  }, [from, to, config, availabilityVersion]);
+  }, [from, to, config, availabilityVersion, trainerId]);
   function select(id) {
     if (editId) return;
     const chosen = catalog.find(s => s.id === id);

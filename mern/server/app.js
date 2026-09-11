@@ -19,6 +19,7 @@ import { SERVICES, quote, rescheduledQuote } from '../shared/catalog.js';
 import { effectiveServices } from './services.js';
 import { clientError } from './errors.js';
 import { chatFilter, visibleInbox, resetChat } from './chat-state.js';
+import { publicTrainerSchedules, readTrainerSchedule, saveTrainerSchedule, checkTrainerVisits } from './trainer-schedules.js';
 
 const app = express();
 app.disable('x-powered-by');
@@ -60,6 +61,9 @@ app.get('/api/team', async (_req, res) => {
 });
 app.use('/api', sameOrigin, async (_req, _res, next) => { await connectDb(); next(); }, identify);
 app.use('/api', rateLimit('api', 240, 60000));
+app.get('/api/team/schedules', publicTrainerSchedules);
+app.get('/api/admin/trainer-schedules/:id', requireUser, requireStaff, readTrainerSchedule);
+app.put('/api/admin/trainer-schedules/:id', requireUser, requireStaff, saveTrainerSchedule);
 app.get('/api/lessons/:id/image', async (req, res) => {
   const lesson = await Lesson.findOne({ _id: req.params.id, ...(['staff', 'owner'].includes(req.user?.role) ? {} : { published: true }) }).lean();
   if (!lesson?.imageUpload) return res.status(404).end();
@@ -95,10 +99,10 @@ app.post('/api/auth/password', requireUser, rateLimit('password', 5, 900000), as
   await Session.deleteMany({ userId: user._id }); await issueSession(req, res, user);
   res.json({ ok: true });
 });
-app.get('/api/availability', async (req, res) => res.json(await getAvailability(String(req.query.from), String(req.query.to))));
+app.get('/api/availability', async (req, res) => res.json(await getAvailability(String(req.query.from), String(req.query.to), req.query.staffId ? String(req.query.staffId) : null)));
 app.post('/api/availability/auto', async (req, res) => {
-  const input = z.object({ count: z.number().int().min(1).max(31), startDate: z.string(), startTime: z.string(), endDate: z.string(), endTime: z.string(), preference: z.enum(['any', 'morning', 'afternoon', 'evening']), service: z.enum(['training', 'walking', 'aggression']) }).parse(req.body);
-  const { days } = await getAvailability(input.startDate, input.endDate);
+  const input = z.object({ count: z.number().int().min(1).max(31), startDate: z.string(), startTime: z.string(), endDate: z.string(), endTime: z.string(), preference: z.enum(['any', 'morning', 'afternoon', 'evening']), service: z.enum(['training', 'walking', 'aggression']), staffId: z.string().regex(/^[a-f\d]{24}$/i).optional() }).parse(req.body);
+  const { days } = await getAvailability(input.startDate, input.endDate, input.staffId);
   res.json(autoSchedule(days, input));
 });
 app.post('/api/quote', async (req, res) => {
@@ -134,6 +138,7 @@ app.patch('/api/bookings/:id/visits', requireUser, async (req, res) => {
   if (dates.some(d => dateTime(d).diff(dateTime(new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })), 'days').days > 92)) throw new Error('Book within the next 92 days.');
   await transaction(async session => {
     const settings = await Settings.findOneAndUpdate({ _id: 'schedule' }, { $inc: { revision: 1 } }, { returnDocument: 'after', session }).lean();
+    await checkTrainerVisits(booking.staffId || booking.requestedStaffId, visits, settings, session);
     const open = dates.length ? availability({ from: dates[0], to: dates.at(-1), settings }) : [];
     if (visits.some(v => !open.find(d => d.date === v.date)?.slots.includes(v.time))) throw new Error('Selected dates are outside current availability.');
     await Slot.deleteMany({ bookingId: booking._id }, { session });

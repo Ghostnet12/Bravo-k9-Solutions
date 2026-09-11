@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from './api';
 import { Notice, AppointmentNotice, formatTime } from './ui';
 import { today } from './BookingPage';
@@ -11,11 +11,20 @@ export default function StaffBooking({ team, onSaved }) {
   const [query, setQuery] = useState(''), [clients, setClients] = useState([]), [client, setClient] = useState(null);
   const [date, setDate] = useState(''), [slots, setSlots] = useState([]), [time, setTime] = useState('');
   const [service, setService] = useState('training');
+  const [assignedTrainer, setAssignedTrainer] = useState('');
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  useEffect(() => {
+    let active = true; setSlots([]); setTime('');
+    if (!date) { setLoadingSlots(false); return; }
+    setLoadingSlots(true);
+    api(`/availability?from=${date}&to=${date}${assignedTrainer ? `&staffId=${encodeURIComponent(assignedTrainer)}` : ''}`).then(result => { if (active) setSlots(result.days[0]?.slots || []); }).catch(err => { if (active) setError(err.message); }).finally(() => { if (active) setLoadingSlots(false); });
+    return () => { active = false; };
+  }, [date, assignedTrainer]);
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState('');
   const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
   function resetForm() {
     setQuery(''); setClients([]); setClient(null); setDate(''); setSlots([]); setTime('');
-    setService('training'); setRequestKey(crypto.randomUUID()); setError('');
+    setService('training'); setAssignedTrainer(''); setRequestKey(crypto.randomUUID()); setError('');
     setNotice('Client selection and unsaved visit fields cleared. Saved visits were not changed.');
   }
   async function search(e) {
@@ -23,12 +32,7 @@ export default function StaffBooking({ team, onSaved }) {
     try { setClients((await api(`/admin/clients?q=${encodeURIComponent(query)}`)).clients); }
     catch (err) { setError(err.message); } finally { setBusy(false); }
   }
-  async function chooseDate(value) {
-    setDate(value); setSlots([]); setTime(''); setError(''); if (!value) return;
-    setBusy(true);
-    try { const data = await api(`/availability?from=${value}&to=${value}`); setSlots(data.days[0]?.slots || []); }
-    catch (err) { setError(err.message); } finally { setBusy(false); }
-  }
+  function chooseDate(value) { setDate(value); setError(''); }
   async function save(e) {
     e.preventDefault(); const form = e.currentTarget, fields = Object.fromEntries(new FormData(form));
     setBusy(true); setError(''); setNotice('');
@@ -46,12 +50,12 @@ export default function StaffBooking({ team, onSaved }) {
     {client && <form key={client._id} onSubmit={save}><div className="form-grid">
       <label>Service<select name="service" value={service} onChange={e => setService(e.target.value)}>{catalog.filter(item => item.id !== 'online' && item.enabled !== false).map(item => <option key={item.id} value={item.id}>{item.name} · {money(item.cents)}{item.interval === 'walk' ? '/dog · 30 min' : item.interval === 'month' ? '/month' : ''}</option>)}</select></label>
       {service === 'training' && <label>Training focus<select name="trainingFocus" defaultValue="basic-obedience">{TRAINING_FOCUSES.map(focus => <option key={focus.id} value={focus.id}>{focus.name}</option>)}</select></label>}
-      <label>Trainer<select name="staffId"><option value="">Unassigned</option>{team.map(person => <option key={person._id} value={person._id}>{person.name}</option>)}</select></label>
+      <label>Trainer<select name="staffId" value={assignedTrainer} onChange={e => setAssignedTrainer(e.target.value)}><option value="">Unassigned</option>{team.map(person => <option key={person._id} value={person._id}>{person.name}</option>)}</select></label>
       <label>Date<input type="date" min={today()} value={date} required disabled={busy} onChange={e => chooseDate(e.target.value)}/></label>
       <label>Opening (Aberdeen time)<select value={time} required disabled={busy || !slots.length} onChange={e => setTime(e.target.value)}><option value="">{date && !slots.length ? 'No openings that day' : 'Choose a time'}</option>{slots.map(value => <option key={value} value={value}>{formatTime(value)}</option>)}</select></label>
       <label>Dog’s name<input name="dogName" required maxLength="80" defaultValue={client.dogName}/></label>
       <label>Client phone<input type="tel" name="phone" required minLength="7" maxLength="30" defaultValue={client.phone}/></label>
       <label>Number of dogs<input name="dogCount" type="number" min="1" max="10" defaultValue="1"/><small>Training: $200/month for the first dog, then $100/month per additional dog. Walking: {money(catalog.find(service => service.id === 'walking')?.cents ?? 2500)} per dog.</small></label>
-    </div><label>Visit address<input name="address" required minLength="5" maxLength="300" defaultValue={client.address}/></label><label>Private booking notes<textarea name="notes" maxLength="1500" rows="3"/></label><AppointmentNotice compact/><button className="button" disabled={busy || !time}>{busy ? 'Working…' : 'Add visit request'}</button></form>}
+    </div><label>Visit address<input name="address" required minLength="5" maxLength="300" defaultValue={client.address}/></label><label>Private booking notes<textarea name="notes" maxLength="1500" rows="3"/></label><AppointmentNotice compact/><button className="button" disabled={busy || loadingSlots || !time}>{busy ? 'Working…' : 'Add visit request'}</button></form>}
   </details>;
 }
