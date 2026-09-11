@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "./Link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 
 type Preferences = {
   largeText: boolean;
@@ -18,10 +19,13 @@ const defaultPreferences: Preferences = {
 const storageKey = "bravo-accessibility-preferences";
 
 export default function AccessibilityTools() {
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [ready, setReady] = useState(false);
   const [preferences, setPreferences] = useState(defaultPreferences);
   const [announcement, setAnnouncement] = useState("");
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const restorePreferences = window.setTimeout(() => {
@@ -49,6 +53,20 @@ export default function AccessibilityTools() {
     }
   }, [preferences, ready]);
 
+  useEffect(() => {
+    setOpen(false);
+  }, [location.pathname, location.search, location.hash]);
+
+  useEffect(() => {
+    if (!open) return;
+    panelRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+  }, [open]);
+
+  function closePanel(returnFocus = false) {
+    setOpen(false);
+    if (returnFocus) window.requestAnimationFrame(() => triggerRef.current?.focus());
+  }
+
   function toggle(key: keyof Preferences, label: string) {
     setPreferences((current) => {
       const enabled = !current[key];
@@ -58,12 +76,19 @@ export default function AccessibilityTools() {
   }
 
   return (
-    <aside className="accessibility-tools" aria-label="Accessibility options">
-      <button className="accessibility-trigger" type="button" aria-expanded={open} aria-controls="accessibility-panel" onClick={() => setOpen((current) => !current)}>
+    <aside className="accessibility-tools" aria-label="Accessibility options" onBlur={(event) => {
+      if (open && !event.currentTarget.contains(event.relatedTarget as Node | null)) closePanel();
+    }} onKeyDown={(event) => {
+      if (event.key === "Escape" && open) {
+        event.preventDefault();
+        closePanel(true);
+      }
+    }}>
+      <button ref={triggerRef} className="accessibility-trigger" type="button" aria-expanded={open} aria-controls="accessibility-panel" onClick={() => setOpen((current) => !current)}>
         <span aria-hidden="true">Aa</span> Accessibility
       </button>
-      <div className="accessibility-panel" id="accessibility-panel" hidden={!open}>
-        <strong>Make this site easier to use</strong>
+      <div ref={panelRef} className="accessibility-panel" id="accessibility-panel" role="region" aria-labelledby="accessibility-panel-title" hidden={!open}>
+        <strong id="accessibility-panel-title">Make this site easier to use</strong>
         <button type="button" aria-pressed={preferences.largeText} onClick={() => toggle("largeText", "Larger text")}>Larger text <span>{preferences.largeText ? "On" : "Off"}</span></button>
         <button type="button" aria-pressed={preferences.highContrast} onClick={() => toggle("highContrast", "High contrast")}>High contrast <span>{preferences.highContrast ? "On" : "Off"}</span></button>
         <button type="button" aria-pressed={preferences.reducedMotion} onClick={() => toggle("reducedMotion", "Reduced motion")}>Reduce motion <span>{preferences.reducedMotion ? "On" : "Off"}</span></button>

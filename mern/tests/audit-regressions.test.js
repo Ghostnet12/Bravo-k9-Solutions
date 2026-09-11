@@ -147,3 +147,43 @@ test('webhook rejects mismatched customer/session and preserves refunded state o
   object.id = 'cs_fixture'; booking.paymentStatus = 'refunded'; booking.refundId = 're_existing'; await processStripeEvent(event, {});
   assert.equal(write.mock.callCount(), 0);
 });
+
+test('accessibility controls support focus management, Escape, and route changes', async () => {
+  const source = await readFile(new URL('../client/src/Accessibility.tsx', import.meta.url), 'utf8');
+  assert.match(source, /useLocation/);
+  assert.match(source, /event\.key === "Escape"/);
+  assert.match(source, /triggerRef\.current\?\.focus/);
+  assert.match(source, /aria-labelledby="accessibility-panel-title"/);
+  assert.match(source, /location\.pathname, location\.search, location\.hash/);
+});
+
+test('personal-information fields expose recognized autofill purposes', async () => {
+  const [account, booking] = await Promise.all([
+    readFile(new URL('../client/src/AccountPage.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../client/src/BookingPage.jsx', import.meta.url), 'utf8')
+  ]);
+  for (const token of ['name', 'tel', 'street-address']) assert.match(account, new RegExp(`autoComplete="${token}"`));
+  assert.match(booking, /autoComplete=\{field === 'phone' \? 'tel' : field === 'address' \? 'street-address' : 'off'\}/);
+});
+
+test('ratings have one accessible name and decorative stars stay silent', async () => {
+  const source = await readFile(new URL('../client/src/Home.tsx', import.meta.url), 'utf8');
+  assert.match(source, /className="review-stars" role="img" aria-label=/);
+  assert.match(source, /<span aria-hidden="true">/);
+});
+
+test('accessibility statement names the current target, methods, and ongoing review', async () => {
+  const source = await readFile(new URL('../client/src/AccessibilityPage.jsx', import.meta.url), 'utf8');
+  assert.match(source, /WCAG\) 2\.2, Level AA/);
+  assert.match(source, /additional Level AAA practices where practical/);
+  assert.match(source, /Measures we take/);
+  assert.match(source, /not a government certification/);
+});
+
+test('sticky controls leave focus clearance and form boundaries meet contrast target', async () => {
+  const css = await readFile(new URL('../client/src/accessibility-layout.css', import.meta.url), 'utf8');
+  assert.match(css, /scroll-padding-block:7rem 8rem/);
+  assert.match(css, /scroll-margin-block:7rem/);
+  assert.match(css, /border-color:#8b7b63/);
+  assert.match(css, /\.bravo-footer a\{min-height:44px\}/);
+});
