@@ -20,9 +20,9 @@ jobs:
           cache: npm
           cache-dependency-path: mern/package-lock.json
       - run: npm ci
+      - name: Production build
+        run: npm run build
       - name: Unit and existing regression tests
         run: npm test
       - name: Isolated media authorization and persistence tests
         run: node --test tests/media-editor.integration.js
-      - name: Production build
-        run: npm run build
