@@ -70,10 +70,19 @@ test('a fresh checkout lock cannot be stolen while customer creation is starting
 });
 test('production static pages get CSP and frame protections, with enough checkout runtime', async () => {
   const config = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url), 'utf8'));
-  const headers = Object.fromEntries(config.headers.find(rule => rule.source === '/:path*').headers.map(header => [header.key, header.value]));
+  const rule = config.headers.find(rule => rule.source === '/(.*)');
+  for (const route of ['/', '/account', '/assets/app.js']) assert.match(route, new RegExp(`^${rule.source}$`));
+  const headers = Object.fromEntries(rule.headers.map(header => [header.key, header.value]));
   assert.match(headers['Content-Security-Policy'], /frame-ancestors 'none'/);
   assert.match(headers['Content-Security-Policy'], /script-src 'self'/);
   assert.equal(headers['X-Frame-Options'], 'DENY'); assert.ok(config.functions['api/index.js'].maxDuration >= 60);
+});
+test('structured business data uses the public domain without stale editable prices', async () => {
+  const html = await readFile(new URL('../client/index.html', import.meta.url), 'utf8');
+  const data = JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/)[1]);
+  assert.equal(data.url, 'https://bravounleashed.com');
+  assert.match(data.image, /^https:\/\/bravounleashed\.com\//);
+  assert.equal(data.makesOffer.find(offer => offer.name === 'Dog Walking').price, undefined);
 });
 test('paid, covered, refunded and review bookings cannot start another checkout', async () => {
   for (const paymentStatus of ['paid', 'covered', 'refunded', 'review']) {
