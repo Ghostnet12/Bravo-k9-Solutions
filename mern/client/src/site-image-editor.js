@@ -2,6 +2,7 @@ import { api } from './api.js';
 import { isEditableMediaKey, SITE_IMAGE_MAX_BYTES, SITE_VIDEO_MAX_BYTES, MEDIA_CHUNK_BYTES, defaultSiteImage, sourceImageKey, sourceVideoKey, videoTarget, normalizeFraming, mediaSettingsChanged } from '../../shared/site-images.js';
 import { applyFraming, videoControls } from './media-framing.js';
 let cachedImages = {};
+let initialImagesResolved = false;
 const slug = value => value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 90);
 const readFile = file => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(new Error('This file could not be read.')); reader.readAsDataURL(file); });
 export async function optimizeSitePhoto(file) {
@@ -86,6 +87,18 @@ export function mountSiteImages({ canEdit = false } = {}) {
         if ((!custom || (saved.zoom || 1) === 1) && record.cleanup) { record.cleanup(); record.cleanup = null; }
         record.signature = signature;
       }
+      if (key === 'home-hero' && initialImagesResolved && !element.hasAttribute('data-site-hero-ready') && !record.revealing) {
+        record.revealing = true;
+        const expectedSource = next;
+        const reveal = () => {
+          record.revealing = false;
+          if (disposed || !element.isConnected) return;
+          if (record.applied === expectedSource) element.setAttribute('data-site-hero-ready', '');
+          else schedule();
+        };
+        const decoded = typeof element.decode === 'function' ? element.decode().catch(() => {}) : Promise.resolve();
+        Promise.all([decoded, document.fonts?.ready]).then(reveal, reveal);
+      }
       element.dataset.siteImageKey = key; element.dataset.siteImageCustom = String(custom);
       element.toggleAttribute('data-site-image-editable', allowed);
       if (allowed) { element.setAttribute('tabindex', '0'); element.setAttribute('aria-keyshortcuts', 'F2'); }
@@ -103,7 +116,7 @@ export function mountSiteImages({ canEdit = false } = {}) {
   const schedule = () => { if (!disposed && !frame) frame = requestAnimationFrame(scan); };
   async function refresh() {
     if (loading) return loading;
-    loading = api('/site-images').then(data => { if (disposed) return; images = data.images || {}; cachedImages = images; ready = true; schedule(); sync(); }).catch(error => { if (selected) showError(error.message); }).finally(() => { loading = null; });
+    loading = api('/site-images').then(data => { if (disposed) return; images = data.images || {}; cachedImages = images; initialImagesResolved = true; ready = true; schedule(); sync(); }).catch(error => { initialImagesResolved = true; schedule(); if (selected) showError(error.message); }).finally(() => { loading = null; });
     return loading;
   }
   function values() { return normalizeFraming({ alt: fields.alt.value, x: fields.x.value, y: fields.y.value, zoom: fields.zoom.value, fit: fields.fit.value }); }
