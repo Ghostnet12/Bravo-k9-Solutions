@@ -22,7 +22,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
-      - run: node --test tests/client-services.integration.js tests/member-access.integration.js
+      - run: node --test --test-concurrency=1 tests/client-services.integration.js tests/member-access.integration.js
       - run: npm install --no-save --package-lock=false playwright@1.55.1
       - run: npx playwright install --with-deps chromium webkit
       - run: node tests/client-services.browser.mjs
