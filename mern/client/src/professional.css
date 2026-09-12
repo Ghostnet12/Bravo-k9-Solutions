@@ -74,6 +74,4 @@ html.access-high-contrast :is(.home-price-card,.home-package-row,.home-service-s
 @media(max-width:580px){.booking-schedule-actions{flex-direction:column}.booking-schedule-actions .button{width:100%;flex-basis:auto}}
 .app-page .badge.waitlisted{background:#302819;border-color:#8f7448;color:#f0d49d}
 
-/* One hero photo; published framing is resolved before its first visible paint. */
-.home-hero-image:not([data-site-hero-ready]){visibility:hidden}
 .home-hero-inner{position:relative;z-index:2}
