@@ -2,9 +2,10 @@ import { z } from 'zod';
 import { Booking, Settings, Slot, Subscription, User } from './models.js';
 import { transaction } from './db.js';
 import { availability, validateVisits, dateTime, dateRange } from './scheduling.js';
-import { quote, serviceSelection, TRAINING_FOCUSES } from '../shared/catalog.js';
+import { quote, serviceSelection, TRAINING_FOCUSES, ALL_SERVICES } from '../shared/catalog.js';
 import { effectiveServices } from './services.js';
 import { filterTrainerAvailability, checkTrainerVisits } from './trainer-schedules.js';
+import { activeTermQuery, monthTerm } from '../shared/membership-terms.js';
 export const bookingInput = z.object({
   requestKey: z.string().uuid(), serviceIds: z.array(z.string()).min(1).max(4),
   preferredTrainerId: z.string().regex(/^[a-f\d]{24}$/i).nullable().optional(),
@@ -36,8 +37,10 @@ async function activeTrainer(id) {
   if (!trainer) throw new Error('Choose an active trainer.');
   return trainer;
 }
-export async function getEntitlements(userId) {
-  const subs = await Subscription.find({ userId, status: { $in: ['active', 'trialing'] }, validUntil: { $gt: new Date() } }).lean();
+export async function getEntitlements(userId, { includeFuture = false } = {}) {
+  const filter = activeTermQuery();
+  if (includeFuture) delete filter.$or;
+  const subs = await Subscription.find({ userId, ...filter }).lean();
   const active = new Set(['training', 'walking', 'sitting', 'online', 'aggression']);
   const legacy = { complete: ['training', 'sitting'], 'all-access': ['training', 'sitting', 'online'] };
   const services = [...new Set(subs.flatMap(subscription => subscription.serviceIds.flatMap(id => legacy[id] || (active.has(id) ? [id] : []))))];
@@ -74,8 +77,9 @@ export async function createBooking(userId, payload, assignment = {}) {
   const chosenTrainerId = assignment.staffId || data.preferredTrainerId || null;
   if (chosenTrainerId) await activeTrainer(chosenTrainerId);
   delete data.preferredTrainerId;
-  const entitlements = await getEntitlements(userId);
-  const covered = bookingCoveredByEntitlements(data.serviceIds, data.dogCount, entitlements);
+  const entitlements = await getEntitlements(userId, { includeFuture: true });
+  const covered = bookingCoveredByEntitlements(data.serviceIds, data.dogCount, entitlements) && data.visits.every(visit => entitlements.subscriptions.some(term => serviceSelection(term.serviceIds, ALL_SERVICES).some(service => service.includes.includes(visit.service)) && dateTime(visit.date, visit.time).toJSDate() < term.validUntil && (!term.validFrom || dateTime(visit.date, visit.time).toJSDate() >= term.validFrom)));
+  if (!covered && data.visits.some(visit => visit.service === 'training' && dateTime(visit.date, visit.time).toJSDate() >= monthTerm().validUntil)) throw Object.assign(new Error('A training purchase covers one month. Choose training dates within the next month, then renew manually for later visits.'), { status: 400 });
   let booking;
   try {
     await transaction(async session => {
@@ -154,7 +158,7 @@ export async function cancelBooking(booking, stripe) {
     if (checkout.status === 'open') await stripe.checkout.sessions.expire(checkout.id);
   }
   await transaction(async session => {
-    const result = await Booking.updateOne({ _id: booking._id, checkoutStarting: { $ne: true }, stripeSessionId: current.stripeSessionId || { $exists: false } }, { $set: { status: 'cancelled' } }, { session });
+    const result = await Booking.updateOne({ _id: booking._id, checkoutStarting: { $ne: true }, stripeSessionId: current.stripeSessionId || { $exists: false } }, { $set: { status: 'cancelled', ...(current.renewalOf ? { requestKey: `cancelled-renewal:${current._id}` } : {}) } }, { session });
     if (!result.matchedCount) throw Object.assign(new Error('Checkout is starting. Wait for it to open before cancelling.'), { status: 409 });
     await Slot.deleteMany({ bookingId: booking._id }, { session });
   });

@@ -2,6 +2,7 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "client/dist",
+  "crons": [{ "path": "/api/cron/memberships", "schedule": "0 14 * * *" }],
   "redirects": [{ "source": "/dog-sitting", "destination": "/portal", "permanent": true }],
   "functions": {
     "api/index.js": {

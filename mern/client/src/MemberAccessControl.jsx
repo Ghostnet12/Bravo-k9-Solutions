@@ -23,8 +23,8 @@ export default function MemberAccessControl({ person, onSaved }) {
   return <section className="member-access-control" aria-label={`Member access for ${person.name}`}>
     <div className="member-access-heading"><div><p className="kicker gold">EXISTING CUSTOMERS</p><h3>Member access</h3></div><span className="badge">{!access ? 'Not loaded' : access.manual ? 'Member · manual access' : access.paidMembership ? 'Paid membership' : 'Client · no manual access'}</span></div>
     <p>Current customers can create their own account, then you can make them Members here. Member access unlocks published online lessons, not staff tools or media editing.</p>
-    <p className="helper">No charge or new subscription is created. Training, walks, and existing billing stay unchanged. Manual access lasts until an administrator or owner removes it.</p>
-    {access?.paidOnline && <p className="helper">This account also has paid online access. Removing manual access will not cancel or remove that subscription.</p>}
+    <p className="helper">No charge or new subscription is created. Training, walks, and existing billing stay unchanged. New Member access lasts one month and then expires. Extend it manually when the client continues.</p>
+    {access?.endsAt && <p className="helper">Access ends {new Date(access.endsAt).toLocaleDateString()}.</p>}{access?.paidOnline && <p className="helper">This account also has paid online access. Removing manual access will not cancel or remove that subscription.</p>}
     {person.blocked && <Notice>This account is blocked. Restore it before granting Member access.</Notice>}
     <Notice error>{error}</Notice><Notice>{notice}</Notice>
     <button type="button" className={`button button-small ${access?.manual ? 'button-ghost' : ''}`} disabled={busy || !access || (!access.manual && (person.blocked || person.role !== 'member'))} onClick={change}>{busy ? 'Saving Member access…' : access?.manual ? 'Remove manual Member access' : 'Make Member'}</button>

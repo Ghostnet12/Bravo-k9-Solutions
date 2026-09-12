@@ -3,16 +3,20 @@ import { api } from './api';
 import { Notice } from './ui';
 import { useBravo } from './context';
 import { useChatHistory } from './chat-history';
+import { useLocation } from 'react-router-dom';
 import MessageCard from './MessageCard';
 
 export default function StaffInbox({ inbox = [], refreshInbox }) {
-  const { user } = useBravo();
-  const [memberId, setMemberId] = useState(''), [drafts, setDrafts] = useState({}), [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false), [resettingInbox, setResettingInbox] = useState(false);
+  const { user, refreshNotifications } = useBravo();
+  const [memberId, setMemberId] = useState(() => new URLSearchParams(window.location.search).get('client') || ''), [drafts, setDrafts] = useState({}), [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false), [resettingInbox, setResettingInbox] = useState(false);
   const history = useChatHistory(memberId && !resettingInbox ? `/direct?memberId=${memberId}` : null);
+  const location = useLocation();
+  useEffect(() => { const selected = new URLSearchParams(location.search).get('client'); if (selected && inbox.some(thread => String(thread._id) === selected)) setMemberId(selected); }, [location.search, inbox]);
   const working = busy || history.clearing || resettingInbox;
   useEffect(() => {
     if (!resettingInbox && !inbox.some(thread => String(thread._id) === memberId)) setMemberId(inbox[0]?._id ? String(inbox[0]._id) : '');
   }, [inbox, memberId, resettingInbox]);
+  useEffect(() => { if (!memberId || history.loading || !history.messages.length) return; const ids = history.messages.map(message => `message:${message._id}`); api('/notifications/read', { method: 'POST', body: { ids } }).then(refreshNotifications).catch(() => {}); }, [memberId, history.messages, history.loading, refreshNotifications]);
   async function send(e) {
     e.preventDefault(); if (working || !memberId) return;
     setBusy(true); setError(''); setNotice('');

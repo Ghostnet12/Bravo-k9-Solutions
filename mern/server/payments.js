@@ -2,6 +2,7 @@ import Stripe from 'stripe';
 import { Booking, User, Subscription, StripeEvent, BillingLock, Lesson } from './models.js';
 import { connectDb, transaction } from './db.js';
 import { ALL_SERVICES, TRAINING_ADDITIONAL_DOG_CENTS, serviceSelection } from '../shared/catalog.js';
+import { monthTerm } from '../shared/membership-terms.js';
 export function stripeMode() {
   const key = process.env.STRIPE_SECRET_KEY || '';
   if (/^(?:sk|rk)_live_/.test(key)) return 'live';
@@ -35,9 +36,9 @@ export async function checkout(booking, user, stripe) {
   if (!origin) throw Object.assign(new Error('Checkout is not configured yet.'), { status: 503 });
   const selected = serviceSelection(booking.serviceIds);
   if (selected.some(s => s.includes.includes('online')) && !(await Lesson.exists({ published: true }))) throw Object.assign(new Error('Online enrollment opens once the lesson library is ready. Please contact Bravo for updates.'), { status: 409 });
-  const subscriptions = await Subscription.find({ userId: user._id, status: { $nin: ['canceled', 'incomplete_expired'] } }).lean();
+  const subscriptions = await Subscription.find({ userId: user._id, status: { $in: ['active', 'trialing'] }, validUntil: { $gt: new Date() } }).lean();
   const recurring = selected.filter(s => s.interval === 'month').flatMap(s => s.includes);
-  if (subscriptions.some(sub => serviceSelection(sub.serviceIds, ALL_SERVICES).some(s => s.includes.some(i => recurring.includes(i))))) throw Object.assign(new Error('An existing membership overlaps this purchase. Manage it in Billing or contact Bravo before changing plans.'), { status: 409 });
+  if (!booking.renewalOf && subscriptions.some(sub => serviceSelection(sub.serviceIds, ALL_SERVICES).some(s => s.includes.some(i => recurring.includes(i))))) throw Object.assign(new Error('An existing membership overlaps this purchase. Use Renew membership from your account to purchase the next month.'), { status: 409 });
   const lockId = String(user._id), bookingId = String(booking._id);
   // One purchase at a time per customer. Never expire a local lock before Stripe's session expires.
   let lockAcquired = false;
@@ -62,7 +63,11 @@ export async function checkout(booking, user, stripe) {
   try {
     if (booking.stripeSessionId) {
       const current = await stripe.checkout.sessions.retrieve(booking.stripeSessionId);
-      if (current.status === 'open') return { url: current.url };
+      if (current.status === 'open' && current.mode !== 'subscription') return { url: current.url };
+      if (current.status === 'open' && current.mode === 'subscription') {
+        await stripe.checkout.sessions.expire(current.id);
+        throw Object.assign(new Error('This saved checkout used automatic billing and has been closed. Cancel this unpaid request and create a new one with manual renewal.'), { status: 409 });
+      }
       if (current.status === 'complete') throw Object.assign(new Error('Payment is being verified. Please refresh your account shortly.'), { status: 409 });
       throw Object.assign(new Error('This checkout expired. Cancel this request and create a new one to pay.'), { status: 409 });
     }
@@ -73,14 +78,13 @@ export async function checkout(booking, user, stripe) {
       await User.updateOne({ _id: user._id }, { $set: { stripeCustomerId: customerId } });
     }
     const pricing = validatedCheckoutPricing(booking);
-    const metadata = { app: 'bravo-k9', userId: String(user._id), bookingId, dogCount: String(booking.dogCount || 1), serviceIds: JSON.stringify(booking.serviceIds.filter(id => selected.find(s => s.id === id).interval === 'month')) };
+    const metadata = { app: 'bravo-k9', billing: 'manual-month-v1', userId: String(user._id), bookingId, dogCount: String(booking.dogCount || 1), serviceIds: JSON.stringify(booking.serviceIds.filter(id => selected.find(s => s.id === id).interval === 'month')) };
     const params = {
-      mode: pricing.monthlyCents ? 'subscription' : 'payment', customer: customerId,
+      mode: 'payment', customer: customerId,
       client_reference_id: bookingId, metadata,
       line_items: pricing.lines.filter(l => l.quantity > 0).map(line => ({
-        quantity: line.quantity, price_data: { currency: 'usd', unit_amount: line.unitCents, product_data: { name: `Bravo K9 — ${line.name}` }, ...(line.interval === 'month' ? { recurring: { interval: 'month' } } : {}) },
+        quantity: line.quantity, price_data: { currency: 'usd', unit_amount: line.unitCents, product_data: { name: `Bravo K9 — ${line.name}${line.interval === 'month' ? ' (one month, manual renewal)' : ''}` } },
       })),
-      ...(pricing.monthlyCents ? { subscription_data: { metadata } } : {}),
       expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
       success_url: `${origin}/account?payment=verifying&booking=${encodeURIComponent(bookingId)}&session_id={CHECKOUT_SESSION_ID}`, cancel_url: `${origin}/account?payment=cancelled&booking=${encodeURIComponent(bookingId)}`,
     };
@@ -92,6 +96,7 @@ export async function checkout(booking, user, stripe) {
     if (!guarded.matchedCount) throw Object.assign(new Error('This request changed before checkout began. Refresh your account and try again.'), { status: 409 });
     const attempt = await Booking.findById(booking._id).select('+checkoutParams');
     if (!attempt?.checkoutParams || attempt.status === 'cancelled' || attempt.paymentStatus !== 'unpaid') throw new Error('This booking changed before checkout began.');
+    if (attempt.checkoutParams.mode === 'subscription') throw Object.assign(new Error('This saved request uses retired automatic billing. Cancel it and create a fresh request with manual renewal.'), { status: 409 });
     requestSent = true;
     const session = await stripe.checkout.sessions.create(attempt.checkoutParams, { idempotencyKey: `bravo-checkout-${bookingId}` });
     await Booking.updateOne({ _id: booking._id }, { $set: { stripeSessionId: session.id, checkoutUrl: session.url, checkoutExpiresAt: new Date(session.expires_at * 1000), checkoutStarting: false } });
@@ -132,7 +137,9 @@ export async function processStripeEvent(event, stripe) {
       if (!previous || (previous.lastEventAt || 0) <= event.created) {
         const periods = sub.items.data.map(item => item.current_period_end).filter(Boolean);
         const until = sub.current_period_end || (periods.length ? Math.min(...periods) : 0);
-        await Subscription.updateOne({ stripeId: sub.id }, { $set: { userId: user._id, serviceIds: ids, dogCount, status: sub.status, validUntil: new Date(until * 1000), lastEventAt: event.created } }, { upsert: true, session });
+        const starts = sub.items.data.map(item => item.current_period_start).filter(Boolean);
+        const from = sub.current_period_start || (starts.length ? Math.max(...starts) : sub.start_date);
+        await Subscription.updateOne({ stripeId: sub.id }, { $set: { userId: user._id, serviceIds: ids, dogCount, status: sub.status, validFrom: new Date(from * 1000), validUntil: new Date(until * 1000), autoPayDisabled: !!sub.cancel_at_period_end || sub.status === 'canceled', source: 'stripe', lastEventAt: event.created } }, { upsert: true, session });
       }
     }
     if (['checkout.session.completed', 'checkout.session.async_payment_succeeded'].includes(event.type) && object.metadata?.app === 'bravo-k9' && object.payment_status === 'paid') {
@@ -144,6 +151,18 @@ export async function processStripeEvent(event, stripe) {
       if (booking.stripeSessionId && booking.stripeSessionId !== object.id) throw new Error('Checkout session mismatch.');
       // A late, distinct completion event must never undo a refund already recorded.
       if (booking.refundId || booking.paymentStatus === 'refunded') return;
+      if (object.mode === 'payment' && object.metadata.billing === 'manual-month-v1' && booking.quote.monthlyCents > 0 && booking.status !== 'cancelled') {
+        const ids = serviceSelection(booking.serviceIds).filter(service => service.interval === 'month').map(service => service.id);
+        let start = new Date(event.created * 1000);
+        if (booking.renewalOf) {
+          const previous = await Subscription.findOne({ stripeId: booking.renewalOf, userId: booking.userId }).session(session);
+          if (!previous) throw new Error('Renewal membership not found.');
+          if (previous.validUntil > start) start = previous.validUntil;
+        }
+        const term = monthTerm(start);
+        const saved = await Subscription.findOneAndUpdate({ stripeId: `manual:${booking._id}` }, { $setOnInsert: { userId: booking.userId, serviceIds: ids, dogCount: booking.dogCount, status: 'active', source: 'manual', autoPayDisabled: true, bookingId: booking._id, renewalOf: booking.renewalOf, ...term } }, { upsert: true, returnDocument: 'after', session });
+        await Booking.updateOne({ _id: booking._id }, { $set: { termStartsAt: saved.validFrom, termEndsAt: saved.validUntil } }, { session });
+      }
       await Booking.updateOne({ _id: booking._id }, { $set: { paymentStatus: booking.status === 'cancelled' ? 'review' : 'paid', stripeSessionId: object.id, stripePaymentIntentId: typeof object.payment_intent === 'string' ? object.payment_intent : object.payment_intent?.id, checkoutStarting: false } }, { session });
       await BillingLock.deleteOne({ _id: object.metadata.userId, bookingId: String(booking._id) }, { session });
     }
@@ -180,6 +199,7 @@ export async function refundBooking(booking, owner, stripe) {
       ? await stripe.refunds.retrieve(booking.refundId)
       : await stripe.refunds.create({ payment_intent: intent, amount: amountCents, metadata: { app: 'bravo-k9', bookingId: String(booking._id) } }, { idempotencyKey: `bravo-refund-${booking._id}` });
     if (refund.amount !== amountCents || refund.currency !== 'usd') throw new Error('Refund verification mismatch. Review the transaction in Stripe.');
+    if (refund.status === 'succeeded' && booking.quote?.monthlyCents > 0) await Subscription.updateOne({ stripeId: `manual:${booking._id}` }, { $set: { status: 'refunded' } });
     await Booking.updateOne({ _id: booking._id, paymentStatus: { $ne: 'refunded' }, refundId: { $in: ['pending', refund.id] } }, { $set: { refundId: refund.id, refundStatus: refund.status, refundAmountCents: amountCents, ...(refund.status === 'succeeded' ? { refundedAt: new Date() } : {}), paymentStatus: refund.status === 'succeeded' ? 'refunded' : 'review' } });
     return { ok: true, refundId: refund.id, amountCents, message: `${refund.status === 'succeeded' ? 'Refund succeeded through Stripe.' : `Stripe refund status: ${refund.status}. Check its status again before taking further action.`} Any subscription remains active until separately changed in billing.` };
   } catch (error) {

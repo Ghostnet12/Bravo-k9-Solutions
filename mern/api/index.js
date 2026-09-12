@@ -1,1 +1,1 @@
-export { default } from '../server/member-app.js';
+export { default } from '../server/client-services-app.js';

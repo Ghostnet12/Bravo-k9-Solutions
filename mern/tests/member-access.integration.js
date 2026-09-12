@@ -59,11 +59,11 @@ test('Member activation for existing customers (isolated MongoDB)', { timeout: 1
       assert.equal(response.body.membership.manual, true);
       const me = await call('client', 'get', '/api/auth/me').expect(200);
       assert.deepEqual(me.body.membership, { active: true, manual: true, onlineAccess: true });
-      assert.equal(me.body.user.role, 'member'); assert.deepEqual(me.body.services, []); assert.deepEqual(me.body.subscriptions, []);
+      assert.equal(me.body.user.role, 'member'); assert.deepEqual(me.body.services, ['online']); assert.equal(me.body.subscriptions[0].source, 'grant'); assert.ok(new Date(me.body.subscriptions[0].validUntil) > new Date());
       const entitlement = await getEntitlements(users.client._id);
       assert.equal(bookingCoveredByEntitlements(['training'], 1, entitlement), false);
       assert.equal(bookingCoveredByEntitlements(['online'], 1, entitlement), false);
-      assert.equal(await Subscription.countDocuments(), 0); assert.equal(await Booking.countDocuments(), 0);
+      assert.equal(await Subscription.countDocuments({ source: { $ne: 'grant' } }), 0); assert.equal(await Booking.countDocuments(), 0);
       const list = await call('administrator', 'get', `/api/admin/memberships?ids=${users.client._id}`).expect(200);
       assert.equal(list.body.memberships[String(users.client._id)].manual, true);
     });

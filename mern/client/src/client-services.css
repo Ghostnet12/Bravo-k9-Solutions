@@ -1,0 +1,17 @@
+.notification-bell {position:relative;flex-shrink:0}
+.notification-count {display:inline-flex;align-items:center;justify-content:center;min-width:1.7em;min-height:1.7em;border-radius:50%;background:#d7b774;color:#111;font-weight:700;margin-left:.3em}
+.notification-inbox {position:fixed;z-index:100;right:1rem;top:6rem;width:min(24rem,85vw);max-height:65vh;overflow:auto;padding:1.2rem;background:#171a15;color:#fff;border:2px solid #d7b774;border-radius:.6rem;box-shadow:0 8px 30px #0009}
+.notification-inbox h2 {font-size:1.5rem}.notification-inbox article {padding:1rem 0;border-top:1px solid #777;display:grid;gap:.5rem}.notification-inbox a {color:#f2dfb7}
+.schedule-controls {display:flex;flex-wrap:wrap;align-items:end;gap:1rem;margin:1rem 0 2rem}.schedule-controls label {min-width:12rem}
+.schedule-list {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,20rem),1fr));gap:1rem}.schedule-visit {border:1px solid #978359;border-radius:.5rem;padding:1rem;min-width:0;overflow-wrap:anywhere}.schedule-visit h3 {font-size:1.3rem}.schedule-visit p {margin:.4rem 0}
+.membership-term {padding:1rem 0;border-top:1px solid #777;overflow-wrap:anywhere}.membership-term h3 {font-size:1.2rem}
+.menu-toggle {position:relative}.menu-notification-count {position:absolute;right:-.6rem;top:-.6rem}
+@media(max-width:700px){.notification-bell {margin-left:0}.notification-bell>.quiet-button {font-size:.8rem}.notification-inbox {position:fixed;right:1rem;top:8rem}.schedule-controls>* {max-width:100%}}
+@media print {
+  body:has(.schedule-print-page),body:has(.schedule-print-page) #root {background:#fff!important;color:#000!important}
+  body:has(.schedule-print-page) .app-header,body:has(.schedule-print-page) .bravo-footer,body:has(.schedule-print-page) .schedule-controls,body:has(.schedule-print-page) .site-media-tools-slot,body:has(.schedule-print-page) .skip-link,body:has(.schedule-print-page) #root>div:not(:has(.schedule-print-page)) {display:none!important}
+  body:has(.schedule-print-page) [class*="accessibility"],body:has(.schedule-print-page) [data-site-media-tools] {display:none!important}
+  .schedule-print-page {width:100%!important;margin:0!important;padding:0!important;max-width:none!important}
+  .schedule-print-page * {color:#000!important;background:transparent!important;box-shadow:none!important;text-shadow:none!important}
+  .schedule-list {display:block}.schedule-visit {break-inside:avoid;border:1px solid #777;margin-bottom:10pt}.schedule-print-page h1 {font-size:24pt!important}.schedule-print-page h2 {font-size:16pt!important}.schedule-print-page p {font-size:11pt!important}
+}

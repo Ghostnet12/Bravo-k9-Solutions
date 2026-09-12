@@ -9,6 +9,7 @@ import { User, Subscription, AuditEvent } from './models.js';
 import { identify, requireUser, requireOwner, sameOrigin, publicUser, rateLimit } from './auth.js';
 import { getEntitlements } from './bookings.js';
 import { protectedLesson } from './lessons.js';
+import { monthTerm, grantActive, activeTermQuery } from '../shared/membership-terms.js';
 
 // Member access is an entitlement, NOT an employee role or a Stripe subscription.
 // No grant is created during registration. Paid plans, quotes and billing records
@@ -18,12 +19,13 @@ export const MemberAccess = mongoose.models.BravoMemberAccess || mongoose.model(
   enabled: { type: Boolean, default: false },
   revision: { type: Number, default: 0 },
   updatedBy: mongoose.Schema.Types.ObjectId,
+  startsAt: Date, endsAt: Date,
 }, { timestamps: true }));
 const idInput = z.string().regex(/^[a-f\d]{24}$/i);
 const changeInput = z.object({ enabled: z.boolean(), expectedRevision: z.number().int().min(0) }).strict();
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 export function membershipSummary(entitlements, grant) {
-  const manual = grant?.enabled === true;
+  const manual = grantActive(grant);
   return { active: manual || entitlements.services.length > 0, manual, onlineAccess: manual || entitlements.services.includes('online') };
 }
 const app = express();
@@ -40,12 +42,12 @@ app.get('/api/admin/memberships', ...session, requireUser, requireOwner, async (
   const userIds = z.array(idInput).min(1).max(100).parse(ids.split(','));
   const [grants, paid] = await Promise.all([
     MemberAccess.find({ _id: { $in: userIds } }).lean(),
-    Subscription.find({ userId: { $in: userIds }, status: { $in: ['active', 'trialing'] }, validUntil: { $gt: new Date() } }).select('userId serviceIds').lean(),
+    Subscription.find({ userId: { $in: userIds }, ...activeTermQuery() }).select('userId serviceIds').lean(),
   ]);
   const byId = new Map(grants.map(grant => [String(grant._id), grant]));
   res.json({ memberships: Object.fromEntries(userIds.map(id => {
     const grant = byId.get(id), subscriptions = paid.filter(item => String(item.userId) === id);
-    return [id, { manual: grant?.enabled === true, revision: grant?.revision || 0, paidMembership: subscriptions.length > 0, paidOnline: subscriptions.some(item => item.serviceIds.some(service => ['online', 'all-access'].includes(service))) }];
+    return [id, { manual: grantActive(grant), startsAt: grant?.startsAt, endsAt: grant?.endsAt, revision: grant?.revision || 0, paidMembership: subscriptions.length > 0, paidOnline: subscriptions.some(item => item.serviceIds.some(service => ['online', 'all-access'].includes(service))) }];
   })) });
 });
 app.patch('/api/admin/memberships/:id', ...session, requireUser, requireOwner, sameOrigin, rateLimit('member-access-write', 80, 3600000), express.json({ limit: '4kb' }), async (req, res) => {
@@ -64,7 +66,10 @@ app.patch('/api/admin/memberships/:id', ...session, requireUser, requireOwner, s
     const record = grant || new MemberAccess({ _id: userId });
     const previous = record.enabled === true;
     record.enabled = input.enabled; record.revision = input.expectedRevision + 1; record.updatedBy = req.user._id;
+    if (input.enabled) { const term = monthTerm(); record.startsAt = term.validFrom; record.endsAt = term.validUntil; }
     await record.save({ session: dbSession });
+    if (input.enabled) await Subscription.create([{ stripeId: `grant:${userId}:${record.revision}`, userId, serviceIds: ['online'], dogCount: 1, source: 'grant', autoPayDisabled: true, status: 'active', validFrom: record.startsAt, validUntil: record.endsAt }], { session: dbSession });
+    else await Subscription.updateMany({ userId, source: 'grant', status: 'active' }, { $set: { status: 'revoked' } }, { session: dbSession });
     await AuditEvent.create([{ actorId: req.user._id, action: input.enabled ? 'membership.granted' : 'membership.revoked', targetType: 'user', targetId: userId, details: { from: previous, to: input.enabled, revision: record.revision, scope: 'published-member-lessons' } }], { session: dbSession });
     result = { manual: record.enabled, revision: record.revision };
   });
@@ -75,7 +80,7 @@ app.patch('/api/admin/memberships/:id', ...session, requireUser, requireOwner, s
 for (const type of ['video', 'captions', 'transcript']) app.get(`/api/lessons/:id/${type}`, ...session, requireUser, async (req, res) => {
   if (!/^[a-z0-9-]{1,80}$/.test(req.params.id)) return res.status(404).json({ error: 'Lesson not found.' });
   const grant = req.user.role === 'member' ? await MemberAccess.findById(req.user._id).lean() : null;
-  return protectedLesson(req, res, type, { manualMember: grant?.enabled === true });
+  return protectedLesson(req, res, type, { manualMember: grantActive(grant) });
 });
 app.use(mediaApp);
 app.use((error, _req, res, _next) => {

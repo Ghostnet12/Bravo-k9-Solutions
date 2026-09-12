@@ -32,16 +32,16 @@ test('checkout uses the verified server quote and safe Stripe return flow', asyn
 
   const result = await checkout(booking, user, stripe);
   assert.equal(result.url, 'https://checkout.stripe.test/session');
-  assert.equal(received.params.mode, 'subscription');
+  assert.equal(received.params.mode, 'payment');
   assert.equal(received.params.customer, user.stripeCustomerId);
   assert.equal(received.params.line_items[0].price_data.unit_amount, 20000);
-  assert.equal(received.params.line_items[0].price_data.recurring.interval, 'month');
+  assert.equal(received.params.line_items[0].price_data.recurring, undefined);
   assert.equal(received.params.line_items[1].price_data.unit_amount, 10000);
   assert.equal(received.params.line_items[1].quantity, 1);
-  assert.equal(received.params.line_items[1].price_data.recurring.interval, 'month');
+  assert.equal(received.params.line_items[1].price_data.recurring, undefined);
   assert.equal(received.params.line_items[2].price_data.unit_amount, 2500);
   assert.equal(received.params.line_items[2].quantity, 2);
-  assert.equal(received.params.subscription_data.metadata.dogCount, '2');
+  assert.equal(received.params.metadata.dogCount, '2');
   assert.equal(received.params.line_items.reduce((total, line) => total + line.price_data.unit_amount * line.quantity, 0), booking.quote.dueNowCents);
   assert.equal(received.params.payment_method_types, undefined);
   assert.match(received.params.success_url, /payment=verifying&booking=68c20f8f5c734fa0f944ad10&session_id=\{CHECKOUT_SESSION_ID\}$/);

@@ -6,7 +6,7 @@ import StaffScheduleEditor from './StaffScheduleEditor';
 import './trainer-schedules.css';
 import { downloadCalendar } from './calendar';
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import { useBravo } from './context';
 import { api } from './api';
 import { Page, Notice, AppointmentNotice, formatDate, formatTime } from './ui';
@@ -17,10 +17,12 @@ import { deskLabel } from '../../shared/access';
 const hours = Array.from({ length: 13 }, (_, i) => `${i + 9}:00`.padStart(5, '0'));
 const serviceName = id => ALL_SERVICES.find(service => service.id === id)?.name || 'Legacy Bravo program';
 export default function AdminPage() {
-  const { user, config, refreshConfig, authReady, setBookingDraft } = useBravo();
+  const { notifications, user, config, refreshConfig, authReady, setBookingDraft } = useBravo();
   const [data, setData] = useState(null), [schedule, setSchedule] = useState(null), [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false);
   const [resetVersion, setResetVersion] = useState(0);
-  const [tab, setTab] = useState('schedule'), [query, setQuery] = useState(''), [statusFilter, setStatusFilter] = useState('active'), [visitDate, setVisitDate] = useState(''), [trainer, setTrainer] = useState('all');
+  const [tab, setTab] = useState(() => new URLSearchParams(window.location.search).get('tab') || 'schedule'), [query, setQuery] = useState(''), [statusFilter, setStatusFilter] = useState('active'), [visitDate, setVisitDate] = useState(''), [trainer, setTrainer] = useState('all');
+  const location = useLocation();
+  useEffect(() => { const wanted = new URLSearchParams(location.search).get('tab'); if (wanted && ['schedule', 'people', 'messages', 'lessons', 'services', 'reviews'].includes(wanted)) setTab(wanted); }, [location.search]);
   const load = useCallback(async () => { const result = await api('/admin'); const [reviews, services] = result.role === 'owner' ? await Promise.all([api('/admin/reviews').then(data => data.reviews), api('/admin/services').then(data => data.services)]) : [[], []]; setData({ ...result, reviews, services }); setSchedule(result.settings); }, []);
   useEffect(() => { if (['staff', 'owner'].includes(user?.role)) load().catch(e => setError(e.message)); }, [user, load]);
   async function action(work) { setBusy(true); setError(''); setNotice(''); try { await work(); await load(); } catch (e) { setError(e.message); } finally { setBusy(false); } }
@@ -43,7 +45,7 @@ export default function AdminPage() {
   return <Page className="staff-page" title={`Your ${deskLabel(user).toLowerCase()}.`} eyebrow={user?.isPrimaryOwner ? 'BRAVO OWNERSHIP' : 'BRAVO OPERATIONS'} intro="Choose a task. Keep your day, your clients, and your lessons in one place.">
     <Notice error>{error}</Notice><Notice>{notice}</Notice>{allowed && <div className="reset-actions desk-reset"><button className="button button-small button-ghost" type="button" disabled={busy} onClick={resetDesk}>Refresh & reset desk</button><small>Clear unsaved forms and selections; keep saved records.</small></div>}
     {!authReady ? <p role="status">Checking access…</p> : !allowed ? <div className="panel"><h2>Team access required.</h2><p>The owner assigns staff privileges to registered accounts.</p><Link className="button" to="/account">Open your account</Link></div> : !data ? <p role="status">Loading your desk…</p> : <>
-      <nav className="community-tabs desk-tabs" aria-label="Desk sections">{tabs.map(([id, label]) => <button key={id} aria-pressed={tab === id} onClick={() => { setTab(id); setError(''); setNotice(''); }}>{label}</button>)}</nav>
+      <nav className="community-tabs desk-tabs" aria-label="Desk sections">{tabs.map(([id, label]) => <button key={id} aria-pressed={tab === id} onClick={() => { setTab(id); setError(''); setNotice(''); }}>{label}{id === 'messages' && <span className="notification-count">{(notifications || []).filter(item => item.unread && item.id.startsWith('message:')).length}</span>}</button>)}</nav>
       {tab === 'schedule' && <>
         <AppointmentNotice/>
         <section className="panel"><div className="section-label"><h2>Today’s visits.</h2><button className="quiet-button" disabled={busy} onClick={resetDesk}>Refresh & reset</button></div>
@@ -56,6 +58,7 @@ export default function AdminPage() {
           <div className="panel"><div className="form-grid"><label>Find a client or dog<input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Name, email, phone, or booking ID"/></label><label>Status<select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option value="active">Active requests, waitlist & visits</option><option value="waitlisted">Trainer waiting list</option><option value="requested">Awaiting confirmation</option><option value="confirmed">Confirmed</option><option value="cancelled">Cancelled</option><option value="all">All statuses</option></select></label><label>Visit date<input type="date" value={visitDate} onChange={e => setVisitDate(e.target.value)}/></label></div><button type="button" className="quiet-button" onClick={() => { setQuery(''); setStatusFilter('active'); setVisitDate(''); setTrainer('all'); }}>Reset filters</button><p className="helper">Showing {visible.length} of the latest {data.bookings.length} requests.</p></div>
           {!visible.length ? <div className="panel"><p>No requests match this view.</p></div> : <div className="admin-bookings">{visible.map(booking => <article className="panel" key={booking._id}>
             <div className="record-top"><span className="badge">{booking.status}</span><span className="badge">{booking.paymentStatus}</span></div><h3>{booking.dogName}</h3><p>{booking.serviceIds.map(serviceName).join(' + ')}{booking.serviceIds.some(id => ['training', 'walking'].includes(id)) ? ` · ${booking.dogCount || 1} ${(booking.dogCount || 1) === 1 ? 'dog' : 'dogs'}` : ''} · {money(booking.quote?.dueNowCents || 0)} due</p><p>{booking.userId?.name || 'Former client'} · {booking.userId?.email}</p><p><a className="inline-link" href={`tel:${booking.phone.replace(/[^+0-9]/g, '')}`}>{booking.phone}</a><br/>{booking.address}</p>{booking.notes && <p className="staff-note">{booking.notes}</p>}
+            {booking.userId?._id && <Link className="button button-small" to={`/schedule?client=${booking.userId._id}`}>Client schedule & print</Link>}
             {booking.status === 'waitlisted' && <Notice>Waiting-list request. These are preferred dates only and are not reserved. Choose a trainer below to activate it when capacity and the requested times are available.</Notice>}
             {booking.visits.map(v => <div className="appointment-line" key={`${v.date}-${v.time}`}><strong>{formatDate(v.date)}</strong><span>{formatTime(v.time)} · {v.service}</span></div>)}
             <label>{booking.status === 'waitlisted' ? 'Preferred trainer / activate request' : 'Assigned trainer'}<select disabled={busy || booking.status === 'cancelled'} value={booking.staffId || ''} onChange={e => action(() => api(`/admin/bookings/${booking._id}/assignment`, { method: 'PATCH', body: { staffId: e.target.value || null } }))}><option value="">{booking.requestedStaffId ? `Waiting for ${data.team.find(person => person._id === booking.requestedStaffId)?.name || 'chosen trainer'}` : 'Unassigned'}</option>{booking.staffId && !data.team.some(person => person._id === booking.staffId) && <option value={booking.staffId}>Former staff — reassign this visit</option>}{data.team.map(person => <option key={person._id} value={person._id}>{person.name}</option>)}</select></label>

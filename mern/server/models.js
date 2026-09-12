@@ -25,6 +25,7 @@ const bookingSchema = new Schema({
   paymentStatus: { type: String, enum: ['unpaid', 'paid', 'covered', 'review', 'refunded'], default: 'unpaid' },
   quote: Schema.Types.Mixed, stripeSessionId: String, stripePaymentIntentId: String, checkoutUrl: String, checkoutExpiresAt: Date,
   refundId: String, refundStatus: String, refundAmountCents: Number, refundedAt: Date, refundedBy: id,
+  renewalOf: String, termStartsAt: Date, termEndsAt: Date,
   checkoutParams: { type: Schema.Types.Mixed, select: false }, checkoutStarting: { type: Boolean, default: false },
 }, { timestamps: true });
 bookingSchema.index({ userId: 1, requestKey: 1 }, { unique: true });
@@ -40,8 +41,11 @@ export const AuditEvent = model('BravoAuditEvent', new Schema({ actorId: id, act
 export const DirectMessage = model('BravoDirectMessage', new Schema({ memberId: { type: id, required: true, index: true }, senderId: { type: id, required: true }, senderName: String, senderRole: String, recipientId: id, recipientName: String, body: String, deleted: { type: Boolean, default: false } }, { timestamps: true }));
 export const CommunityGroup = model('BravoCommunityGroup', new Schema({ name: { type: String, required: true }, ownerId: { type: id, required: true }, members: [{ type: id }], archived: { type: Boolean, default: false } }, { timestamps: true }));
 export const GroupMessage = model('BravoGroupMessage', new Schema({ groupId: { type: id, required: true, index: true }, userId: { type: id, required: true }, authorName: String, role: String, body: String, deleted: { type: Boolean, default: false } }, { timestamps: true }));
-const subscriptionSchema = new Schema({ userId: { type: id, index: true }, stripeId: { type: String, unique: true }, serviceIds: [String], dogCount: { type: Number, min: 1, max: 10, default: 1 }, status: String, validUntil: Date, lastEventAt: Number }, { timestamps: true });
+const subscriptionSchema = new Schema({ userId: { type: id, index: true }, stripeId: { type: String, unique: true }, serviceIds: [String], dogCount: { type: Number, min: 1, max: 10, default: 1 }, status: String, validFrom: Date, validUntil: Date, source: String, bookingId: id, renewalOf: String, renewalDeclined: Boolean, autoPayDisabled: Boolean, lastEventAt: Number }, { timestamps: true });
 export const Subscription = model('BravoSubscription', subscriptionSchema);
+export const Notification = model('BravoNotification', new Schema({ _id: String, userId: id, staff: Boolean, body: String, href: String, createdAt: { type: Date, default: Date.now } }));
+export const NotificationRead = model('BravoNotificationRead', new Schema({ _id: String, userId: id, notificationId: String, messageId: id }));
+export const PasswordReset = model('BravoPasswordReset', new Schema({ _id: String, userId: { type: id, unique: true }, expiresAt: { type: Date, expires: 0 } }));
 export const StripeEvent = model('BravoStripeEvent', new Schema({ _id: String, type: String, processedAt: Date }));
 export const BillingLock = model('BravoBillingLock', new Schema({ _id: String, bookingId: String, expiresAt: { type: Date, expires: 0 } }));
 export const Lesson = model('BravoLesson', new Schema({
@@ -55,4 +59,4 @@ export const MediaUpload = model('BravoMediaUpload', new Schema({ _id: String, l
 const mediaChunkSchema = new Schema({ uploadId: { type: String, index: true }, index: Number, size: Number, data: Buffer, expiresAt: { type: Date, expires: 0 } }, { timestamps: true });
 mediaChunkSchema.index({ uploadId: 1, index: 1 }, { unique: true });
 export const MediaChunk = model('BravoMediaChunk', mediaChunkSchema);
-export const ALL_MODELS = [TrainerSchedule, ChatReset, User, Session, RateBucket, Booking, Slot, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Subscription, StripeEvent, Lesson, BillingLock, MediaUpload, MediaChunk];
+export const ALL_MODELS = [Notification, NotificationRead, PasswordReset, TrainerSchedule, ChatReset, User, Session, RateBucket, Booking, Slot, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Subscription, StripeEvent, Lesson, BillingLock, MediaUpload, MediaChunk];
