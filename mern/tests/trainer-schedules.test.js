@@ -29,3 +29,10 @@ test('hour labels preserve gaps and show session starts rather than invented ran
   assert.equal(startTimeRanges(['09:00','10:00','15:00','17:00','18:00']), '9 AM–10 AM · 3 PM · 5 PM–6 PM');
   assert.equal(startTimeRanges([]),'Off'); assert.equal(startTimeRanges(['12:00','13:00']),'12 PM–1 PM');
 });
+
+test('weekends open only inside team and personal working hours, including Sunday', () => {
+  const open = {...team, weekdays:[1,2,3,4,5,6,7]};
+  assert.deepEqual(workingHours('2026-09-19', null, open), team.hours);
+  assert.deepEqual(workingHours('2026-09-20', {...person, weekdays:[7]}, open), person.hours);
+  assert.deepEqual(workingHours('2026-09-20', {...person, weekdays:[7]}, team), []);
+});

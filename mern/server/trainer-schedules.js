@@ -8,13 +8,13 @@ import { workingHours, restrictTrainerDays } from '../shared/trainer-schedule.js
 const objectId = z.string().regex(/^[a-f\d]{24}$/i);
 const input = z.object({
   revision: z.number().int().min(0), enabled: z.boolean(),
-  weekdays: z.array(z.number().int().min(1).max(5)).max(5),
+  weekdays: z.array(z.number().int().min(1).max(7)).max(7),
   hours: z.array(z.enum(HOURS)).max(13),
   overrides: z.array(z.object({ date: z.string(), hours: z.array(z.enum(HOURS)).max(13) }).strict()).max(93),
 }).strict();
 const fail = (message, status = 409) => Object.assign(new Error(message), { status });
 function editable(stored, team) {
-  return { revision: stored?.revision || 0, enabled: stored ? stored.enabled : true, weekdays: stored?.weekdays || team.weekdays.filter(day => day <= 5), hours: stored?.hours || team.hours, overrides: stored?.overrides || [] };
+  return { revision: stored?.revision || 0, enabled: stored ? stored.enabled : true, weekdays: stored?.weekdays || team.weekdays, hours: stored?.hours || team.hours, overrides: stored?.overrides || [] };
 }
 async function target(req) {
   const id = objectId.parse(req.params.id).toLowerCase();
@@ -34,7 +34,7 @@ export async function saveTrainerSchedule(req, res) {
   if (new Set(data.overrides.map(day => day.date)).size !== data.overrides.length) throw fail('Use one exception per date.', 400);
   for (const day of data.overrides) {
     const parsed = dateTime(day.date);
-    if (day.date < today || day.date > last || (parsed.weekday > 5 && day.hours.length)) throw fail('Choose weekdays within the next 92 days. Weekends stay closed.', 400);
+    if (day.date < today || day.date > last) throw fail('Choose dates within the next 92 days.', 400);
   }
   data.weekdays = [...new Set(data.weekdays)].sort(); data.hours = [...new Set(data.hours)].sort();
   data.overrides = data.overrides.map(day => ({ date: day.date, hours: [...new Set(day.hours)].sort() })).sort((a, b) => a.date.localeCompare(b.date));

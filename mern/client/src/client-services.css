@@ -15,3 +15,22 @@
   .schedule-print-page * {color:#000!important;background:transparent!important;box-shadow:none!important;text-shadow:none!important}
   .schedule-list {display:block}.schedule-visit {break-inside:avoid;border:1px solid #777;margin-bottom:10pt}.schedule-print-page h1 {font-size:24pt!important}.schedule-print-page h2 {font-size:16pt!important}.schedule-print-page p {font-size:11pt!important}
 }
+
+/* Keep native iOS month controls inside their own row, including with larger text. */
+.app-page .schedule-controls {display:grid;grid-template-columns:minmax(0,1fr);gap:1rem;align-items:start}
+.app-page .schedule-controls label {width:100%;max-width:24rem;min-width:0;margin:0}
+.app-page .schedule-controls input[type="month"] {display:block;box-sizing:border-box;width:100%;max-width:100%;min-width:0;-webkit-appearance:none;appearance:none}
+.schedule-controls input::-webkit-date-and-time-value {min-width:0;text-align:left}
+.schedule-print-actions {display:flex;flex-wrap:wrap;gap:.75rem;min-width:0}
+.app-page .schedule-print-actions>.button {position:static;margin:0;flex:0 1 auto;min-width:0;max-width:100%;overflow-wrap:normal;word-break:normal}
+.app-page .schedule-controls .schedule-back {margin:0;justify-self:start}
+.schedule-print-help {margin:0}
+@media(max-width:700px){.schedule-print-actions {display:grid;grid-template-columns:minmax(0,1fr)}.app-page .schedule-print-actions>.button {width:100%;box-sizing:border-box}.app-page .schedule-controls label {max-width:none}}
+
+.saved-calendar {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:.3rem;margin:1.2rem 0}
+.saved-calendar .calendar-weekday {text-align:center;font-size:.8rem}
+.saved-calendar button {min-width:0;min-height:58px;padding:.4rem .15rem;border:1px solid #777;background:#121411;color:#fff;border-radius:.3rem;display:flex;flex-direction:column;align-items:center}
+.saved-calendar button.has-visits {border:2px solid #cfb173;background:#322b1c}.saved-calendar button[aria-pressed=true] {outline:3px solid #f1d49c;outline-offset:1px}
+.saved-calendar button small {font-size:.7rem}.schedule-list>.schedule-visit[hidden] {display:none}
+.schedule-visit-actions {margin-top:.8rem}.schedule-visit-actions .record-actions {display:flex;flex-wrap:wrap}.schedule-visit-actions form {margin-top:1rem}
+@media print {.saved-calendar,.calendar-day-heading,.schedule-visit-actions {display:none!important}.schedule-list>.schedule-visit[hidden] {display:block!important}}

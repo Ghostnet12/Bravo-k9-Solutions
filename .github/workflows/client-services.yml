@@ -1,7 +1,7 @@
 name: Client schedules and manual memberships
 on:
   push:
-    branches: [bravo-mern, client-services-20260912]
+    branches: [bravo-mern, client-services-20260912, fix/schedule-print-20260912]
     paths: ['mern/**', '.github/workflows/client-services.yml']
 permissions:
   contents: read
@@ -22,7 +22,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
-      - run: node --test --test-concurrency=1 tests/client-services.integration.js tests/member-access.integration.js
+      - run: node --test --test-concurrency=1 tests/client-services.integration.js tests/member-access.integration.js tests/trainer-schedules.integration.js
       - run: npm install --no-save --package-lock=false playwright@1.55.1
       - run: npx playwright install --with-deps chromium webkit
       - run: node tests/client-services.browser.mjs

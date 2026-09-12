@@ -335,6 +335,8 @@ app.post('/api/admin/bookings/:id/refund', requireUser, requireOwner, rateLimit(
 });
 app.put('/api/admin/schedule', requireUser, requireStaff, async (req, res) => {
   const settings = z.object({ enabled: z.boolean(), weekdays: z.array(z.number().int().min(1).max(7)).min(1).max(7), hours: z.array(z.enum(HOURS)).min(1).max(13) }).parse(req.body);
+  const previous = await Settings.findById('schedule').lean();
+  if (req.user.role !== 'owner' && [6,7].some(day => settings.weekdays.includes(day) !== previous.weekdays.includes(day))) return res.status(403).json({error:'Only administrators and owners can open or close weekends.'});
   await Settings.updateOne({ _id: 'schedule' }, { $set: settings, $inc: { revision: 1 } }); res.json({ ok: true });
 });
 app.post('/api/admin/blocks', requireUser, requireStaff, async (req, res) => {

@@ -34,7 +34,7 @@ test('personal schedule publish is public-safe, durable, isolated, and respected
       await call(null,'get',endpoint('alice')).expect(401);await call('client','get',endpoint('alice')).expect(403);await call('alice','get',endpoint('bob')).expect(403);
       await call('alice','put',endpoint('bob'),draft).expect(403);await call('owner','get',endpoint('bob')).expect(200);
       await call('alice','put',endpoint('alice'),{...draft,privateReason:'must not publish'}).expect(400);
-      await call('alice','put',endpoint('alice'),{...draft,weekdays:[6]}).expect(400);
+      await call('alice','put',endpoint('alice'),{...draft,weekdays:[8]}).expect(400);
       await call('alice','put',endpoint('alice'),{...draft,overrides:[{date:'2026-02-30',hours:[]}]}).expect(400);
       assert.equal(await TrainerSchedule.countDocuments(),0);
     });

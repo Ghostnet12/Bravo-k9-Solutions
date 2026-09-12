@@ -33,11 +33,11 @@ function Editor({ staffId }) {
     const map = new Map(draft.overrides.map(day => [day.date, day]));
     for (let date = from; date <= to;) {
       const value = new Date(`${date}T12:00:00Z`), weekday = value.getUTCDay();
-      if (weekday >= 1 && weekday <= 5) map.set(date, { date, hours: mode === 'off' ? [] : [...draft.hours] });
+      map.set(date, { date, hours: mode === 'off' ? [] : [...draft.hours] });
       value.setUTCDate(value.getUTCDate() + 1); date = value.toISOString().slice(0, 10);
     }
     setDraft(current => ({ ...current, overrides: [...map.values()].sort((a, b) => a.date.localeCompare(b.date)) }));
-    setFrom(''); setTo(''); setNotice('Dates added to your draft. Save & publish to update your homepage schedule. Weekends remain closed.');
+    setFrom(''); setTo(''); setNotice('Dates added to your draft. Save & publish to update your homepage schedule.');
   }
   async function publish(e) {
     e.preventDefault(); if (!draft || busy) return;
@@ -57,11 +57,11 @@ function Editor({ staffId }) {
         <label className="check-label"><input type="checkbox" checked={draft.enabled} onChange={e => setDraft(current => ({ ...current, enabled: e.target.checked }))}/>Available for training requests</label>
         <fieldset><legend>My regular working days</legend><div className="check-grid">{TRAINER_WEEKDAYS.map((day, index) => <label className="check-label" key={day}><input type="checkbox" aria-label={`Work ${day}`} checked={draft.weekdays.includes(index + 1)} onChange={() => toggle('weekdays', index + 1)}/>{day}</label>)}</div></fieldset>
         <fieldset><legend>My session start times</legend><div className="check-grid">{TRAINER_HOURS.map(time => <label className="check-label" key={time}><input type="checkbox" checked={draft.hours.includes(time)} onChange={() => toggle('hours', time)}/>{startTimeLabel(time)}</label>)}</div></fieldset>
-        <p className="helper">All times are Aberdeen time. Weekends remain closed; shared team closures and time-off blocks still apply.</p>
+        <p className="helper">All times are Aberdeen time. Administrators and owners can open weekends in shared team availability; shared closures and time-off blocks still apply.</p>
         <div className="trainer-exceptions"><h3>Specific days off or extra working days</h3><div className="form-grid">
           <label>From date<input type="date" aria-label="Exception start date" min={meta.today} max={meta.maxDate} value={from} onChange={e => { setFrom(e.target.value); if (!to || to < e.target.value) setTo(e.target.value); }}/></label>
           <label>Through date<input type="date" aria-label="Exception end date" min={from || meta.today} max={meta.maxDate} value={to} onChange={e => setTo(e.target.value)}/></label>
-          <label>Set those weekdays to<select aria-label="Exception type" value={mode} onChange={e => setMode(e.target.value)}><option value="off">Day off</option><option value="working">Working · selected start times above</option></select></label>
+          <label>Set those days to<select aria-label="Exception type" value={mode} onChange={e => setMode(e.target.value)}><option value="off">Day off</option><option value="working">Working · selected start times above</option></select></label>
         </div><button type="button" className="button button-small button-ghost" onClick={setExceptions}>Add dates to schedule</button>
         {!!draft.overrides.length && <ul className="trainer-exception-list">{draft.overrides.map(day => <li key={day.date}><span><time dateTime={day.date}>{day.date}</time> · {startTimeRanges(day.hours)}</span><button type="button" className="quiet-button" aria-label={`Use regular hours on ${day.date}`} onClick={() => setDraft(current => ({ ...current, overrides: current.overrides.filter(item => item.date !== day.date) }))}>Use regular hours</button></li>)}</ul>}</div>
         <p className="helper">Publishing does not cancel appointments. A change overlapping an assigned upcoming visit must be resolved by rescheduling or reassigning that visit first.</p>

@@ -1,9 +1,9 @@
 // A trainer's working schedule is distinct from appointment occupancy.
 export const TRAINER_HOURS = Array.from({ length: 13 }, (_, i) => `${String(i + 9).padStart(2, '0')}:00`);
-export const TRAINER_WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+export const TRAINER_WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 export function personalHours(date, schedule) {
-  const weekday = new Date(`${date}T12:00:00Z`).getUTCDay();
-  if (!schedule?.enabled || weekday < 1 || weekday > 5) return [];
+  const weekday = new Date(`${date}T12:00:00Z`).getUTCDay() || 7;
+  if (!schedule?.enabled) return [];
   const override = schedule.overrides?.find(day => day.date === date);
   const hours = override ? override.hours : schedule.weekdays.includes(weekday) ? schedule.hours : [];
   return [...new Set(hours)].filter(time => TRAINER_HOURS.includes(time)).sort();

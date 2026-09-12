@@ -12,7 +12,7 @@ export const User = model('BravoUser', new Schema({
   phone: { type: String, default: '' }, dogName: { type: String, default: '' }, address: { type: String, default: '' },
   title: { type: String, default: '' }, bio: { type: String, default: '' }, showPhone: { type: Boolean, default: false },
   mutedUntil: Date, blocked: { type: Boolean, default: false },
-  stripeCustomerId: String,
+  stripeCustomerId: String, firstPaidAt: Date,
 }, { timestamps: true }));
 export const Session = model('BravoSession', new Schema({ tokenHash: { type: String, unique: true }, userId: { type: id, required: true }, expiresAt: { type: Date, expires: 0 } }));
 export const RateBucket = model('BravoRateBucket', new Schema({ _id: String, count: Number, expiresAt: { type: Date, expires: 0 } }));
@@ -25,7 +25,7 @@ const bookingSchema = new Schema({
   paymentStatus: { type: String, enum: ['unpaid', 'paid', 'covered', 'review', 'refunded'], default: 'unpaid' },
   quote: Schema.Types.Mixed, stripeSessionId: String, stripePaymentIntentId: String, checkoutUrl: String, checkoutExpiresAt: Date,
   refundId: String, refundStatus: String, refundAmountCents: Number, refundedAt: Date, refundedBy: id,
-  renewalOf: String, termStartsAt: Date, termEndsAt: Date,
+  renewalOf: String, termStartsAt: Date, termEndsAt: Date, paidAt: Date, cancelledVisits: [visitSchema],
   checkoutParams: { type: Schema.Types.Mixed, select: false }, checkoutStarting: { type: Boolean, default: false },
 }, { timestamps: true });
 bookingSchema.index({ userId: 1, requestKey: 1 }, { unique: true });

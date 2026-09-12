@@ -151,6 +151,10 @@ export async function processStripeEvent(event, stripe) {
       if (booking.stripeSessionId && booking.stripeSessionId !== object.id) throw new Error('Checkout session mismatch.');
       // A late, distinct completion event must never undo a refund already recorded.
       if (booking.refundId || booking.paymentStatus === 'refunded') return;
+      const paidAt = new Date(event.created * 1000);
+      await User.updateOne({ _id: booking.userId }, { $min: { firstPaidAt: paidAt } }, { session });
+      await Booking.updateOne({ _id: booking._id }, { $min: { paidAt } }, { session });
+
       if (object.mode === 'payment' && object.metadata.billing === 'manual-month-v1' && booking.quote.monthlyCents > 0 && booking.status !== 'cancelled') {
         const ids = serviceSelection(booking.serviceIds).filter(service => service.interval === 'month').map(service => service.id);
         let start = new Date(event.created * 1000);
