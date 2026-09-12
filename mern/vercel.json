@@ -5,10 +5,16 @@
   "redirects": [{ "source": "/dog-sitting", "destination": "/portal", "permanent": true }],
   "functions": {
     "api/index.js": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "includeFiles": "client/dist/index.html"
+    },
+    "api/homepage.js": {
+      "maxDuration": 60,
+      "includeFiles": "client/dist/index.html"
     }
   },
   "rewrites": [
+    { "source": "/", "destination": "/api/homepage" },
     { "source": "/api/:path*", "destination": "/api" },
     { "source": "/dog-walking", "destination": "/dog-walking.html" },
     { "source": "/portal", "destination": "/portal.html" },

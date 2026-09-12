@@ -7,6 +7,9 @@ import { Header, Footer, AppointmentNotice } from './ui';
 import ServiceIcon from './ServiceIcon';
 import { useBravo } from './context';
 import { SERVICES, money } from '../../shared/catalog';
+import { HOME_HERO_SOURCE, HOME_HERO_ALT } from '../../shared/home-hero.js';
+import { framingStyle } from '../../shared/site-images.js';
+import { getSiteImages } from './site-image-state.js';
 
 const primary = ['training', 'walking', 'aggression', 'online'];
 const serviceDetails: Record<string, { label: string; text: string; features: string[] }> = {
@@ -16,6 +19,7 @@ const serviceDetails: Record<string, { label: string; text: string; features: st
   online: { label: 'TRAIN BETWEEN SESSIONS', text: 'Private member lessons from the Bravo team, available when you need them.', features: ['Trainer-uploaded video lessons', 'Captions and written transcripts', 'Learn at your own pace'] },
 };
 export default function Home() {
+  const [hero] = useState(() => getSiteImages()['home-hero']);
   const { config } = useBravo();
   const liveSchedules = useLiveTrainerSchedules();
   const catalog = config?.services?.length ? config.services : SERVICES;
@@ -24,9 +28,9 @@ export default function Home() {
   useEffect(() => { api('/team').then(people => setTeam(people.team)).catch(() => {}); api('/reviews').then(feedback => setReviews(feedback)).catch(() => {}); }, []);
   const portraits: Record<string, string> = { 'David Northrop': 'david-northrop', 'Ashley Northrop': 'ashley-northrop', 'Ashley Leverock': 'ashley-leverock', 'Janet Hughes': 'janet-hughes' };
   return <div className="bravo-home"><Header/>
-    <main id="main-content" tabIndex={-1}><div className="shell site-media-tools-slot site-media-tools-slot--home" data-site-media-tools=""/>
+    <main id="main-content" tabIndex={-1}>
       <section className="home-hero" aria-labelledby="home-title">
-        <img className="home-hero-image" src="/images/hero-bravo-launch.webp" width="1774" height="887" fetchPriority="high" alt="Professional Bravo K9 trainer working with an attentive Belgian Malinois near Aberdeen"/>
+        <img className="home-hero-image" src={hero?.src || HOME_HERO_SOURCE} width="1774" height="887" loading="eager" fetchPriority="high" alt={hero?.framed ? hero.alt : HOME_HERO_ALT} style={hero?.framed ? framingStyle(hero) : undefined} data-site-image-original={HOME_HERO_SOURCE} data-site-image-original-alt={HOME_HERO_ALT} data-site-media-original-styles='{"objectFit":"","objectPosition":"","transform":"","transformOrigin":"","clipPath":""}'/>
         <div className="home-hero-shade"/>
         <div className="shell home-hero-inner"><div className="home-hero-copy">
           <p className="eyebrow">ABERDEEN, SOUTH DAKOTA <span> / </span> MOBILE DOG TRAINING</p>
@@ -37,6 +41,7 @@ export default function Home() {
         </div><div className="hero-field-note"><span>THE BRAVO STANDARD</span><p>Trust.<br/>Train.<br/><em>Deploy.</em></p></div></div>
       </section>
       <div className="home-service-strip"><div className="shell"><p><strong>A professional on your team.</strong><span>Private sessions. Clear communication. Practical structure.</span></p><a href="tel:+16058242767">Talk to Bravo <span>(605) 824-2767</span></a></div></div>
+      <div className="shell site-media-tools-slot site-media-tools-slot--home" data-site-media-tools=""/>
       <section className="home-section shell" id="training" aria-labelledby="program-title">
         <div className="home-section-heading service-heading"><div><p className="eyebrow">01 / OUR SERVICES</p><h2 id="program-title">Training. Support.<br/><em>Real progress.</em></h2></div><AppointmentNotice compact/></div>
         <div className="home-pricing-grid">{primary.map(id => { const service = catalog.find(s => s.id === id); const detail = serviceDetails[id]; return service && service.enabled !== false ? <article className={`home-price-card ${id === 'training' ? 'featured' : ''}`} key={id}>

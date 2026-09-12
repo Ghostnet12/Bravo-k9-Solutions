@@ -1,7 +1,7 @@
 import { api } from './api.js';
 import { isEditableMediaKey, SITE_IMAGE_MAX_BYTES, SITE_VIDEO_MAX_BYTES, MEDIA_CHUNK_BYTES, defaultSiteImage, sourceImageKey, sourceVideoKey, videoTarget, normalizeFraming, mediaSettingsChanged } from '../../shared/site-images.js';
 import { applyFraming, videoControls } from './media-framing.js';
-let cachedImages = {};
+import { getSiteImages, setSiteImages } from './site-image-state.js';
 const slug = value => value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 90);
 const readFile = file => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(new Error('This file could not be read.')); reader.readAsDataURL(file); });
 export async function optimizeSitePhoto(file) {
@@ -24,7 +24,7 @@ export async function optimizeSitePhoto(file) {
 function base64(buffer) { let value = ''; const bytes = new Uint8Array(buffer); for (let i = 0; i < bytes.length; i += 8192) value += String.fromCharCode(...bytes.subarray(i, i + 8192)); return btoa(value); }
 const styleKeys = ['objectFit', 'objectPosition', 'transform', 'transformOrigin', 'clipPath'];
 export function mountSiteImages({ canEdit = false } = {}) {
-  let allowed = canEdit, disposed = false, images = cachedImages, ready = false, loading = null, frame = 0, gesture, suppressUntil = 0, editMode = false;
+  let allowed = canEdit, disposed = false, images = getSiteImages(), ready = false, loading = null, frame = 0, gesture, suppressUntil = 0, editMode = false;
   let selected = null, pending = null, busy = false, preparing = false, generation = 0, previewCleanup = null, blobURL = null;
   const abort = new AbortController(), records = new Map();
   let dialog, toolbar, fields;
@@ -103,7 +103,7 @@ export function mountSiteImages({ canEdit = false } = {}) {
   const schedule = () => { if (!disposed && !frame) frame = requestAnimationFrame(scan); };
   async function refresh() {
     if (loading) return loading;
-    loading = api('/site-images').then(data => { if (disposed) return; images = data.images || {}; cachedImages = images; ready = true; schedule(); sync(); }).catch(error => { if (selected) showError(error.message); }).finally(() => { loading = null; });
+    loading = api('/site-images').then(data => { if (disposed) return; images = data.images || {}; setSiteImages(images); ready = true; schedule(); sync(); }).catch(error => { if (selected) showError(error.message); }).finally(() => { loading = null; });
     return loading;
   }
   function values() { return normalizeFraming({ alt: fields.alt.value, x: fields.x.value, y: fields.y.value, zoom: fields.zoom.value, fit: fields.fit.value }); }
@@ -208,7 +208,7 @@ export function mountSiteImages({ canEdit = false } = {}) {
       const body = undo ? { expectedRevision: target.revision } : { ...settings, expectedRevision: target.revision, ...(!target.isVideo && replacement ? { data: replacement.data, contentType: replacement.contentType, filename: replacement.filename } : {}) };
       const result = await api(`/site-images/${target.key}${undo ? '/undo' : ''}`, { method: undo ? 'POST' : !target.isVideo && replacement ? 'PUT' : 'PATCH', body });
       if (disposed) return;
-      images[target.key] = result.image; cachedImages = images; scan(); setBusy(false); close();
+      images[target.key] = result.image; setSiteImages(images); scan(); setBusy(false); close();
       toolbar.querySelector('[role="status"]').textContent = videoUploaded ? 'Video replaced and saved as a lesson draft. Review captions/transcript in Lesson studio before publishing the lesson.' : undo ? 'Previous edit restored.' : 'Changes published for everyone.';
     } catch (error) {
       if (disposed) return;
