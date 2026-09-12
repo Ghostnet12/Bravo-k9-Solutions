@@ -25,6 +25,7 @@ export default function AdminPage() {
   useEffect(() => { const wanted = new URLSearchParams(location.search).get('tab'); if (wanted && ['schedule', 'people', 'messages', 'lessons', 'services', 'reviews'].includes(wanted)) setTab(wanted); }, [location.search]);
   const load = useCallback(async () => { const result = await api('/admin'); const [reviews, services] = result.role === 'owner' ? await Promise.all([api('/admin/reviews').then(data => data.reviews), api('/admin/services').then(data => data.services)]) : [[], []]; setData({ ...result, reviews, services }); setSchedule(result.settings); }, []);
   useEffect(() => { if (['staff', 'owner'].includes(user?.role)) load().catch(e => setError(e.message)); }, [user, load]);
+  useEffect(() => { if (tab !== 'messages') return; const timer = setInterval(() => { if (!document.hidden) load().catch(e => setError(e.message)); }, 15000); load().catch(e => setError(e.message)); return () => clearInterval(timer); }, [tab, location.search, load]);
   async function action(work) { setBusy(true); setError(''); setNotice(''); try { await work(); await load(); } catch (e) { setError(e.message); } finally { setBusy(false); } }
   async function resetDesk() {
     if (!window.confirm('Clear unsaved desk selections, filters and forms, then reload fresh server data? Saved bookings, client accounts, messages and payments will not be deleted. Use the labelled chat controls to clear history.')) return;
