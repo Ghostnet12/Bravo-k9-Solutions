@@ -6,7 +6,7 @@ import { DateTime } from 'luxon';
 import { z } from 'zod';
 import memberApp, { MemberAccess } from './member-app.js';
 import { connectDb, transaction } from './db.js';
-import { User, Booking, Subscription, DirectMessage, Notification, NotificationRead, PasswordReset, Session, AuditEvent } from './models.js';
+import { User, Booking, Subscription, DirectMessage, Notification, NotificationRead, PasswordReset, Session, AuditEvent, RateBucket } from './models.js';
 import { identify, requireUser, requireOwner, requireStaff, sameOrigin, rateLimit, digest, hashPassword, verifyPassword } from './auth.js';
 import { quote, serviceSelection } from '../shared/catalog.js';
 import { effectiveServices } from './services.js';
@@ -68,6 +68,12 @@ app.post('/api/membership-terms/decline', ...session, requireUser, ...write, asy
   res.json({ ok: true });
 });
 app.get('/api/notifications', ...session, requireUser, async (req, res) => {
+  // Authenticated visits repair missed reminders; cron covers signed-out periods.
+  const key = `membership-notifications:${Math.floor(Date.now() / 300000)}`;
+  let lease;
+  try { lease = await RateBucket.updateOne({ _id: key }, { $setOnInsert: { count: 1, expiresAt: new Date(Date.now() + 600000) } }, { upsert: true }); } catch (error) { if (error.code !== 11000) throw error; }
+  if (lease?.upsertedCount) { try { await membershipNotifications(); } catch { await RateBucket.deleteOne({ _id: key }); } }
+
   const reads = await NotificationRead.find({ userId: req.user._id }).lean();
   const readIds = new Set(reads.map(row => row.notificationId));
   const notices = await Notification.find(audience(req.user)).sort({ createdAt: -1 }).limit(100).lean();
