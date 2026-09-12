@@ -28,6 +28,9 @@ jobs:
           npx playwright install --with-deps chromium webkit
       - name: Cold load, delayed media, administrator tools, and return navigation
         run: node tests/home-hero.browser.mjs
+      - name: Verify the published homepage without signing in
+        if: github.ref == 'refs/heads/bravo-mern'
+        run: node tests/home-hero.live.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

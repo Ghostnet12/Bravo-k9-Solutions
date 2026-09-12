@@ -9,7 +9,7 @@ import { createHomepageHandler } from '../server/homepage.js';
 const engines = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const hero = { revision: 13, src: '/api/site-images/home-hero/image?v=13', alt: 'Bravo team fixture', fit: 'contain', x: 13, y: 19.5, zoom: 1.36, framed: true, canUndo: true };
 const dist = fileURLToPath(new URL('../client/dist/', import.meta.url));
-const html = await readFile(`${dist}/index.html`, 'utf8');
+const html = await readFile(`${dist}/bravo-shell.html`, 'utf8');
 const app = express();
 app.get('/', createHomepageHandler({ loadTemplate: async () => html, loadHero: async () => hero }));
 app.get('/api/site-images/home-hero/image', (_req, res) => res.sendFile(`${dist}/images/hero-bravo-launch.webp`));

@@ -443,7 +443,7 @@ app.get('/{*path}', (req, res) => {
   const known = PAGE_METADATA[req.path];
   if (known?.private) res.set('X-Robots-Tag', 'noindex, nofollow');
   if (!known) res.status(404);
-  res.sendFile(path.join(clientDir, known && req.path !== '/' ? req.path.slice(1) + '.html' : 'index.html'), { maxAge: 0 });
+  res.sendFile(path.join(clientDir, known && req.path !== '/' ? req.path.slice(1) + '.html' : 'bravo-shell.html'), { maxAge: 0 });
 });
 app.use((error, req, res, _next) => {
   if (res.headersSent) return res.end();

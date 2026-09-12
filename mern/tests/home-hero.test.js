@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
 import request from 'supertest';
-import { readFile } from 'node:fs/promises';
+import { readFile, access } from 'node:fs/promises';
 import { HOME_HERO_SOURCE, homeHeroSnapshot, readHomeHero } from '../shared/home-hero.js';
 import { createHomepageHandler, renderHomepage } from '../server/homepage.js';
 
@@ -67,7 +67,9 @@ test('missing media and unavailable database still return usable HTML', async ()
 test('Vercel homepage uses the dynamic snapshot and includes its production HTML', async () => {
   const config = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url)));
   assert.deepEqual(config.rewrites[0], { source: '/', destination: '/api/homepage' });
-  assert.equal(config.functions['api/homepage.js'].includeFiles, 'client/dist/index.html');
+  assert.equal(config.functions['api/homepage.js'].includeFiles, 'client/dist/bravo-shell.html');
+  await access(new URL('../client/dist/bravo-shell.html', import.meta.url));
+  await assert.rejects(access(new URL('../client/dist/index.html', import.meta.url)), { code: 'ENOENT' });
   const source = await readFile(new URL('../client/src/Home.tsx', import.meta.url), 'utf8');
   assert.equal((source.match(/className="home-hero-image"/g) || []).length, 1);
   assert.ok(source.indexOf('data-site-media-tools') > source.indexOf('home-service-strip'));

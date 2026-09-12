@@ -6,11 +6,11 @@
   "functions": {
     "api/index.js": {
       "maxDuration": 60,
-      "includeFiles": "client/dist/index.html"
+      "includeFiles": "client/dist/bravo-shell.html"
     },
     "api/homepage.js": {
       "maxDuration": 60,
-      "includeFiles": "client/dist/index.html"
+      "includeFiles": "client/dist/bravo-shell.html"
     }
   },
   "rewrites": [
@@ -24,7 +24,7 @@
     { "source": "/community", "destination": "/community.html" },
     { "source": "/admin", "destination": "/admin.html" },
     { "source": "/media-rights", "destination": "/media-rights.html" },
-    { "source": "/((?!api(?:/|$)|assets/|images/|fonts/|favicon|sitemap.xml|robots.txt).*)", "destination": "/index.html" }
+    { "source": "/((?!api(?:/|$)|assets/|images/|fonts/|favicon|sitemap.xml|robots.txt).*)", "destination": "/bravo-shell.html" }
   ],
   "headers": [
     {

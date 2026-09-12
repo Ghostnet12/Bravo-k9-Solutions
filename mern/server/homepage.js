@@ -4,7 +4,7 @@ import { HOME_HERO_META, HOME_HERO_SOURCE, homeHeroSnapshot } from '../shared/ho
 const escapeAttribute = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 let template;
 function readTemplate() {
-  template ||= readFile(new URL('../client/dist/index.html', import.meta.url), 'utf8').catch(error => { template = null; throw error; });
+  template ||= readFile(new URL('../client/dist/bravo-shell.html', import.meta.url), 'utf8').catch(error => { template = null; throw error; });
   return template;
 }
 

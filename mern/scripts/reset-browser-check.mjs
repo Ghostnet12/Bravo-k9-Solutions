@@ -6,7 +6,7 @@ import { mkdir } from 'node:fs/promises';
 import { chromium, webkit } from 'playwright';
 import { SERVICES } from '../shared/catalog.js';
 const dist = path.resolve('client/dist');
-const app = express(); app.use(express.static(dist)); app.get('/{*rest}', (_req, res) => res.sendFile(path.join(dist, 'index.html')));
+const app = express(); app.use(express.static(dist)); app.get('/{*rest}', (_req, res) => res.sendFile(path.join(dist, 'bravo-shell.html')));
 const server = app.listen(0, '127.0.0.1'); await new Promise(resolve => server.once('listening', resolve));
 const base = `http://127.0.0.1:${server.address().port}`;
 await mkdir('test-artifacts', { recursive: true });

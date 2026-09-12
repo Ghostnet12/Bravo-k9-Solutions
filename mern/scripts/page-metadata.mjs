@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
 import path from 'node:path';
 import { PAGE_METADATA, SITE_ORIGIN } from '../shared/page-metadata.js';
 const directory = new URL('../client/dist/', import.meta.url);
@@ -19,3 +19,6 @@ for (const [route, data] of Object.entries(PAGE_METADATA)) {
 const routes = Object.entries(PAGE_METADATA).filter(([, value]) => !value.private).map(([route]) => `${SITE_ORIGIN}${route}`);
 await writeFile(new URL('sitemap.xml', directory), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${routes.map(url => `<url><loc>${url}</loc></url>`).join('')}</urlset>`);
 await writeFile(new URL('robots.txt', directory), `User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: ${SITE_ORIGIN}/sitemap.xml\n`);
+// Vercel serves an existing index.html before applying '/' rewrites. Keep the
+// shell under a non-index name so the homepage handler can embed current media.
+await rename(new URL('index.html', directory), new URL('bravo-shell.html', directory));
