@@ -8,7 +8,7 @@ import memberApp, { MemberAccess } from './member-app.js';
 import { connectDb, transaction } from './db.js';
 import { User, Booking, Subscription, DirectMessage, Notification, NotificationRead, PasswordReset, Session, AuditEvent, RateBucket, Settings, Slot } from './models.js';
 import { identify, requireUser, requireOwner, requireStaff, sameOrigin, rateLimit, digest, hashPassword, verifyPassword } from './auth.js';
-import { quote, serviceSelection } from '../shared/catalog.js';
+import { quote, serviceSelection, ALL_SERVICES } from '../shared/catalog.js';
 import { effectiveServices } from './services.js';
 import { membershipNotifications } from './membership-notifications.js';
 import { chatFilter } from './chat-state.js';
@@ -72,7 +72,7 @@ app.post('/api/client-schedule/visit', ...session, requireUser, ...write, rateLi
         if (!availability({ from: next.date, to: next.date, settings: team })[0].slots.includes(next.time)) throw fail('This time is not available.', 409);
         await checkTrainerVisits(booking.staffId || booking.requestedStaffId, [next], team, session);
         if (next.service === 'training') {
-          const terms = await Subscription.find({ userId: booking.userId, status: { $in: ['active', 'trialing', 'canceled'] }, serviceIds: { $in: booking.serviceIds } }).session(session).lean();
+          const terms = await Subscription.find({ userId: booking.userId, status: { $in: ['active', 'trialing', 'canceled'] }, serviceIds: { $in: ALL_SERVICES.filter(s => s.includes.includes('training')).map(s => s.id) } }).session(session).lean();
           if (!terms.some(t => t.validFrom && when.toJSDate() >= t.validFrom && when.toJSDate() < t.validUntil)) throw fail('Choose a date within your paid membership month.', 400);
         }
         if (booking.visits.some(v => v.date === next.date && v.time === next.time)) throw fail('You already have a visit at that time.', 409);
@@ -90,7 +90,7 @@ app.post('/api/client-schedule/visit', ...session, requireUser, ...write, rateLi
     const action = input.action === 'note' ? 'Note about' : input.action === 'cancel' ? 'Cancelled' : 'Requested a change to';
     const body = `${req.user.name}: ${action} ${input.original.date} at ${input.original.time}${input.action === 'change' ? ` → ${input.replacement.date} at ${input.replacement.time}` : ''}. ${input.note}`;
     await Notification.create([{ _id: `visit:${randomBytes(16).toString('hex')}`, staff: true, body, href: `/schedule?client=${booking.userId}&month=${(input.replacement?.date || input.original.date).slice(0,7)}` }], { session });
-    await DirectMessage.create([{ memberId: booking.userId, senderId: req.user._id, senderName: req.user.name, senderRole: staff(req.user) ? 'owner' : 'member', body }], { session });
+    await DirectMessage.create([{ memberId: booking.userId, senderId: req.user._id, senderName: req.user.name, senderRole: req.user.role, body }], { session });
     await AuditEvent.create([{ actorId: req.user._id, action: `visit.${input.action}`, targetType: 'booking', targetId: String(booking._id), details: { original: input.original, replacement: input.replacement } }], { session });
   });
   res.json({ ok: true, message: 'Saved. The whole Bravo team has been notified. Payments and membership end dates are unchanged.' });
