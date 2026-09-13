@@ -36,7 +36,9 @@ export async function assertVisitsFree(visits, trainerIds, session, excludeBooki
 
 export async function reserveVisits(bookingId, visits, trainerIds, session) {
   if (!visits.length) return;
-  await assertVisitsFree(visits, trainerIds, session, bookingId);
+  // Existing visits on this booking also conflict with a new reservation.
+  // Editors release replaced visits before reserving them again.
+  await assertVisitsFree(visits, trainerIds, session);
   // Per-booking keys allow different trainers at the same time. The transaction
   // lock and conflict check prevent two requests from reserving the same trainer.
   await Slot.insertMany(visits.map(visit => ({ _id: `${visitKey(visit)}|${bookingId}`, date: visit.date, time: visit.time, bookingId })), { session });
