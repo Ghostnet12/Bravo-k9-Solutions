@@ -69,6 +69,7 @@ try {
         await page.getByRole('button',{name:'Confirm cancellation & notify team',exact:true}).click();
         await page.getByText('Saved. The Bravo team has been notified.',{exact:true}).waitFor();
         assert.equal(singleVisitBody.action,'cancel');assert.equal(singleVisitBody.note,'');
+        await page.locator('.saved-calendar button.has-visits').nth(1).waitFor();
         assert.equal(await page.getByRole('button', { name: 'Print schedule', exact: true }).count(), 0);
         assert.equal(await page.locator('.saved-calendar button.has-visits').count(), 2);
         const monthBox = await page.getByLabel('Schedule month').boundingBox();
