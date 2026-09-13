@@ -1,0 +1,36 @@
+name: Training day credits
+on:
+  push:
+    branches: [feat/training-day-credits-20260913]
+    paths: ['mern/**', '.github/workflows/training-day-credits.yml']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: mern
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: mern/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Credit and membership integration tests
+        run: |
+          node --test --test-concurrency=1 tests/client-services.integration.js tests/member-access.integration.js tests/membership-trainers.integration.js tests/make-member-training.integration.js tests/trainer-reservations.integration.js
+          if [ -f tests/training-credits.integration.js ]; then node --test tests/training-credits.integration.js; fi
+      - name: Source snapshot for isolated local review
+        run: tar -czf /tmp/bravo-credit-review.tar.gz --exclude=node_modules/.cache --exclude=.env --exclude=.env.local --exclude=dist --exclude=test-results .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bravo-credit-review
+          path: /tmp/bravo-credit-review.tar.gz
+          retention-days: 1
