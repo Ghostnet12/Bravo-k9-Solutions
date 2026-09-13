@@ -43,8 +43,10 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})){
    await page.goto(`${origin}/schedule?month=${month}`);
    await page.getByRole('button',{name:'Add Days and Times',exact:true}).click();
    const editor=page.getByRole('region',{name:'Add Days and Times',exact:true});
-   await editor.locator('.edit-calendar button:not([disabled])').nth(0).click();
-   await editor.locator('.edit-calendar button:not([disabled])').nth(1).click();
+   for(const date of dates){
+    const label=new Date(`${date}T12:00:00`).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    await editor.getByRole('button',{name:new RegExp(`^${label},`)}).click();
+   }
    assert.equal(body,null);
    await editor.getByRole('button',{name:'12:00 PM',exact:true}).click();
    assert.match(await editor.locator('.schedule-change-summary').innerText(),/2 to add/);
