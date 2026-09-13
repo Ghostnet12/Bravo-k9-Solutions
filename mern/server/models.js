@@ -20,6 +20,7 @@ const visitSchema = new Schema({ date: String, time: String, service: String }, 
 const bookingSchema = new Schema({
   userId: { type: id, required: true, index: true }, requestKey: String,
   staffId: { type: id, default: null, index: true }, requestedStaffId: { type: id, default: null, index: true }, createdBy: id,
+  staffIds: [{ type: id, index: true }], requestedStaffIds: [{ type: id, index: true }], trainerAcceptedIds: [id],
   trainerAcceptanceRequired: { type: Boolean, default: false }, trainerAcceptedAt: Date, trainerAcceptedBy: id,
   serviceIds: [String], visits: [visitSchema], trainingFocus: { type: String, enum: TRAINING_FOCUSES.map(focus => focus.id) }, dogCount: { type: Number, min: 1, max: 10, default: 1 }, dogName: String, phone: String, address: String, notes: String,
   status: { type: String, enum: ['requested', 'confirmed', 'waitlisted', 'cancelled'], default: 'requested' }, waitlistedAt: Date,

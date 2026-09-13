@@ -191,9 +191,15 @@ test('owner/staff workspace contracts over HTTP with isolated model mocks', asyn
   await t.test('staff can reassign visits but members cannot', async () => {
     const booking = { _id: ids.other, status: 'confirmed', save: async function() { return this; } };
     t.mock.method(Booking, 'findOne', () => query(booking));
+    const update = t.mock.method(Booking, 'updateOne', (filter, change) => { Object.assign(booking, change.$set); return query({ matchedCount: 1 }); });
+    const reload = t.mock.method(Booking, 'findById', () => query(booking));
     await call('member', 'patch', `/api/admin/bookings/${ids.other}/assignment`, { staffId: ids.staff }).expect(403);
     await call('staff', 'patch', `/api/admin/bookings/${ids.other}/assignment`, { staffId: ids.owner }).expect(200);
     assert.equal(booking.staffId, ids.owner);
+    assert.deepEqual(booking.staffIds, [ids.owner]);
+    assert.equal(update.mock.calls[0].arguments[0].status.$ne, 'cancelled');
+    assert.ok(update.mock.calls[0].arguments[2].session);
+    update.mock.restore(); reload.mock.restore();
   });
   await t.test('registration ignores injected staff, owner, and moderation fields', async () => {
     const create = t.mock.method(User, 'create', async data => ({ ...data, _id: ids.other, role: 'member' }));

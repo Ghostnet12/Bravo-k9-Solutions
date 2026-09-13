@@ -44,7 +44,7 @@ export async function saveTrainerSchedule(req, res) {
     const team = await Settings.findOneAndUpdate({ _id: 'schedule' }, { $inc: { revision: 1 } }, { returnDocument: 'after', session }).lean();
     const previous = await TrainerSchedule.findById(id).session(session).lean();
     if ((previous?.revision || 0) !== data.revision) throw fail('This schedule changed in another window. Reset to the saved schedule before editing again.');
-    const bookings = await Booking.find({ staffId: id, status: { $in: ['requested', 'confirmed'] }, 'visits.date': { $gte: today } }).select('visits').session(session).lean();
+    const bookings = await Booking.find({ $or: [{ staffId: id }, { staffIds: id }], status: { $in: ['requested', 'confirmed'] }, 'visits.date': { $gte: today } }).select('visits').session(session).lean();
     const conflicts = bookings.flatMap(booking => booking.visits).filter(visit => visit.date >= today && workingHours(visit.date, previous, team).includes(visit.time) && !workingHours(visit.date, data, team).includes(visit.time));
     if (conflicts.length) throw fail(`This change overlaps ${conflicts.length} saved visit(s). Reschedule or reassign those visits first; nothing was cancelled.`);
     saved = await TrainerSchedule.findOneAndUpdate({ _id: id }, { $set: { ...data, revision: data.revision + 1 } }, { upsert: true, returnDocument: 'after', runValidators: true, session });
@@ -73,12 +73,14 @@ export async function publicTrainerSchedules(_req, res) {
   }) });
 }
 export async function filterTrainerAvailability(days, staffId, team, session) {
+  if (Array.isArray(staffId)) { for (const id of staffId) days = await filterTrainerAvailability(days, id, team, session); return days; }
   if (!staffId) return days;
   let query = TrainerSchedule.findById(String(staffId));
   if (session) query = query.session(session);
   return restrictTrainerDays(days, await query.lean(), team);
 }
 export async function checkTrainerVisits(staffId, visits, team, session) {
+  if (Array.isArray(staffId)) { for (const id of staffId) await checkTrainerVisits(id, visits, team, session); return; }
   if (!staffId || !visits.length) return;
   let query = TrainerSchedule.findById(String(staffId));
   if (session) query = query.session(session);

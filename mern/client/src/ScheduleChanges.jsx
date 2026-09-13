@@ -1,3 +1,4 @@
+import { trainerOptions, trainerChoice } from '../../shared/trainers';
 import { useEffect, useState } from 'react';
 import { DateTime } from 'luxon';
 import { useBravo } from './context';
@@ -16,7 +17,7 @@ export default function ScheduleChanges({data,initialMonth,onSaved,onClose}) {
   const [bookingId,setBookingId]=useState(bookings[0]?._id||''),[month,setMonth]=useState(initialMonth),[draft,setDraft]=useState({}),[day,setDay]=useState('');
   const [hours,setHours]=useState({}),[loading,setLoading]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[note,setNote]=useState('');
   const [team,setTeam]=useState([]),[chosenTrainer,setChosenTrainer]=useState(user.id),[openWeekends,setOpenWeekends]=useState(true);
-  const booking=bookings.find(b=>b._id===bookingId),trainer=booking?.staffId||booking?.requestedStaffId||(isStaff?chosenTrainer:null);
+  const booking=bookings.find(b=>b._id===bookingId),trainer=trainerChoice(booking)||(isStaff?chosenTrainer:null);
   const canOpen=isStaff && (user.role==='owner'||trainer===user.id);
   const original={};
   for(const v of booking?.visits||[]) if(v.service==='training' && at(v.date,v.time)>DateTime.now()) (original[v.date]||=[]).push(v.time);
@@ -24,7 +25,7 @@ export default function ScheduleChanges({data,initialMonth,onSaved,onClose}) {
   const additions=[],removals=[];
   for(const [date,times] of Object.entries(draft)) {for(const time of times) if(!original[date]?.includes(time)) additions.push({date,time});for(const time of original[date]||[]) if(!times.includes(time)) removals.push({date,time});}
   const dirty=additions.length+removals.length>0;
-  useEffect(()=>{if(!isStaff)return;let current=true;api('/team').then(r=>{if(current)setTeam(r.team)}).catch(e=>{if(current)setError(e.message)});return()=>{current=false}},[isStaff]);
+  useEffect(()=>{if(!isStaff)return;let current=true;api('/team').then(r=>{if(current)setTeam(trainerOptions(r.team))}).catch(e=>{if(current)setError(e.message)});return()=>{current=false}},[isStaff]);
   useEffect(()=>{
     let current=true;setLoading(true);setHours({});setError('');
     const start=DateTime.fromISO(`${month}-01`);
@@ -53,7 +54,7 @@ export default function ScheduleChanges({data,initialMonth,onSaved,onClose}) {
   return <section className="schedule-change-editor" aria-label="Add Days and Times"><h3>Add Days and Times</h3><p>Tap a day to add it. Tap again to take it off. Choose times below the calendar, then save all changes together.</p>
     {!bookings.length?<p>No paid training request is available to edit. Contact Bravo for help.</p>:<form onSubmit={save}>
       <label>Training request<select aria-label="Training request" value={bookingId} disabled={busy||dirty} onChange={e=>{setBookingId(e.target.value);setDraft({});setDay('')}}>{bookings.map(b=><option key={b._id} value={b._id}>{b.dogName} · #{b._id.slice(-6)}</option>)}</select></label>
-      {isStaff&&!booking?.staffId&&!booking?.requestedStaffId&&<label>Trainer<select aria-label="Trainer" value={chosenTrainer} disabled={busy||dirty} onChange={e=>setChosenTrainer(e.target.value)}>{user.role==='owner'?team.map(t=><option key={t.id} value={t.id}>{t.name}</option>):<option value={user.id}>{user.name}</option>}</select></label>}
+      {isStaff&&!booking?.staffId&&!booking?.requestedStaffId&&<label>Trainer<select aria-label="Trainer" value={chosenTrainer} disabled={busy||dirty} onChange={e=>setChosenTrainer(e.target.value)}>{user.role==='owner'?team.map(t=><option key={t.id} value={t.id} disabled={t.disabled}>{t.name}</option>):<option value={user.id}>{user.name}</option>}</select></label>}
       {canOpen&&<label className="check-label"><input type="checkbox" checked={openWeekends} disabled={busy} onChange={e=>setOpenWeekends(e.target.checked)}/>Open the selected weekend times when saving</label>}
       <p className="helper">Gold days are selected. “+” marks an addition; “×” marks a cancellation. {isStaff?'Your note will go to the client and the team.':'Your note will go to all staff, administrators and owners.'}</p>
       {loading&&<p role="status">Checking available times…</p>}

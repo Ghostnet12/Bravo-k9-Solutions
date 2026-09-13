@@ -32,7 +32,7 @@ function VisitEditor({ visit, reload }) {
   const editable = ['paid','covered'].includes(visit.paymentStatus) && ['requested','confirmed'].includes(visit.status) && DateTime.fromISO(`${visit.date}T${visit.time}`, {zone:'America/Chicago'}) > DateTime.now();
   async function findTimes() {
     setBusy(true); setError(''); setTime(''); setHours([]);
-    try { const result = await api(`/availability?from=${date}&to=${date}${visit.staffId ? `&staffId=${visit.staffId}` : ''}`); const values = result.days?.[0]?.slots || []; setHours(values); if (!values.length) setError('No available times on this date. Choose another day.'); } catch(e) { setError(e.message); } finally { setBusy(false); }
+    try { const result = await api(`/availability?from=${date}&to=${date}${visit.trainerChoice || visit.staffId ? `&staffId=${visit.trainerChoice || visit.staffId}` : ''}`); const values = result.days?.[0]?.slots || []; setHours(values); if (!values.length) setError('No available times on this date. Choose another day.'); } catch(e) { setError(e.message); } finally { setBusy(false); }
   }
   async function submit(e) {
     e.preventDefault(); setBusy(true); setError('');

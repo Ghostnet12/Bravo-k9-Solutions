@@ -1,4 +1,7 @@
 import { z } from 'zod';
+import { randomUUID } from 'node:crypto';
+import { trainerSelectionInput, resolveTrainerIds } from './trainer-selection.js';
+import { assignedTrainerIds, requestedTrainerIds, acceptedTrainerIds } from '../shared/trainers.js';
 import { Booking, Settings, Slot, Subscription, User, Notification, AuditEvent } from './models.js';
 import { transaction } from './db.js';
 import { availability, validateVisits, dateTime, dateRange } from './scheduling.js';
@@ -8,7 +11,7 @@ import { filterTrainerAvailability, checkTrainerVisits } from './trainer-schedul
 import { activeTermQuery, monthTerm } from '../shared/membership-terms.js';
 export const bookingInput = z.object({
   requestKey: z.string().uuid(), serviceIds: z.array(z.string()).min(1).max(4),
-  preferredTrainerId: z.string().regex(/^[a-f\d]{24}$/i).nullable().optional(),
+  preferredTrainerId: trainerSelectionInput.nullable().optional(),
   visits: z.array(z.object({ date: z.string(), time: z.string(), service: z.string() })).max(62),
   trainingFocus: z.enum(TRAINING_FOCUSES.map(focus => focus.id)).optional(),
   dogCount: z.number().int().min(1).max(10).default(1),
@@ -18,7 +21,7 @@ export const bookingInput = z.object({
 export const TRAINER_DOG_LIMIT = 5;
 export async function trainerCapacity(staffId, { session, excludeUserId } = {}) {
   if (!staffId) return { activeDogs: 0, spotsRemaining: TRAINER_DOG_LIMIT, full: false };
-  const filter = { staffId, status: { $in: ['requested', 'confirmed'] }, serviceIds: 'training' };
+  const filter = { $or: [{ staffId }, { staffIds: staffId }], status: { $in: ['requested', 'confirmed'] }, serviceIds: 'training' };
   if (excludeUserId) filter.userId = { $ne: excludeUserId };
   let query = Booking.find(filter).select('userId dogCount');
   if (session) query = query.session(session);
@@ -30,12 +33,6 @@ export async function trainerCapacity(staffId, { session, excludeUserId } = {}) 
   }
   const activeDogs = [...dogsByClient.values()].reduce((total, dogs) => total + dogs, 0);
   return { activeDogs, spotsRemaining: Math.max(0, TRAINER_DOG_LIMIT - activeDogs), full: activeDogs >= TRAINER_DOG_LIMIT };
-}
-async function activeTrainer(id) {
-  if (!id) return null;
-  const trainer = await User.exists({ _id: id, role: { $in: ['staff', 'owner'] }, blocked: { $ne: true } });
-  if (!trainer) throw new Error('Choose an active trainer.');
-  return trainer;
 }
 export async function getEntitlements(userId, { includeFuture = false } = {}) {
   const filter = activeTermQuery();
@@ -55,11 +52,11 @@ export function bookingCoveredByEntitlements(serviceIds, dogCount, entitlements)
     && (!serviceIds.includes('training') || (entitlements.serviceDogCounts?.training || 0) >= dogCount);
 }
 export async function getAvailability(from, to, staffId = null) {
-  if (staffId) { z.string().regex(/^[a-f\d]{24}$/i).parse(staffId); await activeTrainer(staffId); }
+  const trainerIds = await resolveTrainerIds(staffId);
   dateRange(from, to); // Validate bounded dates before issuing a database range query.
   const settings = await Settings.findById('schedule').lean();
   const slots = await Slot.find({ date: { $gte: from, $lte: to } }, { _id: 1 }).lean();
-  return { days: await filterTrainerAvailability(availability({ from, to, settings, occupied: slots.map(s => s._id) }), staffId, settings), enabled: settings.enabled };
+  return { days: await filterTrainerAvailability(availability({ from, to, settings, occupied: slots.map(s => s._id) }), trainerIds, settings), enabled: settings.enabled };
 }
 export async function createBooking(userId, payload, assignment = {}) {
   const data = bookingInput.parse(payload);
@@ -74,8 +71,8 @@ export async function createBooking(userId, payload, assignment = {}) {
   if (dates.some(date => dateTime(date) > maximum)) throw new Error('Book within the next 92 days.');
   const existing = await Booking.findOne({ userId, requestKey: data.requestKey });
   if (existing) return existing;
-  const chosenTrainerId = assignment.staffId || data.preferredTrainerId || null;
-  if (chosenTrainerId) await activeTrainer(chosenTrainerId);
+  const chosenTrainerIds = await resolveTrainerIds(assignment.staffId || data.preferredTrainerId || null);
+  const chosenTrainerId = chosenTrainerIds[0] || null;
   delete data.preferredTrainerId;
   const entitlements = await getEntitlements(userId, { includeFuture: true });
   const covered = bookingCoveredByEntitlements(data.serviceIds, data.dogCount, entitlements) && data.visits.every(visit => entitlements.subscriptions.some(term => serviceSelection(term.serviceIds, ALL_SERVICES).some(service => service.includes.includes(visit.service)) && dateTime(visit.date, visit.time).toJSDate() < term.validUntil && (!term.validFrom || dateTime(visit.date, visit.time).toJSDate() >= term.validFrom)));
@@ -85,14 +82,16 @@ export async function createBooking(userId, payload, assignment = {}) {
     await transaction(async session => {
       // Schedule updates and reservations share a write lock; closures cannot race a booking.
       const settings = await Settings.findOneAndUpdate({ _id: 'schedule' }, { $inc: { revision: 1 } }, { returnDocument: 'after', session }).lean();
-      await checkTrainerVisits(chosenTrainerId, data.visits, settings, session);
-      const capacity = data.serviceIds.includes('training') && chosenTrainerId ? await trainerCapacity(chosenTrainerId, { session, excludeUserId: userId }) : null;
-      const waitlisted = !!capacity && capacity.activeDogs + data.dogCount > TRAINER_DOG_LIMIT;
+      await resolveTrainerIds(chosenTrainerIds, session);
+      await checkTrainerVisits(chosenTrainerIds, data.visits, settings, session);
+      const capacities = [];
+      if (data.serviceIds.includes('training')) for (const trainerId of chosenTrainerIds) capacities.push(await trainerCapacity(trainerId, { session, excludeUserId: userId }));
+      const waitlisted = capacities.some(capacity => capacity.activeDogs + data.dogCount > TRAINER_DOG_LIMIT);
       if (dates.length && !waitlisted) {
         const open = availability({ from: dates[0], to: dates.at(-1), settings });
         if (data.visits.some(v => !open.find(d => d.date === v.date)?.slots.includes(v.time))) throw Object.assign(new Error('One or more visits are no longer available. Refresh the schedule.'), { status: 409 });
       }
-      [booking] = await Booking.create([{ ...data, userId, staffId: waitlisted ? null : chosenTrainerId, requestedStaffId: chosenTrainerId, createdBy: assignment.createdBy || userId, status: waitlisted ? 'waitlisted' : 'requested', waitlistedAt: waitlisted ? new Date() : undefined, quote: quote(data.serviceIds, data.visits, { dogCount: data.dogCount }, catalog), paymentStatus: covered ? 'covered' : 'unpaid' }], { session });
+      [booking] = await Booking.create([{ ...data, userId, staffId: waitlisted ? null : chosenTrainerId, staffIds: waitlisted ? [] : chosenTrainerIds, requestedStaffId: chosenTrainerId, requestedStaffIds: chosenTrainerIds, trainerAcceptanceRequired: chosenTrainerIds.length > 1, createdBy: assignment.createdBy || userId, status: waitlisted ? 'waitlisted' : 'requested', waitlistedAt: waitlisted ? new Date() : undefined, quote: quote(data.serviceIds, data.visits, { dogCount: data.dogCount }, catalog), paymentStatus: covered ? 'covered' : 'unpaid' }], { session });
       if (data.visits.length && !waitlisted) await Slot.insertMany(data.visits.map(v => ({ _id: `${v.date}|${v.time}`, date: v.date, time: v.time, bookingId: booking._id })), { session });
     });
   } catch (error) {
@@ -105,56 +104,52 @@ export async function createBooking(userId, payload, assignment = {}) {
   }
   return booking;
 }
-export async function assignTrainer(booking, staffId, options = {}) {
-  const acceptance = options.acceptedBy ? { trainerAcceptanceRequired:false, trainerAcceptedAt:new Date(), trainerAcceptedBy:options.acceptedBy } : { trainerAcceptanceRequired:!!options.requireAcceptance, trainerAcceptedAt:null, trainerAcceptedBy:null };
-  async function recordAcceptance(session) {
-    if(!options.acceptedBy)return;
-    const trainer=await User.findById(staffId).select('name').session(session).lean();
-    const body=`${trainer.name} accepted ${booking.dogName || 'your dog'} as a training client. Your saved schedule now shows your trainer.`;
-    await Notification.create([{_id:`trainer:${booking._id}:${acceptance.trainerAcceptedAt.getTime()}:client`,staff:false,userId:booking.userId,body,href:'/schedule'},{_id:`trainer:${booking._id}:${acceptance.trainerAcceptedAt.getTime()}:staff`,staff:true,body,href:`/schedule?client=${booking.userId}`}],{session,ordered:true});
-    await AuditEvent.create([{actorId:options.acceptedBy,action:'trainer.client.accepted',targetType:'booking',targetId:String(booking._id),details:{staffId}}],{session});
-  }
-  if (!staffId) {
-    const previous = booking.staffId;
-    booking.staffId = null; Object.assign(booking,{trainerAcceptanceRequired:false,trainerAcceptedAt:null,trainerAcceptedBy:null});
-    await booking.save();
-    if (previous) await promoteTrainerWaitlist(previous);
-    return booking;
-  }
-  await activeTrainer(staffId);
-  if (!booking.serviceIds?.includes('training')) {
-    await transaction(async session => {
-      const settings = await Settings.findOneAndUpdate({ _id: 'schedule' }, { $inc: { revision: 1 } }, { returnDocument: 'after', session }).lean();
-      await checkTrainerVisits(staffId, booking.visits || [], settings, session);
-      booking.staffId = staffId; booking.requestedStaffId ||= staffId; Object.assign(booking,acceptance); await booking.save({ session }); await recordAcceptance(session);
-    });
-    return booking;
-  }
-  const previous = booking.staffId;
+export async function assignTrainer(booking, selection, options = {}) {
+  const trainerIds = await resolveTrainerIds(selection);
+  const previous = assignedTrainerIds(booking);
+  const sameAssignment = previous.length === trainerIds.length && previous.every(id => trainerIds.includes(id));
+  const acceptingIds = options.acceptedBy ? (options.acceptingStaffIds || trainerIds).map(String) : [];
+  if (acceptingIds.some(id => !trainerIds.includes(id))) throw Object.assign(new Error('This trainer is not assigned to this client.'), { status: 409 });
+  const acceptedIds = options.acceptedBy ? [...new Set([...(sameAssignment ? acceptedTrainerIds(booking) : []), ...acceptingIds])] : [];
+  const complete = !!options.acceptedBy && trainerIds.length > 0 && trainerIds.every(id => acceptedIds.includes(id));
+  const acceptance = { trainerAcceptedIds: acceptedIds, trainerAcceptanceRequired: trainerIds.length > 0 && (options.acceptedBy ? !complete : !!options.requireAcceptance || trainerIds.length > 1 || !!booking.trainerAcceptanceRequired), trainerAcceptedAt: complete ? new Date() : null, trainerAcceptedBy: complete ? options.acceptedBy : null };
   await transaction(async session => {
+    // Both trainers and all slot reservations share one transaction and schedule lock.
     const settings = await Settings.findOneAndUpdate({ _id: 'schedule' }, { $inc: { revision: 1 } }, { returnDocument: 'after', session }).lean();
-    await checkTrainerVisits(staffId, booking.visits || [], settings, session);
-    const capacity = await trainerCapacity(staffId, { session, excludeUserId: booking.userId });
-    if (capacity.activeDogs + (booking.dogCount || 1) > TRAINER_DOG_LIMIT) throw Object.assign(new Error('That trainer is at the five-dog limit. This client must remain on the waiting list or choose another trainer.'), { status: 409 });
-    if (booking.status === 'waitlisted' && booking.visits.length) {
+    await resolveTrainerIds(trainerIds, session);
+    await checkTrainerVisits(trainerIds, booking.visits || [], settings, session);
+    if (booking.serviceIds?.includes('training')) for (const trainerId of trainerIds) {
+      const capacity = await trainerCapacity(trainerId, { session, excludeUserId: booking.userId });
+      if (capacity.activeDogs + (booking.dogCount || 1) > TRAINER_DOG_LIMIT) throw Object.assign(new Error('One of the selected trainers is at the five-dog limit. Keep this request on the waiting list or choose another trainer.'), { status: 409 });
+    }
+    if (trainerIds.length && booking.status === 'waitlisted' && booking.visits.length) {
       const dates = booking.visits.map(visit => visit.date).sort();
       const occupied = await Slot.find({ date: { $gte: dates[0], $lte: dates.at(-1) } }, { _id: 1 }).session(session).lean();
       const open = availability({ from: dates[0], to: dates.at(-1), settings, occupied: occupied.map(slot => slot._id) });
-      if (booking.visits.some(visit => !open.find(day => day.date === visit.date)?.slots.includes(visit.time))) throw Object.assign(new Error('This waitlisted client’s preferred times are no longer open. Ask them to choose new dates before activating the request.'), { status: 409 });
+      if (booking.visits.some(visit => !open.find(day => day.date === visit.date)?.slots.includes(visit.time))) throw Object.assign(new Error('This waitlisted client’s preferred times are no longer open. Choose new dates before activating the request.'), { status: 409 });
       await Slot.insertMany(booking.visits.map(visit => ({ _id: `${visit.date}|${visit.time}`, date: visit.date, time: visit.time, bookingId: booking._id })), { session });
     }
-    const result = await Booking.updateOne({ _id: booking._id, status: { $ne: 'cancelled' }, ...(options.expectedUpdatedAt ? {updatedAt:options.expectedUpdatedAt} : {}) }, { $set: { staffId, requestedStaffId: staffId, ...acceptance, status: booking.status === 'waitlisted' ? 'requested' : booking.status }, $unset: { waitlistedAt: 1 } }, { session });
+    const result = await Booking.updateOne({ _id: booking._id, status: { $ne: 'cancelled' }, ...((options.expectedUpdatedAt || booking.updatedAt) ? { updatedAt: options.expectedUpdatedAt || booking.updatedAt } : {}) }, {
+      $set: { staffId: trainerIds[0] || null, staffIds: trainerIds, requestedStaffId: trainerIds[0] || null, requestedStaffIds: trainerIds, ...acceptance, status: trainerIds.length && booking.status === 'waitlisted' ? 'requested' : booking.status },
+      ...(trainerIds.length ? { $unset: { waitlistedAt: 1 } } : {}),
+    }, { session });
     if (!result.matchedCount) throw Object.assign(new Error('This request changed. Refresh and try again.'), { status: 409 });
-    await recordAcceptance(session);
+    if (options.acceptedBy) {
+      const people = await User.find({ _id: { $in: acceptingIds } }).select('name').session(session).lean();
+      const body = `${people.map(person => person.name).join(' and ')} accepted ${booking.dogName || 'your dog'} as a training client. ${complete ? 'Your saved schedule now shows your trainer' + (trainerIds.length > 1 ? 's.' : '.') : 'The other assigned trainer still needs to accept.'}`;
+      const event = randomUUID();
+      await Notification.create([{ _id: `trainer:${booking._id}:${event}:client`, staff: false, userId: booking.userId, body, href: '/schedule' }, { _id: `trainer:${booking._id}:${event}:staff`, staff: true, body, href: `/schedule?client=${booking.userId}` }], { session, ordered: true });
+      await AuditEvent.create([{ actorId: options.acceptedBy, action: 'trainer.client.accepted', targetType: 'booking', targetId: String(booking._id), details: { staffId: trainerIds[0] || null, staffIds: trainerIds, acceptingStaffIds: acceptingIds, complete } }], { session });
+    }
   });
-  if (previous && String(previous) !== String(staffId)) await promoteTrainerWaitlist(previous);
+  for (const formerId of previous.filter(id => !trainerIds.includes(id))) await promoteTrainerWaitlist(formerId);
   return Booking.findById(booking._id);
 }
 export async function promoteTrainerWaitlist(staffId) {
   if (!staffId) return null;
-  const next = await Booking.findOne({ requestedStaffId: staffId, status: 'waitlisted' }).sort({ waitlistedAt: 1, createdAt: 1 });
+  const next = await Booking.findOne({ $or: [{ requestedStaffId: staffId }, { requestedStaffIds: staffId }], status: 'waitlisted' }).sort({ waitlistedAt: 1, createdAt: 1 });
   if (!next) return null;
-  try { return await assignTrainer(next, staffId); }
+  try { return await assignTrainer(next, requestedTrainerIds(next), { requireAcceptance: true }); }
   catch (error) { if (error.status === 409 || error.code === 11000) return null; throw error; }
 }
 export async function cancelBooking(booking, stripe) {
@@ -171,6 +166,6 @@ export async function cancelBooking(booking, stripe) {
     if (!result.matchedCount) throw Object.assign(new Error('Checkout is starting. Wait for it to open before cancelling.'), { status: 409 });
     await Slot.deleteMany({ bookingId: booking._id }, { session });
   });
-  await promoteTrainerWaitlist(current.staffId);
+  for (const trainerId of assignedTrainerIds(current)) await promoteTrainerWaitlist(trainerId);
   // Cancellation never silently refunds a charge or cancels a recurring plan.
 }

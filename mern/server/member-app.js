@@ -9,7 +9,7 @@ import { User, Subscription, AuditEvent } from './models.js';
 import { identify, requireUser, requireOwner, sameOrigin, publicUser, rateLimit } from './auth.js';
 import { getEntitlements } from './bookings.js';
 import { protectedLesson } from './lessons.js';
-import { monthTerm, grantActive, activeTermQuery } from '../shared/membership-terms.js';
+import { monthTerm, manualMonthTerm, grantActive, activeTermQuery } from '../shared/membership-terms.js';
 
 // Member access is an entitlement, NOT an employee role or a Stripe subscription.
 // No grant is created during registration. Paid plans, quotes and billing records
@@ -22,7 +22,7 @@ export const MemberAccess = mongoose.models.BravoMemberAccess || mongoose.model(
   startsAt: Date, endsAt: Date,
 }, { timestamps: true }));
 const idInput = z.string().regex(/^[a-f\d]{24}$/i);
-const changeInput = z.object({ enabled: z.boolean(), expectedRevision: z.number().int().min(0) }).strict();
+const changeInput = z.object({ enabled: z.boolean(), expectedRevision: z.number().int().min(0), startDate: z.string().optional() }).strict();
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 export function membershipSummary(entitlements, grant) {
   const manual = grantActive(grant);
@@ -47,11 +47,12 @@ app.get('/api/admin/memberships', ...session, requireUser, requireOwner, async (
   const byId = new Map(grants.map(grant => [String(grant._id), grant]));
   res.json({ memberships: Object.fromEntries(userIds.map(id => {
     const grant = byId.get(id), subscriptions = paid.filter(item => String(item.userId) === id);
-    return [id, { manual: grantActive(grant), startsAt: grant?.startsAt, endsAt: grant?.endsAt, revision: grant?.revision || 0, paidMembership: subscriptions.length > 0, paidOnline: subscriptions.some(item => item.serviceIds.some(service => ['online', 'all-access'].includes(service))) }];
+    return [id, { enabled: grant?.enabled === true, manual: grantActive(grant), startsAt: grant?.startsAt, endsAt: grant?.endsAt, revision: grant?.revision || 0, paidMembership: subscriptions.length > 0, paidOnline: subscriptions.some(item => item.serviceIds.some(service => ['online', 'all-access'].includes(service))) }];
   })) });
 });
 app.patch('/api/admin/memberships/:id', ...session, requireUser, requireOwner, sameOrigin, rateLimit('member-access-write', 80, 3600000), express.json({ limit: '4kb' }), async (req, res) => {
   const userId = idInput.parse(req.params.id), input = changeInput.parse(req.body);
+  const chosenTerm = input.enabled ? (input.startDate ? manualMonthTerm(input.startDate) : monthTerm()) : null;
   await MemberAccess.init();
   let result;
   await transaction(async dbSession => {
@@ -66,14 +67,15 @@ app.patch('/api/admin/memberships/:id', ...session, requireUser, requireOwner, s
     const record = grant || new MemberAccess({ _id: userId });
     const previous = record.enabled === true;
     record.enabled = input.enabled; record.revision = input.expectedRevision + 1; record.updatedBy = req.user._id;
-    if (input.enabled) { const term = monthTerm(); record.startsAt = term.validFrom; record.endsAt = term.validUntil; }
+    if (input.enabled) { record.startsAt = chosenTerm.validFrom; record.endsAt = chosenTerm.validUntil; }
+    // Date corrections replace only manual ONLINE grants, never training or Stripe access.
+    await Subscription.updateMany({ userId, source: 'grant', serviceIds: 'online', status: 'active' }, { $set: { status: 'revoked' } }, { session: dbSession });
     await record.save({ session: dbSession });
     if (input.enabled) await Subscription.create([{ stripeId: `grant:${userId}:${record.revision}`, userId, serviceIds: ['online'], dogCount: 1, source: 'grant', autoPayDisabled: true, status: 'active', validFrom: record.startsAt, validUntil: record.endsAt }], { session: dbSession });
-    else await Subscription.updateMany({ userId, source: 'grant', status: 'active' }, { $set: { status: 'revoked' } }, { session: dbSession });
-    await AuditEvent.create([{ actorId: req.user._id, action: input.enabled ? 'membership.granted' : 'membership.revoked', targetType: 'user', targetId: userId, details: { from: previous, to: input.enabled, revision: record.revision, scope: 'published-member-lessons' } }], { session: dbSession });
-    result = { manual: record.enabled, revision: record.revision };
+    await AuditEvent.create([{ actorId: req.user._id, action: input.enabled ? 'membership.granted' : 'membership.revoked', targetType: 'user', targetId: userId, details: { from: previous, to: input.enabled, revision: record.revision, scope: 'published-member-lessons', startsAt: record.startsAt, endsAt: record.endsAt } }], { session: dbSession });
+    result = { enabled: record.enabled, manual: grantActive(record), revision: record.revision, startsAt: record.startsAt, endsAt: record.endsAt };
   });
-  res.json({ membership: result, message: input.enabled ? 'Member access activated. No payment, subscription, or staff permissions were created.' : 'Manual Member access removed. Existing paid subscriptions are unchanged.' });
+  res.json({ membership: result, message: input.enabled ? 'Member access dates saved. No payment, automatic billing, or staff permissions were created.' : 'Manual Member access removed. Existing paid subscriptions are unchanged.' });
 });
 // Extend the existing protected player without exposing a public video endpoint.
 // Manual access never grants staff privileges or access to draft lessons.

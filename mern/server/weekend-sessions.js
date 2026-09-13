@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { bookingTrainerIds } from '../shared/trainers.js';
 import { z } from 'zod';
 import { DateTime } from 'luxon';
 import { Booking, User, Settings, TrainerSchedule, Slot, Subscription, Notification, AuditEvent } from './models.js';
@@ -51,7 +52,7 @@ export async function addTrainingVisit(req,res) {
     if(b.visits.length>=62) throw fail('This request already has 62 visits.');
     if(!await Subscription.exists({userId:b.userId,serviceIds:{$in:trainingIds},status:{$in:['active','trialing','canceled']},validFrom:{$lte:when.toJSDate()},validUntil:{$gt:when.toJSDate()},dogCount:{$gte:b.dogCount||1}}).session(session)) throw fail('This session must fall within the client’s paid training month.');
     if(!availability({from:date,to:date,settings:team})[0].slots.includes(time)) throw fail('Open these days and times before adding a visit.');
-    await checkTrainerVisits(b.staffId||b.requestedStaffId,[{date,time,service:'training'}],team,session);
+    await checkTrainerVisits(bookingTrainerIds(b),[{date,time,service:'training'}],team,session);
     const key=`${date}|${time}`;
     if(await Slot.exists({_id:key}).session(session)) throw fail('This time is already reserved or blocked.',409);
     await Slot.create([{_id:key,date,time,bookingId:b._id}],{session});
