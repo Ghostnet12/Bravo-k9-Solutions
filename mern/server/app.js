@@ -449,12 +449,22 @@ app.put('/api/admin/lessons/:id', requireUser, requireStaff, async (req, res) =>
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Endpoint not found.' }));
 const clientDir = fileURLToPath(new URL('../client/dist/', import.meta.url));
 app.get('/dog-sitting', (_req, res) => res.redirect(308, '/portal'));
+// Normalize duplicate public document URLs before static file delivery.
+app.get('/{*path}', (req, res, next) => {
+  const route = req.path.replace(/\.html$/, '').replace(/\/+$/, '') || '/';
+  const alias = ['/index.html', '/bravo-shell.html'].includes(req.path) ? '/' : null;
+  if (alias || (PAGE_METADATA[route] && route !== req.path)) {
+    const query = req.originalUrl.includes('?') ? req.originalUrl.slice(req.originalUrl.indexOf('?')) : '';
+    return res.redirect(308, (alias || route) + query);
+  }
+  next();
+});
 app.use(express.static(clientDir, { maxAge: '1h', index: false, redirect: false }));
 app.get('/{*path}', (req, res) => {
   const known = PAGE_METADATA[req.path];
-  if (known?.private) res.set('X-Robots-Tag', 'noindex, nofollow');
+  if (!known || known.private) res.set('X-Robots-Tag', 'noindex, nofollow');
   if (!known) res.status(404);
-  res.sendFile(path.join(clientDir, known && req.path !== '/' ? req.path.slice(1) + '.html' : 'bravo-shell.html'), { maxAge: 0 });
+  res.sendFile(path.join(clientDir, !known ? '404.html' : req.path !== '/' ? req.path.slice(1) + '.html' : 'bravo-shell.html'), { maxAge: 0 });
 });
 app.use((error, req, res, _next) => {
   if (res.headersSent) return res.end();

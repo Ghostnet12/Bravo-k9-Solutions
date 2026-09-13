@@ -1,0 +1,9 @@
+.page-breadcrumbs { margin: 0 0 1.25rem; color: var(--muted, #bbb8ad); font-size: .9rem; }
+.page-breadcrumbs a { display: inline-flex; align-items: center; min-height: 44px; }
+.service-overview { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 2rem; align-items: center; }
+.service-overview img { width: 100%; height: auto; border-radius: 8px; }
+.service-overview p { line-height: 1.7; }
+.service-questions details { border-top: 1px solid #494638; padding: .65rem 0; }
+.service-questions summary { min-height: 44px; padding: .6rem 0; cursor: pointer; font-weight: 700; }
+.service-questions summary:focus-visible { outline: 3px solid #edc975; outline-offset: 4px; }
+@media (max-width: 720px) { .service-overview { grid-template-columns: 1fr; } }

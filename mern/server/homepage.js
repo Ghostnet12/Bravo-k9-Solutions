@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
-import { HOME_HERO_META, HOME_HERO_SOURCE, homeHeroSnapshot } from '../shared/home-hero.js';
+import { HOME_HERO_META, HOME_HERO_SOURCE, HOME_HERO_ALT, homeHeroSnapshot } from '../shared/home-hero.js';
+import { framingStyle } from '../shared/site-images.js';
 
 const escapeAttribute = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 let template;
@@ -11,6 +12,16 @@ function readTemplate() {
 export function renderHomepage(html, value) {
   const hero = homeHeroSnapshot(value);
   const preload = `<link rel="preload" as="image" href="${escapeAttribute(hero?.src || HOME_HERO_SOURCE)}" fetchpriority="high"/>`;
+  // The pre-rendered photo must match the published snapshot on the very first
+  // frame, including before JavaScript starts. Preserve the editor's original
+  // source attributes so existing image edits and undo keep working.
+  html = html.replace(/<img\b[^>]*class="home-hero-image"[^>]*>/g, tag => {
+    const styles = hero?.framed ? Object.entries(framingStyle(hero)).map(([key, setting]) => `${key.replace(/[A-Z]/g, char => '-' + char.toLowerCase())}:${setting}`).join(';') : '';
+    return tag.replace(/ src="[^"]*"/, ` src="${escapeAttribute(hero?.src || HOME_HERO_SOURCE)}"`)
+      .replace(/ alt="[^"]*"/, ` alt="${escapeAttribute(hero?.framed ? hero.alt : HOME_HERO_ALT)}"`)
+      .replace(/ style="[^"]*"/, '')
+      .replace(/\/?>(?=$)/, ` style="${escapeAttribute(styles)}"/>`);
+  });
   // Replace the original preload, rather than downloading two hero photos.
   return html.replace(/<link\b(?=[^>]*\brel="preload")(?=[^>]*\bas="image")[^>]*>/g, '')
     .replace('</head>', `${preload}<meta name="${HOME_HERO_META}" content="${escapeAttribute(JSON.stringify(hero))}"/></head>`);

@@ -1,7 +1,7 @@
 name: Client schedules and manual memberships
 on:
   push:
-    branches: [bravo-mern, client-services-20260912, fix/schedule-print-20260912, fix/weekend-sessions-20260913, fix/calendar-batch-20260913, fix/trainer-acceptance-20260913, fix/make-member-training-20260913, fix/existing-member-recovery-20260913, fix/trainer-time-availability-20260913, fix/client-trash-icon-20260913, fix/simple-client-membership-20260913, fix/owner-admin-removal-20260913, fix/client-temporary-login-20260913, fix/simple-scheduling-menu-20260913, fix/clear-schedule-navigation-20260913, fix/optional-schedule-notes-20260913, fix/usability-shortcuts-20260913]
+    branches: [bravo-mern, client-services-20260912, fix/schedule-print-20260912, fix/weekend-sessions-20260913, fix/calendar-batch-20260913, fix/trainer-acceptance-20260913, fix/make-member-training-20260913, fix/existing-member-recovery-20260913, fix/trainer-time-availability-20260913, fix/client-trash-icon-20260913, fix/simple-client-membership-20260913, fix/owner-admin-removal-20260913, fix/client-temporary-login-20260913, fix/simple-scheduling-menu-20260913, fix/clear-schedule-navigation-20260913, fix/optional-schedule-notes-20260913, fix/usability-shortcuts-20260913, feat/bravo-seo-20260913]
     paths: ['mern/**', '.github/workflows/client-services.yml']
 permissions:
   contents: read
@@ -34,6 +34,7 @@ jobs:
       - run: node tests/simple-client-membership.browser.mjs
       - run: node tests/client-login.browser.mjs
       - run: node tests/home-hero.browser.mjs
+      - run: node tests/seo.browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

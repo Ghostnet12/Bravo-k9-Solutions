@@ -34,8 +34,8 @@ export default function Home() {
         <div className="home-hero-shade"/>
         <div className="shell home-hero-inner"><div className="home-hero-copy">
           <p className="eyebrow">ABERDEEN, SOUTH DAKOTA <span> / </span> MOBILE DOG TRAINING</p>
-          <h1 id="home-title">Real training.<br/><em>Real life.</em></h1>
-          <p className="home-intro">Practical training and real-world support for a stronger, calmer, happier life with your dog.</p>
+          <h1 id="home-title">Real-life<br/><em>dog training.</em></h1>
+          <p className="home-intro">Mobile dog training and dog walking in Aberdeen, South Dakota. We come to you for practical support and a calmer everyday life with your dog.</p>
           <div className="home-hero-actions"><Link className="button" href="/portal">Find your program <span aria-hidden="true">→</span></Link><a className="button button-ghost" href="#team">Meet the team</a></div>
           <div className="hero-service-note"><span>STRONGER RELATIONSHIPS</span><span>REAL-WORLD RESULTS</span><span>SUPPORT EVERY STEP</span></div>
         </div><div className="hero-field-note"><span>THE BRAVO STANDARD</span><p>Trust.<br/>Train.<br/><em>Deploy.</em></p></div></div>
@@ -47,7 +47,7 @@ export default function Home() {
         <div className="home-pricing-grid">{primary.map(id => { const service = catalog.find(s => s.id === id); const detail = serviceDetails[id]; return service && service.enabled !== false ? <article className={`home-price-card ${id === 'training' ? 'featured' : ''}`} key={id}>
           <ServiceIcon service={id}/><p className="eyebrow">{detail.label}</p><h3>{service.name}</h3><p className="service-description">{detail.text}</p>
           <div className="home-price">{money(service.cents)}<span>{service.interval === 'month' ? '/ month' : service.interval === 'walk' ? '/ dog' : 'initial intake'}</span></div>
-          <ul>{(id === 'walking' ? [`${money(service.cents)} per dog`, ...detail.features.slice(1)] : detail.features).map(feature => <li key={feature}>{feature}</li>)}</ul><Link className={`button ${id === 'training' ? '' : 'button-ghost'}`} href={id === 'online' ? '/learn' : id === 'walking' ? '/dog-walking' : `/portal?program=${id}`}>{id === 'online' ? 'Explore online lessons' : id === 'aggression' ? 'Request an assessment' : id === 'walking' ? 'Explore Dog Walking' : 'Choose training'}<span aria-hidden="true">↗</span></Link>
+          <ul>{(id === 'walking' ? [`${money(service.cents)} per dog`, ...detail.features.slice(1)] : detail.features).map(feature => <li key={feature}>{feature}</li>)}</ul><Link className={`button ${id === 'training' ? '' : 'button-ghost'}`} href={id === 'online' ? '/learn' : id === 'walking' ? '/dog-walking' : id === 'aggression' ? '/behavior-assessment' : '/dog-training'}>{id === 'online' ? 'Explore online lessons' : id === 'aggression' ? 'Explore behavior assessments' : id === 'walking' ? 'Explore Dog Walking' : 'Explore dog training'}<span aria-hidden="true">↗</span></Link>
         </article> : null; })}</div>
         <p className="home-price-note">Saving a request does not charge your card. Visits are subject to availability and Bravo’s confirmation.</p>
       </section>
