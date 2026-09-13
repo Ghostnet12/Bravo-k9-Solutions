@@ -7,6 +7,8 @@ import { Notice, formatDate, formatTime } from './ui';
 import { ALL_SERVICES } from '../../shared/catalog';
 import { TRAINER_HOURS } from '../../shared/trainer-schedule';
 import BulkTimes from './BulkTimes';
+import CreditedCalendarDays from './CreditedCalendarDays';
+import { creditedCalendarDates } from '../../shared/day-credits';
 import ScheduleDayGrid from './ScheduleDayGrid';
 
 const trainingIds=ALL_SERVICES.filter(s=>s.includes.includes('training')).map(s=>s.id);
@@ -21,6 +23,8 @@ export default function ScheduleChanges({data,initialMonth,onSaved,onClose}) {
   const [team,setTeam]=useState([]),[chosenTrainer,setChosenTrainer]=useState(user.id),[openWeekends,setOpenWeekends]=useState(true);
   const booking=bookings.find(b=>b._id===bookingId),trainer=trainerChoice(booking)||(isStaff?chosenTrainer:null);
   const canOpen=isStaff && (user.role==='owner'||trainer===user.id);
+  const creditDates = creditedCalendarDates(data.terms, data.dayCredits).filter(date => (!booking?.termStartsAt || at(date, '23:59') >= DateTime.fromISO(booking.termStartsAt)) && (!booking?.termEndsAt || at(date, '00:00') < DateTime.fromISO(booking.termEndsAt)));
+  const credited = new Set(creditDates);
   const original={};
   for(const v of booking?.visits||[]) if(v.service==='training' && at(v.date,v.time)>DateTime.now()) (original[v.date]||=[]).push(v.time);
   const selected=date=>draft[date]??original[date]??[];
@@ -71,9 +75,10 @@ export default function ScheduleChanges({data,initialMonth,onSaved,onClose}) {
       {canOpen&&<label className="check-label"><input type="checkbox" checked={openWeekends} disabled={busy} onChange={e=>setOpenWeekends(e.target.checked)}/>Open the selected weekend times when saving</label>}
       <p className="helper">Times follow the assigned trainer’s working hours. Unavailable times stay visible and are labelled “Reserved” or “Outside trainer hours”. Gold days are selected for editing. Tapping again deselects a date without cancelling its visit. “+” marks a change; “×” marks a cancellation; numbers show saved or drafted visits. {isStaff?'Your note will go to the client and the team.':'Your note will go to all staff, administrators and owners.'}</p>
       {loading&&<p role="status">Checking available times…</p>}
+      <CreditedCalendarDays dates={creditDates} month={month} onMonth={setMonth}/>
       <ScheduleDayGrid month={month} onMonth={setMonth} disabled={busy||loading} onDay={toggleDay} dayState={date=>{
         const times=selected(date),base=original[date]||[],changed=!same(times,base),free=options(date).filter(time=>available(date,time));
-        return {selected:batchDates.includes(date),changed,disabled:!booking||(!times.length&&!base.length&&!free.length),marker:changed?(times.length?'+':'×'):(times.length||''),label:`${times.length} saved or drafted visit${times.length===1?'':'s'}${changed?(times.length?', pending changes':', pending cancellation'):''}`};
+        return {selected:batchDates.includes(date),changed,credited:credited.has(date),disabled:!booking||(!times.length&&!base.length&&!free.length),marker:changed?(times.length?'+':'×'):(times.length||''),label:`${times.length} saved or drafted visit${times.length===1?'':'s'}${changed?(times.length?', pending changes':', pending cancellation'):''}${credited.has(date)?', credited membership day':''}`};
       }}/>
       <div className="batch-date-actions"><button type="button" className="quiet-button" disabled={busy||!batchDates.length} onClick={()=>setBatchDates([])}>Clear date selection</button><button type="button" className="quiet-button" disabled={busy||!batchDates.some(date=>selected(date).length)} onClick={()=>{setDraft(d=>({...d,...Object.fromEntries(batchDates.map(date=>[date,[]]))}));setBatchDates([]);setDay('')}}>Cancel visits on selected dates</button></div>
       <BulkTimes dates={batchDates} options={options} available={available} onApply={applyTime} selectedTimes={selected} disabled={busy||loading}/>

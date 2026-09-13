@@ -29,7 +29,7 @@ export default function MemberTrainingSetup({ person, access }) {
     {data && <>
       <ClientTrainer key={`trainer-${revision}-${month}`} bookings={data.trainingBookings} onSaved={reload} initiallyOpen/>
       <label>Schedule month<input type="month" value={month} onChange={event => { if (event.target.value) setMonth(event.target.value); }}/></label>
-      <SavedScheduleCalendar key={`calendar-${revision}-${month}`} data={data} month={month} reload={reload}/>
+      <SavedScheduleCalendar key={`calendar-${revision}-${month}`} data={data} month={month} onMonth={setMonth} reload={reload}/>
     </>}
     <Link className="inline-link" to={`/schedule?client=${person._id}&month=${month}`}>Open full schedule &amp; PDF</Link>
   </section>;

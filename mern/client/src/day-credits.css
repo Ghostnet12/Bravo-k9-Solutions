@@ -10,3 +10,11 @@
 .staff-day-credits > .membership-day-credits { padding-inline: 0; border: 0; }
 @media (max-width: 420px) { .credit-fields { grid-template-columns: minmax(0, 1fr); gap: 0; } }
 @media print { .membership-day-credits, .staff-day-credits { display: none; } }
+
+.saved-calendar button.credited-day:not(.has-visits) { background: #3b2f17; color: #fff4d6; border: 3px solid #e7c57a; }
+.saved-calendar button.credited-day .credit-day-label { font-size: .5rem; line-height: 1.4; text-transform: uppercase; font-weight: 800; letter-spacing: 0; }
+.edit-calendar button.credited-day:disabled { opacity: 1; border-style: dashed; color: #e5d7b7; }
+.credited-calendar-summary { border-left: 4px solid #e7c57a; padding: .5rem 1rem; margin-block: 1rem; background: #ba9a641a; }
+.credited-calendar-summary p { margin: .5rem 0; }
+.credit-key { background: #3b2f17; border: 3px solid #e7c57a; box-sizing: border-box; }
+@media print { .credited-calendar-summary { display: none; } }

@@ -9,7 +9,7 @@ export default function ScheduleDayGrid({month,onMonth,dayState,onDay,disabled=f
       {Array.from({length:start.weekday%7},(_,i)=><span key={`pad-${i}`}/>)}
       {Array.from({length:start.daysInMonth},(_,i)=>{
         const date=start.plus({days:i}).toISODate(),state=dayState(date);
-        return <button type="button" key={date} disabled={disabled||state.disabled} aria-pressed={!!state.selected} aria-label={`${formatDate(date)}, ${state.label}`} className={`${state.selected?'has-visits':''} ${state.changed?'pending-day':''}`} onClick={()=>onDay(date)}><strong>{i+1}</strong><small>{state.marker||'\u00a0'}</small></button>;
+        return <button type="button" key={date} disabled={disabled||state.disabled} aria-pressed={!!state.selected} aria-label={`${formatDate(date)}, ${state.label}`} className={`${state.selected?'has-visits':''} ${state.changed?'pending-day':''} ${state.credited?'credited-day':''}`} onClick={()=>onDay(date)}><strong>{i+1}</strong><small>{state.marker||'\u00a0'}</small>{state.credited && <small className="credit-day-label">Credit</small>}</button>;
       })}
     </div></>;
 }

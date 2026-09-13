@@ -9,7 +9,7 @@ import './client-services.css';
 import SavedScheduleCalendar from './SavedScheduleCalendar';
 import ClientTrainer from './ClientTrainer';
 import TrainingRecovery from './TrainingRecovery';
-import { isTrainingTerm, remainingDays } from '../../shared/day-credits';
+import { isTrainingTerm, remainingDays, lastCoveredDay } from '../../shared/day-credits';
 export default function SchedulePage() {
   const { user, authReady } = useBravo(), [params, setParams] = useSearchParams();
   const client = params.get('client');
@@ -45,8 +45,8 @@ export default function SchedulePage() {
       <p className="helper">Choose “Add Days and Times” to edit your schedule, or tap a saved date to see its visits. All times are local to Aberdeen.</p>
       {user.role === 'owner' && !data.trainingBookings?.length && <TrainingRecovery client={data.client} onSaved={message=>{setNotice(message);setRevision(n=>n+1)}}/>}
       {['staff','owner'].includes(user.role)&&!!data.trainingBookings?.length&&<ClientTrainer key={`trainer-${revision}`} bookings={data.trainingBookings||[]} onSaved={message=>{setNotice(message);setRevision(n=>n+1)}}/>}
-      {(user.role !== 'owner' || !!data.trainingBookings?.length) && <SavedScheduleCalendar key={`${month}-${revision}`} data={data} month={month} reload={message => { setNotice(message);setRevision(n => n+1); }}/>}
-      {activeTerm && <p className="membership-counter"><strong>{remainingDays(activeTerm.validUntil)} days remaining</strong> · Training membership ends {DateTime.fromISO(activeTerm.validUntil, {zone: 'America/Chicago'}).toFormat('LLL d, yyyy · h:mm a')}.{activeTerm.creditedDays > 0 && <> Includes {activeTerm.creditedDays} credited {activeTerm.creditedDays === 1 ? 'day' : 'days'}.</>}</p>}
+      {(user.role !== 'owner' || !!data.trainingBookings?.length) && <SavedScheduleCalendar key={`${month}-${revision}`} data={data} month={month} onMonth={chooseMonth} reload={message => { setNotice(message);setRevision(n => n+1); }}/>}
+      {activeTerm && <p className="membership-counter"><strong>{remainingDays(activeTerm.validUntil)} days remaining</strong> · Training coverage through {formatDate(lastCoveredDay(activeTerm.validUntil))}. Membership ends {DateTime.fromISO(activeTerm.validUntil, {zone: 'America/Chicago'}).toFormat('LLL d, yyyy · h:mm a')}.{activeTerm.creditedDays > 0 && <> Includes {activeTerm.creditedDays} credited {activeTerm.creditedDays === 1 ? 'day' : 'days'}.</>}</p>}
       <details className="schedule-membership-details"><summary>Membership details</summary>
       {data.firstPaidAt && <div className="membership-payment-start"><p><strong>Membership payment / start:</strong> {DateTime.fromISO(data.firstPaidAt, {zone:'America/Chicago'}).toFormat('LLL d, yyyy · h:mm a')}</p><p>First month: {DateTime.fromISO(data.firstPaidAt, {zone:'America/Chicago'}).toFormat('LLL d, yyyy')} - {DateTime.fromISO(data.firstPaidAt, {zone:'America/Chicago'}).plus({months:1}).toFormat('LLL d, yyyy')}. {Math.max(0, Math.floor(DateTime.now().diff(DateTime.fromISO(data.firstPaidAt), 'days').days))} days since membership began.</p></div>}
       {data.firstTrainingDay && <p>First paid scheduled visit: {formatDate(data.firstTrainingDay)}</p>}
