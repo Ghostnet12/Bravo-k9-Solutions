@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { Booking, User, Subscription, StripeEvent, BillingLock, Lesson } from './models.js';
+import { Booking, User, Subscription, StripeEvent, BillingLock, Lesson, Settings } from './models.js';
 import { connectDb, transaction } from './db.js';
 import { ALL_SERVICES, TRAINING_ADDITIONAL_DOG_CENTS, serviceSelection } from '../shared/catalog.js';
 import { monthTerm } from '../shared/membership-terms.js';
@@ -162,6 +162,8 @@ export async function processStripeEvent(event, stripe) {
         const ids = serviceSelection(booking.serviceIds).filter(service => service.interval === 'month').map(service => service.id);
         let start = new Date(event.created * 1000);
         if (booking.renewalOf) {
+          // A simultaneous day credit must finish before the next month is dated.
+          await Settings.updateOne({ _id: 'schedule' }, { $inc: { revision: 1 } }, { session });
           const previous = await Subscription.findOne({ stripeId: booking.renewalOf, userId: booking.userId }).session(session);
           if (!previous) throw new Error('Renewal membership not found.');
           if (previous.validUntil > start) start = previous.validUntil;

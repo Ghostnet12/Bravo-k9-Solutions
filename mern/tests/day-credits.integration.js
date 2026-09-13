@@ -93,6 +93,17 @@ test('staff day credits extend real membership access and scheduling atomically'
       const next = await Subscription.create({ userId: people.client._id, stripeId: 'next-fixture', renewalOf: term.stripeId, serviceIds: ['training'], status: 'active', validFrom: before.validUntil, validUntil: creditedEnd(before.validUntil, 30) });
       await credit('owner', payload({ expectedEnd: before.validUntil.toISOString() })).expect(409); await Subscription.deleteOne({ _id: next._id });
     });
+    await t.test('renewal payment and a simultaneous credit cannot overlap the extra day', async () => {
+      const before = await Subscription.findById(term._id);
+      await User.updateOne({ _id: people.client._id }, { $set: { stripeCustomerId: 'cus_credit_renewal' } });
+      const renewal = await Booking.create({ userId: people.client._id, requestKey: randomUUID(), renewalOf: term.stripeId, serviceIds: ['training'], dogCount: 2, status: 'requested', paymentStatus: 'unpaid', quote: { monthlyCents: 30000, dueNowCents: 30000 }, stripeSessionId: 'cs_credit_renewal', visits: [] });
+      const event = { id: 'evt_credit_renewal', type: 'checkout.session.completed', created: Math.floor(Date.now() / 1000), data: { object: { id: 'cs_credit_renewal', mode: 'payment', payment_status: 'paid', currency: 'usd', amount_total: 30000, customer: 'cus_credit_renewal', client_reference_id: String(renewal._id), metadata: { app: 'bravo-k9', billing: 'manual-month-v1', userId: String(people.client._id), bookingId: String(renewal._id) } } } };
+      const [response] = await Promise.all([credit('staff', payload({ expectedEnd: before.validUntil.toISOString() })), processStripeEvent(event, {})]);
+      assert.ok([200, 409].includes(response.status));
+      const current = await Subscription.findById(term._id), next = await Subscription.findOne({ bookingId: renewal._id });
+      assert.equal(next.validFrom.toISOString(), current.validUntil.toISOString());
+      assert.equal(current.creditedDays, before.creditedDays + (response.status === 200 ? 1 : 0));
+    });
     await t.test('paid legacy terms retain credited access after a Stripe sync, without charging', async () => {
       const rawEnd = now.plus({ days: 2 }).toJSDate();
       await User.updateOne({ _id: people.other._id }, { $set: { stripeCustomerId: 'cus_fixture' } });
