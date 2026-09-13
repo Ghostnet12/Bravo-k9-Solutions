@@ -80,8 +80,8 @@ test('client services: schedules, notifications, recovery and monthly payments',
       const payload={bookingId:String(b._id),action:'change',original,replacement,note:'Please update my training day.'};
       await call('other','post','/api/client-schedule/visit',payload).expect(404);
       await call('client','post','/api/client-schedule/visit',payload).expect(200);
-      assert.equal(await Slot.exists({_id:`${from}|10:00`}),null);
-      assert.ok(await Slot.exists({_id:`${to}|11:00`}));
+      assert.equal(await Slot.exists({date: from, time: '10:00'}),null);
+      assert.ok(await Slot.exists({date: to, time: '11:00'}));
       assert.equal((await Booking.findById(b._id)).paidAt.getTime(),b.paidAt.getTime());
       await call('client','post','/api/client-schedule/visit',payload).expect(409);
       await call('client','post','/api/client-schedule/visit',{bookingId:String(b._id),action:'cancel',original:replacement,note:'I cannot attend.'}).expect(200);
@@ -123,7 +123,7 @@ test('client services: schedules, notifications, recovery and monthly payments',
       await Slot.create({_id:`${sun}|13:00`,date:sun,time:'13:00',reason:'Fixture closure'});
       await call('staff','post','/api/client-schedule/changes',payload).expect(409);
       assert.equal((await Booking.findById(booking._id)).visits.length,1);
-      assert.ok(await Slot.exists({_id:`${mon}|13:00`,bookingId:booking._id}));
+      assert.ok(await Slot.exists({date: mon, time: '13:00',bookingId:booking._id}));
       assert.equal((await Settings.findById('schedule')).overrides.length,0);
       assert.equal(await TrainerSchedule.countDocuments({}),0);
       await Slot.deleteOne({_id:`${sun}|13:00`});
@@ -132,7 +132,7 @@ test('client services: schedules, notifications, recovery and monthly payments',
       const saved=await Booking.findById(booking._id);
       assert.deepEqual(saved.visits.map(v=>v.date),[sat,sun]);assert.equal(saved.cancelledVisits.length,1);
       assert.equal(saved.paymentStatus,'paid');assert.equal(saved.status,'confirmed');
-      assert.equal(await Slot.exists({_id:`${mon}|13:00`}),null);
+      assert.equal(await Slot.exists({date: mon, time: '13:00'}),null);
       assert.ok(await Notification.exists({userId:users.client._id,staff:false,body:/We are away Monday/}));
       assert.ok(await Notification.exists({staff:true,body:/We are away Monday/}));
       const feed=await call('client','get',`/api/client-schedule?month=${sat.slice(0,7)}`).expect(200);
@@ -147,7 +147,7 @@ test('client services: schedules, notifications, recovery and monthly payments',
       assert.ok(await Notification.exists({staff:true,body:/Please train Tuesday instead/}));
       const tooLate=saturday.plus({months:2}).toISODate();
       await call('owner','post','/api/client-schedule/changes',{...clientChange,revision:changed.updatedAt.toISOString(),additions:[{date:tooLate,time:'10:00'}],removals:[{date:sun,time:'13:00'}]}).expect(400);
-      assert.ok(await Slot.exists({_id:`${sun}|13:00`,bookingId:booking._id}));
+      assert.ok(await Slot.exists({date: sun, time: '13:00',bookingId:booking._id}));
     });
     await t.test('trainer assignment, profile acceptance and schedule names stay consistent', async () => {
       await Settings.updateOne({_id:'schedule'},{$set:{enabled:true,weekdays:[1,2,3,4,5,6,7],hours:['10:00','11:00'],overrides:[]}});

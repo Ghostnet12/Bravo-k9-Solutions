@@ -31,11 +31,11 @@ test('persistent accounts, conflict protection, ownership, staff tools, and bill
   let booking;
   await t.test('simultaneous reservations cannot double book; same request retries safely', async () => {
     const body=payload(); const responses=await Promise.all([post(alice,'/api/bookings',body),post(bob,'/api/bookings',payload())]);
-    assert.deepEqual(responses.map(r=>r.status).sort(),[201,409]); assert.equal(await Slot.countDocuments({_id:`${date}|09:00`}),1);
+    assert.deepEqual(responses.map(r=>r.status).sort(),[201,409]); assert.equal(await Slot.countDocuments({date: date, time: '09:00'}),1);
     const owner = responses[0].status === 201 ? alice : bob; booking=responses.find(r=>r.status===201).body.booking;
     const retry=await post(owner,'/api/bookings',{...payload(),requestKey:booking.requestKey}).expect(201); assert.equal(retry.body.booking._id,booking._id);
     const stranger=owner===alice?bob:alice; await post(stranger,`/api/bookings/${booking._id}/cancel`,{}).expect(404);
-    await post(owner,`/api/bookings/${booking._id}/cancel`,{}).expect(200); assert.equal(await Slot.countDocuments({_id:`${date}|09:00`}),0);
+    await post(owner,`/api/bookings/${booking._id}/cancel`,{}).expect(200); assert.equal(await Slot.countDocuments({date: date, time: '09:00'}),0);
   });
   await t.test('messages persist without leaking account email', async () => {
     await post(alice,'/api/community',{body:'A real saved message',kind:'message'}).expect(201);

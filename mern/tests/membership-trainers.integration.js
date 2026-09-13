@@ -59,18 +59,18 @@ test('backdated onboarding and actual two-trainer assignments persist atomically
       assert.equal(membershipDate(schedule.body.terms[0].validFrom),start);assert.equal(membershipDate(schedule.body.terms[0].validUntil),membershipDate(manualMonthTerm(start).validUntil));assert.equal(schedule.body.trainingBookings.length,1);
       const b=schedule.body.trainingBookings[0];
       await call('david','post','/api/client-schedule/changes',{bookingId:b._id,revision:b.updatedAt,additions:[{date,time:'13:00'}],removals:[],note:'Training month imported; appointment agreed.'}).expect(200);
-      assert.ok(await Slot.exists({_id:`${date}|13:00`,bookingId:b._id}));
+      assert.ok(await Slot.exists({date: date, time: '13:00',bookingId:b._id}));
     });
-    await t.test('editing online Member dates revokes the old window, not training or paid grants',async()=>{
+    await t.test('membership date corrections cannot strand saved training visits',async()=>{
       const path=`/api/admin/memberships/${onboarded}`;
       await call('david','patch',path,{enabled:true,expectedRevision:0,startDate:now.toISODate()}).expect(200);
       assert.ok((await getEntitlements(onboarded)).services.includes('online'));
-      await call('david','patch',path,{enabled:true,expectedRevision:1,startDate:'2026-01-01'}).expect(200);
-      assert.deepEqual((await getEntitlements(onboarded)).services,['training']);
+      await call('david','patch',path,{enabled:true,expectedRevision:1,startDate:'2026-01-01'}).expect(409);
+      assert.deepEqual((await getEntitlements(onboarded)).services.sort(),['online','training']);
       assert.equal(await Subscription.countDocuments({userId:onboarded,serviceIds:'online',status:'active'}),1);
-      await call('david','patch',path,{enabled:false,expectedRevision:2}).expect(200);
+      await call('david','patch',path,{enabled:false,expectedRevision:1}).expect(200);
       assert.equal(await Subscription.countDocuments({userId:onboarded,serviceIds:'training',status:'active'}),1);
-      await call('david','patch',path,{enabled:true,expectedRevision:2,startDate:now.toISODate()}).expect(409);
+      await call('david','patch',path,{enabled:true,expectedRevision:1,startDate:now.toISODate()}).expect(409);
     });
     await t.test('third option is based on two real active accounts, not a dummy staff user',async()=>{
       const r=await call('client','get','/api/trainers').expect(200);
@@ -113,14 +113,14 @@ test('backdated onboarding and actual two-trainer assignments persist atomically
       const full=await Booking.create({userId:people.other._id,requestKey:randomUUID(),serviceIds:['training'],dogCount:4,staffId:people.ashley._id,status:'confirmed',visits:[],quote:quote(['training'])});
       const tomorrow=now.plus({days:4}).toISODate();
       const r=await call('admin','post','/api/admin/bookings',{requestKey:randomUUID(),userId:onboarded,staffId:JOINT_TRAINER_ID,serviceIds:['training'],dogCount:1,dogName:'Waiting dog',phone:'6055550100',address:'Isolated test address',visits:[{date:tomorrow,time:'11:00',service:'training'}]}).expect(201);
-      const b=r.body.booking;assert.equal(b.status,'waitlisted');assert.deepEqual(b.requestedStaffIds,ids);assert.deepEqual(b.staffIds,[]);assert.equal(await Slot.exists({_id:`${tomorrow}|11:00`}),null);
+      const b=r.body.booking;assert.equal(b.status,'waitlisted');assert.deepEqual(b.requestedStaffIds,ids);assert.deepEqual(b.staffIds,[]);assert.equal(await Slot.exists({date: tomorrow, time: '11:00'}),null);
       await call('admin','post',`/api/admin/bookings/${b._id}/accept-client`,{staffId:JOINT_TRAINER_ID,revision:b.updatedAt}).expect(409);
       await Booking.deleteOne({_id:full._id});
       await promoteTrainerWaitlist(ids[1]);
       const promoted=await Booking.findById(b._id);
       assert.equal(promoted.status,'requested');assert.deepEqual(promoted.staffIds.map(String),ids);
       assert.equal(promoted.trainerAcceptanceRequired,true);
-      assert.ok(await Slot.exists({_id:`${tomorrow}|11:00`,bookingId:b._id}));
+      assert.ok(await Slot.exists({date: tomorrow, time: '11:00',bookingId:b._id}));
     });
   }finally{await mongoose.disconnect();await replica.stop()}
 });

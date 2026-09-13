@@ -29,20 +29,28 @@ export default function ScheduleChanges({data,initialMonth,onSaved,onClose}) {
   useEffect(()=>{
     let current=true;setLoading(true);setHours({});setError('');
     const start=DateTime.fromISO(`${month}-01`);
-    api(`/availability?from=${start.toISODate()}&to=${start.endOf('month').toISODate()}${trainer?`&staffId=${trainer}`:''}`).then(r=>{if(current)setHours(Object.fromEntries((r.days||[]).map(d=>[d.date,d.slots])))}).catch(e=>{if(current)setError(e.message)}).finally(()=>{if(current)setLoading(false)});
-    return()=>{current=false};
+    const refresh=()=>api(`/availability?from=${start.toISODate()}&to=${start.endOf('month').toISODate()}${trainer?`&staffId=${trainer}`:''}`).then(r=>{if(current)setHours(Object.fromEntries((r.days||[]).map(d=>[d.date,d])))}).catch(e=>{if(current)setError(e.message)}).finally(()=>{if(current)setLoading(false)});
+    refresh();
+    const onFocus=()=>{if(!document.hidden)refresh();};
+    const timer=setInterval(onFocus,20000);window.addEventListener('focus',onFocus);
+    return()=>{current=false;clearInterval(timer);window.removeEventListener('focus',onFocus)};
   },[month,trainer]);
   function paid(date,time) {const instant=at(date,time);return (!booking?.termStartsAt||instant>=DateTime.fromISO(booking.termStartsAt))&&(!booking?.termEndsAt||instant<DateTime.fromISO(booking.termEndsAt))&&instant>DateTime.now() && instant.diffNow('days').days<=92 && data.terms.some(t=>['active','trialing','canceled'].includes(t.status)&&t.serviceIds.some(id=>trainingIds.includes(id))&&(t.dogCount||1)>=(booking?.dogCount||1)&&t.validFrom&&instant>=DateTime.fromISO(t.validFrom)&&instant<DateTime.fromISO(t.validUntil));}
   function options(date) {
     const weekend=at(date,'12:00').weekday>=6;
-    const offered=canOpen&&openWeekends&&weekend?TRAINER_HOURS:(hours[date]||[]);
+    const offered=canOpen&&openWeekends&&weekend?TRAINER_HOURS:(hours[date]?.workingHours||hours[date]?.slots||[]);
     return [...new Set([...(original[date]||[]),...offered.filter(t=>paid(date,t))])].sort();
+  }
+  function available(date,time) {
+    if(original[date]?.includes(time)) return true;
+    if(hours[date]?.reservedTimes?.includes(time)) return false;
+    return !!hours[date]?.slots?.includes(time) || (canOpen && openWeekends && at(date,'12:00').weekday>=6);
   }
   function toggleDay(date) {
     setDay(date);setError('');
     if(selected(date).length) setDraft(d=>({...d,[date]:[]}));
     else {
-      const available=options(date),usual=booking?.visits.find(v=>v.service==='training')?.time;
+      const available=options(date).filter(time=>!hours[date]?.reservedTimes?.includes(time)),usual=booking?.visits.find(v=>v.service==='training')?.time;
       const restored=original[date]?.length?original[date]:[available.includes(usual)?usual:available[0]].filter(Boolean);
       setDraft(d=>({...d,[date]:restored}));
     }
@@ -56,13 +64,13 @@ export default function ScheduleChanges({data,initialMonth,onSaved,onClose}) {
       <label>Training request<select aria-label="Training request" value={bookingId} disabled={busy||dirty} onChange={e=>{setBookingId(e.target.value);setDraft({});setDay('')}}>{bookings.map(b=><option key={b._id} value={b._id}>{b.dogName} · #{b._id.slice(-6)}</option>)}</select></label>
       {isStaff&&!booking?.staffId&&!booking?.requestedStaffId&&<label>Trainer<select aria-label="Trainer" value={chosenTrainer} disabled={busy||dirty} onChange={e=>setChosenTrainer(e.target.value)}>{user.role==='owner'?team.map(t=><option key={t.id} value={t.id} disabled={t.disabled}>{t.name}</option>):<option value={user.id}>{user.name}</option>}</select></label>}
       {canOpen&&<label className="check-label"><input type="checkbox" checked={openWeekends} disabled={busy} onChange={e=>setOpenWeekends(e.target.checked)}/>Open the selected weekend times when saving</label>}
-      <p className="helper">Gold days are selected. “+” marks an addition; “×” marks a cancellation. {isStaff?'Your note will go to the client and the team.':'Your note will go to all staff, administrators and owners.'}</p>
+      <p className="helper">Times follow the assigned trainer’s working hours. Reserved times stay visible and cannot be selected. Gold days are selected. “+” marks an addition; “×” marks a cancellation. {isStaff?'Your note will go to the client and the team.':'Your note will go to all staff, administrators and owners.'}</p>
       {loading&&<p role="status">Checking available times…</p>}
       <ScheduleDayGrid month={month} onMonth={setMonth} disabled={busy||loading} onDay={toggleDay} dayState={date=>{
         const times=selected(date),base=original[date]||[],changed=!same(times,base),available=options(date);
         return {selected:times.length>0,changed,disabled:!booking||(!times.length&&!base.length&&!available.length),marker:changed?(times.length?'+':'×'):(times.length||''),label:`${times.length} selected visit${times.length===1?'':'s'}${changed?(times.length?', pending changes':', pending cancellation'):''}`};
       }}/>
-      {day&&<fieldset disabled={busy} className="calendar-time-options"><legend>Times for {formatDate(day)}</legend>{!selected(day).length&&<p>This day is off in your draft. Tap it again to restore it, or choose a time below.</p>}<div className="check-grid">{options(day).map(time=><label className="check-label" key={time}><input type="checkbox" checked={selected(day).includes(time)} onChange={()=>setDraft(d=>({...d,[day]:selected(day).includes(time)?selected(day).filter(t=>t!==time):[...selected(day),time].sort()}))}/>{formatTime(time)}</label>)}</div></fieldset>}
+      {day&&<fieldset disabled={busy} className="calendar-time-options"><legend>Times for {formatDate(day)}</legend>{!selected(day).length&&<p>This day is off in your draft. Tap it again to restore it, or choose a time below.</p>}<div className="check-grid">{options(day).map(time=><label className="check-label" key={time}><input type="checkbox" disabled={!selected(day).includes(time)&&!available(day,time)} checked={selected(day).includes(time)} onChange={()=>setDraft(d=>({...d,[day]:selected(day).includes(time)?selected(day).filter(t=>t!==time):[...selected(day),time].sort()}))}/>{formatTime(time)}{!available(day,time)&&!selected(day).includes(time)&&' · Reserved'}</label>)}</div></fieldset>}
       <div className="schedule-change-summary" role="status"><strong>{additions.length} to add · {removals.length} to cancel</strong>{dirty&&<ul>{Object.keys(draft).sort().filter(date=>!same(selected(date),original[date]||[])).map(date=><li key={date}>{formatDate(date)}: {selected(date).length?selected(date).map(formatTime).join(', '):'Day off'}</li>)}</ul>}</div>
       <label>{isStaff?'Note to the client':'Note to Bravo'}<textarea aria-label={isStaff?'Note to the client':'Note to Bravo'} required maxLength={1200} disabled={busy} value={note} onChange={e=>setNote(e.target.value)}/></label>
       <p className="helper">Changes within 24 hours follow Bravo’s appointment policy. Cancelling visits does not refund payment or extend the paid month.</p>

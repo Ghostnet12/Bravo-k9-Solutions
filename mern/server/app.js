@@ -1,3 +1,4 @@
+import { reserveVisits, assertVisitsFree } from './reservations.js';
 import express from 'express';
 import { trainerSelectionInput, resolveTrainerIds } from './trainer-selection.js';
 import { trainerOptions, bookingTrainerIds } from '../shared/trainers.js';
@@ -10,7 +11,7 @@ import { access } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { connectDb, transaction } from './db.js';
-import { User, Session, Booking, Slot, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Lesson, BillingLock, MediaUpload, MediaChunk } from './models.js';
+import { User, Session, Booking, Slot, Subscription, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Lesson, BillingLock, MediaUpload, MediaChunk } from './models.js';
 import { hashPassword, verifyPassword, issueSession, identify, requireUser, requireStaff, requireOwner, signOut, publicUser, publicRole, isPrimaryOwner, sameOrigin, rateLimit } from './auth.js';
 import { createBooking, getAvailability, getEntitlements, cancelBooking, trainerCapacity, assignTrainer, TRAINER_DOG_LIMIT } from './bookings.js';
 import { stripeClient, stripeMode, stripeWebhook, checkout, refundBooking } from './payments.js';
@@ -18,7 +19,7 @@ import { sendUploadedMedia, CHUNK_SIZE, MEDIA_LIMITS, mediaBytes, validMediaHead
 import { LESSON_PREVIEWS, privatePath, protectedLesson } from './lessons.js';
 import { DEFAULT_SCHEDULE, HOURS, autoSchedule, validateVisits, availability, dateTime } from './scheduling.js';
 import { PAGE_METADATA } from '../shared/page-metadata.js';
-import { SERVICES, quote, rescheduledQuote } from '../shared/catalog.js';
+import { SERVICES, ALL_SERVICES, quote, rescheduledQuote } from '../shared/catalog.js';
 import { effectiveServices } from './services.js';
 import { clientError } from './errors.js';
 import { chatFilter, visibleInbox, resetChat } from './chat-state.js';
@@ -144,8 +145,16 @@ app.patch('/api/bookings/:id/visits', requireUser, async (req, res) => {
     await checkTrainerVisits(bookingTrainerIds(booking), visits, settings, session);
     const open = dates.length ? availability({ from: dates[0], to: dates.at(-1), settings }) : [];
     if (visits.some(v => !open.find(d => d.date === v.date)?.slots.includes(v.time))) throw new Error('Selected dates are outside current availability.');
+    if (['paid','covered'].includes(booking.paymentStatus) && visits.some(v => v.service === 'training')) {
+      const trainingIds = ALL_SERVICES.filter(s => s.includes.includes('training')).map(s => s.id);
+      const terms = await Subscription.find({ userId: booking.userId, serviceIds: { $in: trainingIds }, status: { $in: ['active','trialing','canceled'] }, dogCount: { $gte: booking.dogCount || 1 } }).session(session).lean();
+      for (const visit of visits.filter(v => v.service === 'training')) {
+        const at = dateTime(visit.date, visit.time).toJSDate();
+        if ((booking.termStartsAt && at < booking.termStartsAt) || (booking.termEndsAt && at >= booking.termEndsAt) || !terms.some(t => t.validFrom && at >= t.validFrom && at < t.validUntil)) throw Object.assign(new Error('Choose training visits within this request’s covered membership dates.'), { status: 400 });
+      }
+    }
     await Slot.deleteMany({ bookingId: booking._id }, { session });
-    if (visits.length) await Slot.insertMany(visits.map(v => ({ _id: `${v.date}|${v.time}`, bookingId: booking._id, date: v.date, time: v.time })), { session });
+    if (visits.length) await reserveVisits(booking._id, visits, bookingTrainerIds(booking), session);
     const result = await Booking.updateOne({ _id: booking._id, status: { $ne: 'cancelled' }, checkoutStarting: { $ne: true }, checkoutParams: { $exists: false }, stripeSessionId: { $exists: false }, updatedAt: booking.updatedAt }, { $set: { visits, quote: rescheduledQuote(booking, visits), status: 'requested' } }, { session });
     if (!result.matchedCount) throw new Error('This booking changed while you were editing it. Refresh your account.');
   });
@@ -328,9 +337,14 @@ app.put('/api/admin/schedule', requireUser, requireStaff, async (req, res) => {
 app.post('/api/admin/blocks', requireUser, requireStaff, async (req, res) => {
   const data = z.object({ date: z.string(), time: z.enum(HOURS), reason: z.string().trim().min(1).max(200) }).parse(req.body);
   dateTime(data.date, data.time);
-  await Slot.create({ _id: `${data.date}|${data.time}`, ...data }); res.status(201).json({ ok: true });
+  await transaction(async session => {
+    await Settings.updateOne({ _id: 'schedule' }, { $inc: { revision: 1 } }, { session });
+    await assertVisitsFree([data], [], session);
+    await Slot.create([{ _id: `${data.date}|${data.time}`, ...data }], { session });
+  });
+  res.status(201).json({ ok: true });
 });
-app.delete('/api/admin/blocks/:id', requireUser, requireStaff, async (req, res) => { await Slot.deleteOne({ _id: req.params.id, bookingId: { $exists: false } }); res.json({ ok: true }); });
+app.delete('/api/admin/blocks/:id', requireUser, requireStaff, async (req, res) => { await transaction(async session => { await Settings.updateOne({ _id: 'schedule' }, { $inc: { revision: 1 } }, { session }); await Slot.deleteOne({ _id: req.params.id, bookingId: { $exists: false } }, { session }); }); res.json({ ok: true }); });
 app.patch('/api/admin/bookings/:id', requireUser, requireStaff, async (req, res) => {
   const booking = await ownedBooking(req);
   const status = z.enum(['confirmed', 'cancelled']).parse(req.body.status);

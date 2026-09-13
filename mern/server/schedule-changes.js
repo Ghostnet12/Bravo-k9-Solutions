@@ -1,3 +1,4 @@
+import { reserveVisits, releaseVisit } from './reservations.js';
 import { randomUUID } from 'node:crypto';
 import { trainerSelectionInput, resolveTrainerIds } from './trainer-selection.js';
 import { assignedTrainerIds, bookingTrainerIds } from '../shared/trainers.js';
@@ -71,11 +72,8 @@ export async function saveScheduleChanges(req,res) {
     }
     for(const v of data.additions) if(!availability({from:v.date,to:v.date,settings:team.toObject()})[0].slots.includes(v.time)) throw fail(`${v.date} at ${v.time} is closed. No changes were saved.`,409);
     await checkTrainerVisits(trainers,data.additions,team.toObject(),session);
-    for(const v of data.removals) await Slot.deleteOne({_id:key(v),bookingId:booking._id},{session});
-    for(const v of data.additions) {
-      if(await Slot.exists({_id:key(v)}).session(session)) throw fail(`${v.date} at ${v.time} was taken or blocked. No changes were saved.`,409);
-      await Slot.create([{_id:key(v),date:v.date,time:v.time,bookingId:booking._id}],{session});
-    }
+    for(const v of data.removals) await releaseVisit(booking._id,v,session);
+    await reserveVisits(booking._id,data.additions,trainers,session);
     booking.cancelledVisits.push(...data.removals.map(v=>({...v,service:'training'})));
     booking.visits=[...remaining,...data.additions.map(v=>({...v,service:'training'}))].sort((a,b)=>key(a).localeCompare(key(b)));
     if(data.additions.length && !isStaff) booking.status='requested';

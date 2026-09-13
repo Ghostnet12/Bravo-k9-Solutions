@@ -1,3 +1,4 @@
+import { reserveVisits } from './reservations.js';
 import { randomUUID } from 'node:crypto';
 import { bookingTrainerIds } from '../shared/trainers.js';
 import { z } from 'zod';
@@ -54,9 +55,7 @@ export async function addTrainingVisit(req,res) {
     if(!await Subscription.exists({userId:b.userId,serviceIds:{$in:trainingIds},status:{$in:['active','trialing','canceled']},validFrom:{$lte:when.toJSDate()},validUntil:{$gt:when.toJSDate()},dogCount:{$gte:b.dogCount||1}}).session(session)) throw fail('This session must fall within the client’s paid training month.');
     if(!availability({from:date,to:date,settings:team})[0].slots.includes(time)) throw fail('Open these days and times before adding a visit.');
     await checkTrainerVisits(bookingTrainerIds(b),[{date,time,service:'training'}],team,session);
-    const key=`${date}|${time}`;
-    if(await Slot.exists({_id:key}).session(session)) throw fail('This time is already reserved or blocked.',409);
-    await Slot.create([{_id:key,date,time,bookingId:b._id}],{session});
+    await reserveVisits(b._id,[{date,time}],bookingTrainerIds(b),session);
     b.visits.push({date,time,service:'training'});b.visits.sort((a,b)=>`${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));await b.save({session});
     const body=`Bravo added a training visit on ${date} at ${time} for ${b.dogName}.`;
     const eventId=randomUUID();

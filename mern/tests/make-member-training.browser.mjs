@@ -53,7 +53,7 @@ try {
             booking = { ...booking, staffId: david.id, staffIds: [david.id, ashley.id], trainerAcceptanceRequired: true }; json = { ok: true };
           } else if (path === '/api/availability') {
             const day = DateTime.fromISO(`${now.toFormat('yyyy-MM')}-01`);
-            json = { enabled: true, days: Array.from({ length: day.daysInMonth }, (_, i) => ({ date: day.plus({ days: i }).toISODate(), slots: ['10:00', '11:00'] })) };
+            json = { enabled: true, days: Array.from({ length: day.daysInMonth }, (_, i) => ({ date: day.plus({ days: i }).toISODate(), slots: ['09:00', '10:00', '11:00', '14:00'], workingHours: ['09:00', '10:00', '11:00', '12:00', '14:00'], reservedTimes: ['12:00'] })) };
           } else if (path === '/api/client-schedule/changes') {
             calendarBody = route.request().postDataJSON(); booking = { ...booking, visits: calendarBody.additions.map(v => ({ ...v, service: 'training' })) }; json = { ok: true, message: 'Schedule saved. The client and Bravo team have been notified.' };
           } else if (path === '/api/client-schedule') json = { client: { id: client._id, name: client.name }, month: url.searchParams.get('month'), terms: term ? [term] : [], visits: (booking?.visits || []).map(v => ({ ...v, bookingId, dogName: 'Gunner', status: 'requested', paymentStatus: 'covered', trainer: 'David and Ashley' })), trainingBookings: booking ? [booking] : [] };
@@ -76,10 +76,15 @@ try {
           await setup.getByText('Checking available times…', { exact: true }).waitFor({ state: 'hidden' });
           const available = setup.locator('.edit-calendar button:not([disabled])');
           assert.ok(await available.count() >= 2); await available.nth(0).click(); await available.nth(1).click();
+          const ten = setup.getByRole('checkbox', { name: '10:00 AM', exact: true });
+          assert.equal(await ten.isEnabled(), true);
+          assert.equal(await setup.getByRole('checkbox', { name: /12:00 PM.*Reserved/ }).isDisabled(), true);
+          await setup.getByRole('checkbox', { name: '9:00 AM', exact: true }).uncheck();
+          await ten.check();
           await setup.getByLabel('Note to the client', { exact: true }).fill('Training days confirmed with the client.');
           await setup.getByRole('button', { name: 'Save changes', exact: true }).click();
           await setup.getByText('Schedule saved. The client and Bravo team have been notified.', { exact: true }).waitFor();
-          assert.equal(calendarBody.bookingId, bookingId); assert.equal(calendarBody.additions.length, 2);
+          assert.equal(calendarBody.bookingId, bookingId); assert.equal(calendarBody.additions.length, 2); assert.ok(calendarBody.additions.some(v => v.time === '10:00'));
           await setup.locator('.saved-calendar button.has-visits').first().waitFor();
           assert.equal(await setup.locator('.saved-calendar button.has-visits').count(), 2);
           await page.reload(); await page.locator('.owner-person > summary').click();

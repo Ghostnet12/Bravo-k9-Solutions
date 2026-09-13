@@ -40,7 +40,9 @@ test('Make Member connects existing clients to covered training and the shared c
       assert.equal(await Booking.countDocuments(), 0); assert.equal(await Subscription.countDocuments(), 0);
     });
     await t.test('online-only existing member gets one covered training request, exact dates and dogs', async () => {
-      await call('admin', 'patch', endpoint('client'), { enabled: true, expectedRevision: 0, startDate: start }).expect(200);
+      const oldTerm = manualMonthTerm(start);
+      await MemberAccess.create({ _id: people.client._id, enabled: true, revision: 1, startsAt: oldTerm.validFrom, endsAt: oldTerm.validUntil });
+      await Subscription.create({ userId: people.client._id, stripeId: 'legacy-client-online', serviceIds: ['online'], source: 'grant', status: 'active', ...oldTerm });
       const result = await save('admin', 'client', 1).expect(200); bookingId = result.body.membership.trainingBookingId;
       const booking = await Booking.findById(bookingId), term = await Subscription.findOne({ bookingId });
       assert.equal(booking.paymentStatus, 'covered'); assert.equal(booking.status, 'requested'); assert.equal(booking.dogCount, 2); assert.equal(booking.visits.length, 0);
@@ -60,7 +62,7 @@ test('Make Member connects existing clients to covered training and the shared c
       const additions = [{ date: saturday.toISODate(), time: '10:00' }, { date: sunday.toISODate(), time: '11:00' }];
       await call('admin', 'post', '/api/client-schedule/changes', { bookingId, revision: booking.updatedAt.toISOString(), additions, removals: [], note: 'Agreed training days.', openWeekends: true }).expect(200);
       for (const visit of additions) {
-        assert.ok(await Slot.exists({ _id: `${visit.date}|${visit.time}`, bookingId }));
+        assert.ok(await Slot.exists({date: visit.date, time: visit.time, bookingId }));
         const schedule = await call('client', 'get', `/api/client-schedule?month=${visit.date.slice(0, 7)}`).expect(200);
         assert.ok(schedule.body.visits.some(v => v.date === visit.date && v.time === visit.time && v.trainer === 'David and Ashley'));
       }
@@ -90,7 +92,7 @@ test('Make Member connects existing clients to covered training and the shared c
       await Subscription.create({ userId: people.client._id, stripeId: 'paid-later-fixture', serviceIds: ['training'], dogCount: 2, status: 'active', ...manualMonthTerm(later.toISODate()) });
       const booking = await Booking.findById(bookingId);
       await call('admin', 'post', '/api/client-schedule/changes', { bookingId, revision: booking.updatedAt.toISOString(), additions: [{ date: later.toISODate(), time: '13:00' }], removals: [], note: 'Outside original term.' }).expect(400);
-      assert.equal(await Slot.exists({ _id: `${later.toISODate()}|13:00` }), null);
+      assert.equal(await Slot.exists({date: later.toISODate(), time: '13:00' }), null);
     });
     await t.test('future and historical months stay inactive outside their exact window', async () => {
       for (const [key, date] of [['future', now.plus({ months: 2 }).toISODate()], ['past', '2026-01-01']]) {
@@ -111,7 +113,9 @@ test('Make Member connects existing clients to covered training and the shared c
     await t.test('legacy online-only schedule can restore training without changing its saved window or online grants', async () => {
       const legacy = await User.create({ name: 'Legacy member', role: 'member', email: 'legacy@example.test', passwordHash: 'fixture-only' });
       const path = `/api/admin/memberships/${legacy._id}`;
-      await call('admin', 'patch', path, { enabled: true, expectedRevision: 0, startDate: '2026-08-24' }).expect(200);
+      const oldTerm = manualMonthTerm('2026-08-24');
+      await MemberAccess.create({ _id: legacy._id, enabled: true, revision: 1, startsAt: oldTerm.validFrom, endsAt: oldTerm.validUntil });
+      await Subscription.create({ userId: legacy._id, stripeId: 'legacy-recovery-online', serviceIds: ['online'], source: 'grant', status: 'active', ...oldTerm });
       const before = await Subscription.find({ userId: legacy._id }).lean();
       const dates = await MemberAccess.findById(legacy._id).lean();
       assert.equal(await Booking.countDocuments({ userId: legacy._id }), 0);

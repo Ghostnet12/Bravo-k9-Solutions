@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { occupiedTimes, reserveVisits, assertVisitsFree } from './reservations.js';
 import { randomUUID } from 'node:crypto';
 import { trainerSelectionInput, resolveTrainerIds } from './trainer-selection.js';
 import { assignedTrainerIds, requestedTrainerIds, acceptedTrainerIds } from '../shared/trainers.js';
@@ -55,8 +56,9 @@ export async function getAvailability(from, to, staffId = null) {
   const trainerIds = await resolveTrainerIds(staffId);
   dateRange(from, to); // Validate bounded dates before issuing a database range query.
   const settings = await Settings.findById('schedule').lean();
-  const slots = await Slot.find({ date: { $gte: from, $lte: to } }, { _id: 1 }).lean();
-  return { days: await filterTrainerAvailability(availability({ from, to, settings, occupied: slots.map(s => s._id) }), trainerIds, settings), enabled: settings.enabled };
+  const occupied = new Set(await occupiedTimes({ from, to, trainerIds }));
+  const working = await filterTrainerAvailability(availability({ from, to, settings }), trainerIds, settings);
+  return { days: working.map(day => ({ ...day, workingHours: day.slots, slots: day.slots.filter(time => !occupied.has(`${day.date}|${time}`)), reservedTimes: [...occupied].filter(key => key.startsWith(`${day.date}|`)).map(key => key.split('|')[1]) })), enabled: settings.enabled };
 }
 export async function createBooking(userId, payload, assignment = {}) {
   const data = bookingInput.parse(payload);
@@ -92,7 +94,7 @@ export async function createBooking(userId, payload, assignment = {}) {
         if (data.visits.some(v => !open.find(d => d.date === v.date)?.slots.includes(v.time))) throw Object.assign(new Error('One or more visits are no longer available. Refresh the schedule.'), { status: 409 });
       }
       [booking] = await Booking.create([{ ...data, userId, staffId: waitlisted ? null : chosenTrainerId, staffIds: waitlisted ? [] : chosenTrainerIds, requestedStaffId: chosenTrainerId, requestedStaffIds: chosenTrainerIds, trainerAcceptanceRequired: chosenTrainerIds.length > 1, createdBy: assignment.createdBy || userId, status: waitlisted ? 'waitlisted' : 'requested', waitlistedAt: waitlisted ? new Date() : undefined, quote: quote(data.serviceIds, data.visits, { dogCount: data.dogCount }, catalog), paymentStatus: covered ? 'covered' : 'unpaid' }], { session });
-      if (data.visits.length && !waitlisted) await Slot.insertMany(data.visits.map(v => ({ _id: `${v.date}|${v.time}`, date: v.date, time: v.time, bookingId: booking._id })), { session });
+      if (data.visits.length && !waitlisted) await reserveVisits(booking._id, data.visits, chosenTrainerIds, session);
     });
   } catch (error) {
     if (error.code === 11000) {
@@ -122,12 +124,12 @@ export async function assignTrainer(booking, selection, options = {}) {
       const capacity = await trainerCapacity(trainerId, { session, excludeUserId: booking.userId });
       if (capacity.activeDogs + (booking.dogCount || 1) > TRAINER_DOG_LIMIT) throw Object.assign(new Error('One of the selected trainers is at the five-dog limit. Keep this request on the waiting list or choose another trainer.'), { status: 409 });
     }
+    await assertVisitsFree(booking.visits, trainerIds, session, booking._id);
     if (trainerIds.length && booking.status === 'waitlisted' && booking.visits.length) {
       const dates = booking.visits.map(visit => visit.date).sort();
-      const occupied = await Slot.find({ date: { $gte: dates[0], $lte: dates.at(-1) } }, { _id: 1 }).session(session).lean();
-      const open = availability({ from: dates[0], to: dates.at(-1), settings, occupied: occupied.map(slot => slot._id) });
+      const open = availability({ from: dates[0], to: dates.at(-1), settings });
       if (booking.visits.some(visit => !open.find(day => day.date === visit.date)?.slots.includes(visit.time))) throw Object.assign(new Error('This waitlisted client’s preferred times are no longer open. Choose new dates before activating the request.'), { status: 409 });
-      await Slot.insertMany(booking.visits.map(visit => ({ _id: `${visit.date}|${visit.time}`, date: visit.date, time: visit.time, bookingId: booking._id })), { session });
+      await reserveVisits(booking._id, booking.visits, trainerIds, session);
     }
     const result = await Booking.updateOne({ _id: booking._id, status: { $ne: 'cancelled' }, ...((options.expectedUpdatedAt || booking.updatedAt) ? { updatedAt: options.expectedUpdatedAt || booking.updatedAt } : {}) }, {
       $set: { staffId: trainerIds[0] || null, staffIds: trainerIds, requestedStaffId: trainerIds[0] || null, requestedStaffIds: trainerIds, ...acceptance, status: trainerIds.length && booking.status === 'waitlisted' ? 'requested' : booking.status },

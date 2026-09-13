@@ -1,3 +1,4 @@
+import { reserveVisits, releaseVisit } from './reservations.js';
 import express from 'express';
 import { bookingTrainerIds, trainerChoice, scheduledTrainerLabel } from '../shared/trainers.js';
 import cookieParser from 'cookie-parser';
@@ -87,15 +88,14 @@ app.post('/api/client-schedule/visit', ...session, requireUser, ...write, rateLi
           if (!terms.some(t => t.validFrom && when.toJSDate() >= t.validFrom && when.toJSDate() < t.validUntil)) throw fail('Choose a date within your paid membership month.', 400);
         }
         if (booking.visits.some(v => v.date === next.date && v.time === next.time)) throw fail('You already have a visit at that time.', 409);
-        if (await Slot.exists({ _id: `${next.date}|${next.time}` }).session(session)) throw fail('This time was just taken. Choose another.', 409);
-        await Slot.create([{ _id: `${next.date}|${next.time}`, date: next.date, time: next.time, bookingId: booking._id }], { session });
+        await reserveVisits(booking._id, [next], bookingTrainerIds(booking), session);
         booking.visits = booking.visits.map(v => same(v) ? next : v);
         booking.status = 'requested';
       } else {
         booking.cancelledVisits.push(input.original);
         booking.visits = booking.visits.filter(v => !same(v));
       }
-      await Slot.deleteOne({ _id: `${input.original.date}|${input.original.time}`, bookingId: booking._id }, { session });
+      await releaseVisit(booking._id, input.original, session);
       await booking.save({ session });
     }
     const action = input.action === 'note' ? 'Note about' : input.action === 'cancel' ? 'Cancelled' : 'Requested a change to';

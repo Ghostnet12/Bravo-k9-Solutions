@@ -54,16 +54,16 @@ test('Member activation for existing customers (isolated MongoDB)', { timeout: 1
       await request(app).patch(endpoint('client')).set('Cookie', cookies.owner).set('Origin', 'https://unrelated.example').send({ enabled: true, expectedRevision: 0 }).expect(403);
       await call('owner', 'patch', '/api/admin/memberships/not-an-id', { enabled: true, expectedRevision: 0 }).expect(400);
     });
-    await t.test('owner turns an existing client into a Member without role, billing or booking changes', async () => {
+    await t.test('owner makes a full Member with covered training without a charge or work permissions', async () => {
       const response = await grant('owner', 'client', true, 0).expect(200);
       assert.equal(response.body.membership.manual, true);
       const me = await call('client', 'get', '/api/auth/me').expect(200);
       assert.deepEqual(me.body.membership, { active: true, manual: true, onlineAccess: true });
-      assert.equal(me.body.user.role, 'member'); assert.deepEqual(me.body.services, ['online']); assert.equal(me.body.subscriptions[0].source, 'grant'); assert.ok(new Date(me.body.subscriptions[0].validUntil) > new Date());
+      assert.equal(me.body.user.role, 'member'); assert.deepEqual(me.body.services.sort(), ['online', 'training']); assert.equal(me.body.subscriptions[0].source, 'grant'); assert.ok(new Date(me.body.subscriptions[0].validUntil) > new Date());
       const entitlement = await getEntitlements(users.client._id);
-      assert.equal(bookingCoveredByEntitlements(['training'], 1, entitlement), false);
+      assert.equal(bookingCoveredByEntitlements(['training'], 1, entitlement), true);
       assert.equal(bookingCoveredByEntitlements(['online'], 1, entitlement), true);
-      assert.equal(await Subscription.countDocuments({ source: { $ne: 'grant' } }), 0); assert.equal(await Booking.countDocuments(), 0);
+      assert.equal(await Subscription.countDocuments({ source: { $ne: 'grant' } }), 0); assert.equal(await Booking.countDocuments(), 1); assert.equal((await Booking.findOne()).paymentStatus, 'covered');
       const list = await call('administrator', 'get', `/api/admin/memberships?ids=${users.client._id}`).expect(200);
       assert.equal(list.body.memberships[String(users.client._id)].manual, true);
     });
@@ -80,7 +80,7 @@ test('Member activation for existing customers (isolated MongoDB)', { timeout: 1
     await t.test('administrator can revoke access immediately; stale changes fail', async () => {
       await grant('administrator', 'client', false, 0).expect(409);
       await grant('administrator', 'client', false, 1).expect(200);
-      const me = await call('client', 'get', '/api/auth/me').expect(200); assert.equal(me.body.membership.active, false);
+      const me = await call('client', 'get', '/api/auth/me').expect(200); assert.equal(me.body.membership.onlineAccess, false); assert.equal(me.body.membership.active, true);
       for (const type of ['video', 'captions', 'transcript']) await call('client', 'get', `/api/lessons/published-test/${type}?manualMember=true`).expect(403);
       await grant('administrator', 'client', true, 2).expect(200);
       assert.equal(await AuditEvent.countDocuments({ targetId: String(users.client._id), action: { $in: ['membership.granted', 'membership.revoked'] } }), 3);

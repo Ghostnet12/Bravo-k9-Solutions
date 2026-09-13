@@ -70,20 +70,20 @@ app.patch('/api/admin/memberships/:id', ...session, requireUser, requireOwner, s
     const previous = record.enabled === true;
     record.enabled = input.enabled; record.revision = input.expectedRevision + 1; record.updatedBy = req.user._id;
     if (input.enabled) { record.startsAt = chosenTerm.validFrom; record.endsAt = chosenTerm.validUntil; }
-    // Older online-only requests keep their scope. The current-client UI always
-    // sends dogs covered, explicitly opting into the connected training setup.
-    if (input.enabled && input.trainingDogCount !== undefined) {
-      const training = await saveManualTraining({ user: target, actorId: req.user._id, term: chosenTerm, dogCount: input.trainingDogCount, session: dbSession, subscriptionId: record.trainingSubscriptionId });
+    // Make Member always includes covered training, including submissions from
+    // older open browser tabs that do not send dogs covered.
+    if (input.enabled) {
+      const training = await saveManualTraining({ user: target, actorId: req.user._id, term: chosenTerm, dogCount: input.trainingDogCount ?? record.trainingDogCount ?? 1, session: dbSession, subscriptionId: record.trainingSubscriptionId });
       record.trainingBookingId = training.bookingId; record.trainingSubscriptionId = training.subscriptionId; record.trainingDogCount = training.dogCount;
     }
     // Date corrections replace only manual ONLINE grants, never training or Stripe access.
     await Subscription.updateMany({ userId, source: 'grant', serviceIds: 'online', status: 'active' }, { $set: { status: 'revoked' } }, { session: dbSession });
     await record.save({ session: dbSession });
     if (input.enabled) await Subscription.create([{ stripeId: `grant:${userId}:${record.revision}`, userId, serviceIds: ['online'], dogCount: 1, source: 'grant', autoPayDisabled: true, status: 'active', validFrom: record.startsAt, validUntil: record.endsAt }], { session: dbSession });
-    await AuditEvent.create([{ actorId: req.user._id, action: input.enabled ? 'membership.granted' : 'membership.revoked', targetType: 'user', targetId: userId, details: { from: previous, to: input.enabled, revision: record.revision, scope: input.enabled && input.trainingDogCount !== undefined ? 'training-and-published-member-lessons' : 'published-member-lessons', startsAt: record.startsAt, endsAt: record.endsAt, trainingBookingId: record.trainingBookingId, trainingDogCount: record.trainingDogCount } }], { session: dbSession });
+    await AuditEvent.create([{ actorId: req.user._id, action: input.enabled ? 'membership.granted' : 'membership.revoked', targetType: 'user', targetId: userId, details: { from: previous, to: input.enabled, revision: record.revision, scope: input.enabled ? 'training-and-published-member-lessons' : 'published-member-lessons', startsAt: record.startsAt, endsAt: record.endsAt, trainingBookingId: record.trainingBookingId, trainingDogCount: record.trainingDogCount } }], { session: dbSession });
     result = { enabled: record.enabled, manual: grantActive(record), revision: record.revision, startsAt: record.startsAt, endsAt: record.endsAt, trainingBookingId: record.trainingBookingId, trainingDogCount: record.trainingDogCount };
   });
-  res.json({ membership: result, message: input.enabled ? (input.trainingDogCount !== undefined ? 'Membership and covered training saved. Choose a trainer and add days and times below. No charge or automatic renewal was created.' : 'Member access dates saved. No payment, automatic billing, or staff permissions were created.') : 'Manual online access removed. Training and paid subscriptions are unchanged.' });
+  res.json({ membership: result, message: input.enabled ? 'Membership and covered training saved. Choose a trainer and add days and times below. No charge or automatic renewal was created.' : 'Manual online access removed. Training and paid subscriptions are unchanged.' });
 });
 // Repair an existing Make Member grant using its saved window, never today's
 // date. This is an explicit Owner/Admin write, not a migration on schedule reads.
