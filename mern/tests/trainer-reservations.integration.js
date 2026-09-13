@@ -106,7 +106,8 @@ test('manual members and independent trainer reservations share one consistent c
     await t.test('trainer-specific day off and working hours determine the offered time list',async()=>{
       const schedule=await TrainerSchedule.findById(String(users.ashley._id));
       await call('ashley','put',`/api/admin/trainer-schedules/${users.ashley._id}`,{revision:schedule.revision,enabled:true,weekdays:[1,2,3,4,5,6,7],hours:['09:00','10:00','11:00','12:00','13:00'],overrides:[]}).expect(200);
-      assert.ok(!(await availability(users.ashley._id)).workingHours.includes('14:00'));assert.ok((await availability(users.david._id)).slots.includes('14:00'));
+      const ashleyHours=await availability(users.ashley._id);
+      assert.ok(ashleyHours.businessHours.includes('14:00'));assert.ok(!ashleyHours.workingHours.includes('14:00'));assert.ok(!ashleyHours.reservedTimes.includes('14:00'));assert.ok((await availability(users.david._id)).slots.includes('14:00'));
       const future=now.plus({days:6}).toISODate();const updated=await TrainerSchedule.findById(String(users.ashley._id));
       await call('ashley','put',`/api/admin/trainer-schedules/${users.ashley._id}`,{revision:updated.revision,enabled:true,weekdays:[1,2,3,4,5,6,7],hours:updated.hours,overrides:[{date:future,hours:[]}]}).expect(200);
       assert.deepEqual((await availability(users.ashley._id,future)).slots,[]);assert.ok((await availability(users.david._id,future)).slots.includes('10:00'));

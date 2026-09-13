@@ -57,8 +57,9 @@ export async function getAvailability(from, to, staffId = null) {
   dateRange(from, to); // Validate bounded dates before issuing a database range query.
   const settings = await Settings.findById('schedule').lean();
   const occupied = new Set(await occupiedTimes({ from, to, trainerIds }));
-  const working = await filterTrainerAvailability(availability({ from, to, settings }), trainerIds, settings);
-  return { days: working.map(day => ({ ...day, workingHours: day.slots, slots: day.slots.filter(time => !occupied.has(`${day.date}|${time}`)), reservedTimes: [...occupied].filter(key => key.startsWith(`${day.date}|`)).map(key => key.split('|')[1]) })), enabled: settings.enabled };
+  const business = availability({ from, to, settings });
+  const working = await filterTrainerAvailability(business, trainerIds, settings);
+  return { days: working.map((day, index) => ({ ...day, businessHours: business[index].slots, workingHours: day.slots, slots: day.slots.filter(time => !occupied.has(`${day.date}|${time}`)), reservedTimes: [...occupied].filter(key => key.startsWith(`${day.date}|`)).map(key => key.split('|')[1]) })), enabled: settings.enabled };
 }
 export async function createBooking(userId, payload, assignment = {}) {
   const data = bookingInput.parse(payload);
