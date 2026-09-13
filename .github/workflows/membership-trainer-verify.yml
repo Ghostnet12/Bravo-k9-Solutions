@@ -1,0 +1,22 @@
+name: Verify membership dates and joint trainers
+on:
+  push:
+    branches: [feature/backdated-memberships-dual-trainers-20260913]
+    paths: [.github/workflows/membership-trainer-verify.yml]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Inspect public source-patch download link
+        run: |
+          python - <<'PY'
+          import urllib.request, re
+          u='https://firestorage.ai/ja/f/PHXp101hHlQT'
+          html=urllib.request.urlopen(u,timeout=30).read().decode()
+          for line in html.splitlines():
+            if any(word in line.lower() for word in ['download','bravo-membership','public_id','oixowp']): print(line[:18000])
+          print('LINKS',re.findall(r'(?:href|src)=[\"\x27]([^\"\x27]+)',html))
+          PY
