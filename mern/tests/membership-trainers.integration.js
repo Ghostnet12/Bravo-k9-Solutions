@@ -29,9 +29,9 @@ test('backdated onboarding and actual two-trainer assignments persist atomically
     const ids=[String(people.david._id),String(people.ashley._id)];
     const call=(who,method,path,body)=>{let r=request(app)[method](path).set('Origin',process.env.APP_ORIGIN);if(who)r=r.set('Cookie',cookies[who]);return body===undefined?r:r.send(body)};
     await Settings.updateOne({_id:'schedule'},{$set:{enabled:true,weekdays:[1,2,3,4,5,6,7],hours:['10:00','11:00','13:00'],overrides:[]}});
-    await t.test('only owner/admin can create dated access; invalid input has no side effects',async()=>{
+    await t.test('only staff/admin/owner can create dated access; invalid input has no side effects',async()=>{
       const payload={name:'Added client',dogName:'Fixture dog',email:'blocked@example.test',membershipStartDate:'2026-01-01'};
-      for(const who of [null,'client','ashley'])await call(who,'post','/api/admin/users',payload).expect(who?403:401);
+      for(const who of [null,'client'])await call(who,'post','/api/admin/users',payload).expect(who?403:401);
       await call('david','post','/api/admin/users',{...payload,membershipStartDate:'2026-02-30'}).expect(400);
       assert.equal(await User.countDocuments({email:payload.email}),0);assert.equal(await Subscription.countDocuments(),0);
     });

@@ -18,26 +18,36 @@ const cookieOptions = () => ({ httpOnly: true, secure: process.env.NODE_ENV === 
 export async function issueSession(req, res, user) {
   if (req.cookies[cookieName()]) await Session.deleteOne({ tokenHash: digest(req.cookies[cookieName()]) });
   const token = randomBytes(32).toString('hex');
-  const maxAge = 1000 * 60 * 60 * 24 * 7;
-  await Session.create({ tokenHash: digest(token), userId: user._id, expiresAt: new Date(Date.now() + maxAge) });
+  const maxAge = user.mustChangePassword ? 30 * 60000 : 1000 * 60 * 60 * 24 * 7;
+  await Session.create({ tokenHash: digest(token), userId: user._id, credentialVersion: user.credentialVersion || 0, expiresAt: new Date(Date.now() + maxAge) });
   res.cookie(cookieName(), token, { ...cookieOptions(), maxAge });
 }
 export async function signOut(req, res) {
   if (req.cookies[cookieName()]) await Session.deleteOne({ tokenHash: digest(req.cookies[cookieName()]) });
   res.clearCookie(cookieName(), cookieOptions());
 }
-export async function identify(req, _res, next) {
+export async function identify(req, res, next) {
   const token = req.cookies[cookieName()];
   if (token) {
     const session = await Session.findOne({ tokenHash: digest(token), expiresAt: { $gt: new Date() } });
     if (session) {
-      req.user = await User.findById(session.userId);
+      req.user = await User.findById(session.userId).select('+credentialVersion');
+      if (req.user && ((session.credentialVersion || 0) !== (req.user.credentialVersion || 0) ||
+        (req.user.mustChangePassword && !(req.user.temporaryPasswordExpiresAt > new Date())))) {
+        await Session.deleteOne({ tokenHash: session.tokenHash }); req.user = null;
+      }
       // Bootstrap only the existing owner record, never a freely entered email.
       if (req.user && isPrimaryOwner(req.user) && req.user.role !== 'owner' && !req.user.blocked) {
         req.user.role = 'owner'; await req.user.save();
       }
       if (req.user?.blocked) { await Session.deleteMany({ userId: req.user._id }); req.user = null; }
     }
+  }
+  // A temporary sign-in can only finish password setup or sign out. Enforce this
+  // here so every app wrapper (schedules, lessons, messages, billing) agrees.
+  const setupRoutes = ['GET /api/auth/me', 'POST /api/auth/password-setup', 'POST /api/auth/logout', 'POST /api/auth/login', 'POST /api/auth/recover'];
+  if (req.user?.mustChangePassword && !setupRoutes.includes(`${req.method} ${req.originalUrl.split('?')[0]}`)) {
+    return res.status(403).json({ error: 'Create your own password before continuing.', code: 'PASSWORD_SETUP_REQUIRED' });
   }
   next();
 }
@@ -48,7 +58,7 @@ export function isPrimaryOwner(user) { return String(user?._id) === (process.env
 // Access roles are private capabilities, not public job titles. Only the founder
 // is presented as Owner; delegated owner access still appears publicly as staff.
 export function publicRole(user) { return user.role === 'owner' && !isPrimaryOwner(user) ? 'staff' : user.role; }
-export function publicUser(user) { return { id: String(user._id), email: user.email, name: user.name, role: user.role, isPrimaryOwner: isPrimaryOwner(user), publicRole: publicRole(user), hasBillingAccount: !!user.stripeCustomerId, dogName: user.dogName, phone: user.phone, address: user.address, title: user.title, bio: user.bio, showPhone: user.showPhone }; }
+export function publicUser(user) { return { id: String(user._id), email: user.email, name: user.name, role: user.role, mustChangePassword: !!user.mustChangePassword, isPrimaryOwner: isPrimaryOwner(user), publicRole: publicRole(user), hasBillingAccount: !!user.stripeCustomerId, dogName: user.dogName, phone: user.phone, address: user.address, title: user.title, bio: user.bio, showPhone: user.showPhone }; }
 export function sameOrigin(req, _res, next) {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
   const allowed = process.env.APP_ORIGIN || (process.env.NODE_ENV !== 'production' ? 'http://localhost:5173' : '');

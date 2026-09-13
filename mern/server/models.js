@@ -9,6 +9,8 @@ const id = Schema.Types.ObjectId;
 export const User = model('BravoUser', new Schema({
   email: { type: String, trim: true, lowercase: true }, name: { type: String, required: true },
   passwordHash: { type: String, required: true, select: false }, role: { type: String, enum: ['member', 'staff', 'owner'], default: 'member' },
+  mustChangePassword: { type: Boolean, default: false }, temporaryPasswordExpiresAt: Date,
+  credentialVersion: { type: Number, default: 0, select: false },
   phone: { type: String, default: '' }, dogName: { type: String, default: '' }, address: { type: String, default: '' },
   title: { type: String, default: '' }, bio: { type: String, default: '' }, showPhone: { type: Boolean, default: false },
   mutedUntil: Date, blocked: { type: Boolean, default: false },
@@ -20,7 +22,7 @@ export const MemberAccess = model('BravoMemberAccess', new Schema({
   updatedBy: id, startsAt: Date, endsAt: Date,
   trainingBookingId: id, trainingSubscriptionId: String, trainingDogCount: Number,
 }, { timestamps: true }));
-export const Session = model('BravoSession', new Schema({ tokenHash: { type: String, unique: true }, userId: { type: id, required: true }, expiresAt: { type: Date, expires: 0 } }));
+export const Session = model('BravoSession', new Schema({ tokenHash: { type: String, unique: true }, userId: { type: id, required: true }, credentialVersion: { type: Number, default: 0 }, expiresAt: { type: Date, expires: 0 } }));
 export const RateBucket = model('BravoRateBucket', new Schema({ _id: String, count: Number, expiresAt: { type: Date, expires: 0 } }));
 const visitSchema = new Schema({ date: String, time: String, service: String }, { _id: false });
 const bookingSchema = new Schema({

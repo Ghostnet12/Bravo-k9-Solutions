@@ -8,27 +8,27 @@ export function AppProvider({ children }) {
   const readNotifications = useRef(new Set()), notificationUser = useRef(user?.id);
   notificationUser.current = user?.id;
   const refreshNotifications = useCallback(async () => {
-    if (!user) return;
+    if (!user || user.mustChangePassword) return;
     const result = await api('/notifications');
     if (notificationUser.current === user.id) setNotifications((result.items || []).filter(item => item.unread && !readNotifications.current.has(item.id)));
-  }, [user?.id]);
+  }, [user?.id, user?.mustChangePassword]);
   const markNotificationsRead = useCallback(async ids => {
-    if (!user) return;
+    if (!user || user.mustChangePassword) return;
     const pending = [...new Set(ids)].filter(id => !readNotifications.current.has(id));
     if (!pending.length) return;
     await api('/notifications/read', { method: 'POST', body: { ids: pending } });
     if (notificationUser.current !== user.id) return;
     pending.forEach(id => readNotifications.current.add(id));
     setNotifications(items => items.filter(item => !readNotifications.current.has(item.id)));
-  }, [user?.id]);
+  }, [user?.id, user?.mustChangePassword]);
   useEffect(() => {
     readNotifications.current = new Set(); setNotifications([]);
-    if (!user) return;
+    if (!user || user.mustChangePassword) return;
     let current = true;
     const load = () => { if (current && !document.hidden) refreshNotifications().catch(() => {}); };
     load(); const timer = setInterval(load, 15000);
     return () => { current = false; clearInterval(timer); };
-  }, [user?.id, refreshNotifications]);
+  }, [user?.id, user?.mustChangePassword, refreshNotifications]);
   const [membership, setMembership] = useState(noMembership);
   const [bookingDraft, setBookingDraft] = useState(null);
   const previousUserId = useRef(null);

@@ -179,7 +179,7 @@ app.post('/api/auth/recover', ...session, ...write, rateLimit('recovery-complete
   await transaction(async dbSession => {
     const reset = await PasswordReset.findOneAndDelete({ _id: digest(input.token), expiresAt: { $gt: new Date() } }, { session: dbSession });
     if (!reset) throw fail('This recovery link is invalid or expired. Ask Bravo for a new link.', 400);
-    const result = await User.updateOne({ _id: reset.userId, role: 'member', blocked: false }, { $set: { passwordHash } }, { session: dbSession });
+    const result = await User.updateOne({ _id: reset.userId, role: 'member', blocked: false }, { $set: { passwordHash, mustChangePassword: false }, $unset: { temporaryPasswordExpiresAt: 1 }, $inc: { credentialVersion: 1 } }, { session: dbSession });
     if (!result.matchedCount) throw fail('Contact Bravo for account assistance.', 403);
     await Session.deleteMany({ userId: reset.userId }, { session: dbSession });
     await AuditEvent.create([{ actorId: reset.userId, action: 'password.recovered', targetType: 'user', targetId: String(reset.userId) }], { session: dbSession });

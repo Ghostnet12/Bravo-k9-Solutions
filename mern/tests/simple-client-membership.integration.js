@@ -32,7 +32,7 @@ test('name and dog create a complete member without contact details or payment',
     }
     await Settings.updateOne({ _id: 'schedule' }, { $set: { enabled: true, weekdays: [1, 2, 3, 4, 5, 6, 7], hours: ['09:00', '10:00', '11:00'], overrides: [] } });
     await t.test('authorization and required names are enforced before creating any records', async () => {
-      for (const who of [null, 'staff', 'member']) await call(who, 'post', '/api/admin/users', { name: 'Client', dogName: 'Gunner' }).expect(who ? 403 : 401);
+      for (const who of [null, 'member']) await call(who, 'post', '/api/admin/users', { name: 'Client', dogName: 'Gunner' }).expect(who ? 403 : 401);
       for (const body of [{ name: 'Client' }, { dogName: 'Gunner' }, { name: 'Client', dogName: ' ' }, { name: 'Client', dogName: 'Gunner', email: 'invalid' }]) await call('owner', 'post', '/api/admin/users', body).expect(400);
       assert.equal(await User.countDocuments(), 4); assert.equal(await Booking.countDocuments(), 0); assert.equal(await Subscription.countDocuments(), 0);
     });
@@ -42,7 +42,7 @@ test('name and dog create a complete member without contact details or payment',
       const second = await call('admin', 'post', '/api/admin/users', { name: 'Name only client', dogName: 'Luna', email: ' ', phone: '', address: '', membershipStartDate: '', trainingDogCount: '' }).expect(201); secondId = second.body.user.id;
       assert.notEqual(clientId, secondId);
       for (const result of [first.body, second.body]) {
-        assert.equal(result.temporaryPassword, undefined); assert.equal(result.user.email, undefined); assert.equal(result.user.phone, ''); assert.equal(result.user.address, ''); assert.equal(result.user.role, 'member');
+        assert.match(result.temporaryPassword, /^Bravo-[a-f\d]{32}!$/); assert.equal(result.user.mustChangePassword, true); assert.equal(result.user.email, undefined); assert.equal(result.user.phone, ''); assert.equal(result.user.address, ''); assert.equal(result.user.role, 'member');
         assert.equal(result.membership.active, true); assert.equal(result.membership.enabled, true); assert.equal(result.membership.revision, 1);
         assert.equal(membershipDate(result.membership.startsAt), membershipToday()); assert.equal(membershipDate(result.membership.endsAt), membershipDate(manualMonthTerm(membershipToday()).validUntil));
         const user = await User.findById(result.user.id).lean(), access = await MemberAccess.findById(user._id), booking = await Booking.findOne({ userId: user._id });

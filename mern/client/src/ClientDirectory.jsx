@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { api } from './api';
 import { Notice } from './ui';
 import RemoveClientButton from './RemoveClientButton';
+import CreateClientForm from './CreateClientForm';
+import TemporaryPasswordControl from './TemporaryPasswordControl';
 
 export default function ClientDirectory() {
   const [query, setQuery] = useState(''), [clients, setClients] = useState([]);
@@ -16,7 +18,8 @@ export default function ClientDirectory() {
   }
   useEffect(() => { load(); return () => { requestId.current++; }; }, []);
   return <section aria-label="Client directory"><h2>Clients.</h2><Notice error>{error}</Notice><Notice>{notice}</Notice>
+    <CreateClientForm onCreated={result => { requestId.current++; setLoading(false); setQuery(result.user.name); setClients([{ ...result.user, _id: result.user.id }]); }}/>
     <form className="owner-search panel" onSubmit={e => { e.preventDefault(); load(); }}><label>Find a client<input type="search" maxLength="100" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search name or email"/></label><button className="button button-small" disabled={loading}>Search clients</button></form>
-    {loading ? <p role="status">Loading clients…</p> : !clients.length ? <p>No clients match that search.</p> : <div className="owner-people">{clients.map(client => <article className="panel client-directory-row" key={client._id}><div><h3>{client.name}</h3><p>{client.email}</p><Link className="inline-link" to={`/schedule?client=${client._id}`}>Client schedule</Link></div><RemoveClientButton client={{ ...client, role: 'member' }} onRemoved={message => { setNotice(message); setClients(current => current.filter(c => c._id !== client._id)); }}/></article>)}</div>}
+    {loading ? <p role="status">Loading clients…</p> : !clients.length ? <p>No clients match that search.</p> : <div className="owner-people">{clients.map(client => <article className="panel client-directory-row" key={client._id}><div><h3>{client.name}</h3><p>{client.email}</p><Link className="inline-link" to={`/schedule?client=${client._id}`}>Client schedule</Link><TemporaryPasswordControl person={{ ...client, role: 'member' }}/></div><RemoveClientButton client={{ ...client, role: 'member' }} onRemoved={message => { setNotice(message); setClients(current => current.filter(c => c._id !== client._id)); }}/></article>)}</div>}
   </section>;
 }

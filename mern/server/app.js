@@ -3,6 +3,7 @@ import express from 'express';
 import { trainerSelectionInput, resolveTrainerIds } from './trainer-selection.js';
 import { trainerOptions, bookingTrainerIds } from '../shared/trainers.js';
 import { createAssistedClient } from './onboarding.js';
+import { login, completePasswordSetup, replaceTemporaryPassword } from './client-login.js';
 import { removeClient } from './client-removal.js';
 import { removeAdministrator, requirePrimaryOwner } from './administrator-removal.js';
 import helmet from 'helmet';
@@ -13,7 +14,7 @@ import { access } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { connectDb, transaction } from './db.js';
-import { User, Session, Booking, Slot, Subscription, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Lesson, BillingLock, MediaUpload, MediaChunk } from './models.js';
+import { User, Session, PasswordReset, Booking, Slot, Subscription, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Lesson, BillingLock, MediaUpload, MediaChunk } from './models.js';
 import { hashPassword, verifyPassword, issueSession, identify, requireUser, requireStaff, requireOwner, signOut, publicUser, publicRole, isPrimaryOwner, sameOrigin, rateLimit } from './auth.js';
 import { createBooking, getAvailability, getEntitlements, cancelBooking, trainerCapacity, assignTrainer, TRAINER_DOG_LIMIT } from './bookings.js';
 import { stripeClient, stripeMode, stripeWebhook, checkout, refundBooking } from './payments.js';
@@ -82,16 +83,10 @@ app.post('/api/auth/register', rateLimit('register', 5, 3600000), async (req, re
   await issueSession(req, res, user);
   res.status(201).json({ user: publicUser(user) });
 });
-app.post('/api/auth/login', rateLimit('login', 12, 900000), async (req, res) => {
-  const input = accountInput.omit({ name: true }).parse(req.body);
-  const user = await User.findOne({ email: input.email }).select('+passwordHash');
-  const valid = await verifyPassword(input.password, user?.passwordHash);
-  if (!user || !valid || user.blocked) return res.status(401).json({ error: 'Sign-in is unavailable. Check your details or contact Bravo.' });
-  await issueSession(req, res, user);
-  res.json({ user: publicUser(user) });
-});
+app.post('/api/auth/login', rateLimit('login', 12, 900000), login);
+app.post('/api/auth/password-setup', requireUser, rateLimit('password-setup', 5, 900000), completePasswordSetup);
 app.post('/api/auth/logout', async (req, res) => { await signOut(req, res); res.json({ ok: true }); });
-app.get('/api/auth/me', async (req, res) => res.json({ user: req.user ? publicUser(req.user) : null, ...(req.user ? await getEntitlements(req.user._id) : { services: [], subscriptions: [] }) }));
+app.get('/api/auth/me', async (req, res) => res.json({ user: req.user ? publicUser(req.user) : null, ...(req.user && !req.user.mustChangePassword ? await getEntitlements(req.user._id) : { services: [], subscriptions: [] }) }));
 app.patch('/api/auth/profile', requireUser, async (req, res) => {
   const fields = z.object({ name: z.string().trim().min(2).max(80), dogName: z.string().trim().max(80), phone: z.string().trim().max(30), address: z.string().trim().max(300), title: z.string().trim().max(80).optional(), bio: z.string().trim().max(500).optional(), showPhone: z.boolean().optional() }).parse(req.body);
   const user = await User.findByIdAndUpdate(req.user._id, { $set: fields }, { returnDocument: 'after' });
@@ -99,10 +94,17 @@ app.patch('/api/auth/profile', requireUser, async (req, res) => {
 });
 app.post('/api/auth/password', requireUser, rateLimit('password', 5, 900000), async (req, res) => {
   const fields = z.object({ currentPassword: z.string().max(128), password: z.string().min(12).max(128) }).parse(req.body);
-  const user = await User.findById(req.user._id).select('+passwordHash');
-  if (!await verifyPassword(fields.currentPassword, user.passwordHash)) return res.status(400).json({ error: 'Current password is incorrect.' });
-  user.passwordHash = await hashPassword(fields.password); await user.save();
-  await Session.deleteMany({ userId: user._id }); await issueSession(req, res, user);
+  const current = await User.findById(req.user._id).select('+passwordHash +credentialVersion');
+  if (!current || !await verifyPassword(fields.currentPassword, current.passwordHash)) return res.status(400).json({ error: 'Current password is incorrect.' });
+  const passwordHash = await hashPassword(fields.password);
+  let user;
+  await transaction(async session => {
+    user = await User.findOneAndUpdate({ _id: current._id, passwordHash: current.passwordHash, blocked: false, mustChangePassword: { $ne: true } }, { $set: { passwordHash }, $inc: { credentialVersion: 1 } }, { returnDocument: 'after', session }).select('+credentialVersion');
+    if (!user) throw Object.assign(new Error('Your sign-in changed. Sign in again before changing your password.'), { status: 409 });
+    await Session.deleteMany({ userId: user._id }, { session });
+    await PasswordReset.deleteMany({ userId: user._id }, { session });
+  });
+  await issueSession(req, res, user);
   res.json({ ok: true });
 });
 app.get('/api/availability', async (req, res) => res.json(await getAvailability(String(req.query.from), String(req.query.to), req.query.staffId ? String(req.query.staffId) : null)));
@@ -261,7 +263,7 @@ const objectId = z.string().regex(/^[a-f\d]{24}$/i);
 const searchPattern = value => new RegExp(String(value || '').trim().slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
 app.get('/api/admin/clients', requireUser, requireStaff, async (req, res) => {
   const pattern = searchPattern(req.query.q);
-  const clients = await User.find({ removedAt: null, blocked: { $ne: true }, ...(req.query.clientsOnly === '1' ? { role: 'member' } : {}), $or: [{ name: pattern }, { email: pattern }] }).select('name email dogName phone address').sort({ name: 1 }).limit(30).lean();
+  const clients = await User.find({ removedAt: null, blocked: { $ne: true }, ...(req.query.clientsOnly === '1' ? { role: 'member' } : {}), $or: [{ name: pattern }, { email: pattern }] }).select('name email dogName phone address mustChangePassword temporaryPasswordExpiresAt').sort({ name: 1 }).limit(30).lean();
   res.json({ clients });
 });
 app.post('/api/admin/bookings', requireUser, requireStaff, rateLimit('staff-booking', 30, 3600000), async (req, res) => {
@@ -279,10 +281,11 @@ app.patch('/api/admin/bookings/:id/assignment', requireUser, requireStaff, async
 app.get('/api/admin/bookings/:id', requireUser, requireStaff, async (req, res) => res.json({ booking: await ownedBooking(req) }));
 app.get('/api/admin/users', requireUser, requireOwner, async (req, res) => {
   const q = String(req.query.q || '').trim(); const filter = q ? { $or: [{ name: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }, { email: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }] } : {};
-  const users = await User.find({ ...filter, removedAt: null }).select('name email role phone dogName address title bio showPhone mutedUntil blocked').sort({ createdAt: -1 }).limit(100).lean();
+  const users = await User.find({ ...filter, removedAt: null }).select('name email role phone dogName address title bio showPhone mutedUntil blocked mustChangePassword temporaryPasswordExpiresAt').sort({ createdAt: -1 }).limit(100).lean();
   res.json({ users: users.map(user => ({ ...user, _id: String(user._id), isPrimaryOwner: isPrimaryOwner(user) })) });
 });
-app.post('/api/admin/users', requireUser, requireOwner, rateLimit('admin-client', 20, 3600000), createAssistedClient);
+app.post('/api/admin/users', requireUser, requireStaff, rateLimit('admin-client', 20, 3600000), createAssistedClient);
+app.post('/api/admin/clients/:id/temporary-password', requireUser, requireStaff, rateLimit('temporary-password', 20, 3600000), replaceTemporaryPassword);
 app.delete('/api/admin/clients/:id', requireUser, requireStaff, rateLimit('client-removal', 30, 3600000), removeClient);
 app.delete('/api/admin/administrators/:id', requireUser, requirePrimaryOwner, rateLimit('administrator-removal', 10, 3600000), removeAdministrator);
 app.patch('/api/admin/users/:id', requireUser, requireOwner, async (req, res) => {
@@ -291,6 +294,7 @@ app.patch('/api/admin/users/:id', requireUser, requireOwner, async (req, res) =>
   const { confirmOwnerAccess, ...fields } = z.object({ role: z.enum(['member', 'staff', 'owner']).optional(), confirmOwnerAccess: z.boolean().optional(), email: z.string().trim().email().max(254).transform(value => value.toLowerCase()).optional(), dogName: z.string().trim().max(80).optional(), address: z.string().trim().max(300).optional(), name: z.string().trim().min(2).max(80).optional(), phone: z.string().trim().max(30).optional(), title: z.string().trim().max(80).optional(), bio: z.string().trim().max(500).optional(), showPhone: z.boolean().optional(), blocked: z.boolean().optional(), mutedUntil: z.union([z.string().datetime(), z.null()]).optional() }).parse(req.body);
   if (fields.email && (target.role !== 'member' || target.email)) throw new Error('An email can only be added to a client who does not have one yet.');
   const changesRole = fields.role !== undefined && fields.role !== target.role;
+  if (changesRole && fields.role !== 'member' && target.mustChangePassword) throw new Error('This client must choose their own password before receiving staff permissions.');
   const removesAccess = (fields.role !== undefined && fields.role !== 'owner') || fields.blocked === true || !!fields.mutedUntil;
   if (isPrimaryOwner(target) && removesAccess) throw new Error('The primary owner’s access is protected.');
   if (String(target._id) === String(req.user._id) && removesAccess) throw new Error('You cannot remove your own administrator access.');
@@ -302,7 +306,7 @@ app.patch('/api/admin/users/:id', requireUser, requireOwner, async (req, res) =>
   let updated;
   await transaction(async session => {
     // Compare the role so concurrent saves cannot silently overwrite a promotion.
-    updated = await User.findOneAndUpdate({ _id: target._id, removedAt: null, role: target.role, blocked: target.blocked, ...(fields.email ? { email: null } : {}) }, { $set: fields }, { returnDocument: 'after', runValidators: true, session });
+    updated = await User.findOneAndUpdate({ _id: target._id, removedAt: null, role: target.role, blocked: target.blocked, ...(changesRole && fields.role !== 'member' ? { mustChangePassword: { $ne: true } } : {}), ...(fields.email ? { email: null } : {}) }, { $set: fields }, { returnDocument: 'after', runValidators: true, session });
     if (!updated) throw Object.assign(new Error('This account changed. Refresh it before saving again.'), { status: 409 });
     if (changesRole) await AuditEvent.create([{ actorId: req.user._id, action: 'user.access.changed', targetType: 'user', targetId: String(target._id), details: { from: target.role, to: fields.role } }], { session });
     if (fields.blocked) await Session.deleteMany({ userId: updated._id }, { session });

@@ -27,6 +27,7 @@ app.disable('x-powered-by'); app.set('trust proxy', process.env.VERCEL ? 1 : fal
 const session = [helmet(), (_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); }, cookieParser(), async (_req, _res, next) => { await connectDb(); next(); }, identify, rateLimit('api', 240, 60000)];
 app.get('/api/auth/me', ...session, async (req, res) => {
   if (!req.user) return res.json({ user: null, services: [], subscriptions: [], serviceDogCounts: {}, membership: { active: false, manual: false, onlineAccess: false } });
+  if (req.user.mustChangePassword) return res.json({ user: publicUser(req.user), services: [], subscriptions: [], serviceDogCounts: {}, membership: { active: false, manual: false, onlineAccess: false } });
   const [entitlements, grant] = await Promise.all([getEntitlements(req.user._id), MemberAccess.findById(req.user._id).lean()]);
   res.json({ user: publicUser(req.user), ...entitlements, membership: membershipSummary(entitlements, grant) });
 });

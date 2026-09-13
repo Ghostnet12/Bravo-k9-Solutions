@@ -35,11 +35,11 @@ try {
           else if (path === '/api/admin/memberships') json = { memberships: client ? { [clientId]: membership } : {} };
           else if (path === '/api/admin/users' && method === 'POST') {
             createdBody = route.request().postDataJSON(); const dates = manualMonthTerm(now.toISODate());
-            client = { id: clientId, _id: clientId, name: createdBody.name, dogName: createdBody.dogName, phone: '', address: '', role: 'member' };
+            client = { id: clientId, _id: clientId, name: createdBody.name, dogName: createdBody.dogName, phone: '', address: '', role: 'member', mustChangePassword: true };
             membership = { revision: 1, active: true, enabled: true, manual: true, startsAt: dates.validFrom.toISOString(), endsAt: dates.validUntil.toISOString(), trainingDogCount: 1, trainingBookingId: bookingId };
             term = { ...dates, stripeId: 'fixture-grant', serviceIds: ['training'], status: 'active', dogCount: 1 };
             booking = { _id: bookingId, dogName: client.dogName, dogCount: 1, staffId: null, staffIds: [], visits: [], updatedAt: now.toISO(), termStartsAt: membership.startsAt, termEndsAt: membership.endsAt };
-            json = { user: client, membership };
+            json = { user: client, membership, temporaryPassword: 'Isolated-temporary-browser-fixture!', temporaryPasswordExpiresAt: now.plus({days:7}).toISO() };
           } else if (path === '/api/admin/users') json = { users: client ? [client] : [] };
           else if (path === `/api/admin/users/${clientId}` && method === 'PATCH') { client = { ...client, ...route.request().postDataJSON() }; json = { user: client }; }
           else if (path === '/api/team') json = { team: [david, ashley] };
@@ -61,7 +61,7 @@ try {
           await panel.getByRole('button', { name: 'Create client & member', exact: true }).click();
           await panel.getByRole('heading', { name: 'Client account created.', exact: true }).waitFor();
           assert.equal(createdBody.email, ''); assert.equal(createdBody.phone, ''); assert.equal(createdBody.address, ''); assert.equal(createdBody.membershipStartDate, '');
-          assert.equal(await panel.getByLabel('Temporary password', { exact: true }).count(), 0);
+          assert.equal(await panel.getByLabel('Temporary password', { exact: true }).count(), 1);
           const setup = panel.getByRole('region', { name: 'Training setup for Imported client', exact: true }), trainer = setup.getByLabel('Assigned trainer', { exact: true });
           await trainer.locator(`option[value="${david.id}"]`).waitFor({ state: 'attached' });
           await trainer.selectOption(david.id); await setup.getByRole('button', { name: 'Assign trainer', exact: true }).click();
@@ -82,7 +82,7 @@ try {
           const email = person.getByLabel('Email', { exact: true }); assert.equal(await email.isEnabled(), true); await email.fill('later@example.test');
           await person.getByRole('button', { name: 'Save profile & access', exact: true }).click();
           await person.getByText('Profile and access saved.', { exact: false }).waitFor();
-          assert.equal(client.email, 'later@example.test'); await person.getByText('Account recovery', { exact: true }).waitFor();
+          assert.equal(client.email, 'later@example.test'); await person.getByRole('button', { name: 'Create new temporary password', exact: true }).waitFor();
           assert.deepEqual(errors, []); console.log(`${engineName} ${width}: two required names → member → trainer → 10 AM schedule → later email passed`);
         } catch (error) {
           await page.screenshot({ path: `test-results/simple-client-failure-${engineName}-${width}.png`, fullPage: true }); console.log(await page.locator('body').innerText()); throw error;

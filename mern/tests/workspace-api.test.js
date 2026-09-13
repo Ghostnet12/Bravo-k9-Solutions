@@ -217,10 +217,10 @@ test('owner/staff workspace contracts over HTTP with isolated model mocks', asyn
     sub.mock.method(Subscription.prototype, 'save', async function () { return this; });
     sub.mock.method(MemberAccess, 'create', async data => data);
     sub.mock.method(Subscription, 'create', async data => data);
-    await call('staff', 'post', '/api/admin/users', { name: 'Assisted Client', dogName: 'Fixture dog', email: 'assisted@example.test' }).expect(403);
+    await call('member', 'post', '/api/admin/users', { name: 'Assisted Client', dogName: 'Fixture dog', email: 'assisted@example.test' }).expect(403);
     const ownerResult = await call('owner', 'post', '/api/admin/users', { name: 'Assisted Client', dogName: 'Fixture dog', email: 'ASSISTED@example.test', role: 'owner', blocked: true }).expect(201);
     assert.equal(ownerResult.body.user.role, 'member'); assert.equal(ownerResult.body.user.email, 'assisted@example.test');
-    assert.match(ownerResult.body.temporaryPassword, /^Bravo-[a-f\d]{18}!$/); assert.equal(ownerResult.body.user.passwordHash, undefined);
+    assert.match(ownerResult.body.temporaryPassword, /^Bravo-[a-f\d]{32}!$/); assert.equal(ownerResult.body.user.passwordHash, undefined);
     assert.equal(created[0].role, 'member'); assert.equal(created[0].blocked, undefined); assert.ok(created[0].passwordHash);
     users[ids.other].role = 'owner';
     const delegateResult = await call('other', 'post', '/api/admin/users', { name: 'Second Client', dogName: 'Fixture dog', email: 'second@example.test', phone: '605-555-0100' }).expect(201);
