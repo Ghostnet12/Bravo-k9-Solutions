@@ -5,7 +5,7 @@ import { api } from './api';
 import { Page, Notice } from './ui';
 
 export default function PasswordSetupGate({ children }) {
-  const { user, refreshUser } = useBravo(), navigate = useNavigate();
+  const { user, refreshUser, signOut } = useBravo(), navigate = useNavigate();
   const [busy, setBusy] = useState(false), [error, setError] = useState('');
   if (!user?.mustChangePassword) return children;
   async function save(event) {
@@ -26,7 +26,7 @@ export default function PasswordSetupGate({ children }) {
         <p className="helper">Use at least 12 characters. Choose a password different from the temporary one Bravo sent you. Your temporary password will stop working when you save.</p>
         <button className="button" disabled={busy}>{busy ? 'Saving password…' : 'Save password & open schedule'}</button>
       </form>
-      <button type="button" className="quiet-button" disabled={busy} onClick={async () => { setBusy(true); setError(''); try { await api('/auth/logout', { method: 'POST', body: {} }); await refreshUser(); navigate('/account'); } catch (e) { setError(e.message); } finally { setBusy(false); } }}>Sign out</button>
+      <button type="button" className="quiet-button" disabled={busy} onClick={async () => { setBusy(true); setError(''); try { await signOut(); navigate('/account'); } catch (e) { setError(e.message); } finally { setBusy(false); } }}>Sign out</button>
     </section>
   </Page>;
 }

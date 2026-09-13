@@ -1,0 +1,14 @@
+.nav-sign-out button{background:transparent;color:var(--gold,#d3b678);border:1px solid var(--line,#56503d);border-radius:6px;padding:10px 14px;min-height:44px;cursor:pointer;font:inherit;white-space:nowrap}
+.nav-sign-out p{max-width:230px;font-size:.875rem}
+.bulk-times{margin:24px 0;padding:20px;border:1px solid var(--line,#56503d);min-width:0}
+.bulk-times legend{font-weight:700;font-size:1.15rem}
+.bulk-time-buttons{display:flex;flex-wrap:wrap;gap:12px}
+.bulk-time-buttons>div{flex:1 1 130px;max-width:230px;min-width:0}
+.bulk-time-buttons button{width:100%;min-height:48px}
+.bulk-time-buttons small{display:block;margin-top:6px;font-size:.8rem;overflow-wrap:anywhere}
+.single-date-editor{margin:20px 0;padding:16px;border:1px solid var(--line,#56503d)}
+.single-date-editor summary{cursor:pointer;font-weight:700;min-height:44px;display:list-item}
+.single-date-editor label{margin-top:14px}
+.batch-date-actions{display:flex;flex-wrap:wrap;gap:16px;margin:16px 0}
+@media(min-width:1121px){.app-header nav{gap:1rem}.app-header nav a{font-size:.85rem}}
+@media(max-width:1120px){.app-header nav.is-open{max-height:calc(100dvh - 110px);overflow-y:auto}.nav-sign-out{margin-top:16px;padding-top:12px;border-top:1px solid var(--line,#56503d)}.nav-sign-out button{width:100%;text-align:left;padding:12px 16px}.nav-sign-out p{max-width:none}}

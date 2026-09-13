@@ -70,7 +70,7 @@ try {
           await setup.getByText('Checking available times…', { exact: true }).waitFor({ state: 'hidden' });
           await setup.getByRole('checkbox', { name: 'Open the selected weekend times when saving', exact: true }).uncheck();
           await setup.locator('.edit-calendar button:not([disabled])').first().click();
-          await setup.getByRole('checkbox', { name: '9:00 AM', exact: true }).uncheck(); await setup.getByRole('checkbox', { name: '10:00 AM', exact: true }).check();
+          await setup.getByRole('button', { name: '10:00 AM', exact: true }).click();
           await setup.getByLabel('Note to the client', { exact: true }).fill('Agreed training time.'); await setup.getByRole('button', { name: 'Save changes', exact: true }).click();
           await setup.getByText('Schedule saved.', { exact: true }).waitFor(); assert.equal(calendarBody.additions[0].time, '10:00');
           await setup.locator('.saved-calendar button.has-visits').first().waitFor();

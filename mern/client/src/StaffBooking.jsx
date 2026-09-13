@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { trainerOptions } from '../../shared/trainers';
 import { useEffect, useState } from 'react';
 import { api } from './api';
@@ -48,6 +49,7 @@ export default function StaffBooking({ team, onSaved }) {
     <Notice error>{error}</Notice><Notice>{notice}</Notice><button type="button" className="quiet-button" disabled={busy} onClick={resetForm}>Reset client visit form</button>
     <form className="owner-search" onSubmit={search}><label>Client name or email<input type="search" value={query} minLength="2" required onChange={e => setQuery(e.target.value)}/></label><button className="button button-small button-ghost" disabled={busy}>Find client</button></form>
     {clients.length > 0 && <label>Choose client<select value={client?._id || ''} disabled={busy} onChange={e => { setClient(clients.find(person => person._id === e.target.value) || null); setRequestKey(crypto.randomUUID()); }}><option value="">Select a person</option>{clients.map(person => <option key={person._id} value={person._id}>{person.name} · {person.email}</option>)}</select></label>}
+    {client && <p><Link className="button button-ghost" to={`/schedule?client=${client._id}`}>Manage this client’s membership schedule</Link><small>Add several training dates at once, change times, or cancel saved visits. Use the form below for a separate single-visit request.</small></p>}
     {client && <form key={client._id} onSubmit={save}><div className="form-grid">
       <label>Service<select name="service" value={service} onChange={e => setService(e.target.value)}>{catalog.filter(item => item.id !== 'online' && item.enabled !== false).map(item => <option key={item.id} value={item.id}>{item.name} · {money(item.cents)}{item.interval === 'walk' ? '/dog · 30 min' : item.interval === 'month' ? '/month' : ''}</option>)}</select></label>
       {service === 'training' && <label>Training focus<select name="trainingFocus" defaultValue="basic-obedience">{TRAINING_FOCUSES.map(focus => <option key={focus.id} value={focus.id}>{focus.name}</option>)}</select></label>}

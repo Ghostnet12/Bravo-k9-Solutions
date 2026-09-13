@@ -20,6 +20,7 @@ const origin = `http://127.0.0.1:${server.address().port}`;
 await mkdir('test-results', { recursive: true });
 try {
   for (const [name, engine] of Object.entries({ chromium, webkit })) {
+    if (process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(name)) continue;
     const browser = await engine.launch();
     try {
       for (const width of [320, 390, 1440]) {
@@ -91,9 +92,14 @@ try {
         assert.equal(await editor.getByRole('button',{name:/Tue, Sep 22,/}).getAttribute('aria-pressed'),'false');
         assert.equal(saved,false);
         await editor.getByRole('button',{name:/Tue, Sep 22,/}).click();
-        await editor.getByRole('button',{name:/Mon, Sep 21,/}).click();
+
         await editor.getByRole('button',{name:'Next month',exact:true}).click();
         await editor.getByRole('button',{name:/Tue, Oct 6,/}).click();
+        await editor.getByRole('button',{name:'10:00 AM',exact:true}).click();
+        await editor.getByRole('button',{name:'Clear date selection',exact:true}).click();
+        await editor.getByRole('button',{name:'Previous month',exact:true}).click();
+        await editor.getByRole('button',{name:/Mon, Sep 21,/}).click();
+        await editor.getByRole('button',{name:'Cancel visits on selected dates',exact:true}).click();
         await editor.getByLabel('Note to Bravo',{exact:true}).fill('Tuesday works better for us.');
         await editor.getByRole('button',{name:'Save changes',exact:true}).click();
         await page.getByText('Schedule saved and note sent.',{exact:true}).waitFor();
@@ -106,9 +112,14 @@ try {
         await page.getByRole('button',{name:'Add Days and Times',exact:true}).click();
         await editor.getByRole('button',{name:/Sat, Sep 19,/}).click();
         await editor.getByRole('button',{name:/Sun, Sep 20,/}).click();
+        await editor.getByRole('button',{name:'10:00 AM',exact:true}).click();
+        await editor.getByText('Change one date',{exact:true}).click();
+        await editor.getByLabel('Date to change',{exact:true}).selectOption('2026-09-20');
         await editor.getByRole('checkbox',{name:'1:00 PM',exact:true}).check();
         await editor.getByRole('checkbox',{name:'10:00 AM',exact:true}).uncheck();
+        await editor.getByRole('button',{name:'Clear date selection',exact:true}).click();
         await editor.getByRole('button',{name:/Tue, Sep 22,/}).click();
+        await editor.getByRole('button',{name:'Cancel visits on selected dates',exact:true}).click();
         await editor.getByLabel('Note to the client',{exact:true}).fill('Sorry, we are sick Tuesday. Weekend sessions added.');
         assert.equal(saved,false);
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));

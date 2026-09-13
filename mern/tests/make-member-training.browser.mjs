@@ -17,6 +17,7 @@ const now = DateTime.now().setZone('America/Chicago'), startDate = now.minus({ d
 await mkdir('test-results', { recursive: true });
 try {
   for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
+    if (process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(engineName)) continue;
     const browser = await engine.launch();
     try {
       for (const width of [320, 390, 1440]) {
@@ -78,12 +79,11 @@ try {
           await setup.getByRole('checkbox', { name: 'Open the selected weekend times when saving', exact: true }).uncheck();
           const available = setup.locator('.edit-calendar button:not([disabled])');
           assert.ok(await available.count() >= 2); await available.nth(0).click(); await available.nth(1).click();
-          const ten = setup.getByRole('checkbox', { name: '10:00 AM', exact: true });
+          const ten = setup.getByRole('button', { name: '10:00 AM', exact: true });
           assert.equal(await ten.isEnabled(), true);
-          assert.equal(await setup.getByRole('checkbox', { name: /12:00 PM.*Reserved/ }).isDisabled(), true);
-          assert.equal(await setup.getByRole('checkbox', { name: /1:00 PM.*Outside trainer hours/ }).isDisabled(), true);
-          await setup.getByRole('checkbox', { name: '9:00 AM', exact: true }).uncheck();
-          await ten.check();
+          assert.equal(await setup.getByRole('button', { name: '12:00 PM', exact: true }).isDisabled(), true);
+          assert.equal(await setup.getByRole('button', { name: '1:00 PM', exact: true }).isDisabled(), true);
+          await ten.click();
           await setup.getByLabel('Note to the client', { exact: true }).fill('Training days confirmed with the client.');
           await setup.getByRole('button', { name: 'Save changes', exact: true }).click();
           await setup.getByText('Schedule saved. The client and Bravo team have been notified.', { exact: true }).waitFor();
@@ -111,6 +111,7 @@ try {
           await page.getByText('Checking available times…', { exact: true }).waitFor({ state: 'hidden' });
           const recoveredDays = page.locator('.edit-calendar button:not([disabled])');
           await recoveredDays.nth(0).click(); await recoveredDays.nth(1).click();
+          await page.getByRole('button', { name: '10:00 AM', exact: true }).click();
           await page.getByLabel('Note to the client', { exact: true }).fill('Existing member recovery test.');
           await page.getByRole('button', { name: 'Save changes', exact: true }).click();
           await page.getByText('Schedule saved. The client and Bravo team have been notified.', { exact: true }).waitFor();
