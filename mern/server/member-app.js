@@ -85,6 +85,28 @@ app.patch('/api/admin/memberships/:id', ...session, requireUser, requireOwner, s
   });
   res.json({ membership: result, message: input.enabled ? (input.trainingDogCount !== undefined ? 'Membership and covered training saved. Choose a trainer and add days and times below. No charge or automatic renewal was created.' : 'Member access dates saved. No payment, automatic billing, or staff permissions were created.') : 'Manual online access removed. Training and paid subscriptions are unchanged.' });
 });
+// Repair an existing Make Member grant using its saved window, never today's
+// date. This is an explicit Owner/Admin write, not a migration on schedule reads.
+app.post('/api/admin/memberships/:id/training-setup', ...session, requireUser, requireOwner, sameOrigin, rateLimit('member-access-write', 80, 3600000), express.json({ limit: '4kb' }), async (req, res) => {
+  const userId = idInput.parse(req.params.id);
+  const input = z.object({ expectedRevision: z.number().int().min(0), trainingDogCount: z.number().int().min(1).max(10) }).strict().parse(req.body);
+  let training;
+  await transaction(async dbSession => {
+    const actor = await User.findById(req.user._id).select('role blocked').session(dbSession);
+    if (!actor || actor.blocked || actor.role !== 'owner') throw fail('Administrator or owner access is required.', 403);
+    const target = await User.findById(userId).select('role blocked dogName phone address').session(dbSession);
+    if (!target || target.blocked || target.role !== 'member') throw fail('Choose an unblocked client account.', 409);
+    const grant = await MemberAccess.findById(userId).session(dbSession);
+    if (!grant?.enabled || !grant.startsAt || !grant.endsAt || grant.endsAt <= grant.startsAt) throw fail('Save this client’s membership dates in People & permissions first.', 409);
+    if (grant.revision !== input.expectedRevision) throw fail('Membership changed. Reload the schedule before enabling training.', 409);
+    training = await saveManualTraining({ user: target, actorId: req.user._id, term: { validFrom: grant.startsAt, validUntil: grant.endsAt }, dogCount: input.trainingDogCount, session: dbSession, subscriptionId: grant.trainingSubscriptionId });
+    grant.trainingBookingId = training.bookingId; grant.trainingSubscriptionId = training.subscriptionId; grant.trainingDogCount = training.dogCount;
+    grant.revision += 1; grant.updatedBy = req.user._id;
+    await grant.save({ session: dbSession });
+    await AuditEvent.create([{ actorId: req.user._id, action: 'membership.training-restored', targetType: 'user', targetId: userId, details: { bookingId: training.bookingId, dogCount: training.dogCount, startsAt: grant.startsAt, endsAt: grant.endsAt } }], { session: dbSession });
+  });
+  res.json({ training, message: 'Training enabled for the saved membership dates. Assign a trainer and add days and times below.' });
+});
 // Extend the existing protected player without exposing a public video endpoint.
 // Manual access never grants staff privileges or access to draft lessons.
 for (const type of ['video', 'captions', 'transcript']) app.get(`/api/lessons/:id/${type}`, ...session, requireUser, async (req, res) => {

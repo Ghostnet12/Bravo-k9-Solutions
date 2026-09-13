@@ -108,6 +108,30 @@ test('Make Member connects existing clients to covered training and the shared c
       const results = await Promise.all([save('admin', 'race', 0), save('david', 'race', 0)]); assert.deepEqual(results.map(r => r.status).sort(), [200, 409]);
       assert.equal(await Booking.countDocuments({ userId: people.race._id }), 1); assert.equal(await Subscription.countDocuments({ userId: people.race._id, serviceIds: 'training' }), 1);
     });
+    await t.test('legacy online-only schedule can restore training without changing its saved window or online grants', async () => {
+      const legacy = await User.create({ name: 'Legacy member', role: 'member', email: 'legacy@example.test', passwordHash: 'fixture-only' });
+      const path = `/api/admin/memberships/${legacy._id}`;
+      await call('admin', 'patch', path, { enabled: true, expectedRevision: 0, startDate: '2026-08-24' }).expect(200);
+      const before = await Subscription.find({ userId: legacy._id }).lean();
+      const dates = await MemberAccess.findById(legacy._id).lean();
+      assert.equal(await Booking.countDocuments({ userId: legacy._id }), 0);
+      const body = { expectedRevision: 1, trainingDogCount: 2 };
+      for (const who of [null, 'client', 'ashley']) await call(who, 'post', `${path}/training-setup`, body).expect(who ? 403 : 401);
+      await call('admin', 'post', `${path}/training-setup`, { ...body, trainingDogCount: 0 }).expect(400);
+      const result = await call('admin', 'post', `${path}/training-setup`, body).expect(200);
+      const booking = await Booking.findById(result.body.training.bookingId);
+      assert.equal(booking.paymentStatus, 'covered'); assert.equal(booking.dogCount, 2); assert.equal(booking.paidAt, undefined);
+      assert.equal(booking.termStartsAt.toISOString(), dates.startsAt.toISOString()); assert.equal(booking.termEndsAt.toISOString(), dates.endsAt.toISOString());
+      assert.deepEqual(await Subscription.find({ userId: legacy._id, serviceIds: 'online' }).lean(), before);
+      const schedule = await call('admin', 'get', `/api/client-schedule?client=${legacy._id}&month=2026-09`).expect(200);
+      assert.equal(schedule.body.trainingBookings.length, 1);
+      await call('admin', 'post', `${path}/training-setup`, body).expect(409);
+      await call('admin', 'post', `${path}/training-setup`, { ...body, expectedRevision: 2 }).expect(200);
+      assert.equal(await Booking.countDocuments({ userId: legacy._id }), 1);
+      assert.equal(await Subscription.countDocuments({ userId: legacy._id, serviceIds: 'training' }), 1);
+      await call('admin', 'patch', path, { enabled: false, expectedRevision: 3 }).expect(200);
+      await call('admin', 'post', `${path}/training-setup`, { ...body, expectedRevision: 4 }).expect(409);
+    });
     await t.test('removing online access preserves covered training and real paid records', async () => {
       const paidBefore = await Subscription.findOne({ stripeId: 'paid-later-fixture' }).lean();
       await call('admin', 'patch', endpoint('client'), { enabled: false, expectedRevision: 3 }).expect(200);

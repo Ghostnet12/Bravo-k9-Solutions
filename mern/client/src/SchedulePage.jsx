@@ -8,6 +8,7 @@ import { trainingFocusName } from '../../shared/catalog';
 import './client-services.css';
 import SavedScheduleCalendar from './SavedScheduleCalendar';
 import ClientTrainer from './ClientTrainer';
+import TrainingRecovery from './TrainingRecovery';
 export default function SchedulePage() {
   const { user, authReady } = useBravo(), [params, setParams] = useSearchParams();
   const client = params.get('client');
@@ -44,8 +45,9 @@ export default function SchedulePage() {
       {activeTerm && <p className="membership-counter"><strong>Current paid month:</strong> Day {Math.floor(DateTime.now().diff(DateTime.fromISO(activeTerm.validFrom), 'days').days)+1}. Ends {DateTime.fromISO(activeTerm.validUntil, {zone:'America/Chicago'}).toFormat('LLL d, yyyy · h:mm a')} · {Math.max(0,Math.ceil(DateTime.fromISO(activeTerm.validUntil).diffNow('days').days))} days remaining.</p>}
       {data.firstTrainingDay && <p>First paid scheduled visit: {formatDate(data.firstTrainingDay)}</p>}
       <p className="helper">These are your saved booking dates, not suggested openings. Requested visits await Bravo’s confirmation. Cancelled visits are labelled below.</p>
-      {['staff','owner'].includes(user.role)&&<ClientTrainer key={`trainer-${revision}`} bookings={data.trainingBookings||[]} onSaved={message=>{setNotice(message);setRevision(n=>n+1)}}/>}
-      <SavedScheduleCalendar key={`${month}-${revision}`} data={data} month={month} reload={message => { setNotice(message);setRevision(n => n+1); }}/>
+      {user.role === 'owner' && !data.trainingBookings?.length && <TrainingRecovery client={data.client} onSaved={message=>{setNotice(message);setRevision(n=>n+1)}}/>}
+      {['staff','owner'].includes(user.role)&&!!data.trainingBookings?.length&&<ClientTrainer key={`trainer-${revision}`} bookings={data.trainingBookings||[]} onSaved={message=>{setNotice(message);setRevision(n=>n+1)}}/>}
+      {(user.role !== 'owner' || !!data.trainingBookings?.length) && <SavedScheduleCalendar key={`${month}-${revision}`} data={data} month={month} reload={message => { setNotice(message);setRevision(n => n+1); }}/>}
       <h2>Membership dates</h2>{data.terms.length ? data.terms.map(term => <p key={term.stripeId}>{term.serviceIds.join(' + ')}: {term.validFrom ? new Date(term.validFrom).toLocaleDateString('en-US', { timeZone: 'America/Chicago' }) : 'Start date not yet recorded'} – {new Date(term.validUntil).toLocaleDateString('en-US', { timeZone: 'America/Chicago' })} · {new Date(term.validUntil) <= new Date() ? 'Expired' : term.status}</p>) : <p>No paid monthly membership recorded.</p>}
     </section>}
   </Page>;

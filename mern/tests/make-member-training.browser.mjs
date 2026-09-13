@@ -35,6 +35,11 @@ try {
           else if (path === '/api/admin/membership-status') json = { remindersConfigured: true, automaticPlans: 0 };
           else if (path === '/api/admin/users') json = { users: [client] };
           else if (path === '/api/admin/memberships') json = { memberships: { [client._id]: membership } };
+          else if (path === `/api/admin/memberships/${client._id}/training-setup`) {
+            const repair = route.request().postDataJSON(); assert.equal(repair.trainingDogCount, 2); assert.equal(repair.startDate, undefined);
+            booking = { _id: bookingId, dogName: 'Gunner', dogCount: repair.trainingDogCount, staffId: null, staffIds: [], visits: [], updatedAt: now.toISO(), termStartsAt: membership.startsAt, termEndsAt: membership.endsAt };
+            json = { message: 'Training enabled for the saved membership dates.' };
+          }
           else if (path === `/api/admin/memberships/${client._id}`) {
             savedBody = route.request().postDataJSON(); const dates = manualMonthTerm(savedBody.startDate);
             membership = { revision: membership.revision + 1, enabled: true, manual: true, startsAt: dates.validFrom.toISOString(), endsAt: dates.validUntil.toISOString(), trainingDogCount: savedBody.trainingDogCount, trainingBookingId: bookingId };
@@ -82,6 +87,28 @@ try {
           assert.equal(await access.getByLabel('Dogs covered by this training membership', { exact: true }).inputValue(), '2');
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)); assert.deepEqual(errors, []);
           await page.screenshot({ path: `test-results/make-member-${engineName}-${width}.png`, fullPage: true });
+          booking = null;
+          await page.goto(`${origin}/schedule?client=${client._id}`);
+          await page.getByRole('heading', { name: 'Finish this client’s training setup' }).waitFor();
+          assert.equal(await page.getByRole('button', { name: 'Add Days and Times', exact: true }).count(), 0);
+          await page.getByLabel('Dogs covered', { exact: true }).fill('2');
+          await page.getByRole('button', { name: 'Enable training & scheduling', exact: true }).click();
+          await page.getByText('Assign trainer & accept client', { exact: true }).click();
+          const recoveredTrainer = page.getByLabel('Assigned trainer', { exact: true });
+          await recoveredTrainer.locator(`option[value="${JOINT_TRAINER_ID}"]`).waitFor({ state: 'attached' });
+          await recoveredTrainer.selectOption(JOINT_TRAINER_ID);
+          await page.getByRole('button', { name: 'Assign trainer', exact: true }).click();
+          await page.getByText('Trainer assigned. Each assigned trainer can now accept from their staff profile.', { exact: true }).waitFor();
+          await page.getByRole('button', { name: 'Add Days and Times', exact: true }).click();
+          await page.getByText('Checking available times…', { exact: true }).waitFor({ state: 'hidden' });
+          const recoveredDays = page.locator('.edit-calendar button:not([disabled])');
+          await recoveredDays.nth(0).click(); await recoveredDays.nth(1).click();
+          await page.getByLabel('Note to the client', { exact: true }).fill('Existing member recovery test.');
+          await page.getByRole('button', { name: 'Save changes', exact: true }).click();
+          await page.getByText('Schedule saved. The client and Bravo team have been notified.', { exact: true }).waitFor();
+          assert.equal(calendarBody.additions.length, 2); assert.deepEqual(errors, []);
+          assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+          console.log(`${engineName} ${width}: legacy online-only schedule → recovered dates/dogs → joint trainer → saved calendar passed`);
           console.log(`${engineName} ${width}: Make Member → dates/dogs → joint trainer → batch calendar → saved schedule and reload passed`);
         } catch (error) {
           await page.screenshot({ path: `test-results/make-member-failure-${engineName}-${width}.png`, fullPage: true }); console.log(await page.locator('body').innerText()); throw error;
