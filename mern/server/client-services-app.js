@@ -191,7 +191,9 @@ app.get('/api/cron/memberships', async (req, res) => {
   const supplied = Buffer.from(req.get('authorization') || '');
   if (!expected || supplied.length !== expected.length || !timingSafeEqual(expected, supplied)) return res.status(401).json({ error: 'Unauthorized' });
   await connectDb();
-  res.set('Cache-Control', 'no-store').json({ ok: true, created: await membershipNotifications() });
+  const created = await membershipNotifications();
+  await AuditEvent.create({ action: 'membership.reminders.completed', details: { created } });
+  res.set('Cache-Control', 'no-store').json({ ok: true, created });
 });
 // Explicit owner control also lets the team complete migration using the site's
 // existing Stripe integration, without exposing any API credentials.
@@ -220,7 +222,8 @@ app.post('/api/admin/manual-renewal', ...session, requireUser, requireOwner, ...
   res.json({ changed, message: `${changed} Bravo plans now end at their paid period end. No refunds or new charges were created.` });
 });
 app.get('/api/admin/membership-status', ...session, requireUser, requireOwner, async (_req, res) => {
-  res.json({ remindersConfigured: !!process.env.CRON_SECRET, automaticPlans: await Subscription.countDocuments({ stripeId: /^sub_/, status: { $in: ['active', 'trialing'] }, autoPayDisabled: { $ne: true }, validUntil: { $gt: new Date() } }) });
+  const lastRun = await AuditEvent.findOne({ action: 'membership.reminders.completed' }).sort({ createdAt: -1 }).select('createdAt').lean();
+  res.json({ remindersConfigured: !!process.env.CRON_SECRET, lastReminderRunAt: lastRun?.createdAt || null, automaticPlans: await Subscription.countDocuments({ stripeId: /^sub_/, status: { $in: ['active', 'trialing'] }, autoPayDisabled: { $ne: true }, validUntil: { $gt: new Date() } }) });
 });
 app.use(memberApp);
 app.use((error, _req, res, _next) => {

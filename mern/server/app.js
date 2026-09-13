@@ -4,6 +4,7 @@ import { trainerSelectionInput, resolveTrainerIds } from './trainer-selection.js
 import { trainerOptions, bookingTrainerIds } from '../shared/trainers.js';
 import { createAssistedClient } from './onboarding.js';
 import { removeClient } from './client-removal.js';
+import { removeAdministrator, requirePrimaryOwner } from './administrator-removal.js';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import path from 'node:path';
@@ -283,6 +284,7 @@ app.get('/api/admin/users', requireUser, requireOwner, async (req, res) => {
 });
 app.post('/api/admin/users', requireUser, requireOwner, rateLimit('admin-client', 20, 3600000), createAssistedClient);
 app.delete('/api/admin/clients/:id', requireUser, requireStaff, rateLimit('client-removal', 30, 3600000), removeClient);
+app.delete('/api/admin/administrators/:id', requireUser, requirePrimaryOwner, rateLimit('administrator-removal', 10, 3600000), removeAdministrator);
 app.patch('/api/admin/users/:id', requireUser, requireOwner, async (req, res) => {
   const target = await User.findById(objectId.parse(req.params.id));
   if (!target || target.removedAt) return res.status(404).json({ error: 'Account not found.' });

@@ -9,6 +9,7 @@ const dist = fileURLToPath(new URL('../client/dist/', import.meta.url)), html = 
 const app = express(); app.use(express.static(dist)); app.get('/{*path}', (_req, res) => res.type('html').send(html));
 const server = app.listen(0, '127.0.0.1'); await once(server, 'listening'); const origin = `http://127.0.0.1:${server.address().port}`;
 const client = { _id: 'cccccccccccccccccccccccc', name: 'Current Client', email: 'current@example.test', role: 'member' };
+const administrator = { _id: 'dddddddddddddddddddddddd', name: 'Fixture Administrator', email: 'admin@example.test', role: 'owner', isPrimaryOwner: false };
 const colleague = { _id: 'bbbbbbbbbbbbbbbbbbbbbbbb', name: 'Fixture Trainer', email: 'trainer@example.test', role: 'staff' };
 await mkdir('test-results', { recursive: true });
 try {
@@ -20,9 +21,9 @@ try {
         const context = await browser.newContext({ viewport: { width, height: 844 }, isMobile: width < 700 }), page = await context.newPage();
         const role = access === 'admin' ? 'owner' : access;
         const user = { id: 'aaaaaaaaaaaaaaaaaaaaaaaa', _id: 'aaaaaaaaaaaaaaaaaaaaaaaa', name: 'Signed In Person', role, isPrimaryOwner: access === 'owner' };
-        let removed = false, attempts = 0, accept = false; const errors = [];
+        let removed = false, adminRemoved = false, attempts = 0, accept = false; const errors = [];
         page.on('pageerror', e => errors.push(e.message));
-        page.on('dialog', dialog => { assert.match(dialog.message(), /Remove Current Client\?/); assert.match(dialog.message(), /cancels remaining visits/); return accept ? dialog.accept() : dialog.dismiss(); });
+        page.on('dialog', dialog => { if (dialog.message().startsWith('Delete administrator')) { assert.match(dialog.message(), /Fixture Administrator/); assert.match(dialog.message(), /Client appointments and history are kept/); } else { assert.match(dialog.message(), /Remove Current Client\?/); assert.match(dialog.message(), /cancels remaining visits/); } return accept ? dialog.accept() : dialog.dismiss(); });
         await page.route('**/api/**', async route => {
           const path = new URL(route.request().url()).pathname; let json = {};
           if (path === '/api/config') json = { connected: true, paymentsReady: false, services: SERVICES, schedule: { enabled: true, weekdays: [1,2,3,4,5], hours: ['10:00'] } };
@@ -32,10 +33,11 @@ try {
           else if (path === '/api/admin') json = { role, team: [user, colleague], bookings: [], inbox: [], blocks: [], settings: { enabled: true, weekdays: [1,2,3,4,5], hours: ['10:00'] } };
           else if (path === '/api/admin/reviews') json = { reviews: [] };
           else if (path === '/api/admin/services') json = { services: SERVICES };
-          else if (path === '/api/admin/membership-status') json = { remindersConfigured: true, automaticPlans: 0 };
+          else if (path === '/api/admin/membership-status') json = { remindersConfigured: true, automaticPlans: 0, lastReminderRunAt: '2026-09-13T14:00:00.000Z' };
           else if (path === '/api/admin/memberships') json = { memberships: {} };
-          else if (path === '/api/admin/users') json = { users: [user, colleague, ...removed ? [] : [client]] };
+          else if (path === '/api/admin/users') json = { users: [user, colleague, ...adminRemoved ? [] : [administrator], ...removed ? [] : [client]] };
           else if (path === '/api/admin/clients') json = { clients: removed ? [] : [client] };
+          else if (path === `/api/admin/administrators/${administrator._id}` && route.request().method() === 'DELETE') { assert.equal(access, 'owner'); assert.deepEqual(route.request().postDataJSON(), { confirmRemoval: true }); adminRemoved = true; json = { ok: true, message: 'Administrator profile deleted and access revoked.' }; }
           else if (path === `/api/admin/clients/${client._id}` && route.request().method() === 'DELETE') {
             attempts++; assert.deepEqual(route.request().postDataJSON(), { confirmRemoval: true });
             if (attempts === 1) return route.fulfill({ status: 409, json: { error: 'This client changed. Refresh and try again.' } });
@@ -50,7 +52,9 @@ try {
             assert.equal(await page.locator('.client-trash-button').count(), 0);
           } else {
             const button = page.getByRole('button', { name: 'Remove client Current Client', exact: true }); await button.waitFor();
-            assert.equal(await page.locator('.client-trash-button').count(), 1);
+            assert.equal(await page.locator('.client-trash-button').count(), access === 'owner' ? 2 : 1);
+            assert.equal(await page.getByRole('button', { name: 'Delete administrator Fixture Administrator', exact: true }).count(), access === 'owner' ? 1 : 0);
+            if (role === 'owner') { await page.getByText(/Daily membership reminders are enabled/).waitFor(); assert.ok((await page.locator('body').innerText()).includes('Last completed check:')); }
             assert.equal(await page.getByRole('button', { name: 'Remove client Fixture Trainer', exact: true }).count(), 0);
             const box = await button.boundingBox(); assert.ok(box.width >= 44 && box.height >= 44);
             assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
@@ -63,6 +67,16 @@ try {
             assert.equal(attempts, 2); await page.getByText('Client removed. Account access is disabled and remaining visits are cancelled.', { exact: true }).waitFor();
             await page.reload(); await page.getByRole('heading', { name: role === 'staff' ? 'Clients.' : 'People & permissions.' }).waitFor();
             assert.equal(await page.getByRole('button', { name: 'Remove client Current Client', exact: true }).count(), 0);
+            if (access === 'owner') {
+              const trash = page.getByRole('button', { name: 'Delete administrator Fixture Administrator', exact: true });
+              accept = false; await trash.click(); assert.equal(adminRemoved, false);
+              assert.equal(await page.locator('.owner-person').filter({ has: trash }).getAttribute('open'), null);
+              accept = true; await trash.focus(); await page.keyboard.press('Enter'); await trash.waitFor({ state: 'detached' });
+              assert.equal(adminRemoved, true); await page.getByText('Administrator profile deleted and access revoked.', { exact: true }).waitFor();
+              await page.reload(); await page.getByRole('heading', { name: 'People & permissions.' }).waitFor();
+              assert.equal(await page.getByRole('button', { name: 'Delete administrator Fixture Administrator', exact: true }).count(), 0);
+              assert.equal(await page.getByRole('button', { name: 'Delete administrator Signed In Person', exact: true }).count(), 0);
+            }
           }
           assert.deepEqual(errors, []); console.log(`${engineName} ${width} ${access}: trash visibility, confirmation, error recovery, keyboard removal and reload passed`);
         } finally { await context.close(); }
