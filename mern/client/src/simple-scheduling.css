@@ -25,3 +25,7 @@
 .schedule-membership-details>summary{cursor:pointer;font-weight:700;min-height:44px}
 @media print{.schedule-membership-details>*{display:block!important}}
 .bulk-time-buttons .button.time-selected,.calendar-time-options .check-label:has(input:checked){transition:none!important}
+
+.booking-extra-options { margin: 1rem 0; border: 1px solid #766748; border-radius: 8px; padding: .75rem 1rem; }
+.booking-extra-options > summary { cursor: pointer; min-height: 44px; align-content: center; color: #edc975; font-weight: 700; }
+.booking-extra-options > button { margin-top: 1rem; }

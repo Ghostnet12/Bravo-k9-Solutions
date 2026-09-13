@@ -70,6 +70,15 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})){
     await page.getByRole('heading',{name:'Fixture Person’s schedule.',exact:true}).waitFor();
     assert.equal(new URL(page.url()).pathname,'/schedule');
     await page.goto(`${origin}/portal?new=1`);
+    assert.equal(await page.locator('.booking-extra-options select').last().isVisible(),false);
+    await page.getByText('More scheduling options (optional)',{exact:true}).click();
+    await page.locator('.booking-extra-options select').last().waitFor({state:'visible'});
+    await page.locator('.booking-extra-options select').last().selectOption('morning');
+    await page.getByText('More scheduling options (optional)',{exact:true}).click();
+    await page.getByText(/Time filters are on:/).waitFor();
+    await page.getByText('More scheduling options (optional)',{exact:true}).click();
+    await page.locator('.booking-extra-options select').last().selectOption('any');
+    await page.getByText('More scheduling options (optional)',{exact:true}).click();
     await page.getByLabel('Choose my trainer',{exact:true}).selectOption(id);
     await page.getByLabel('Start date',{exact:true}).fill(dates[0]);
     await page.getByLabel('End date',{exact:true}).fill(dates[1]);
@@ -88,6 +97,13 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})){
    await page.getByRole('button',{name:'Menu',exact:true}).click();
    const nav=page.getByRole('navigation',{name:'Primary navigation',exact:true});
    assert.equal(await nav.locator('button').last().innerText(),'Sign out');
+   if(access==='member'){
+    assert.equal(await nav.getByRole('link',{name:'My schedule',exact:true}).count(),1);
+    assert.equal(await nav.getByRole('link',{name:'Message Bravo',exact:true}).getAttribute('href'),'/community?tab=direct');
+   }else{
+    assert.equal(await nav.getByRole('link',{name:'Team schedule',exact:true}).getAttribute('href'),'/admin?tab=schedule');
+    assert.equal(await nav.getByRole('link',{name:'People & access',exact:true}).getAttribute('href'),'/admin?tab=people');
+   }
    await nav.getByRole('button',{name:'Sign out',exact:true}).click();
    await nav.getByRole('alert').waitFor();assert.equal(signedIn,true);
    await nav.getByRole('button',{name:'Sign out',exact:true}).click();
