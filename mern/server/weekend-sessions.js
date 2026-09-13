@@ -48,7 +48,7 @@ export async function addTrainingVisit(req,res) {
     b.visits.push({date,time,service:'training'});b.visits.sort((a,b)=>`${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));await b.save({session});
     const body=`Bravo added a training visit on ${date} at ${time} for ${b.dogName}.`;
     const eventId=randomUUID();
-    await Notification.create([{_id:`added:${eventId}:staff`,staff:true,body,href:`/schedule?client=${b.userId}&month=${date.slice(0,7)}`},{_id:`added:${eventId}:client`,userId:b.userId,staff:false,body,href:`/schedule?month=${date.slice(0,7)}`}],{session});
+    await Notification.create([{_id:`added:${eventId}:staff`,staff:true,body,href:`/schedule?client=${b.userId}&month=${date.slice(0,7)}`},{_id:`added:${eventId}:client`,userId:b.userId,staff:false,body,href:`/schedule?month=${date.slice(0,7)}`}],{session,ordered:true});
     await AuditEvent.create([{actorId:req.user._id,action:'visit.added',targetType:'booking',targetId:String(b._id),details:{date,time}}],{session});
   });res.json({ok:true,message:'Training visit added. The client and whole team have been notified.'});
 }

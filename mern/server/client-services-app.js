@@ -216,7 +216,6 @@ app.get('/api/admin/membership-status', ...session, requireUser, requireOwner, a
 });
 app.use(memberApp);
 app.use((error, _req, res, _next) => {
-  if (process.env.NODE_ENV === 'test') console.error(error);
   if (res.headersSent) return res.end();
   const status = error instanceof z.ZodError ? 400 : Number(error.status) || 500;
   res.status(status).json({ error: error instanceof z.ZodError ? 'Check the form fields and try again.' : status >= 500 ? 'This operation could not be completed. Please try again.' : error.message });
