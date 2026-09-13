@@ -30,31 +30,31 @@ test('backdated onboarding and actual two-trainer assignments persist atomically
     const call=(who,method,path,body)=>{let r=request(app)[method](path).set('Origin',process.env.APP_ORIGIN);if(who)r=r.set('Cookie',cookies[who]);return body===undefined?r:r.send(body)};
     await Settings.updateOne({_id:'schedule'},{$set:{enabled:true,weekdays:[1,2,3,4,5,6,7],hours:['10:00','11:00','13:00'],overrides:[]}});
     await t.test('only owner/admin can create dated access; invalid input has no side effects',async()=>{
-      const payload={name:'Added client',email:'blocked@example.test',membershipStartDate:'2026-01-01'};
+      const payload={name:'Added client',dogName:'Fixture dog',email:'blocked@example.test',membershipStartDate:'2026-01-01'};
       for(const who of [null,'client','ashley'])await call(who,'post','/api/admin/users',payload).expect(who?403:401);
       await call('david','post','/api/admin/users',{...payload,membershipStartDate:'2026-02-30'}).expect(400);
       assert.equal(await User.countDocuments({email:payload.email}),0);assert.equal(await Subscription.countDocuments(),0);
     });
     await t.test('historical month is exact and expired, with no Stripe charge or invented payment date',async()=>{
-      const response=await call('admin','post','/api/admin/users',{name:'Historical client',email:'history@example.test',membershipStartDate:'2026-01-01',trainingDogCount:2,role:'owner'}).expect(201);
+      const response=await call('admin','post','/api/admin/users',{name:'Historical client',dogName:'Fixture dog',email:'history@example.test',membershipStartDate:'2026-01-01',trainingDogCount:2,role:'owner'}).expect(201);
       const id=response.body.user.id;assert.equal(response.body.user.role,'member');assert.equal(response.body.membership.active,false);
       assert.equal(membershipDate(response.body.membership.validFrom),'2026-01-01');assert.equal(membershipDate(response.body.membership.validUntil),'2026-02-01');
-      const term=await Subscription.findOne({userId:id});assert.equal(term.source,'grant');assert.equal(term.dogCount,2);assert.equal(term.autoPayDisabled,true);
+      const term=await Subscription.findOne({userId:id,serviceIds:'training'});assert.equal(term.source,'grant');assert.equal(term.dogCount,2);assert.equal(term.autoPayDisabled,true);
       const b=await Booking.findOne({userId:id});assert.equal(b.paymentStatus,'covered');assert.equal(b.visits.length,0);assert.equal(b.paidAt,undefined);assert.equal((await User.findById(id)).firstPaidAt,undefined);assert.deepEqual((await getEntitlements(id)).services,[]);
       assert.ok(await AuditEvent.exists({targetId:id,action:'client.created'}));
-      await call('admin','post','/api/admin/users',{name:'Duplicate',email:'history@example.test',membershipStartDate:'2026-01-01'}).expect(409);
-      assert.equal(await Subscription.countDocuments({userId:id}),1);assert.equal(await Booking.countDocuments({userId:id}),1);
+      await call('admin','post','/api/admin/users',{name:'Duplicate',dogName:'Fixture dog',email:'history@example.test',membershipStartDate:'2026-01-01'}).expect(409);
+      assert.equal(await Subscription.countDocuments({userId:id}),2);assert.equal(await Booking.countDocuments({userId:id}),1);
     });
-    await t.test('blank start remains account-only; future start does not activate access early',async()=>{
-      const plain=await call('david','post','/api/admin/users',{name:'Account only',email:'plain@example.test',membershipStartDate:''}).expect(201);
-      assert.equal(plain.body.membership,null);assert.equal(await Subscription.countDocuments({userId:plain.body.user.id}),0);
-      const future=await call('david','post','/api/admin/users',{name:'Future client',email:'future@example.test',membershipStartDate:now.plus({months:2}).toISODate()}).expect(201);
+    await t.test('blank start activates full membership today; future start does not activate access early',async()=>{
+      const plain=await call('david','post','/api/admin/users',{name:'Account only',dogName:'Fixture dog',email:'plain@example.test',membershipStartDate:''}).expect(201);
+      assert.equal(plain.body.membership.active,true);assert.equal(membershipDate(plain.body.membership.validFrom),now.toISODate());assert.equal(await Subscription.countDocuments({userId:plain.body.user.id}),2);
+      const future=await call('david','post','/api/admin/users',{name:'Future client',dogName:'Fixture dog',email:'future@example.test',membershipStartDate:now.plus({months:2}).toISODate()}).expect(201);
       assert.equal(future.body.membership.active,false);assert.deepEqual((await getEntitlements(future.body.user.id)).services,[]);
     });
     await t.test('backdated current month gives only its remaining time and survives a fresh read',async()=>{
       const start=now.minus({days:5}).toISODate();
-      const r=await call('david','post','/api/admin/users',{name:'Current client',email:'current@example.test',membershipStartDate:start,trainingDogCount:1}).expect(201);onboarded=r.body.user.id;
-      assert.equal(r.body.membership.active,true);assert.deepEqual((await getEntitlements(onboarded)).services,['training']);
+      const r=await call('david','post','/api/admin/users',{name:'Current client',dogName:'Fixture dog',email:'current@example.test',membershipStartDate:start,trainingDogCount:1}).expect(201);onboarded=r.body.user.id;
+      assert.equal(r.body.membership.active,true);assert.deepEqual((await getEntitlements(onboarded)).services.sort(),['online','training']);
       const schedule=await call('david','get',`/api/client-schedule?client=${onboarded}&month=${date.slice(0,7)}`).expect(200);
       assert.equal(membershipDate(schedule.body.terms[0].validFrom),start);assert.equal(membershipDate(schedule.body.terms[0].validUntil),membershipDate(manualMonthTerm(start).validUntil));assert.equal(schedule.body.trainingBookings.length,1);
       const b=schedule.body.trainingBookings[0];
@@ -63,14 +63,14 @@ test('backdated onboarding and actual two-trainer assignments persist atomically
     });
     await t.test('membership date corrections cannot strand saved training visits',async()=>{
       const path=`/api/admin/memberships/${onboarded}`;
-      await call('david','patch',path,{enabled:true,expectedRevision:0,startDate:now.toISODate()}).expect(200);
+      await call('david','patch',path,{enabled:true,expectedRevision:1,startDate:now.toISODate()}).expect(200);
       assert.ok((await getEntitlements(onboarded)).services.includes('online'));
-      await call('david','patch',path,{enabled:true,expectedRevision:1,startDate:'2026-01-01'}).expect(409);
+      await call('david','patch',path,{enabled:true,expectedRevision:2,startDate:'2026-01-01'}).expect(409);
       assert.deepEqual((await getEntitlements(onboarded)).services.sort(),['online','training']);
       assert.equal(await Subscription.countDocuments({userId:onboarded,serviceIds:'online',status:'active'}),1);
-      await call('david','patch',path,{enabled:false,expectedRevision:1}).expect(200);
+      await call('david','patch',path,{enabled:false,expectedRevision:2}).expect(200);
       assert.equal(await Subscription.countDocuments({userId:onboarded,serviceIds:'training',status:'active'}),1);
-      await call('david','patch',path,{enabled:true,expectedRevision:1,startDate:now.toISODate()}).expect(409);
+      await call('david','patch',path,{enabled:true,expectedRevision:2,startDate:now.toISODate()}).expect(409);
     });
     await t.test('third option is based on two real active accounts, not a dummy staff user',async()=>{
       const r=await call('client','get','/api/trainers').expect(200);

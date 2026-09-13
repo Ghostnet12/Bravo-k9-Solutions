@@ -27,9 +27,9 @@ test('manual members and independent trainer reservations share one consistent c
     await Settings.updateOne({ _id: 'schedule' }, { $set: { enabled: true, weekdays: [1,2,3,4,5,6,7], hours: ['09:00','10:00','11:00','12:00','13:00','14:00'], overrides: [] } });
     for (const key of ['david', 'ashley']) await TrainerSchedule.create({ _id: String(users[key]._id), enabled: true, weekdays: [1,2,3,4,5,6,7], hours: ['09:00','10:00','11:00','12:00','13:00','14:00'], overrides: [] });
     const bookings = {};
-    await t.test('account creation is free; Make Member without a dog field grants complete covered access', async () => {
-      const created = await call('david', 'post', '/api/admin/users', { name: 'Manually added', email: 'manual@example.test', membershipStartDate: '' }).expect(201);
-      assert.equal(created.body.membership, null); assert.equal(await Subscription.countDocuments({ userId: created.body.user.id }), 0); assert.equal(await Booking.countDocuments({ userId: created.body.user.id }), 0);
+    await t.test('account creation grants free membership; Make Member also covers existing clients', async () => {
+      const created = await call('david', 'post', '/api/admin/users', { name: 'Manually added', dogName: 'Fixture dog', email: 'manual@example.test', membershipStartDate: '' }).expect(201);
+      assert.equal(created.body.membership.active, true); assert.equal(await Subscription.countDocuments({ userId: created.body.user.id }), 2); assert.equal(await Booking.countDocuments({ userId: created.body.user.id }), 1);
       for (const key of ['clientD','clientA','other','joint']) {
         const r = await call('david', 'patch', `/api/admin/memberships/${users[key]._id}`, { enabled: true, expectedRevision: 0, startDate: now.minus({ days: 5 }).toISODate() }).expect(200);
         bookings[key] = r.body.membership.trainingBookingId;

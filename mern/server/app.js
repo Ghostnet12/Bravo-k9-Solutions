@@ -278,7 +278,7 @@ app.patch('/api/admin/bookings/:id/assignment', requireUser, requireStaff, async
 app.get('/api/admin/bookings/:id', requireUser, requireStaff, async (req, res) => res.json({ booking: await ownedBooking(req) }));
 app.get('/api/admin/users', requireUser, requireOwner, async (req, res) => {
   const q = String(req.query.q || '').trim(); const filter = q ? { $or: [{ name: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }, { email: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }] } : {};
-  const users = await User.find({ ...filter, removedAt: null }).select('name email role phone title bio showPhone mutedUntil blocked').sort({ createdAt: -1 }).limit(100).lean();
+  const users = await User.find({ ...filter, removedAt: null }).select('name email role phone dogName address title bio showPhone mutedUntil blocked').sort({ createdAt: -1 }).limit(100).lean();
   res.json({ users: users.map(user => ({ ...user, _id: String(user._id), isPrimaryOwner: isPrimaryOwner(user) })) });
 });
 app.post('/api/admin/users', requireUser, requireOwner, rateLimit('admin-client', 20, 3600000), createAssistedClient);
@@ -286,7 +286,8 @@ app.delete('/api/admin/clients/:id', requireUser, requireStaff, rateLimit('clien
 app.patch('/api/admin/users/:id', requireUser, requireOwner, async (req, res) => {
   const target = await User.findById(objectId.parse(req.params.id));
   if (!target || target.removedAt) return res.status(404).json({ error: 'Account not found.' });
-  const { confirmOwnerAccess, ...fields } = z.object({ role: z.enum(['member', 'staff', 'owner']).optional(), confirmOwnerAccess: z.boolean().optional(), name: z.string().trim().min(2).max(80).optional(), phone: z.string().trim().max(30).optional(), title: z.string().trim().max(80).optional(), bio: z.string().trim().max(500).optional(), showPhone: z.boolean().optional(), blocked: z.boolean().optional(), mutedUntil: z.union([z.string().datetime(), z.null()]).optional() }).parse(req.body);
+  const { confirmOwnerAccess, ...fields } = z.object({ role: z.enum(['member', 'staff', 'owner']).optional(), confirmOwnerAccess: z.boolean().optional(), email: z.string().trim().email().max(254).transform(value => value.toLowerCase()).optional(), dogName: z.string().trim().max(80).optional(), address: z.string().trim().max(300).optional(), name: z.string().trim().min(2).max(80).optional(), phone: z.string().trim().max(30).optional(), title: z.string().trim().max(80).optional(), bio: z.string().trim().max(500).optional(), showPhone: z.boolean().optional(), blocked: z.boolean().optional(), mutedUntil: z.union([z.string().datetime(), z.null()]).optional() }).parse(req.body);
+  if (fields.email && (target.role !== 'member' || target.email)) throw new Error('An email can only be added to a client who does not have one yet.');
   const changesRole = fields.role !== undefined && fields.role !== target.role;
   const removesAccess = (fields.role !== undefined && fields.role !== 'owner') || fields.blocked === true || !!fields.mutedUntil;
   if (isPrimaryOwner(target) && removesAccess) throw new Error('The primary owner’s access is protected.');
@@ -299,7 +300,7 @@ app.patch('/api/admin/users/:id', requireUser, requireOwner, async (req, res) =>
   let updated;
   await transaction(async session => {
     // Compare the role so concurrent saves cannot silently overwrite a promotion.
-    updated = await User.findOneAndUpdate({ _id: target._id, removedAt: null, role: target.role, blocked: target.blocked }, { $set: fields }, { returnDocument: 'after', runValidators: true, session });
+    updated = await User.findOneAndUpdate({ _id: target._id, removedAt: null, role: target.role, blocked: target.blocked, ...(fields.email ? { email: null } : {}) }, { $set: fields }, { returnDocument: 'after', runValidators: true, session });
     if (!updated) throw Object.assign(new Error('This account changed. Refresh it before saving again.'), { status: 409 });
     if (changesRole) await AuditEvent.create([{ actorId: req.user._id, action: 'user.access.changed', targetType: 'user', targetId: String(target._id), details: { from: target.role, to: fields.role } }], { session });
     if (fields.blocked) await Session.deleteMany({ userId: updated._id }, { session });

@@ -1,11 +1,10 @@
 import express from 'express';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
-import mongoose from 'mongoose';
 import { z } from 'zod';
 import mediaApp from './site-image-app.js';
 import { connectDb, transaction } from './db.js';
-import { User, Subscription, AuditEvent } from './models.js';
+import { User, Subscription, AuditEvent, MemberAccess } from './models.js';
 import { identify, requireUser, requireOwner, sameOrigin, publicUser, rateLimit } from './auth.js';
 import { getEntitlements } from './bookings.js';
 import { protectedLesson } from './lessons.js';
@@ -15,14 +14,7 @@ import { saveManualTraining } from './manual-training.js';
 // Member access is an entitlement, NOT an employee role or a Stripe subscription.
 // No grant is created during registration. Paid plans, quotes and billing records
 // remain independent. Current-client setup also links a manual training grant.
-export const MemberAccess = mongoose.models.BravoMemberAccess || mongoose.model('BravoMemberAccess', new mongoose.Schema({
-  _id: mongoose.Schema.Types.ObjectId,
-  enabled: { type: Boolean, default: false },
-  revision: { type: Number, default: 0 },
-  updatedBy: mongoose.Schema.Types.ObjectId,
-  startsAt: Date, endsAt: Date,
-  trainingBookingId: mongoose.Schema.Types.ObjectId, trainingSubscriptionId: String, trainingDogCount: Number,
-}, { timestamps: true }));
+export { MemberAccess };
 const idInput = z.string().regex(/^[a-f\d]{24}$/i);
 const changeInput = z.object({ enabled: z.boolean(), expectedRevision: z.number().int().min(0), startDate: z.string().optional(), trainingDogCount: z.number().int().min(1).max(10).optional() }).strict();
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });

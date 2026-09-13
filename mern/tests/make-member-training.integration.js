@@ -101,9 +101,9 @@ test('Make Member connects existing clients to covered training and the shared c
       }
     });
     await t.test('existing dated onboarding reuses its training grant and booking', async () => {
-      const r = await call('admin', 'post', '/api/admin/users', { name: 'Onboarded client', email: 'onboarded@example.test', membershipStartDate: start, trainingDogCount: 1 }).expect(201);
+      const r = await call('admin', 'post', '/api/admin/users', { name: 'Onboarded client', dogName: 'Fixture dog', email: 'onboarded@example.test', membershipStartDate: start, trainingDogCount: 1 }).expect(201);
       const id = r.body.user.id, before = await Booking.findOne({ userId: id });
-      const changed = await call('admin', 'patch', `/api/admin/memberships/${id}`, { enabled: true, expectedRevision: 0, startDate: start, trainingDogCount: 2 }).expect(200);
+      const changed = await call('admin', 'patch', `/api/admin/memberships/${id}`, { enabled: true, expectedRevision: 1, startDate: start, trainingDogCount: 2 }).expect(200);
       assert.equal(changed.body.membership.trainingBookingId, String(before._id)); assert.equal(await Booking.countDocuments({ userId: id }), 1); assert.equal(await Subscription.countDocuments({ userId: id, serviceIds: 'training' }), 1);
     });
     await t.test('concurrent setup commits only one covered request', async () => {

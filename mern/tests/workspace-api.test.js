@@ -6,7 +6,7 @@ import mongoose from 'mongoose';
 import request from 'supertest';
 import app from '../server/app.js';
 import { digest } from '../server/auth.js';
-import { ALL_MODELS, TrainerSchedule, ChatReset, User, Session, RateBucket, Settings, ServiceSetting, Subscription, CommunityGroup, GroupMessage, DirectMessage, Message, Lesson, MediaUpload, MediaChunk, Booking, Review, AuditEvent } from '../server/models.js';
+import { ALL_MODELS, MemberAccess, TrainerSchedule, ChatReset, User, Session, RateBucket, Settings, ServiceSetting, Subscription, CommunityGroup, GroupMessage, DirectMessage, Message, Lesson, MediaUpload, MediaChunk, Booking, Review, AuditEvent } from '../server/models.js';
 const origin = 'http://localhost:5173';
 const ids = { owner: '6aa290cbd066f8feb3c1964f', staff: '111111111111111111111111', member: '222222222222222222222222', other: '333333333333333333333333' };
 function query(value) {
@@ -210,18 +210,22 @@ test('owner/staff workspace contracts over HTTP with isolated model mocks', asyn
     assert.equal(data.role, undefined); assert.equal(data.blocked, undefined); assert.equal(data.showPhone, undefined);
     assert.ok(data.passwordHash); assert.equal(result.body.user.passwordHash, undefined);
   });
-  await t.test('owners and delegated administrators can create client-only accounts', async () => {
+  await t.test('owners and delegated administrators create clients with covered memberships', async sub => {
     const created = [];
-    const create = t.mock.method(User, 'create', async data => { created.push(data); return { ...data, _id: '444444444444444444444444' }; });
-    await call('staff', 'post', '/api/admin/users', { name: 'Assisted Client', email: 'assisted@example.test' }).expect(403);
-    const ownerResult = await call('owner', 'post', '/api/admin/users', { name: 'Assisted Client', email: 'ASSISTED@example.test', role: 'owner', blocked: true }).expect(201);
+    sub.mock.method(User, 'create', async ([data]) => { created.push(data); return [{ ...data, _id: '444444444444444444444444' }]; });
+    sub.mock.method(Booking.prototype, 'save', async function () { return this; });
+    sub.mock.method(Subscription.prototype, 'save', async function () { return this; });
+    sub.mock.method(MemberAccess, 'create', async data => data);
+    sub.mock.method(Subscription, 'create', async data => data);
+    await call('staff', 'post', '/api/admin/users', { name: 'Assisted Client', dogName: 'Fixture dog', email: 'assisted@example.test' }).expect(403);
+    const ownerResult = await call('owner', 'post', '/api/admin/users', { name: 'Assisted Client', dogName: 'Fixture dog', email: 'ASSISTED@example.test', role: 'owner', blocked: true }).expect(201);
     assert.equal(ownerResult.body.user.role, 'member'); assert.equal(ownerResult.body.user.email, 'assisted@example.test');
     assert.match(ownerResult.body.temporaryPassword, /^Bravo-[a-f\d]{18}!$/); assert.equal(ownerResult.body.user.passwordHash, undefined);
     assert.equal(created[0].role, 'member'); assert.equal(created[0].blocked, undefined); assert.ok(created[0].passwordHash);
     users[ids.other].role = 'owner';
-    const delegateResult = await call('other', 'post', '/api/admin/users', { name: 'Second Client', email: 'second@example.test', phone: '605-555-0100' }).expect(201);
+    const delegateResult = await call('other', 'post', '/api/admin/users', { name: 'Second Client', dogName: 'Fixture dog', email: 'second@example.test', phone: '605-555-0100' }).expect(201);
     assert.equal(delegateResult.body.user.publicRole, 'member'); assert.equal(created[1].phone, '605-555-0100');
-    users[ids.other].role = 'member'; create.mock.restore();
+    users[ids.other].role = 'member';
   });
   await t.test('reviews use the signed-in identity and owner-only moderation', async () => {
     const saved = { _id: ids.other, userId: ids.member, authorName: 'member', rating: 5, body: 'A careful and helpful training experience.', hidden: false };

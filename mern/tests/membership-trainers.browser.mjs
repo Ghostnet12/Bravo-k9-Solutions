@@ -15,6 +15,7 @@ const clientId='cccccccccccccccccccccccc',bookingId='dddddddddddddddddddddddd';
 await mkdir('test-results',{recursive:true});
 try{
  for(const [engineName,engine] of Object.entries({chromium,webkit})){
+  if (process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(engineName)) continue;
   const browser=await engine.launch();
   try{for(const width of [320,390,1440]){
    const context=await browser.newContext({viewport:{width,height:844},isMobile:width<700}),page=await context.newPage();
@@ -47,11 +48,12 @@ try{
    const panel=page.locator('.add-client-panel'),start=panel.locator('input[name="membershipStartDate"]'),end=panel.getByLabel('Membership end date',{exact:true});
    assert.equal(await start.getAttribute('min'),null);
    for(const [from,to] of [['2026-01-01','2026-02-01'],['2026-01-31','2026-02-28'],['2028-01-31','2028-02-29']]){await start.fill(from);await page.waitForFunction(({to})=>[...document.querySelectorAll('.add-client-panel input[readonly]')].some(i=>i.value===to),{to});assert.equal(await end.inputValue(),to);}
-   await start.fill('2026-01-01');await panel.getByLabel('Client name',{exact:true}).fill('Added Client');await panel.getByLabel('Email',{exact:true}).fill('added@example.test');
+   await start.fill('2026-01-01');await panel.getByLabel('Client name',{exact:true}).fill('Added Client');await panel.getByLabel('Email (optional)',{exact:true}).fill('added@example.test');
+   await panel.getByLabel('Dog’s name',{exact:true}).fill('Fixture dog');
    await panel.locator('input[name="trainingDogCount"]').fill('2');
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
    await page.screenshot({path:`test-results/membership-dates-${engineName}-${width}.png`,fullPage:true});
-   await panel.getByRole('button',{name:'Create client account',exact:true}).click();await panel.getByRole('heading',{name:'Client account created.',exact:true}).waitFor();
+   await panel.getByRole('button',{name:'Create client & member',exact:true}).click();await panel.getByRole('heading',{name:'Client account created.',exact:true}).waitFor();
    assert.equal(createdBody.membershipStartDate,'2026-01-01');assert.equal(createdBody.trainingDogCount,'2');assert.equal(createdBody.validUntil,undefined);
    await page.goto(`${origin}/portal?program=training`);
    const choices=page.getByLabel('Choose my trainer',{exact:true});await choices.locator(`option[value="${JOINT_TRAINER_ID}"]`).waitFor({state:'attached'});
