@@ -55,7 +55,7 @@ export default function AdminPage() {
         <section className="panel"><div className="section-label"><h2>Today’s visits.</h2><button className="quiet-button" disabled={busy} onClick={resetDesk}>Refresh & reset</button></div>
           <div className="form-grid"><p>{formatDate(today())} · Aberdeen time</p><label>View schedule<select value={trainer} onChange={e => setTrainer(e.target.value)}><option value="all">Whole team</option><option value={user.id}>My visits</option><option value="unassigned">Unassigned visits</option>{data.team.filter(person => person._id !== user.id).map(person => <option key={person._id} value={person._id}>{person.name}</option>)}</select></label></div>
           {agenda.length ? agenda.map(v => <div className="appointment-line" key={`${v.booking._id}-${v.time}`}><strong>{formatTime(v.time)} · {v.booking.dogName}</strong><span>{v.booking.userId?.name} · {v.booking.status}</span><a className="inline-link" href={`tel:${v.booking.phone.replace(/[^+0-9]/g, '')}`}>Call client</a></div>) : <p>No visits today for this view.</p>}
-          <p className="helper">Requests need confirmation. Each hourly opening is shared across the team.</p>
+          <p className="helper">Requests need confirmation. Openings follow each assigned trainer’s working hours and saved visits.</p>
         </section>
         <TrainerClients key={`clients-${resetVersion}`} staffId={user.id}/><WeekendSessions/><StaffScheduleEditor key={`personal-schedule-${resetVersion}`} team={data.team}/><StaffBooking key={`booking-${resetVersion}`} team={data.team} onSaved={load}/>
         <section id="customer-requests"><h2>Requests & upcoming visits.</h2>

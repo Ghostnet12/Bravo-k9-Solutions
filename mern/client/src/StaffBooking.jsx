@@ -44,7 +44,7 @@ export default function StaffBooking({ team, onSaved }) {
     } catch (err) { setError(err.message); } finally { setBusy(false); }
   }
   return <details className="panel staff-create"><summary>Add a visit for a client</summary>
-    <p>Find their existing account, select an opening, and assign a trainer. All trainers share one booking calendar.</p>
+    <p>Find their existing account, choose a trainer, and select one of that trainer’s available times. Saved visits appear on the client’s and team’s calendars.</p>
     <Notice error>{error}</Notice><Notice>{notice}</Notice><button type="button" className="quiet-button" disabled={busy} onClick={resetForm}>Reset client visit form</button>
     <form className="owner-search" onSubmit={search}><label>Client name or email<input type="search" value={query} minLength="2" required onChange={e => setQuery(e.target.value)}/></label><button className="button button-small button-ghost" disabled={busy}>Find client</button></form>
     {clients.length > 0 && <label>Choose client<select value={client?._id || ''} disabled={busy} onChange={e => { setClient(clients.find(person => person._id === e.target.value) || null); setRequestKey(crypto.randomUUID()); }}><option value="">Select a person</option>{clients.map(person => <option key={person._id} value={person._id}>{person.name} · {person.email}</option>)}</select></label>}
