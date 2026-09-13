@@ -63,7 +63,8 @@ app.post('/api/admin/training-visits', ...session, requireStaff, ...write, addTr
 app.post('/api/client-schedule/changes', ...session, requireUser, sameOrigin, express.json({limit:'20kb'}), rateLimit('visit-change',30,3600000), saveScheduleChanges);
 app.post('/api/client-schedule/visit', ...session, requireUser, ...write, rateLimit('visit-change', 30, 3600000), async (req, res) => {
   const visit = z.object({ date: z.string(), time: z.enum(HOURS), service: z.string() }).strict();
-  const input = z.object({ bookingId: id, action: z.enum(['change', 'cancel', 'note']), original: visit, replacement: visit.optional(), note: z.string().trim().min(1).max(1200) }).strict().parse(req.body);
+  const input = z.object({ bookingId: id, action: z.enum(['change', 'cancel', 'note']), original: visit, replacement: visit.optional(), note: z.string().trim().max(1200).default('') }).strict().parse(req.body);
+  if (input.action === 'note' && !input.note) throw fail('Write a note before sending it.');
   await transaction(async session => {
     const booking = await Booking.findById(input.bookingId).session(session);
     if (!booking || (String(booking.userId) !== String(req.user._id) && !staff(req.user))) throw fail('Schedule not found.', 404);
@@ -99,7 +100,7 @@ app.post('/api/client-schedule/visit', ...session, requireUser, ...write, rateLi
       await booking.save({ session });
     }
     const action = input.action === 'note' ? 'Note about' : input.action === 'cancel' ? 'Cancelled' : 'Requested a change to';
-    const body = `${req.user.name}: ${action} ${input.original.date} at ${input.original.time}${input.action === 'change' ? ` → ${input.replacement.date} at ${input.replacement.time}` : ''}. ${input.note}`;
+    const body = `${req.user.name}: ${action} ${input.original.date} at ${input.original.time}${input.action === 'change' ? ` → ${input.replacement.date} at ${input.replacement.time}` : ''}. ${input.note}`.trim();
     await Notification.create([{ _id: `visit:${randomBytes(16).toString('hex')}`, staff: true, body, href: `/schedule?client=${booking.userId}&month=${(input.replacement?.date || input.original.date).slice(0,7)}` }], { session });
     if (staff(req.user)) await Notification.create([{_id:`visit-client:${randomBytes(16).toString('hex')}`,staff:false,userId:booking.userId,body,href:`/schedule?month=${(input.replacement?.date||input.original.date).slice(0,7)}`}],{session});
     await DirectMessage.create([{ memberId: booking.userId, senderId: req.user._id, senderName: req.user.name, senderRole: req.user.role, body }], { session });

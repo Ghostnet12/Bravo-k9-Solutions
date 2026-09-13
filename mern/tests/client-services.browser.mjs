@@ -26,6 +26,7 @@ try {
       for (const width of [320, 390, 1440]) {
         const context = await browser.newContext({ viewport: { width, height: 844 }, isMobile: width < 700 });
         const page = await context.newPage(), errors = []; let printed = false, read = false, role = 'member', changeBody = null, saved = false;
+        let singleVisitBody=null;
         let trainerAssigned='aaaaaaaaaaaaaaaaaaaaaaaa',trainerPending=false,trainerAccepted=null;
         let savedVisits=['2026-09-21','2026-09-28','2026-10-05'].map(date=>({date,time:'10:00',service:'training'}));
         page.on('pageerror', error => errors.push(error.message));
@@ -44,6 +45,7 @@ try {
           else if (url.pathname.endsWith('/assignment')) {trainerAssigned=route.request().postDataJSON().staffId;trainerPending=true;trainerAccepted=null;json={ok:true};}
           else if (url.pathname.endsWith('/accept-client')) {assert.equal(route.request().postDataJSON().staffId,trainerAssigned);trainerPending=false;trainerAccepted='2026-09-13T12:00:00.000Z';json={ok:true,message:'Client accepted. Their saved schedule now shows the trainer’s name.'};}
           else if (url.pathname === '/api/team') json = {team:[{id:'aaaaaaaaaaaaaaaaaaaaaaaa',name:'Fixture Trainer'}]};
+          else if (url.pathname === '/api/client-schedule/visit') {singleVisitBody=route.request().postDataJSON();json={ok:true};}
           else if (url.pathname === '/api/client-schedule/changes') { changeBody=route.request().postDataJSON(); saved=true; savedVisits=savedVisits.filter(v=>!changeBody.removals.some(r=>r.date===v.date&&r.time===v.time)).concat(changeBody.additions.map(v=>({...v,service:'training'})));json={ok:true,message:'Schedule saved and note sent.'}; }
           else if (url.pathname === '/api/availability') {const start=new Date(url.searchParams.get('from')+'T12:00:00Z'),end=new Date(url.searchParams.get('to')+'T12:00:00Z'),days=[];for(let d=start;d<=end;d=new Date(d.getTime()+86400000))days.push({date:d.toISOString().slice(0,10),slots:[0,6].includes(d.getUTCDay())?[]:['10:00','13:00']});json={days,enabled:true};}
 
@@ -61,6 +63,12 @@ try {
         await page.getByRole('button', {name:'Note to staff',exact:true}).click();
         await page.getByLabel('Note to all staff, administrators and owners').fill('Please call me about this visit.');
         await page.getByRole('button', {name:'Keep current visit',exact:true}).click();
+        await page.getByRole('button',{name:'Cancel this visit',exact:true}).click();
+        const optionalNote=page.getByLabel('Note to all staff, administrators and owners',{exact:true});
+        await optionalNote.fill('');assert.equal(await optionalNote.getAttribute('required'),null);
+        await page.getByRole('button',{name:'Confirm cancellation & notify team',exact:true}).click();
+        await page.getByText('Saved. The Bravo team has been notified.',{exact:true}).waitFor();
+        assert.equal(singleVisitBody.action,'cancel');assert.equal(singleVisitBody.note,'');
         assert.equal(await page.getByRole('button', { name: 'Print schedule', exact: true }).count(), 0);
         assert.equal(await page.locator('.saved-calendar button.has-visits').count(), 2);
         const monthBox = await page.getByLabel('Schedule month').boundingBox();

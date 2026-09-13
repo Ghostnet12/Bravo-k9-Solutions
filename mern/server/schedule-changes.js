@@ -14,7 +14,7 @@ import { ALL_SERVICES } from '../shared/catalog.js';
 
 const id=z.string().regex(/^[a-f\d]{24}$/i);
 const visit=z.object({date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),time:z.enum(HOURS)}).strict();
-const input=z.object({bookingId:id,revision:z.string().datetime(),additions:z.array(visit).max(62),removals:z.array(visit).max(62),note:z.string().trim().min(1).max(1200),openWeekends:z.boolean().default(false),staffId:trainerSelectionInput.optional()}).strict();
+const input=z.object({bookingId:id,revision:z.string().datetime(),additions:z.array(visit).max(62),removals:z.array(visit).max(62),note:z.string().trim().max(1200).default(''),openWeekends:z.boolean().default(false),staffId:trainerSelectionInput.optional()}).strict();
 const key=v=>`${v.date}|${v.time}`;
 const fail=(message,status=400)=>Object.assign(new Error(message),{status});
 function when(v) { try{return dateTime(v.date,v.time)}catch{throw fail('Enter a valid date and time.')} }
@@ -79,11 +79,11 @@ export async function saveScheduleChanges(req,res) {
     if(data.additions.length && !isStaff) booking.status='requested';
     await booking.save({session});
     const describe=values=>values.map(v=>`${v.date} at ${v.time}`).join(', ');
-    const body=`${req.user.name}: ${data.additions.length?`Added ${describe(data.additions)}. `:''}${data.removals.length?`Cancelled ${describe(data.removals)}. `:''}${data.note}`;
+    const body=`${req.user.name}: ${data.additions.length?`Added ${describe(data.additions)}. `:''}${data.removals.length?`Cancelled ${describe(data.removals)}. `:''}${data.note}`.trim();
     const event=randomUUID(),month=(data.additions[0]||data.removals[0]).date.slice(0,7);
     await Notification.create([{_id:`schedule:${event}:staff`,staff:true,body,href:`/schedule?client=${booking.userId}&month=${month}`},...(isStaff?[{_id:`schedule:${event}:client`,staff:false,userId:booking.userId,body,href:`/schedule?month=${month}`}]:[])],{session,ordered:true});
     await DirectMessage.create([{memberId:booking.userId,senderId:req.user._id,senderName:req.user.name,senderRole:req.user.role,body}],{session});
     await AuditEvent.create([{actorId:req.user._id,action:'schedule.changed',targetType:'booking',targetId:String(booking._id),details:{additions:data.additions,removals:data.removals}}],{session});
   });
-  res.json({ok:true,message:isStaff?'Schedule saved. The client and Bravo team have been notified.':'Schedule saved. Your note was sent to all staff, administrators and owners.'});
+  res.json({ok:true,message:isStaff?'Schedule saved. The client and Bravo team have been notified.':'Schedule saved. The Bravo team has been notified.'});
 }

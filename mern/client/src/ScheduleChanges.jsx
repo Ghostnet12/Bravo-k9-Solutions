@@ -82,9 +82,9 @@ export default function ScheduleChanges({data,initialMonth,onSaved,onClose}) {
       </details>}
       {pendingDates.length>0&&<p role="status">Choose a time for {pendingDates.length} selected {pendingDates.length===1?'date':'dates'} before saving, or clear the date selection.</p>}
       <div className="schedule-change-summary" role="status"><strong>{additions.length} to add · {removals.length} to cancel</strong>{dirty&&<ul>{Object.keys(draft).sort().filter(date=>!same(selected(date),original[date]||[])).map(date=><li key={date}>{formatDate(date)}: {selected(date).length?selected(date).map(formatTime).join(', '):'Day off'}</li>)}</ul>}</div>
-      <label>{isStaff?'Note to the client':'Note to Bravo'}<textarea aria-label={isStaff?'Note to the client':'Note to Bravo'} required maxLength={1200} disabled={busy} value={note} onChange={e=>setNote(e.target.value)}/></label>
+      <label>{isStaff?'Note to the client':'Note to Bravo'} (optional)<textarea aria-label={isStaff?'Note to the client':'Note to Bravo'} maxLength={1200} disabled={busy} value={note} onChange={e=>setNote(e.target.value)}/></label>
       <p className="helper">Changes within 24 hours follow Bravo’s appointment policy. Cancelling visits does not refund payment or extend the paid month.</p>
-      <Notice error>{error}</Notice><div className="record-actions"><button className="button" disabled={busy||loading||!dirty||pendingDates.length>0||!note.trim()}>{busy?'Saving…':'Save changes'}</button><button type="button" className="quiet-button" disabled={busy} onClick={()=>{setDraft({});setBatchDates([]);setDay('');setNote('');setError('')}}>Reset changes</button></div>
+      <Notice error>{error}</Notice><div className="record-actions"><button className="button" disabled={busy||loading||!dirty||pendingDates.length>0}>{busy?'Saving…':'Save changes'}</button><button type="button" className="quiet-button" disabled={busy} onClick={()=>{setDraft({});setBatchDates([]);setDay('');setNote('');setError('')}}>Reset changes</button></div>
     </form>}
     <button type="button" className="quiet-button" disabled={busy} onClick={onClose}>{dirty?'Discard changes & return':'Back to saved schedule'}</button>
   </section>;

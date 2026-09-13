@@ -149,6 +149,32 @@ test('client services: schedules, notifications, recovery and monthly payments',
       await call('owner','post','/api/client-schedule/changes',{...clientChange,revision:changed.updatedAt.toISOString(),additions:[{date:tooLate,time:'10:00'}],removals:[{date:sun,time:'13:00'}]}).expect(400);
       assert.ok(await Slot.exists({date: sun, time: '13:00',bookingId:booking._id}));
     });
+    await t.test('clients and staff save additions, changes and cancellations without notes', async () => {
+      await Settings.updateOne({_id:'schedule'},{$set:{enabled:true,weekdays:[1,2,3,4,5,6,7],hours:['10:00','11:00'],overrides:[]}});
+      await TrainerSchedule.deleteMany({});
+      let index=0;
+      for(const who of ['client','staff','owner']) {
+        const first=DateTime.now().setZone('America/Chicago').plus({days:20+index++*2}).toISODate();
+        const second=DateTime.fromISO(first).plus({days:1}).toISODate();
+        const b=await Booking.create({userId:users.client._id,staffId:users.staff._id,requestKey:`optional-note-${who}`,serviceIds:['training'],dogName:'Optional Note Dog',visits:[],status:'confirmed',paymentStatus:'paid',paidAt:new Date(),quote:quote(['training'])});
+        const term=await Subscription.findOne({stripeId:'manual:editable'}).lean();
+        const batch={bookingId:String(b._id),revision:b.updatedAt.toISOString(),additions:[{date:first,time:'10:00'},{date:second,time:'11:00'}],removals:[]};
+        await call(who,'post','/api/client-schedule/changes',{...batch,note:'x'.repeat(1201)}).expect(400);
+        await call(who,'post','/api/client-schedule/changes',batch).expect(200);
+        let saved=await Booking.findById(b._id);assert.equal(saved.visits.length,2);
+        await call(who,'post','/api/client-schedule/changes',{...batch,revision:saved.updatedAt.toISOString(),additions:[],removals:[{date:second,time:'11:00'}],note:''}).expect(200);
+        const original={date:first,time:'10:00',service:'training'},replacement={date:second,time:'10:00',service:'training'};
+        await call(who,'post','/api/client-schedule/visit',{bookingId:String(b._id),action:'note',original,note:'   '}).expect(400);
+        await call(who,'post','/api/client-schedule/visit',{bookingId:String(b._id),action:'change',original,replacement,note:'   '}).expect(200);
+        saved=await Booking.findById(b._id);assert.equal(saved.visits[0].date,second);
+        await call(who,'post','/api/client-schedule/visit',{bookingId:String(b._id),action:'cancel',original:replacement}).expect(200);
+        saved=await Booking.findById(b._id);assert.equal(saved.visits.length,0);assert.equal(saved.cancelledVisits.length,2);assert.equal(saved.paidAt.getTime(),b.paidAt.getTime());assert.equal(saved.paymentStatus,'paid');
+        assert.equal((await Subscription.findById(term._id)).validUntil.getTime(),term.validUntil.getTime());
+        assert.equal(await Slot.countDocuments({bookingId:b._id}),0);
+        assert.ok(await Notification.exists({staff:true,body:new RegExp(`Added ${first}`)}));
+        assert.ok(await DirectMessage.exists({memberId:users.client._id,body:`${users[who].name}: Cancelled ${second} at 10:00.`}));
+      }
+    });
     await t.test('trainer assignment, profile acceptance and schedule names stay consistent', async () => {
       await Settings.updateOne({_id:'schedule'},{$set:{enabled:true,weekdays:[1,2,3,4,5,6,7],hours:['10:00','11:00'],overrides:[]}});
       await TrainerSchedule.deleteMany({});

@@ -58,11 +58,12 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})){
    await editor.getByRole('checkbox',{name:'1:00 PM',exact:true}).check();
    assert.equal(await editor.getByRole('button',{name:'12:00 PM',exact:true}).getAttribute('aria-pressed'),'false');
    assert.equal(await editor.getByRole('checkbox',{name:'1:00 PM',exact:true}).evaluate(el=>getComputedStyle(el.closest('label')).backgroundColor),'rgb(237, 201, 117)');
-   await editor.getByLabel(access==='member'?'Note to Bravo':'Note to the client',{exact:true}).fill('Agreed schedule.');
+   assert.equal(await editor.getByLabel(access==='member'?'Note to Bravo':'Note to the client',{exact:true}).getAttribute('required'),null);
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
    await page.screenshot({path:`test-results/bulk-schedule-${engineName}-${access}.png`,fullPage:true});
    await editor.getByRole('button',{name:'Save changes',exact:true}).click();
    await page.getByText('Schedule saved.',{exact:true}).waitFor();
+   assert.equal(body.note,'');
    assert.deepEqual(body.additions,[{date:dates[0],time:'12:00'},{date:dates[1],time:'13:00'}]);
    if(access==='member'){
     await page.goto(`${origin}/portal`);
