@@ -31,6 +31,7 @@ try {
           const url = new URL(route.request().url()), path = url.pathname, method = route.request().method(); let json = {}, status = 200;
           if (path === '/api/config') json = { connected: true, paymentsReady: false, services: SERVICES, schedule: { enabled: true, weekdays: [1, 2, 3, 4, 5], hours: ['10:00'] } };
           else if (path === '/api/auth/me') json = { user: activeUser, services: activeUser === client && !client.mustChangePassword ? ['training', 'online'] : [], membership: activeUser === client && !client.mustChangePassword ? membership : { active: false } };
+          else if (path === '/api/team') json = { team: [operator] };
           else if (path === '/api/notifications') json = { items: [] };
           else if (path === '/api/site-images') json = { images: {} };
           else if (path === '/api/admin') json = { role: operator.role, team: [operator], bookings: [], inbox: [], blocks: [], settings: { enabled: true, weekdays: [1, 2, 3, 4, 5], hours: ['10:00'] } };
@@ -64,6 +65,10 @@ try {
         try {
           await page.goto(`${origin}/admin?tab=people`);
           await page.getByRole('button', { name: 'People & access', exact: true }).waitFor();
+          await page.getByRole('button', { name: 'Schedule', exact: true }).click();
+          await page.locator('main').getByRole('button', { name: 'Back', exact: true }).click();
+          await page.locator('.desk-tabs button[aria-pressed="true"]').filter({ hasText: 'People & access' }).waitFor();
+          assert.equal(await page.getByRole('button', { name: 'People & access', exact: true }).getAttribute('aria-pressed'), 'true');
           await page.locator('.add-client-panel > summary').click(); const form = page.locator('.add-client-panel');
           await form.getByLabel('Client name', { exact: true }).fill('New Fixture Client'); await form.getByLabel('Dog’s name', { exact: true }).fill('Gunner');
           if (access === 'admin') await form.getByLabel('Email (optional)', { exact: true }).fill('fixture@example.test');

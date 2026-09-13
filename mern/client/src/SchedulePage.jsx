@@ -41,14 +41,17 @@ export default function SchedulePage() {
     <Notice error>{error}</Notice><Notice>{notice}</Notice>
     {!authReady ? <p role="status">Checking your account…</p> : !user ? <Link to="/account">Sign in to view your schedule</Link> : loading ? <p role="status">Loading saved visits…</p> : data && <section className="printable-schedule">
       <h2>{DateTime.fromISO(`${month}-01`).toFormat('MMMM yyyy')}</h2><p>Bravo K9 Solutions · {data.client.name}<br/>All times are local to Aberdeen, South Dakota.</p>
+      <p className="helper">Choose “Add Days and Times” to edit your schedule, or tap a saved date to see its visits. All times are local to Aberdeen.</p>
+      {user.role === 'owner' && !data.trainingBookings?.length && <TrainingRecovery client={data.client} onSaved={message=>{setNotice(message);setRevision(n=>n+1)}}/>}
+      {['staff','owner'].includes(user.role)&&!!data.trainingBookings?.length&&<ClientTrainer key={`trainer-${revision}`} bookings={data.trainingBookings||[]} onSaved={message=>{setNotice(message);setRevision(n=>n+1)}}/>}
+      {(user.role !== 'owner' || !!data.trainingBookings?.length) && <SavedScheduleCalendar key={`${month}-${revision}`} data={data} month={month} reload={message => { setNotice(message);setRevision(n => n+1); }}/>}
+      <details className="schedule-membership-details"><summary>Membership details</summary>
       {data.firstPaidAt && <div className="membership-payment-start"><p><strong>Membership payment / start:</strong> {DateTime.fromISO(data.firstPaidAt, {zone:'America/Chicago'}).toFormat('LLL d, yyyy · h:mm a')}</p><p>First month: {DateTime.fromISO(data.firstPaidAt, {zone:'America/Chicago'}).toFormat('LLL d, yyyy')} - {DateTime.fromISO(data.firstPaidAt, {zone:'America/Chicago'}).plus({months:1}).toFormat('LLL d, yyyy')}. {Math.max(0, Math.floor(DateTime.now().diff(DateTime.fromISO(data.firstPaidAt), 'days').days))} days since membership began.</p></div>}
       {activeTerm && <p className="membership-counter"><strong>Current paid month:</strong> Day {Math.floor(DateTime.now().diff(DateTime.fromISO(activeTerm.validFrom), 'days').days)+1}. Ends {DateTime.fromISO(activeTerm.validUntil, {zone:'America/Chicago'}).toFormat('LLL d, yyyy · h:mm a')} · {Math.max(0,Math.ceil(DateTime.fromISO(activeTerm.validUntil).diffNow('days').days))} days remaining.</p>}
       {data.firstTrainingDay && <p>First paid scheduled visit: {formatDate(data.firstTrainingDay)}</p>}
       <p className="helper">These are your saved booking dates, not suggested openings. Requested visits await Bravo’s confirmation. Cancelled visits are labelled below.</p>
-      {user.role === 'owner' && !data.trainingBookings?.length && <TrainingRecovery client={data.client} onSaved={message=>{setNotice(message);setRevision(n=>n+1)}}/>}
-      {['staff','owner'].includes(user.role)&&!!data.trainingBookings?.length&&<ClientTrainer key={`trainer-${revision}`} bookings={data.trainingBookings||[]} onSaved={message=>{setNotice(message);setRevision(n=>n+1)}}/>}
-      {(user.role !== 'owner' || !!data.trainingBookings?.length) && <SavedScheduleCalendar key={`${month}-${revision}`} data={data} month={month} reload={message => { setNotice(message);setRevision(n => n+1); }}/>}
       <h2>Membership dates</h2>{data.terms.length ? data.terms.map(term => <p key={term.stripeId}>{term.serviceIds.join(' + ')}: {term.validFrom ? new Date(term.validFrom).toLocaleDateString('en-US', { timeZone: 'America/Chicago' }) : 'Start date not yet recorded'} – {new Date(term.validUntil).toLocaleDateString('en-US', { timeZone: 'America/Chicago' })} · {new Date(term.validUntil) <= new Date() ? 'Expired' : term.status}</p>) : <p>No paid monthly membership recorded.</p>}
+      </details>
     </section>}
   </Page>;
 }

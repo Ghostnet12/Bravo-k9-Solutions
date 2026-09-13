@@ -21,7 +21,7 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})){
   await page.route('**/api/**',async route=>{
    const url=new URL(route.request().url()),path=url.pathname;let json={};
    if(path==='/api/config')json={connected:true,services:SERVICES,schedule:{enabled:true,hours:['09:00','10:00','12:00','13:00']}};
-   else if(path==='/api/auth/me')json={user:signedIn?{id,name:'Fixture Person',role:access==='administrator'?'owner':access,isPrimaryOwner:access==='owner'}:null,services:[]};
+   else if(path==='/api/auth/me')json={user:signedIn?{id,name:'Fixture Person',role:access==='administrator'?'owner':access,isPrimaryOwner:access==='owner'}:null,services:access==='member'?['training']:[],membership:{active:access==='member'}};
    else if(path==='/api/auth/logout'){
     if(failLogout){failLogout=false;return route.fulfill({status:503,json:{error:'Try again shortly.'}});}
     signedIn=false;json={ok:true};
@@ -49,11 +49,15 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})){
    }
    assert.equal(body,null);
    await editor.getByRole('button',{name:'12:00 PM',exact:true}).click();
+   assert.equal(await editor.getByRole('button',{name:'12:00 PM',exact:true}).getAttribute('aria-pressed'),'true');
+   assert.equal(await editor.getByRole('button',{name:'12:00 PM',exact:true}).evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(237, 201, 117)');
    assert.match(await editor.locator('.schedule-change-summary').innerText(),/2 to add/);
    await editor.getByText('Change one date',{exact:true}).click();
    await editor.getByLabel('Date to change',{exact:true}).selectOption(dates[1]);
    await editor.getByRole('checkbox',{name:'12:00 PM',exact:true}).uncheck();
    await editor.getByRole('checkbox',{name:'1:00 PM',exact:true}).check();
+   assert.equal(await editor.getByRole('button',{name:'12:00 PM',exact:true}).getAttribute('aria-pressed'),'false');
+   assert.equal(await editor.getByRole('checkbox',{name:'1:00 PM',exact:true}).evaluate(el=>getComputedStyle(el.closest('label')).backgroundColor),'rgb(237, 201, 117)');
    await editor.getByLabel(access==='member'?'Note to Bravo':'Note to the client',{exact:true}).fill('Agreed schedule.');
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
    await page.screenshot({path:`test-results/bulk-schedule-${engineName}-${access}.png`,fullPage:true});
@@ -62,6 +66,9 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})){
    assert.deepEqual(body.additions,[{date:dates[0],time:'12:00'},{date:dates[1],time:'13:00'}]);
    if(access==='member'){
     await page.goto(`${origin}/portal`);
+    await page.getByRole('heading',{name:'Fixture Person’s schedule.',exact:true}).waitFor();
+    assert.equal(new URL(page.url()).pathname,'/schedule');
+    await page.goto(`${origin}/portal?new=1`);
     await page.getByLabel('Choose my trainer',{exact:true}).selectOption(id);
     await page.getByLabel('Start date',{exact:true}).fill(dates[0]);
     await page.getByLabel('End date',{exact:true}).fill(dates[1]);
@@ -74,6 +81,9 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})){
     await page.locator('.visit-row select').nth(1).selectOption('13:00');
     assert.deepEqual(await page.locator('.visit-row select').evaluateAll(items=>items.map(item=>item.value)),['12:00','13:00']);
    }
+   await page.getByRole('link',{name:'Contact & visit help',exact:true}).click();
+   await page.locator('main').getByRole('button',{name:'Back',exact:true}).click();
+   assert.notEqual(new URL(page.url()).pathname,'/contact');
    await page.getByRole('button',{name:'Menu',exact:true}).click();
    const nav=page.getByRole('navigation',{name:'Primary navigation',exact:true});
    assert.equal(await nav.locator('button').last().innerText(),'Sign out');

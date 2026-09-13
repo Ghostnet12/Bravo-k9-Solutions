@@ -12,3 +12,16 @@
 .batch-date-actions{display:flex;flex-wrap:wrap;gap:16px;margin:16px 0}
 @media(min-width:1121px){.app-header nav{gap:1rem}.app-header nav a{font-size:.85rem}}
 @media(max-width:1120px){.app-header nav.is-open{max-height:calc(100dvh - 110px);overflow-y:auto}.nav-sign-out{margin-top:16px;padding-top:12px;border-top:1px solid var(--line,#56503d)}.nav-sign-out button{width:100%;text-align:left;padding:12px 16px}.nav-sign-out p{max-width:none}}
+.bulk-time-buttons .button.time-selected,.bulk-time-buttons .button.time-selected:hover{background:#edc975!important;color:#17140d!important;border:3px solid #fff2c9!important;box-shadow:0 0 0 2px #b48d3b;font-weight:800;opacity:1}
+.time-selected-label{display:block;font-size:.8rem;line-height:1.4}
+.bulk-time-buttons .button.time-selected{display:block}
+.calendar-time-options .check-label{min-height:56px;padding:14px;border:2px solid #6c6554;border-radius:8px}
+.calendar-time-options .check-label:has(input:checked){background:#edc975;color:#17140d;border:3px solid #fff2c9;box-shadow:0 0 0 2px #b48d3b;font-weight:800}
+.calendar-time-options input[type=checkbox]{width:26px;height:26px;accent-color:#17140d;flex-shrink:0}
+.page-back{margin-bottom:24px;min-height:48px;min-width:100px}
+.editor-back{margin-bottom:18px;min-height:48px}
+@media print{.page-back,.editor-back{display:none!important}}
+.schedule-membership-details{margin-top:28px;padding:18px;border:1px solid var(--line,#56503d);border-radius:8px}
+.schedule-membership-details>summary{cursor:pointer;font-weight:700;min-height:44px}
+@media print{.schedule-membership-details>*{display:block!important}}
+.bulk-time-buttons .button.time-selected,.calendar-time-options .check-label:has(input:checked){transition:none!important}

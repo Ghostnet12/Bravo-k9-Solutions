@@ -10,7 +10,7 @@ import ClientDirectory from './ClientDirectory';
 import './trainer-schedules.css';
 import { downloadCalendar } from './calendar';
 import { useCallback, useEffect, useState } from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useBravo } from './context';
 import { api } from './api';
 import { Page, Notice, AppointmentNotice, formatDate, formatTime } from './ui';
@@ -25,8 +25,8 @@ export default function AdminPage() {
   const [data, setData] = useState(null), [schedule, setSchedule] = useState(null), [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false);
   const [resetVersion, setResetVersion] = useState(0);
   const [tab, setTab] = useState(() => new URLSearchParams(window.location.search).get('tab') || 'schedule'), [query, setQuery] = useState(''), [statusFilter, setStatusFilter] = useState('active'), [visitDate, setVisitDate] = useState(''), [trainer, setTrainer] = useState('all');
-  const location = useLocation();
-  useEffect(() => { const wanted = new URLSearchParams(location.search).get('tab'); if (wanted && ['schedule', 'people', 'messages', 'lessons', 'services', 'reviews'].includes(wanted)) setTab(wanted); }, [location.search]);
+  const location = useLocation(), navigate = useNavigate();
+  useEffect(() => { const wanted = new URLSearchParams(location.search).get('tab') || 'schedule'; if ( ['schedule', 'people', 'messages', 'lessons', 'services', 'reviews'].includes(wanted)) setTab(wanted); }, [location.search]);
   const load = useCallback(async () => { const result = await api('/admin'); const [reviews, services] = result.role === 'owner' ? await Promise.all([api('/admin/reviews').then(data => data.reviews), api('/admin/services').then(data => data.services)]) : [[], []]; setData({ ...result, reviews, services }); setSchedule(result.settings); }, []);
   useEffect(() => { if (['staff', 'owner'].includes(user?.role)) load().catch(e => setError(e.message)); }, [user, load]);
   useEffect(() => { if (tab !== 'messages') return; const timer = setInterval(() => { if (!document.hidden) load().catch(e => setError(e.message)); }, 15000); load().catch(e => setError(e.message)); return () => clearInterval(timer); }, [tab, location.search, load]);
@@ -50,7 +50,7 @@ export default function AdminPage() {
   return <Page className="staff-page" title={`Your ${deskLabel(user).toLowerCase()}.`} eyebrow={user?.isPrimaryOwner ? 'BRAVO OWNERSHIP' : 'BRAVO OPERATIONS'} intro="Choose a task. Keep your day, your clients, and your lessons in one place.">
     <Notice error>{error}</Notice><Notice>{notice}</Notice>{allowed && <div className="reset-actions desk-reset"><button className="button button-small button-ghost" type="button" disabled={busy} onClick={resetDesk}>Refresh & reset desk</button><small>Clear unsaved forms and selections; keep saved records.</small></div>}
     {!authReady ? <p role="status">Checking access…</p> : !allowed ? <div className="panel"><h2>Team access required.</h2><p>The owner assigns staff privileges to registered accounts.</p><Link className="button" to="/account">Open your account</Link></div> : !data ? <p role="status">Loading your desk…</p> : <>
-      <nav className="community-tabs desk-tabs" aria-label="Desk sections">{tabs.map(([id, label]) => <button key={id} aria-pressed={tab === id} onClick={() => { setTab(id); setError(''); setNotice(''); }}>{label}{id === 'messages' && (notifications || []).some(item=>item.unread&&item.id.startsWith('message:')) && <span className="notification-count">{(notifications || []).filter(item => item.unread && item.id.startsWith('message:')).length}</span>}</button>)}</nav>
+      <nav className="community-tabs desk-tabs" aria-label="Desk sections">{tabs.map(([id, label]) => <button key={id} aria-pressed={tab === id} onClick={() => { setTab(id); const next = new URLSearchParams(location.search); next.set('tab', id); if (id !== tab) navigate({ pathname: '/admin', search: next.toString() }); setError(''); setNotice(''); }}>{label}{id === 'messages' && (notifications || []).some(item=>item.unread&&item.id.startsWith('message:')) && <span className="notification-count">{(notifications || []).filter(item => item.unread && item.id.startsWith('message:')).length}</span>}</button>)}</nav>
       {tab === 'schedule' && <>
         <AppointmentNotice/>
         <section className="panel"><div className="section-label"><h2>Today’s visits.</h2><button className="quiet-button" disabled={busy} onClick={resetDesk}>Refresh & reset</button></div>
