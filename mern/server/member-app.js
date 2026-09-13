@@ -1,15 +1,14 @@
 import express from 'express';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
-import mongoose from 'mongoose';
 import { z } from 'zod';
 import mediaApp from './site-image-app.js';
 import { connectDb, transaction } from './db.js';
-import { User, Subscription, AuditEvent } from './models.js';
+import { Subscription } from './models.js';
 import { identify, requireUser, requireOwner, sameOrigin, publicUser, rateLimit } from './auth.js';
 import { getEntitlements } from './bookings.js';
 import { protectedLesson } from './lessons.js';
-import { monthTerm, grantActive, activeTermQuery } from '../shared/membership-terms.js';
+import { grantActive, activeTermQuery } from '../shared/membership-terms.js';
 
 // Member access is an entitlement, NOT an employee role or a Stripe subscription.
 // No grant is created during registration. Paid plans, quotes and billing records
@@ -18,7 +17,6 @@ import { MemberAccess, writeMemberGrant, manualGrantInput, manualOnlineAccess } 
 export { MemberAccess } from './member-grants.js';
 const idInput = z.string().regex(/^[a-f\d]{24}$/i);
 const changeInput = z.object({ enabled: z.boolean(), expectedRevision: z.number().int().min(0), ...manualGrantInput.shape }).strict();
-const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 export function membershipSummary(entitlements, grant) {
   const manual = grantActive(grant);
   return { active: manual || entitlements.services.length > 0, manual, onlineAccess: manualOnlineAccess(grant) || entitlements.services.includes('online') };
@@ -37,7 +35,7 @@ app.get('/api/admin/memberships', ...session, requireUser, requireOwner, async (
   const userIds = z.array(idInput).min(1).max(100).parse(ids.split(','));
   const [grants, paid] = await Promise.all([
     MemberAccess.find({ _id: { $in: userIds } }).lean(),
-    Subscription.find({ userId: { $in: userIds }, ...activeTermQuery() }).select('userId serviceIds').lean(),
+    Subscription.find({ userId: { $in: userIds }, source: { $ne: 'grant' }, ...activeTermQuery() }).select('userId serviceIds').lean(),
   ]);
   const byId = new Map(grants.map(grant => [String(grant._id), grant]));
   res.json({ memberships: Object.fromEntries(userIds.map(id => {
