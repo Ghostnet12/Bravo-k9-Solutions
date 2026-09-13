@@ -149,6 +149,53 @@ test('client services: schedules, notifications, recovery and monthly payments',
       await call('owner','post','/api/client-schedule/changes',{...clientChange,revision:changed.updatedAt.toISOString(),additions:[{date:tooLate,time:'10:00'}],removals:[{date:sun,time:'13:00'}]}).expect(400);
       assert.ok(await Slot.exists({_id:`${sun}|13:00`,bookingId:booking._id}));
     });
+    await t.test('trainer assignment, profile acceptance and schedule names stay consistent', async () => {
+      await Settings.updateOne({_id:'schedule'},{$set:{enabled:true,weekdays:[1,2,3,4,5,6,7],hours:['10:00','11:00'],overrides:[]}});
+      await TrainerSchedule.deleteMany({});
+      const date=DateTime.now().setZone('America/Chicago').plus({days:16}).toISODate();
+      const b=await Booking.create({userId:users.client._id,staffId:users.staff._id,requestKey:'acceptance-fixture',serviceIds:['training'],dogName:'Acceptance Dog',dogCount:1,visits:[{date,time:'10:00',service:'training'}],status:'confirmed',paymentStatus:'paid',paidAt:new Date(),quote:quote(['training'])});
+      const url=`/api/client-schedule?client=${users.client._id}&month=${date.slice(0,7)}`;
+      const visit=async()=> (await call('client','get',url).expect(200)).body.visits.find(v=>v.bookingId===String(b._id));
+      // Legacy assigned records must resolve the User model even without a schema ref.
+      assert.equal((await visit()).trainer,'staff');
+      await call('owner','patch',`/api/admin/bookings/${b._id}/assignment`,{staffId:String(users.staff._id)}).expect(200);
+      assert.equal((await visit()).trainer,'Awaiting acceptance from staff');
+      const profile=`/api/admin/trainers/${users.staff._id}/clients`;
+      await call('client','get',profile).expect(403); await call('secondStaff','get',profile).expect(403);
+      const pending=(await call('owner','get',profile).expect(200)).body.bookings.find(row=>row._id===String(b._id));
+      assert.equal(pending.clientName,'client'); assert.equal(pending.clientId,String(users.client._id)); assert.equal(pending.trainerAcceptanceRequired,true);
+      const endpoint=`/api/admin/bookings/${b._id}/accept-client`,payload={staffId:String(users.staff._id),revision:pending.updatedAt};
+      await call('client','post',endpoint,payload).expect(403); await call('secondStaff','post',endpoint,payload).expect(403);
+      await call('owner','post',endpoint,{...payload,staffId:String(users.secondStaff._id)}).expect(409);
+      await call('staff','post',endpoint,{...payload,revision:'2020-01-01T00:00:00.000Z'}).expect(409);
+      await call('staff','post',endpoint,payload).expect(200);
+      let saved=await Booking.findById(b._id); assert.equal(saved.trainerAcceptanceRequired,false); assert.ok(saved.trainerAcceptedAt); assert.equal(String(saved.trainerAcceptedBy),String(users.staff._id));
+      assert.equal(saved.paidAt.getTime(),b.paidAt.getTime());assert.equal(saved.status,'confirmed');assert.equal(saved.paymentStatus,'paid');assert.deepEqual(saved.visits.toObject(),b.visits.toObject());assert.equal((await visit()).trainer,'staff');
+      const count=await Notification.countDocuments({_id:new RegExp(`^trainer:${b._id}:`)}); assert.equal(count,2);
+      await call('staff','post',endpoint,{...payload,revision:saved.updatedAt.toISOString()}).expect(200);
+      assert.equal(await Notification.countDocuments({_id:new RegExp(`^trainer:${b._id}:`)}),count);
+      // Reassignment resets acceptance; owner may accept on the new trainer's behalf.
+      await call('owner','patch',`/api/admin/bookings/${b._id}/assignment`,{staffId:String(users.secondStaff._id)}).expect(200);
+      saved=await Booking.findById(b._id);assert.equal(saved.trainerAcceptedAt,null);assert.equal(saved.trainerAcceptanceRequired,true);
+      await call('owner','post',endpoint,{staffId:String(users.secondStaff._id),revision:saved.updatedAt.toISOString()}).expect(200);
+      assert.equal((await visit()).trainer,'secondStaff');
+      assert.equal(String((await Booking.findById(b._id)).trainerAcceptedBy),String(users.owner._id));
+      // A waitlisted request cannot be accepted past the five-dog capacity.
+      const full=await Booking.create({userId:users.other._id,staffId:users.secondStaff._id,requestKey:'full-trainer-fixture',serviceIds:['training'],dogCount:5,status:'confirmed',visits:[],quote:quote(['training'])});
+      const waiting=await Booking.create({userId:users.client._id,requestedStaffId:users.secondStaff._id,requestKey:'waiting-acceptance-fixture',serviceIds:['training'],dogCount:1,status:'waitlisted',visits:[],quote:quote(['training'])});
+      await call('owner','post',`/api/admin/bookings/${waiting._id}/accept-client`,{staffId:String(users.secondStaff._id),revision:waiting.updatedAt.toISOString()}).expect(409);
+      assert.equal((await Booking.findById(waiting._id)).status,'waitlisted');
+      await Booking.deleteMany({_id:{$in:[b._id,full._id,waiting._id]}});
+    });
+    await t.test('viewed system notifications disappear only for the viewing account', async () => {
+      await Notification.create([{_id:'read-fixture:team',staff:true,body:'Team notice',href:'/admin'},{_id:'read-fixture:private',staff:false,userId:users.client._id,body:'Private client notice',href:'/schedule'}]);
+      await call('staff','post','/api/notifications/read',{ids:['read-fixture:team','read-fixture:private']}).expect(200);
+      assert.equal((await call('staff','get','/api/notifications')).body.items.some(i=>i.id==='read-fixture:team'),false);
+      for(const who of ['secondStaff','owner'])assert.equal((await call(who,'get','/api/notifications')).body.items.some(i=>i.id==='read-fixture:team'),true);
+      assert.equal((await call('client','get','/api/notifications')).body.items.some(i=>i.id==='read-fixture:private'),true);
+      await call('client','post','/api/notifications/read',{ids:['read-fixture:private']}).expect(200);
+      assert.equal((await call('client','get','/api/notifications')).body.items.some(i=>i.id==='read-fixture:private'),false);
+    });
     await t.test('recovery requires administrator reauthentication and token is one-use and hashed', async () => {
       const path = `/api/admin/recovery/${users.client._id}`;
       await call('staff', 'post', path, { currentPassword: 'fixture-administrator-password' }).expect(403);

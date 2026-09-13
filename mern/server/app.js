@@ -263,7 +263,7 @@ app.patch('/api/admin/bookings/:id/assignment', requireUser, requireStaff, async
   const booking = await ownedBooking(req);
   const { staffId } = z.object({ staffId: objectId.nullable() }).parse(req.body);
   if (booking.status === 'cancelled') throw new Error('A cancelled visit cannot be reassigned.');
-  await validStaff(staffId); await assignTrainer(booking, staffId); res.json({ ok: true });
+  await validStaff(staffId); await assignTrainer(booking, staffId, {requireAcceptance:!!staffId}); res.json({ ok: true });
 });
 app.get('/api/admin/bookings/:id', requireUser, requireStaff, async (req, res) => res.json({ booking: await ownedBooking(req) }));
 app.get('/api/admin/users', requireUser, requireOwner, async (req, res) => {

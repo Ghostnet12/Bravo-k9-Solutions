@@ -7,7 +7,7 @@ import { useLocation } from 'react-router-dom';
 import MessageCard from './MessageCard';
 
 export default function StaffInbox({ inbox = [], refreshInbox }) {
-  const { user, refreshNotifications } = useBravo();
+  const { user, markNotificationsRead } = useBravo();
   const [memberId, setMemberId] = useState(() => new URLSearchParams(window.location.search).get('client') || ''), [drafts, setDrafts] = useState({}), [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false), [resettingInbox, setResettingInbox] = useState(false);
   const history = useChatHistory(memberId && !resettingInbox ? `/direct?memberId=${memberId}` : null);
   const location = useLocation();
@@ -16,7 +16,7 @@ export default function StaffInbox({ inbox = [], refreshInbox }) {
   useEffect(() => {
     if (!resettingInbox && !inbox.some(thread => String(thread._id) === memberId)) setMemberId(inbox[0]?._id ? String(inbox[0]._id) : '');
   }, [inbox, memberId, resettingInbox]);
-  useEffect(() => { if (!memberId || history.loading || !history.messages.length) return; const ids = history.messages.map(message => `message:${message._id}`); api('/notifications/read', { method: 'POST', body: { ids } }).then(refreshNotifications).catch(() => {}); }, [memberId, history.messages, history.loading, refreshNotifications]);
+  useEffect(() => { if (!memberId || history.loading || !history.messages.length) return; const ids = history.messages.map(message => `message:${message._id}`); markNotificationsRead(ids).catch(() => {}); }, [memberId, history.messages, history.loading, markNotificationsRead]);
   async function send(e) {
     e.preventDefault(); if (working || !memberId) return;
     setBusy(true); setError(''); setNotice('');

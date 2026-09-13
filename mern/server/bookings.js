@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { Booking, Settings, Slot, Subscription, User } from './models.js';
+import { Booking, Settings, Slot, Subscription, User, Notification, AuditEvent } from './models.js';
 import { transaction } from './db.js';
 import { availability, validateVisits, dateTime, dateRange } from './scheduling.js';
 import { quote, serviceSelection, TRAINING_FOCUSES, ALL_SERVICES } from '../shared/catalog.js';
@@ -105,10 +105,18 @@ export async function createBooking(userId, payload, assignment = {}) {
   }
   return booking;
 }
-export async function assignTrainer(booking, staffId) {
+export async function assignTrainer(booking, staffId, options = {}) {
+  const acceptance = options.acceptedBy ? { trainerAcceptanceRequired:false, trainerAcceptedAt:new Date(), trainerAcceptedBy:options.acceptedBy } : { trainerAcceptanceRequired:!!options.requireAcceptance, trainerAcceptedAt:null, trainerAcceptedBy:null };
+  async function recordAcceptance(session) {
+    if(!options.acceptedBy)return;
+    const trainer=await User.findById(staffId).select('name').session(session).lean();
+    const body=`${trainer.name} accepted ${booking.dogName || 'your dog'} as a training client. Your saved schedule now shows your trainer.`;
+    await Notification.create([{_id:`trainer:${booking._id}:${acceptance.trainerAcceptedAt.getTime()}:client`,staff:false,userId:booking.userId,body,href:'/schedule'},{_id:`trainer:${booking._id}:${acceptance.trainerAcceptedAt.getTime()}:staff`,staff:true,body,href:`/schedule?client=${booking.userId}`}],{session,ordered:true});
+    await AuditEvent.create([{actorId:options.acceptedBy,action:'trainer.client.accepted',targetType:'booking',targetId:String(booking._id),details:{staffId}}],{session});
+  }
   if (!staffId) {
     const previous = booking.staffId;
-    booking.staffId = null;
+    booking.staffId = null; Object.assign(booking,{trainerAcceptanceRequired:false,trainerAcceptedAt:null,trainerAcceptedBy:null});
     await booking.save();
     if (previous) await promoteTrainerWaitlist(previous);
     return booking;
@@ -118,7 +126,7 @@ export async function assignTrainer(booking, staffId) {
     await transaction(async session => {
       const settings = await Settings.findOneAndUpdate({ _id: 'schedule' }, { $inc: { revision: 1 } }, { returnDocument: 'after', session }).lean();
       await checkTrainerVisits(staffId, booking.visits || [], settings, session);
-      booking.staffId = staffId; booking.requestedStaffId ||= staffId; await booking.save({ session });
+      booking.staffId = staffId; booking.requestedStaffId ||= staffId; Object.assign(booking,acceptance); await booking.save({ session }); await recordAcceptance(session);
     });
     return booking;
   }
@@ -135,8 +143,9 @@ export async function assignTrainer(booking, staffId) {
       if (booking.visits.some(visit => !open.find(day => day.date === visit.date)?.slots.includes(visit.time))) throw Object.assign(new Error('This waitlisted client’s preferred times are no longer open. Ask them to choose new dates before activating the request.'), { status: 409 });
       await Slot.insertMany(booking.visits.map(visit => ({ _id: `${visit.date}|${visit.time}`, date: visit.date, time: visit.time, bookingId: booking._id })), { session });
     }
-    const result = await Booking.updateOne({ _id: booking._id, status: { $ne: 'cancelled' } }, { $set: { staffId, requestedStaffId: staffId, status: booking.status === 'waitlisted' ? 'requested' : booking.status }, $unset: { waitlistedAt: 1 } }, { session });
+    const result = await Booking.updateOne({ _id: booking._id, status: { $ne: 'cancelled' }, ...(options.expectedUpdatedAt ? {updatedAt:options.expectedUpdatedAt} : {}) }, { $set: { staffId, requestedStaffId: staffId, ...acceptance, status: booking.status === 'waitlisted' ? 'requested' : booking.status }, $unset: { waitlistedAt: 1 } }, { session });
     if (!result.matchedCount) throw Object.assign(new Error('This request changed. Refresh and try again.'), { status: 409 });
+    await recordAcceptance(session);
   });
   if (previous && String(previous) !== String(staffId)) await promoteTrainerWaitlist(previous);
   return Booking.findById(booking._id);

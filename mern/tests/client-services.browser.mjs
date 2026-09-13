@@ -25,6 +25,7 @@ try {
       for (const width of [320, 390, 1440]) {
         const context = await browser.newContext({ viewport: { width, height: 844 }, isMobile: width < 700 });
         const page = await context.newPage(), errors = []; let printed = false, read = false, role = 'member', changeBody = null, saved = false;
+        let trainerAssigned='aaaaaaaaaaaaaaaaaaaaaaaa',trainerPending=false,trainerAccepted=null;
         let savedVisits=['2026-09-21','2026-09-28','2026-10-05'].map(date=>({date,time:'10:00',service:'training'}));
         page.on('pageerror', error => errors.push(error.message));
         await page.exposeFunction('recordPrint', () => { printed = true; });
@@ -33,14 +34,22 @@ try {
           const url = new URL(route.request().url()); let json = {};
           if (url.pathname === '/api/config') json = { connected: true, paymentsReady: true };
           else if (url.pathname === '/api/auth/me') json = { user: { id: 'aaaaaaaaaaaaaaaaaaaaaaaa', name: 'Fixture client', role }, services: [] };
+          else if (url.pathname === '/api/admin') json={role,bookings:[],team:[{_id:'aaaaaaaaaaaaaaaaaaaaaaaa',name:'Fixture Trainer'}],inbox:[],blocks:[],settings:{enabled:true,weekdays:[1,2,3,4,5],hours:['10:00']}};
+          else if (url.pathname === '/api/admin/reviews') json={reviews:[]};
+          else if (url.pathname === '/api/admin/services') json={services:[]};
+          else if (url.pathname === '/api/admin/users') json={users:[{_id:'aaaaaaaaaaaaaaaaaaaaaaaa',name:'Fixture Trainer',role:'staff',email:'trainer@example.test'}]};
+          else if (url.pathname === '/api/admin/memberships') json={memberships:{}};
+          else if (url.pathname.endsWith('/clients')&&url.pathname.includes('/admin/trainers/')) json={bookings:[{_id:'bbbbbbbbbbbbbbbbbbbbbbbb',clientName:'Fixture client',clientId:'cccccccccccccccccccccccc',dogName:'Fixture Dog',dogCount:1,status:'confirmed',trainerAcceptanceRequired:trainerPending,trainerAcceptedAt:trainerAccepted,updatedAt:'2026-09-01T00:00:00.000Z'}]};
+          else if (url.pathname.endsWith('/assignment')) {trainerAssigned=route.request().postDataJSON().staffId;trainerPending=true;trainerAccepted=null;json={ok:true};}
+          else if (url.pathname.endsWith('/accept-client')) {assert.equal(route.request().postDataJSON().staffId,trainerAssigned);trainerPending=false;trainerAccepted='2026-09-13T12:00:00.000Z';json={ok:true,message:'Client accepted. Their saved schedule now shows the trainer’s name.'};}
           else if (url.pathname === '/api/team') json = {team:[{id:'aaaaaaaaaaaaaaaaaaaaaaaa',name:'Fixture Trainer'}]};
           else if (url.pathname === '/api/client-schedule/changes') { changeBody=route.request().postDataJSON(); saved=true; savedVisits=savedVisits.filter(v=>!changeBody.removals.some(r=>r.date===v.date&&r.time===v.time)).concat(changeBody.additions.map(v=>({...v,service:'training'})));json={ok:true,message:'Schedule saved and note sent.'}; }
           else if (url.pathname === '/api/availability') {const start=new Date(url.searchParams.get('from')+'T12:00:00Z'),end=new Date(url.searchParams.get('to')+'T12:00:00Z'),days=[];for(let d=start;d<=end;d=new Date(d.getTime()+86400000))days.push({date:d.toISOString().slice(0,10),slots:[0,6].includes(d.getUTCDay())?[]:['10:00','13:00']});json={days,enabled:true};}
 
           else if (url.pathname === '/api/site-images') json = { images: {} };
-          else if (url.pathname === '/api/notifications') json = { items: [{ id: 'term:fixture', body: 'Your membership expires tomorrow. Renew manually.', href: '/account', unread: !read }] };
+          else if (url.pathname === '/api/notifications') json = { items: read ? [] : [{ id: 'term:fixture', body: 'Your membership expires tomorrow. Renew manually.', href: '/account', unread: !read }] };
           else if (url.pathname === '/api/notifications/read') { read = true; json = { ok: true }; }
-          else if (url.pathname === '/api/client-schedule') {json=fixtureSchedule(url.searchParams.get('month'));json.visits=savedVisits.filter(v=>v.date.startsWith(json.month)).map(v=>({...fixtureSchedule(v.date.slice(0,7)).visits[0],...v,bookingId:'bbbbbbbbbbbbbbbbbbbbbbbb',dogName:'Fixture Dog',status:'confirmed',paymentStatus:'paid'}));json.trainingBookings=[{_id:'bbbbbbbbbbbbbbbbbbbbbbbb',dogName:'Fixture Dog',dogCount:1,staffId:'aaaaaaaaaaaaaaaaaaaaaaaa',updatedAt:'2026-09-01T00:00:00.000Z',visits:savedVisits}];}
+          else if (url.pathname === '/api/client-schedule') {json=fixtureSchedule(url.searchParams.get('month'));json.visits=savedVisits.filter(v=>v.date.startsWith(json.month)).map(v=>({...fixtureSchedule(v.date.slice(0,7)).visits[0],...v,bookingId:'bbbbbbbbbbbbbbbbbbbbbbbb',dogName:'Fixture Dog',status:'confirmed',paymentStatus:'paid',trainer:trainerAssigned?(trainerPending?'Awaiting acceptance from Fixture Trainer':'Fixture Trainer'):'Awaiting assignment'}));json.trainingBookings=[{_id:'bbbbbbbbbbbbbbbbbbbbbbbb',dogName:'Fixture Dog',dogCount:1,staffId:trainerAssigned,trainerAcceptanceRequired:trainerPending,trainerAcceptedAt:trainerAccepted,updatedAt:'2026-09-01T00:00:00.000Z',visits:savedVisits}];}
           if (url.pathname === '/api/client-schedule' && url.searchParams.get('format') === 'pdf') return route.fulfill({ body: await schedulePdf(json), contentType: 'application/pdf', headers: { 'Content-Disposition': 'attachment; filename="bravo-schedule.pdf"' } });
           await route.fulfill({ json });
         });
@@ -68,9 +77,11 @@ try {
         await page.getByLabel('Schedule month').fill('2026-11'); await page.getByText('No saved visits on this day.', { exact: false }).waitFor();
         if (width < 700) await page.getByRole('button', { name: /Menu/ }).click();
         await page.getByRole('button', { name: /Notifications/ }).filter({ hasText: 'Notifications' }).click();
-        await page.getByRole('button', { name: 'Mark read', exact: true }).click();
-        await page.getByRole('button', { name: 'Mark read', exact: true }).waitFor({ state: 'detached' });
-        assert.ok(read);
+        await page.locator('#notification-inbox').getByText('Read',{exact:true}).waitFor();
+        assert.ok(read);assert.equal(await page.locator('.notification-count').count(),0);
+        await page.getByRole('button',{name:'Close notifications',exact:true}).click();
+        await page.getByRole('button',{name:'Notifications',exact:true}).click();
+        await page.getByText('No unread notifications.',{exact:true}).waitFor();
         // Client toggles stay in a draft, work across months, and save together.
         await page.goto(`${origin}/schedule?month=2026-09`);
         await page.getByRole('button',{name:'Add Days and Times',exact:true}).click();
@@ -108,8 +119,26 @@ try {
         assert.deepEqual(changeBody.additions,[{date:'2026-09-19',time:'10:00'},{date:'2026-09-20',time:'13:00'}]);
         assert.deepEqual(changeBody.removals,[{date:'2026-09-22',time:'10:00'}]);
         await page.getByRole('button',{name:'Sun, Sep 20, 1 visit',exact:true}).waitFor();
+        // Assign on the client's schedule, then accept in the trainer's profile/desk.
+        trainerAssigned='';
+        await page.goto(`${origin}/schedule?month=2026-09&client=cccccccccccccccccccccccc`);
+        await page.getByText('Assign trainer & accept client',{exact:true}).click();
+        await page.getByRole('button',{name:'Assign trainer',exact:true}).click();
+        await page.getByText('Trainer: Awaiting acceptance from Fixture Trainer',{exact:true}).first().waitFor();
+        await page.goto(`${origin}/admin?tab=${role==='owner'?'people':'schedule'}`);
+        if(role==='owner')await page.locator('.owner-person>summary').filter({hasText:'Fixture Trainer'}).click();
+        await page.getByText('Training clients · accept assignments',{exact:true}).click();
+        await page.getByRole('button',{name:'Accept client',exact:true}).click();
+        await page.getByText('Client accepted',{exact:true}).waitFor();
+        assert.ok(trainerAccepted);assert.equal(trainerPending,false);
+        assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+        await page.screenshot({path:`test-results/trainer-acceptance-${name}-${width}.png`,fullPage:true});
+        role='member';
+        await page.goto(`${origin}/schedule?month=2026-09`);
+        await page.getByText('Trainer: Fixture Trainer',{exact:true}).first().waitFor();
+        assert.equal(await page.getByText('Assign trainer & accept client',{exact:true}).count(),0);
         assert.deepEqual(errors, []);
-        await context.close(); console.log(`${name} ${width}: PDF, client/staff batch calendars, notes, notifications and layout passed`);
+        await context.close(); console.log(`${name} ${width}: PDF, client/staff batch calendars, notes, trainer acceptance, notifications and layout passed`);
       }
     } finally { await browser.close(); }
   }

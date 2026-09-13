@@ -2,6 +2,9 @@
 .notification-count {display:inline-flex;align-items:center;justify-content:center;min-width:1.7em;min-height:1.7em;border-radius:50%;background:#d7b774;color:#111;font-weight:700;margin-left:.3em}
 .notification-inbox {position:fixed;z-index:100;right:1rem;top:6rem;width:min(24rem,85vw);max-height:65vh;overflow:auto;padding:1.2rem;background:#171a15;color:#fff;border:2px solid #d7b774;border-radius:.6rem;box-shadow:0 8px 30px #0009}
 .notification-inbox h2 {font-size:1.5rem}.notification-inbox article {padding:1rem 0;border-top:1px solid #777;display:grid;gap:.5rem}.notification-inbox a {color:#f2dfb7}
+.app-header .notification-inbox article {min-width:0}
+.app-header .notification-inbox a {display:block;min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.app-header .notification-inbox button {max-width:100%;white-space:normal;justify-self:start}
 .schedule-controls {display:flex;flex-wrap:wrap;align-items:end;gap:1rem;margin:1rem 0 2rem}.schedule-controls label {min-width:12rem}
 .schedule-list {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,20rem),1fr));gap:1rem}.schedule-visit {border:1px solid #978359;border-radius:.5rem;padding:1rem;min-width:0;overflow-wrap:anywhere}.schedule-visit h3 {font-size:1.3rem}.schedule-visit p {margin:.4rem 0}
 .membership-term {padding:1rem 0;border-top:1px solid #777;overflow-wrap:anywhere}.membership-term h3 {font-size:1.2rem}
@@ -58,3 +61,10 @@
 .schedule-change-summary {padding:1rem;border:1px solid #80734f;border-radius:.3rem}
 .schedule-change-summary ul {margin-bottom:0;padding-left:1.2rem}
 @media print {.schedule-change-editor,.schedule-edit-toggle {display:none!important}}
+
+.trainer-client {padding:1rem 0;border-top:1px solid #776b50;display:grid;gap:.8rem;min-width:0}
+.trainer-client h3 {font-size:1.15rem;margin:0}.trainer-client p {margin:0}
+.trainer-assignment label {display:block;min-width:0;margin:1rem 0}
+.trainer-assignment .record-actions {display:flex;flex-wrap:wrap;gap:1rem}
+.trainer-clients .button,.trainer-assignment .button {max-width:100%;word-break:normal;overflow-wrap:normal}
+@media print {.trainer-assignment,.trainer-clients {display:none!important}}

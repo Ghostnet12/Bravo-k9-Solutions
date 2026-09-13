@@ -18,6 +18,7 @@ import { availability, dateTime, HOURS } from './scheduling.js';
 import { checkTrainerVisits } from './trainer-schedules.js';
 import { openWeekend, addTrainingVisit } from './weekend-sessions.js';
 import { saveScheduleChanges } from './schedule-changes.js';
+import { trainerClients, acceptClient } from './trainer-clients.js';
 import { stripeClient, processStripeEvent } from './payments.js';
 
 const app = express();
@@ -37,8 +38,8 @@ app.get('/api/client-schedule', ...session, requireUser, async (req, res) => {
   if (!start.isValid) throw fail('Choose a valid month.');
   const person = await User.findById(client).select('name firstPaidAt').lean();
   if (!person) throw fail('Client not found.', 404);
-  const records = await Booking.find({ userId: client, $or: [{ 'visits.date': { $gte: start.toISODate(), $lt: start.plus({ months: 1 }).toISODate() } }, { 'cancelledVisits.date': { $gte: start.toISODate(), $lt: start.plus({ months: 1 }).toISODate() } }] }).select('visits cancelledVisits paidAt dogName dogCount serviceIds trainingFocus status paymentStatus staffId termStartsAt termEndsAt').populate('staffId', 'name').sort({ createdAt: 1 }).lean();
-  const visits = records.flatMap(record => [...record.visits, ...(record.cancelledVisits || []).map(v => ({ ...v, cancelled: true }))].filter(visit => visit.date.startsWith(input.month)).map(visit => ({ ...visit, bookingId: String(record._id), dogName: record.dogName, dogCount: record.dogCount, status: visit.cancelled ? 'cancelled' : record.status, staffId: record.staffId?._id || null, paymentStatus: record.paymentStatus, trainer: record.staffId?.name || 'Awaiting assignment', trainingFocus: record.trainingFocus }))).sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));
+  const records = await Booking.find({ userId: client, $or: [{ 'visits.date': { $gte: start.toISODate(), $lt: start.plus({ months: 1 }).toISODate() } }, { 'cancelledVisits.date': { $gte: start.toISODate(), $lt: start.plus({ months: 1 }).toISODate() } }] }).select('visits cancelledVisits paidAt dogName dogCount serviceIds trainingFocus status paymentStatus staffId trainerAcceptanceRequired trainerAcceptedAt termStartsAt termEndsAt').populate({path:'staffId',model:User,select:'name'}).sort({ createdAt: 1 }).lean();
+  const visits = records.flatMap(record => [...record.visits, ...(record.cancelledVisits || []).map(v => ({ ...v, cancelled: true }))].filter(visit => visit.date.startsWith(input.month)).map(visit => ({ ...visit, bookingId: String(record._id), dogName: record.dogName, dogCount: record.dogCount, status: visit.cancelled ? 'cancelled' : record.status, staffId: record.staffId?._id || null, paymentStatus: record.paymentStatus, trainer: record.staffId?.name ? (record.trainerAcceptanceRequired ? `Awaiting acceptance from ${record.staffId.name}` : record.staffId.name) : 'Awaiting assignment', trainingFocus: record.trainingFocus }))).sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));
   const terms = await Subscription.find({ userId: client }).select('stripeId serviceIds dogCount validFrom validUntil status autoPayDisabled renewalDeclined source').sort({ validUntil: -1 }).limit(100).lean();
   const first = await Booking.findOne({ userId: client, status: { $ne: 'cancelled' }, paymentStatus: { $in: ['paid', 'covered'] }, 'visits.0': { $exists: true } }).sort({ 'visits.date': 1 }).select('visits').lean();
   const paidTerms = terms.filter(t => t.source !== 'grant' && t.validFrom).sort((a,b) => a.validFrom - b.validFrom);
@@ -50,9 +51,11 @@ app.get('/api/client-schedule', ...session, requireUser, async (req, res) => {
     res.set('Content-Disposition', `attachment; filename="bravo-schedule-${input.month}.pdf"`);
     return res.type('application/pdf').send(bytes);
   }
-  schedule.trainingBookings = await Booking.find({ userId:client, serviceIds: {$in:ALL_SERVICES.filter(s=>s.includes.includes('training')).map(s=>s.id)}, status:{$in:['requested','confirmed']},paymentStatus:{$in:['paid','covered']} }).select('dogName dogCount trainingFocus staffId requestedStaffId visits updatedAt').lean();
+  schedule.trainingBookings = await Booking.find({ userId:client, serviceIds: {$in:ALL_SERVICES.filter(s=>s.includes.includes('training')).map(s=>s.id)}, status:{$in:['requested','confirmed']},paymentStatus:{$in:['paid','covered']} }).select('dogName dogCount trainingFocus staffId requestedStaffId trainerAcceptanceRequired trainerAcceptedAt visits updatedAt').lean();
   res.json(schedule);
 });
+app.get('/api/admin/trainers/:id/clients', ...session, requireStaff, trainerClients);
+app.post('/api/admin/bookings/:id/accept-client', ...session, requireStaff, ...write, acceptClient);
 app.post('/api/admin/weekend-sessions', ...session, requireStaff, ...write, openWeekend);
 app.post('/api/admin/training-visits', ...session, requireStaff, ...write, addTrainingVisit);
 app.post('/api/client-schedule/changes', ...session, requireUser, sameOrigin, express.json({limit:'20kb'}), rateLimit('visit-change',30,3600000), saveScheduleChanges);
@@ -140,7 +143,7 @@ app.get('/api/notifications', ...session, requireUser, async (req, res) => {
 
   const reads = await NotificationRead.find({ userId: req.user._id }).lean();
   const readIds = new Set(reads.map(row => row.notificationId));
-  const notices = await Notification.find(audience(req.user)).sort({ createdAt: -1 }).limit(100).lean();
+  const notices = await Notification.find({...audience(req.user),_id:{$nin:[...readIds]}}).sort({ createdAt: -1 }).limit(100).lean();
   const messages = staff(req.user) ? await DirectMessage.find({ senderRole: 'member', deleted: false, ...await chatFilter(req.user, 'inbox'), _id: { $nin: reads.filter(row => row.messageId).map(row => row.messageId) } }).sort({ createdAt: -1 }).limit(100).select('memberId senderName createdAt').lean() : [];
   res.json({ items: [...messages.map(message => ({ id: `message:${message._id}`, body: `New client message from ${message.senderName}`, href: `/admin?tab=messages&client=${message.memberId}`, unread: true })), ...notices.map(item => ({ id: item._id, body: item.body, href: item.href, unread: !readIds.has(item._id) }))] });
 });
