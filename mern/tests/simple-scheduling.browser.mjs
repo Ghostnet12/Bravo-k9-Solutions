@@ -21,7 +21,7 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})){
   await page.route('**/api/**',async route=>{
    const url=new URL(route.request().url()),path=url.pathname;let json={};
    if(path==='/api/config')json={connected:true,services:SERVICES,schedule:{enabled:true,hours:['09:00','10:00','12:00','13:00']}};
-   else if(path==='/api/auth/me')json={user:signedIn?{id,name:'Fixture Person',role:access==='administrator'?'staff':access,staffAccess:access==='administrator'?'administrator':'staff'}:null,services:[]};
+   else if(path==='/api/auth/me')json={user:signedIn?{id,name:'Fixture Person',role:access==='administrator'?'owner':access,isPrimaryOwner:access==='owner'}:null,services:[]};
    else if(path==='/api/auth/logout'){
     if(failLogout){failLogout=false;return route.fulfill({status:503,json:{error:'Try again shortly.'}});}
     signedIn=false;json={ok:true};
