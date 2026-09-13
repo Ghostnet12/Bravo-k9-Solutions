@@ -78,11 +78,12 @@ test('production static pages get CSP and frame protections, with enough checkou
   assert.equal(headers['X-Frame-Options'], 'DENY'); assert.ok(config.functions['api/index.js'].maxDuration >= 60);
 });
 test('structured business data uses the public domain without stale editable prices', async () => {
-  const html = await readFile(new URL('../client/index.html', import.meta.url), 'utf8');
-  const data = JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/)[1]);
-  assert.equal(data.url, 'https://bravounleashed.com');
+  const html = await readFile(new URL('../client/dist/bravo-shell.html', import.meta.url), 'utf8');
+  const graph = JSON.parse(html.match(/<script id="bravo-structured-data" type="application\/ld\+json">(.*?)<\/script>/)[1])['@graph'];
+  const data = graph.find(item => item['@type'] === 'LocalBusiness');
+  assert.equal(data.url, 'https://bravounleashed.com/');
   assert.match(data.image, /^https:\/\/bravounleashed\.com\//);
-  assert.equal(data.makesOffer.find(offer => offer.name === 'Dog Walking').price, undefined);
+  assert.doesNotMatch(JSON.stringify(graph), /"price"|"priceCurrency"/);
 });
 test('paid, covered, refunded and review bookings cannot start another checkout', async () => {
   for (const paymentStatus of ['paid', 'covered', 'refunded', 'review']) {
