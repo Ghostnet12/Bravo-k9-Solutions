@@ -13,7 +13,9 @@ const app = express(); app.use(express.static(dist)); app.get('/{*path}', (_req,
 const server = app.listen(0, '127.0.0.1'); await once(server, 'listening'); const origin = `http://127.0.0.1:${server.address().port}`;
 const david = { id: 'aaaaaaaaaaaaaaaaaaaaaaaa', _id: 'aaaaaaaaaaaaaaaaaaaaaaaa', name: 'David Northrop', role: 'owner' }, ashley = { id: 'bbbbbbbbbbbbbbbbbbbbbbbb', _id: 'bbbbbbbbbbbbbbbbbbbbbbbb', name: 'Ashley Northrop', role: 'staff' };
 const client = { _id: 'cccccccccccccccccccccccc', name: 'Current Client', email: 'current@example.test', role: 'member', dogName: 'Gunner' }, bookingId = 'dddddddddddddddddddddddd';
-const now = DateTime.now().setZone('America/Chicago'), startDate = now.minus({ days: 5 }).toISODate();
+// Keep two available dates in view and 10 AM in the future regardless of the
+// runner's wall clock. Past times must remain unavailable in production.
+const now = DateTime.now().setZone('America/Chicago').startOf('month').plus({ days: 10, hours: 8 }), startDate = now.minus({ days: 5 }).toISODate();
 await mkdir('test-results', { recursive: true });
 try {
   for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
@@ -22,6 +24,7 @@ try {
     try {
       for (const width of [320, 390, 1440]) {
         const context = await browser.newContext({ viewport: { width, height: 844 }, isMobile: width < 700 }), page = await context.newPage();
+        await page.clock.setFixedTime(now.toJSDate());
         let membership = { revision: 0, enabled: false, manual: false }, booking = null, term = null, savedBody, calendarBody;
         const errors = []; page.on('pageerror', e => errors.push(e.message)); page.on('dialog', dialog => dialog.accept());
         await page.route('**/api/**', async route => {
