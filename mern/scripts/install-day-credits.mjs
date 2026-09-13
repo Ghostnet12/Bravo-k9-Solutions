@@ -41,4 +41,9 @@ const added = {
  'tests/training-credits.browser.mjs':'5f051fae9cda0ffe8363b61f28231430fde22144bb9a0b8e6fe2ece1561e9f9a'
 };
 for(const [p,expected]of Object.entries(added))if(sha(p)!==expected)throw new Error(`New source checksum mismatch: ${p}`);
-console.log('Exact source installed; all 15 SHA-256 checks passed.');
+// The schedule reload intentionally replaces stale booking controls. Preserve
+// the successful credit's open receipt across that reload for this client only.
+edit('client/src/SchedulePage.jsx',"  const [revision, setRevision] = useState(0), [notice, setNotice] = useState('');","  const [revision, setRevision] = useState(0), [notice, setNotice] = useState('');\n  const [creditOpenClient, setCreditOpenClient] = useState(null);");
+edit('client/src/SchedulePage.jsx',"<TrainingDayCredits clientId={data.client.id} onSaved={message => { setNotice(message); setRevision(n => n + 1); }}/>","<TrainingDayCredits clientId={data.client.id} initiallyOpen={creditOpenClient === data.client.id} onSaved={message => { setCreditOpenClient(data.client.id); setNotice(message); setRevision(n => n + 1); }}/>");
+if(sha('client/src/SchedulePage.jsx')!=='f02cb1503e85e265dd7809873ea00fd92168e8afc9a653d78d4be89b5958fd09')throw new Error('Receipt continuity patch differs from tested source.');
+console.log('Exact source installed; all 15 SHA-256 checks and receipt continuity check passed.');
