@@ -56,7 +56,8 @@ try {
           else if (path === '/api/client-schedule') {
             scheduleReads++; assert.equal(client.mustChangePassword, false, 'No schedule is requested before choosing a password');
             json = { client: { id: clientId, name: client.name }, month: date.slice(0, 7), terms: [{ stripeId: 'fixture', serviceIds: ['training'], validFrom: membership.startsAt, validUntil: membership.endsAt, status: 'active' }], visits: [{ date, time: '10:00', service: 'training', dogName: client.dogName, bookingId: 'dddddddddddddddddddddddd', status: 'confirmed', paymentStatus: 'covered', trainer: 'David' }], trainingBookings: [] };
-          } else if (path === '/api/reviews/mine') json = { review: null };
+          } else if (path === '/api/membership-terms') json = { terms: [] };
+          else if (path === '/api/reviews/mine') json = { review: null };
           else if (path === '/api/bookings') json = { bookings: [] };
           await route.fulfill({ status, json });
         });
@@ -100,7 +101,7 @@ try {
           await page.reload(); await page.getByRole('heading', { name: 'New Fixture Client’s schedule.', exact: true }).waitFor();
           assert.equal(await page.getByRole('heading', { name: 'Create your password.', exact: true }).count(), 0);
           await page.goto(`${origin}/account`); await page.getByRole('heading', { name: 'Membership dates & renewal', exact: true }).waitFor();
-          await page.getByRole('link', { name: 'My schedule', exact: true }).first().waitFor();
+          await page.locator('main').getByRole('link', { name: 'My schedule', exact: true }).waitFor();
           activeUser = operator; await page.goto(`${origin}/admin?tab=people`); if (access !== 'staff') await page.locator('.owner-person > summary').click({ position: { x: 8, y: 20 } });
           assert.equal(await page.getByRole('button', { name: 'Create new temporary password', exact: true }).count(), 0);
           assert.deepEqual(errors, []); console.log(`${engineName} ${width} ${access}: create, copy, replace, name/email sign-in, required password setup and saved schedule passed`);
