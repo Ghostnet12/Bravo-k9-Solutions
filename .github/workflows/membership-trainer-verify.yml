@@ -5,6 +5,9 @@ on:
     paths: [.github/workflows/membership-trainer-verify.yml]
 permissions:
   contents: write
+defaults:
+  run:
+    shell: bash
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -26,28 +29,21 @@ jobs:
           mkdir -p test-results
           node --input-type=module <<'JS'
           import { chromium } from 'playwright';
-          import { writeFile } from 'node:fs/promises';
           const browser=await chromium.launch(),page=await browser.newPage();
           try {
             await page.goto('https://firestorage.ai/ja/f/PHXp101hHlQT');
             await page.getByText('bravo-membership-trainers.zip',{exact:false}).first().waitFor({timeout:30000});
-            console.log((await page.locator('body').innerText()).slice(0,8000));
             const buttons=await page.locator('a,button').all();
             let saved=false;
             for(const button of buttons){
-              const label=await button.innerText();
-              if(!/ダウンロード|download/i.test(label))continue;
+              if(!/ダウンロード|download/i.test(await button.innerText()))continue;
               try {
                 const [download]=await Promise.all([page.waitForEvent('download',{timeout:8000}),button.click({timeout:3000})]);
                 await download.saveAs('/tmp/bravo-feature-download.zip');saved=true;break;
               }catch{}
             }
             if(!saved)throw new Error('No source archive download was received.');
-          } finally {
-            await writeFile('test-results/source-transfer.html',await page.content());
-            await page.screenshot({path:'test-results/source-transfer.png',fullPage:true});
-            await browser.close();
-          }
+          } finally { await browser.close(); }
           JS
       - name: Verify source integrity and apply patch
         run: |
@@ -67,6 +63,26 @@ jobs:
           PY
           git apply --check /tmp/bravo-feature.patch
           git apply /tmp/bravo-feature.patch
+      - name: Preserve joint acceptance after waitlist promotion and exercise the actual booking route
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          def replace(path,old,new):
+            p=Path(path);s=p.read_text();assert old in s,(path,old);p.write_text(s.replace(old,new))
+          replace('mern/server/bookings.js','options.acceptedBy ? !complete : !!options.requireAcceptance)', 'options.acceptedBy ? !complete : !!options.requireAcceptance || trainerIds.length > 1 || !!booking.trainerAcceptanceRequired)')
+          replace('mern/client/src/BookingPage.jsx',"import { trainerChoice } from '../../shared/trainers';", "import { trainerChoice, JOINT_TRAINER_ID } from '../../shared/trainers';")
+          replace('mern/client/src/BookingPage.jsx',r"resume?.trainerId || (/^[a-f\d]{24}$/i",r"resume?.trainerId || (params.get('trainer') === JOINT_TRAINER_ID || /^[a-f\d]{24}$/i")
+          replace('mern/tests/membership-trainers.integration.js','getEntitlements,trainerCapacity}', 'getEntitlements,trainerCapacity,promoteTrainerWaitlist}')
+          replace('mern/tests/membership-trainers.integration.js','await Booking.deleteOne({_id:full._id});', '''await Booking.deleteOne({_id:full._id});
+                await promoteTrainerWaitlist(ids[1]);
+                const promoted=await Booking.findById(b._id);
+                assert.equal(promoted.status,'requested');assert.deepEqual(promoted.staffIds.map(String),ids);
+                assert.equal(promoted.trainerAcceptanceRequired,true);
+                assert.ok(await Slot.exists({_id:`${tomorrow}|11:00`,bookingId:b._id}));''')
+          replace('mern/tests/membership-trainers.browser.mjs','${origin}/book?program=training','${origin}/portal?program=training')
+          replace('mern/tests/membership-trainers.browser.mjs',"page.on('pageerror',e=>errors.push(e.message));", "try {\n             page.on('pageerror',e=>errors.push(e.message));")
+          replace('mern/tests/membership-trainers.browser.mjs','await context.close();console.log',"} catch(error) { await page.screenshot({path:`test-results/feature-failure-${engineName}-${width}.png`,fullPage:true}); console.log('BROWSER FAILURE DOM:',await page.locator('body').innerText()); throw error; } finally { await context.close(); }\n             console.log")
+          PY
       - run: npm run build
         working-directory: mern
       - name: Unit regressions
@@ -84,16 +100,18 @@ jobs:
       - name: Homepage regression
         working-directory: mern
         run: node tests/home-hero.browser.mjs 2>&1 | tee test-results/browser-home.log
-      - name: Commit tested source to feature branch only
+      - name: Commit verified application source only
         run: |
-          rm .github/workflows/membership-trainer-verify.yml
+          git restore --source=HEAD --worktree .github/workflows
           git config user.name 'Ghostnet12'
           git config user.email '131214811+Ghostnet12@users.noreply.github.com'
-          git add mern .github/workflows
+          git add mern/client/src mern/server mern/shared mern/tests
           git diff --cached --check
+          git diff --cached --name-only | tee /tmp/staged-paths
+          if grep -E '(^\.github/|test-results/)' /tmp/staged-paths; then exit 1; fi
           git commit -m 'Add backdated calendar-month onboarding and real David-and-Ashley trainer assignments'
           git push origin HEAD:feature/backdated-memberships-dual-trainers-20260913
-          echo "TESTED_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
+          git rev-parse HEAD | tee mern/test-results/tested-commit.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
