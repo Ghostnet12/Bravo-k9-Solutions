@@ -34,3 +34,10 @@
 .saved-calendar button small {font-size:.7rem}.schedule-list>.schedule-visit[hidden] {display:none}
 .schedule-visit-actions {margin-top:.8rem}.schedule-visit-actions .record-actions {display:flex;flex-wrap:wrap}.schedule-visit-actions form {margin-top:1rem}
 @media print {.saved-calendar,.calendar-day-heading,.schedule-visit-actions {display:none!important}.schedule-list>.schedule-visit[hidden] {display:block!important}}
+
+.saved-calendar button.has-visits {background:#cfb173;color:#10120e;border:2px solid #e8ce97;font-weight:700}
+.saved-calendar button.has-visits strong,.saved-calendar button.has-visits small {color:#10120e}
+.saved-calendar button[aria-pressed=true] {outline:3px solid #fff;outline-offset:2px}
+.calendar-legend {font-size:.9rem}.calendar-key {display:inline-block;width:1rem;height:1rem;background:#cfb173;border:1px solid #e8ce97;vertical-align:middle;margin-right:.4rem}
+.weekend-tools form {margin-top:1.2rem}.weekend-tools .button {max-width:100%}
+@media print {.weekend-tools,.calendar-legend {display:none!important}}

@@ -32,7 +32,7 @@ bookingSchema.index({ userId: 1, requestKey: 1 }, { unique: true });
 export const Booking = model('BravoBooking', bookingSchema);
 export const Slot = model('BravoSlot', new Schema({ _id: String, bookingId: id, date: String, time: String, reason: String }));
 export const TrainerSchedule = model('BravoTrainerSchedule', new Schema({ _id: String, enabled: Boolean, weekdays: [Number], hours: [String], overrides: [new Schema({ date: String, hours: [String] }, { _id: false })], revision: { type: Number, default: 0 } }, { timestamps: true }));
-export const Settings = model('BravoSettings', new Schema({ _id: String, weekdays: [Number], hours: [String], enabled: Boolean, revision: { type: Number, default: 0 } }));
+export const Settings = model('BravoSettings', new Schema({ _id: String, weekdays: [Number], hours: [String], overrides: [new Schema({date:String,hours:[String]}, {_id:false})], enabled: Boolean, revision: { type: Number, default: 0 } }));
 export const ServiceSetting = model('BravoServiceSetting', new Schema({ _id: String, cents: { type: Number, min: 0, max: 1000000 }, enabled: { type: Boolean, default: true }, updatedBy: id }, { timestamps: true }));
 export const ChatReset = model('BravoChatReset', new Schema({ _id: String, clearedAt: { type: Date, required: true } }, { timestamps: true }));
 export const Message = model('BravoMessage', new Schema({ userId: id, authorName: String, role: String, kind: { type: String, enum: ['message', 'announcement', 'alert'] }, body: String, deleted: { type: Boolean, default: false } }, { timestamps: true }));

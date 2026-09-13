@@ -9,8 +9,8 @@ export function personalHours(date, schedule) {
   return [...new Set(hours)].filter(time => TRAINER_HOURS.includes(time)).sort();
 }
 export function workingHours(date, personal, team) {
-  const limits = personalHours(date, { ...team, overrides: [] });
-  if (!personal) return limits;
+  const limits = personalHours(date, team);
+  if (!personal) return personalHours(date, { ...team, overrides: [] });
   const own = new Set(personalHours(date, personal));
   return limits.filter(time => own.has(time));
 }

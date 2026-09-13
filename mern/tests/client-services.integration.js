@@ -11,7 +11,7 @@ test('client services: schedules, notifications, recovery and monthly payments',
   process.env.NODE_ENV = 'test'; process.env.MONGODB_URI = replica.getUri(); process.env.MONGODB_DB = 'client_services'; process.env.APP_ORIGIN = 'http://localhost:5173'; process.env.CRON_SECRET = 'isolated-test-cron';
   const { default: app } = await import('../server/client-services-app.js');
   const { connectDb } = await import('../server/db.js');
-  const { User, Booking, Subscription, Session, DirectMessage, Notification, PasswordReset, StripeEvent, Settings, Slot } = await import('../server/models.js');
+  const { User, Booking, Subscription, Session, DirectMessage, Notification, PasswordReset, StripeEvent, Settings, Slot, TrainerSchedule } = await import('../server/models.js');
   const { digest, hashPassword, verifyPassword } = await import('../server/auth.js');
   const { processStripeEvent } = await import('../server/payments.js');
   const { getEntitlements } = await import('../server/bookings.js');
@@ -88,6 +88,26 @@ test('client services: schedules, notifications, recovery and monthly payments',
       const saved=await Booking.findById(b._id);assert.equal(saved.visits.length,0);assert.equal(saved.cancelledVisits.length,1);assert.equal(saved.paymentStatus,'paid');
       assert.equal(await Notification.countDocuments({staff:true,body:/I cannot attend/}),1);
       for (const who of ['staff','secondStaff','owner']) assert.ok((await call(who,'get','/api/notifications')).body.items.some(item=>item.body.includes('I cannot attend')));
+    });
+    await t.test('staff open specific weekend hours and add visits only inside paid training months', async () => {
+      await Settings.updateOne({_id:'schedule'},{$set:{enabled:true,weekdays:[1,2,3,4,5],hours:['10:00'],overrides:[]}});
+      let saturday=DateTime.now().setZone('America/Chicago').plus({days:2}).startOf('day');while(saturday.weekday!==6)saturday=saturday.plus({days:1});
+      const date=saturday.toISODate(),nextWeek=saturday.plus({weeks:1}).toISODate();
+      const body={staffId:String(users.staff._id),date,hours:['11:00']};
+      await call('client','post','/api/admin/weekend-sessions',body).expect(403);
+      await call('secondStaff','post','/api/admin/weekend-sessions',body).expect(403);
+      await call('staff','post','/api/admin/weekend-sessions',body).expect(200);
+      const {workingHours}=await import('../shared/trainer-schedule.js');
+      const team=await Settings.findById('schedule').lean(),own=await TrainerSchedule.findById(String(users.staff._id)).lean();
+      assert.deepEqual(team.weekdays,[1,2,3,4,5]);assert.deepEqual(workingHours(date,own,team),['11:00']);assert.deepEqual(workingHours(nextWeek,own,team),[]);assert.deepEqual(workingHours(date,null,team),[]);
+      const booking=await Booking.create({userId:users.client._id,staffId:users.staff._id,requestKey:'extra-weekend',serviceIds:['training'],dogName:'Fixture Dog',visits:[],status:'confirmed',paymentStatus:'paid',quote:quote(['training'])});
+      await call('client','post','/api/admin/training-visits',{bookingId:String(booking._id),date,time:'11:00'}).expect(403);
+      await call('staff','post','/api/admin/training-visits',{bookingId:String(booking._id),date,time:'11:00'}).expect(200);
+      await call('staff','post','/api/admin/training-visits',{bookingId:String(booking._id),date,time:'11:00'}).expect(409);
+      assert.equal((await Booking.findById(booking._id)).visits.length,1);
+      const unpaid=await Booking.create({userId:users.other._id,requestKey:'no-paid-month',serviceIds:['training'],visits:[],status:'requested',paymentStatus:'paid',quote:quote(['training'])});
+      await call('owner','post','/api/admin/training-visits',{bookingId:String(unpaid._id),date:saturday.plus({days:2}).toISODate(),time:'10:00'}).expect(400);
+      assert.ok(await Notification.exists({userId:users.client._id,staff:false,body:/Bravo added a training visit/}));
     });
     await t.test('recovery requires administrator reauthentication and token is one-use and hashed', async () => {
       const path = `/api/admin/recovery/${users.client._id}`;

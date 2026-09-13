@@ -16,6 +16,7 @@ import { MEMBERSHIP_ZONE } from '../shared/membership-terms.js';
 import { monthTerm } from '../shared/membership-terms.js';
 import { availability, dateTime, HOURS } from './scheduling.js';
 import { checkTrainerVisits } from './trainer-schedules.js';
+import { openWeekend, addTrainingVisit } from './weekend-sessions.js';
 import { stripeClient, processStripeEvent } from './payments.js';
 
 const app = express();
@@ -48,8 +49,11 @@ app.get('/api/client-schedule', ...session, requireUser, async (req, res) => {
     res.set('Content-Disposition', `attachment; filename="bravo-schedule-${input.month}.pdf"`);
     return res.type('application/pdf').send(bytes);
   }
+  if (staff(req.user)) schedule.trainingBookings = await Booking.find({ userId:client, serviceIds: {$in:ALL_SERVICES.filter(s=>s.includes.includes('training')).map(s=>s.id)}, status:{$in:['requested','confirmed']},paymentStatus:{$in:['paid','covered']} }).select('dogName trainingFocus staffId requestedStaffId').lean();
   res.json(schedule);
 });
+app.post('/api/admin/weekend-sessions', ...session, requireStaff, ...write, openWeekend);
+app.post('/api/admin/training-visits', ...session, requireStaff, ...write, addTrainingVisit);
 app.post('/api/client-schedule/visit', ...session, requireUser, ...write, rateLimit('visit-change', 30, 3600000), async (req, res) => {
   const visit = z.object({ date: z.string(), time: z.enum(HOURS), service: z.string() }).strict();
   const input = z.object({ bookingId: id, action: z.enum(['change', 'cancel', 'note']), original: visit, replacement: visit.optional(), note: z.string().trim().min(1).max(1200) }).strict().parse(req.body);

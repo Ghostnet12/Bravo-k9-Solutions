@@ -1,4 +1,5 @@
 import { DateTime } from 'luxon';
+import { personalHours } from '../shared/trainer-schedule.js';
 import { serviceSelection } from '../shared/catalog.js';
 export const ZONE = 'America/Chicago';
 export const HOURS = Array.from({ length: 13 }, (_, i) => `${String(i + 9).padStart(2, '0')}:00`);
@@ -19,8 +20,8 @@ export function dateRange(from, to) {
 }
 export function availability({ from, to, settings = DEFAULT_SCHEDULE, occupied = [], now = DateTime.now() }) {
   const blocked = new Set(occupied);
-  return dateRange(from, to).map(date => ({ date, slots: settings.enabled && settings.weekdays.includes(dateTime(date).weekday)
-    ? settings.hours.filter(time => HOURS.includes(time) && dateTime(date, time) > now && !blocked.has(`${date}|${time}`)) : [] }));
+  return dateRange(from, to).map(date => ({ date, slots: personalHours(date, settings)
+    .filter(time => dateTime(date, time) > now && !blocked.has(`${date}|${time}`)) }));
 }
 export function autoSchedule(days, { count, startDate, startTime = '09:00', endDate, endTime = '21:00', preference = 'any', service = 'training' }) {
   if (!Number.isInteger(count) || count < 1 || count > 31) throw new Error('Choose 1–31 appointments.');

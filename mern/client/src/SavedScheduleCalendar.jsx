@@ -6,8 +6,9 @@ import { trainingFocusName } from '../../shared/catalog';
 
 export default function SavedScheduleCalendar({ data, month, reload }) {
   const [day, setDay] = useState(data.visits[0]?.date || `${month}-01`);
+  const trainingDays = new Set(data.visits.filter(v=>v.service==='training' && v.status!=='cancelled').map(v=>v.date));
   const start = DateTime.fromISO(`${month}-01`), padding = start.weekday % 7;
-  return <><div className="saved-calendar" aria-label="Saved monthly schedule">
+  return <><p className="calendar-legend"><span className="calendar-key"/> {trainingDays.size} training days saved this month. Gold highlights every saved visit; the outline marks the day you are viewing.</p><div className="saved-calendar" aria-label="Saved monthly schedule">
     {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => <span className="calendar-weekday" key={d}>{d}</span>)}
     {Array.from({ length: padding }, (_,i) => <span key={`empty-${i}`}/>)}
     {Array.from({ length: start.daysInMonth }, (_,i) => {
