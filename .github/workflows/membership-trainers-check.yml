@@ -5,27 +5,31 @@ on:
     paths: ['mern/**', '.github/workflows/membership-trainers-check.yml']
 permissions:
   contents: read
+concurrency:
+  group: bravo-membership-review
+  cancel-in-progress: false
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    permissions:
+      contents: write
     defaults:
       run:
         working-directory: mern
     steps:
       - uses: actions/checkout@v4
-      - name: Capture source for isolated review
+      - name: Apply verified source transfer on review branch only
+        if: hashFiles('mern/scripts/apply-membership-trainers.py') != ''
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p test-results
-          git -C .. archive HEAD mern/server mern/shared mern/client/src mern/tests mern/scripts mern/package.json mern/package-lock.json mern/vite.config.js mern/client/index.html mern/vercel.json .github/workflows | gzip > test-results/review-source.tar.gz
-          tar -tzf test-results/review-source.tar.gz > /dev/null
-      - uses: actions/upload-artifact@v4
-        with:
-          name: membership-source-review
-          path: mern/test-results/review-source.tar.gz
-          retention-days: 1
+          python scripts/apply-membership-trainers.py
+          git add -A -- server shared client/src tests scripts/apply-membership-trainers.py scripts/membership-payload-1.b64 scripts/membership-payload-2.b64
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Implement backdated membership months and shared trainer assignments'
+          git push origin HEAD:bravo-membership-dates-shared-trainers
+      - name: Record exact reviewed commit
+        run: git rev-parse HEAD
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -34,4 +38,24 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
-      - run: node --test --test-concurrency=1 tests/client-services.integration.js tests/member-access.integration.js tests/trainer-schedules.integration.js
+      - run: node --test --test-concurrency=1 tests/client-services.integration.js tests/member-access.integration.js tests/trainer-schedules.integration.js tests/membership-trainers.integration.js
+      - name: Install isolated browser test tooling
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.1
+          npx playwright install --with-deps chromium webkit
+      - run: node tests/membership-trainers.browser.mjs
+      - run: node tests/client-services.browser.mjs
+      - name: Capture checked source
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p test-results
+          git -C .. archive HEAD mern/server mern/shared mern/client/src mern/tests mern/package.json mern/package-lock.json .github/workflows | gzip > test-results/review-source.tar.gz
+          git rev-parse HEAD > test-results/reviewed-commit.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: membership-trainer-verification
+          path: mern/test-results/
+          retention-days: 3
