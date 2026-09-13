@@ -15,9 +15,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Capture source for isolated review
+        shell: bash
         run: |
+          set -euo pipefail
           mkdir -p test-results
-          git archive HEAD mern/server mern/shared mern/client/src mern/tests mern/scripts mern/package.json mern/package-lock.json mern/vite.config.js mern/client/index.html mern/vercel.json .github/workflows | gzip > test-results/review-source.tar.gz
+          git -C .. archive HEAD mern/server mern/shared mern/client/src mern/tests mern/scripts mern/package.json mern/package-lock.json mern/vite.config.js mern/client/index.html mern/vercel.json .github/workflows | gzip > test-results/review-source.tar.gz
+          tar -tzf test-results/review-source.tar.gz > /dev/null
       - uses: actions/upload-artifact@v4
         with:
           name: membership-source-review
