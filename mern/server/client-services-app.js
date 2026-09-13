@@ -8,7 +8,7 @@ import { DateTime } from 'luxon';
 import { z } from 'zod';
 import memberApp, { MemberAccess } from './member-app.js';
 import { connectDb, transaction } from './db.js';
-import { User, Booking, Subscription, DirectMessage, Notification, NotificationRead, PasswordReset, Session, AuditEvent, RateBucket, Settings, Slot } from './models.js';
+import { User, Booking, Subscription, MembershipCredit, DirectMessage, Notification, NotificationRead, PasswordReset, Session, AuditEvent, RateBucket, Settings, Slot } from './models.js';
 import { identify, requireUser, requireOwner, requireStaff, sameOrigin, rateLimit, digest, hashPassword, verifyPassword } from './auth.js';
 import { quote, serviceSelection, ALL_SERVICES } from '../shared/catalog.js';
 import { effectiveServices } from './services.js';
@@ -19,6 +19,7 @@ import { monthTerm } from '../shared/membership-terms.js';
 import { availability, dateTime, HOURS } from './scheduling.js';
 import { checkTrainerVisits } from './trainer-schedules.js';
 import { openWeekend, addTrainingVisit } from './weekend-sessions.js';
+import { creditMembershipDays } from './day-credits.js';
 import { saveScheduleChanges } from './schedule-changes.js';
 import { trainerClients, acceptClient } from './trainer-clients.js';
 import { stripeClient, processStripeEvent } from './payments.js';
@@ -42,24 +43,26 @@ app.get('/api/client-schedule', ...session, requireUser, async (req, res) => {
   if (!person) throw fail('Client not found.', 404);
   const records = await Booking.find({ userId: client, $or: [{ 'visits.date': { $gte: start.toISODate(), $lt: start.plus({ months: 1 }).toISODate() } }, { 'cancelledVisits.date': { $gte: start.toISODate(), $lt: start.plus({ months: 1 }).toISODate() } }] }).select('visits cancelledVisits paidAt dogName dogCount serviceIds trainingFocus status paymentStatus staffId staffIds requestedStaffId requestedStaffIds trainerAcceptedIds trainerAcceptanceRequired trainerAcceptedAt termStartsAt termEndsAt').populate({path:'staffId',model:User,select:'name'}).populate({path:'staffIds',model:User,select:'name'}).sort({ createdAt: 1 }).lean();
   const visits = records.flatMap(record => [...record.visits, ...(record.cancelledVisits || []).map(v => ({ ...v, cancelled: true }))].filter(visit => visit.date.startsWith(input.month)).map(visit => ({ ...visit, bookingId: String(record._id), dogName: record.dogName, dogCount: record.dogCount, status: visit.cancelled ? 'cancelled' : record.status, staffId: record.staffId?._id || null, staffIds: bookingTrainerIds(record), trainerChoice: trainerChoice(record), paymentStatus: record.paymentStatus, trainer: scheduledTrainerLabel(record), trainingFocus: record.trainingFocus }))).sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));
-  const terms = await Subscription.find({ userId: client }).select('stripeId serviceIds dogCount validFrom validUntil status autoPayDisabled renewalDeclined source').sort({ validUntil: -1 }).limit(100).lean();
+  const terms = await Subscription.find({ userId: client }).select('stripeId serviceIds dogCount validFrom validUntil status autoPayDisabled renewalDeclined source bookingId renewalOf creditedDays creditedUntil').sort({ validUntil: -1 }).limit(100).lean();
   const first = await Booking.findOne({ userId: client, status: { $ne: 'cancelled' }, paymentStatus: { $in: ['paid', 'covered'] }, 'visits.0': { $exists: true } }).sort({ 'visits.date': 1 }).select('visits').lean();
   const paidTerms = terms.filter(t => t.source !== 'grant' && t.validFrom).sort((a,b) => a.validFrom - b.validFrom);
   const firstPayment = await Booking.findOne({ userId: client, paidAt: { $exists: true } }).sort({ paidAt: 1 }).select('paidAt').lean();
   const schedule = { firstPaidAt: person.firstPaidAt || firstPayment?.paidAt || paidTerms[0]?.validFrom || null, client: { id: client, name: person.name }, month: input.month, visits, terms, firstTrainingDay: first?.visits.map(visit => visit.date).sort()[0] || null };
+  schedule.dayCredits = await MembershipCredit.find({ userId: client }).select('termId days reason note missedDate beforeEnd afterEnd createdAt').sort({ createdAt: -1 }).limit(100).lean();
   if (input.format === 'pdf') {
     const { schedulePdf } = await import('./schedule-pdf.js');
     const bytes = await schedulePdf(schedule);
     res.set('Content-Disposition', `attachment; filename="bravo-schedule-${input.month}.pdf"`);
     return res.type('application/pdf').send(bytes);
   }
-  schedule.trainingBookings = await Booking.find({ userId:client, serviceIds: {$in:ALL_SERVICES.filter(s=>s.includes.includes('training')).map(s=>s.id)}, status:{$in:['requested','confirmed']},paymentStatus:{$in:['paid','covered']} }).select('dogName dogCount trainingFocus staffId staffIds requestedStaffId requestedStaffIds trainerAcceptedIds trainerAcceptanceRequired trainerAcceptedAt termStartsAt termEndsAt visits updatedAt').lean();
+  schedule.trainingBookings = await Booking.find({ userId:client, serviceIds: {$in:ALL_SERVICES.filter(s=>s.includes.includes('training')).map(s=>s.id)}, status:{$in:['requested','confirmed']},paymentStatus:{$in:['paid','covered']} }).select('dogName dogCount trainingFocus staffId staffIds requestedStaffId requestedStaffIds trainerAcceptedIds trainerAcceptanceRequired trainerAcceptedAt termStartsAt termEndsAt visits cancelledVisits updatedAt').lean();
   res.json(schedule);
 });
 app.get('/api/admin/trainers/:id/clients', ...session, requireStaff, trainerClients);
 app.post('/api/admin/bookings/:id/accept-client', ...session, requireStaff, ...write, acceptClient);
 app.post('/api/admin/weekend-sessions', ...session, requireStaff, ...write, openWeekend);
 app.post('/api/admin/training-visits', ...session, requireStaff, ...write, addTrainingVisit);
+app.post('/api/client-schedule/credits', ...session, requireUser, requireStaff, ...write, rateLimit('membership-credit', 80, 3600000), creditMembershipDays);
 app.post('/api/client-schedule/changes', ...session, requireUser, sameOrigin, express.json({limit:'20kb'}), rateLimit('visit-change',30,3600000), saveScheduleChanges);
 app.post('/api/client-schedule/visit', ...session, requireUser, ...write, rateLimit('visit-change', 30, 3600000), async (req, res) => {
   const visit = z.object({ date: z.string(), time: z.enum(HOURS), service: z.string() }).strict();
@@ -110,7 +113,7 @@ app.post('/api/client-schedule/visit', ...session, requireUser, ...write, rateLi
 });
 
 app.get('/api/membership-terms', ...session, requireUser, async (req, res) => {
-  res.json({ terms: await Subscription.find({ userId: req.user._id }).select('stripeId serviceIds dogCount validFrom validUntil status autoPayDisabled renewalDeclined renewalOf source').sort({ validUntil: -1 }).limit(100).lean() });
+  res.json({ terms: await Subscription.find({ userId: req.user._id }).select('stripeId serviceIds dogCount validFrom validUntil status autoPayDisabled renewalDeclined renewalOf source creditedDays creditedUntil').sort({ validUntil: -1 }).limit(100).lean() });
 });
 app.post('/api/membership-terms/renew', ...session, requireUser, ...write, rateLimit('renewal', 20, 3600000), async (req, res) => {
   const input = z.object({ termId: z.string().max(150), requestKey: z.string().uuid() }).strict().parse(req.body);

@@ -1,0 +1,15 @@
+# Training membership day credits
+
+Staff, Administrators and Owner can open **Schedule → Credit days to a client**, search by name/email, and select the client. The same **Credit days** section appears next to **Add Days and Times** on a client's saved calendar, including the calendar within People & access.
+
+The default is one day. The preview shows the saved end date, new end date and change in days remaining. Each credit adds a calendar day in America/Chicago, preserving the local cutoff across daylight saving changes. Notes are optional. Up to 31 whole days can be credited in one operation.
+
+Optionally choose a saved missed training date. Saving then cancels all training visits on that date in the selected membership, frees their reserved times and adds one day in the same transaction. Past missed training and already-cancelled visits can be credited. A missed date can only receive one credit per client. Without a missed date, only the membership is extended. A replacement appointment is chosen separately through the existing calendar and trainer availability rules.
+
+Credits update the training subscription and linked request boundaries. A matching, enabled manual Member grant and its online membership extend with training. The client sees their updated dates, credit history and an in-app notification. The monthly PDF uses those updated dates. Expiry reminders use the new end, and stale reminders for the old end are removed.
+
+No Stripe charge, refund, payment timestamp, trainer reassignment or automatic replacement visit is created. Stripe sync preserves an explicitly credited end date. An automatic plan must be switched to manual renewal first. Refunded/revoked memberships and blocked/removed clients cannot receive credits. A renewed or overlapping next month requires crediting the latest membership so extra days do not overlap paid coverage. An expired membership extends from its saved end date, not from today; the preview makes clear if it remains expired.
+
+POST /api/client-schedule/credits is staff-only, same-origin, validated, rate-limited and transaction-protected. A request UUID makes retries idempotent; the expected end date prevents two concurrent edits from accidentally double-crediting. A permanent credit ledger and audit event record the actor, dates, reason and any cancelled visits. Client-facing history omits internal actor IDs.
+
+Verification: day-credits.test.js covers calendar arithmetic/DST and eligibility. day-credits.integration.js exercises the real database/API, role gates, duplicate/stale/concurrent saves, cancellation/reservations, paid/manual grants, Stripe replay, account access and booking on the extra day. day-credits.browser.mjs exercises the staff/admin/owner controls at mobile and desktop sizes in Chromium and WebKit, optional notes, client history, remaining-day display and replacement scheduling.

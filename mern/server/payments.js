@@ -139,7 +139,10 @@ export async function processStripeEvent(event, stripe) {
         const until = sub.current_period_end || (periods.length ? Math.min(...periods) : 0);
         const starts = sub.items.data.map(item => item.current_period_start).filter(Boolean);
         const from = sub.current_period_start || (starts.length ? Math.max(...starts) : sub.start_date);
-        await Subscription.updateOne({ stripeId: sub.id }, { $set: { userId: user._id, serviceIds: ids, dogCount, status: sub.status, validFrom: new Date(from * 1000), validUntil: new Date(until * 1000), autoPayDisabled: !!sub.cancel_at_period_end || sub.status === 'canceled', source: 'stripe', lastEventAt: event.created } }, { upsert: true, session });
+        // Preserve staff-issued days when Stripe repeats the original paid end date.
+        const paidEnd = new Date(until * 1000);
+        const effectiveEnd = previous?.creditedUntil > paidEnd ? previous.creditedUntil : paidEnd;
+        await Subscription.updateOne({ stripeId: sub.id }, { $set: { userId: user._id, serviceIds: ids, dogCount, status: sub.status, validFrom: new Date(from * 1000), validUntil: effectiveEnd, autoPayDisabled: !!sub.cancel_at_period_end || sub.status === 'canceled', source: 'stripe', lastEventAt: event.created } }, { upsert: true, session });
       }
     }
     if (['checkout.session.completed', 'checkout.session.async_payment_succeeded'].includes(event.type) && object.metadata?.app === 'bravo-k9' && object.payment_status === 'paid') {

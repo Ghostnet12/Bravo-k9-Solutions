@@ -1,0 +1,12 @@
+.membership-day-credits { margin-block: 1.5rem; }
+.membership-day-credits fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.membership-day-credits label { display: grid; gap: .5rem; margin-block: 1rem; min-width: 0; }
+.membership-day-credits input, .membership-day-credits select, .membership-day-credits textarea { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
+.credit-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 1rem; }
+.credit-preview { padding: 1rem; margin-block: 1rem; border: 2px solid #ba9a64; border-radius: .5rem; background: #ba9a641a; }
+.credit-preview p { margin: .4rem 0; }
+.credit-history { margin-block: 1rem; }
+.credit-history li { margin-block: 1rem; overflow-wrap: anywhere; }
+.staff-day-credits > .membership-day-credits { padding-inline: 0; border: 0; }
+@media (max-width: 420px) { .credit-fields { grid-template-columns: minmax(0, 1fr); gap: 0; } }
+@media print { .membership-day-credits, .staff-day-credits { display: none; } }

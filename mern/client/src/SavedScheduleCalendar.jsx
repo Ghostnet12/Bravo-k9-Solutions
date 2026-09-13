@@ -1,18 +1,21 @@
 import { useState } from 'react';
 import { useBravo } from './context';
 import ScheduleChanges from './ScheduleChanges';
+import MembershipDayCredits, { CreditHistory } from './MembershipDayCredits';
 import { DateTime } from 'luxon';
 import { api } from './api';
 import { formatDate, formatTime, Notice } from './ui';
 import { trainingFocusName } from '../../shared/catalog';
 
 export default function SavedScheduleCalendar({ data, month, reload }) {
+  const { user } = useBravo();
+  const isStaff = ['staff', 'owner'].includes(user?.role);
   const [editData,setEditData]=useState(null);
   const [day, setDay] = useState(data.visits[0]?.date || `${month}-01`);
   const trainingDays = new Set(data.visits.filter(v=>v.service==='training' && v.status!=='cancelled').map(v=>v.date));
   const start = DateTime.fromISO(`${month}-01`), padding = start.weekday % 7;
   if(editData) return <ScheduleChanges data={editData} initialMonth={month} onSaved={reload} onClose={()=>setEditData(null)}/>;
-  return <><button type="button" className="button schedule-edit-toggle" onClick={()=>setEditData(data)}>Add Days and Times</button><p className="calendar-legend"><span className="calendar-key"/> {trainingDays.size} training days saved this month. Gold highlights every saved visit; the outline marks the day you are viewing.</p><div className="saved-calendar" aria-label="Saved monthly schedule">
+  return <>{isStaff ? <MembershipDayCredits data={data} onSaved={reload}/> : <CreditHistory credits={data.dayCredits}/>}<button type="button" className="button schedule-edit-toggle" onClick={()=>setEditData(data)}>Add Days and Times</button><p className="calendar-legend"><span className="calendar-key"/> {trainingDays.size} training days saved this month. Gold highlights every saved visit; the outline marks the day you are viewing.</p><div className="saved-calendar" aria-label="Saved monthly schedule">
     {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => <span className="calendar-weekday" key={d}>{d}</span>)}
     {Array.from({ length: padding }, (_,i) => <span key={`empty-${i}`}/>)}
     {Array.from({ length: start.daysInMonth }, (_,i) => {

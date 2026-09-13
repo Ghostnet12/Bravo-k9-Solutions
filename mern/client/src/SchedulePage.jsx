@@ -9,6 +9,7 @@ import './client-services.css';
 import SavedScheduleCalendar from './SavedScheduleCalendar';
 import ClientTrainer from './ClientTrainer';
 import TrainingRecovery from './TrainingRecovery';
+import { isTrainingTerm, remainingDays } from '../../shared/day-credits';
 export default function SchedulePage() {
   const { user, authReady } = useBravo(), [params, setParams] = useSearchParams();
   const client = params.get('client');
@@ -28,7 +29,7 @@ export default function SchedulePage() {
     const timer=setInterval(refresh,20000);window.addEventListener('focus',refresh);
     return()=>{current=false;clearInterval(timer);window.removeEventListener('focus',refresh)};
   },[user?.id,month,client]);
-  const activeTerm = data?.terms.find(term => ['active','trialing','canceled'].includes(term.status) && term.validFrom && new Date(term.validFrom) <= new Date() && new Date(term.validUntil) > new Date());
+  const activeTerm = data?.terms.find(term => isTrainingTerm(term) && ['active','trialing','canceled'].includes(term.status) && term.validFrom && new Date(term.validFrom) <= new Date() && new Date(term.validUntil) > new Date());
   function chooseMonth(value) { const next = new URLSearchParams(params); next.set('month', value); setParams(next); }
   return <Page title={data ? `${data.client.name}’s schedule.` : 'Monthly schedule.'} eyebrow="YOUR SAVED VISITS" className="schedule-print-page">
     <div className="schedule-controls">
@@ -45,9 +46,9 @@ export default function SchedulePage() {
       {user.role === 'owner' && !data.trainingBookings?.length && <TrainingRecovery client={data.client} onSaved={message=>{setNotice(message);setRevision(n=>n+1)}}/>}
       {['staff','owner'].includes(user.role)&&!!data.trainingBookings?.length&&<ClientTrainer key={`trainer-${revision}`} bookings={data.trainingBookings||[]} onSaved={message=>{setNotice(message);setRevision(n=>n+1)}}/>}
       {(user.role !== 'owner' || !!data.trainingBookings?.length) && <SavedScheduleCalendar key={`${month}-${revision}`} data={data} month={month} reload={message => { setNotice(message);setRevision(n => n+1); }}/>}
+      {activeTerm && <p className="membership-counter"><strong>{remainingDays(activeTerm.validUntil)} days remaining</strong> · Training membership ends {DateTime.fromISO(activeTerm.validUntil, {zone: 'America/Chicago'}).toFormat('LLL d, yyyy · h:mm a')}.{activeTerm.creditedDays > 0 && <> Includes {activeTerm.creditedDays} credited {activeTerm.creditedDays === 1 ? 'day' : 'days'}.</>}</p>}
       <details className="schedule-membership-details"><summary>Membership details</summary>
       {data.firstPaidAt && <div className="membership-payment-start"><p><strong>Membership payment / start:</strong> {DateTime.fromISO(data.firstPaidAt, {zone:'America/Chicago'}).toFormat('LLL d, yyyy · h:mm a')}</p><p>First month: {DateTime.fromISO(data.firstPaidAt, {zone:'America/Chicago'}).toFormat('LLL d, yyyy')} - {DateTime.fromISO(data.firstPaidAt, {zone:'America/Chicago'}).plus({months:1}).toFormat('LLL d, yyyy')}. {Math.max(0, Math.floor(DateTime.now().diff(DateTime.fromISO(data.firstPaidAt), 'days').days))} days since membership began.</p></div>}
-      {activeTerm && <p className="membership-counter"><strong>Current paid month:</strong> Day {Math.floor(DateTime.now().diff(DateTime.fromISO(activeTerm.validFrom), 'days').days)+1}. Ends {DateTime.fromISO(activeTerm.validUntil, {zone:'America/Chicago'}).toFormat('LLL d, yyyy · h:mm a')} · {Math.max(0,Math.ceil(DateTime.fromISO(activeTerm.validUntil).diffNow('days').days))} days remaining.</p>}
       {data.firstTrainingDay && <p>First paid scheduled visit: {formatDate(data.firstTrainingDay)}</p>}
       <p className="helper">These are your saved booking dates, not suggested openings. Requested visits await Bravo’s confirmation. Cancelled visits are labelled below.</p>
       <h2>Membership dates</h2>{data.terms.length ? data.terms.map(term => <p key={term.stripeId}>{term.serviceIds.join(' + ')}: {term.validFrom ? new Date(term.validFrom).toLocaleDateString('en-US', { timeZone: 'America/Chicago' }) : 'Start date not yet recorded'} – {new Date(term.validUntil).toLocaleDateString('en-US', { timeZone: 'America/Chicago' })} · {new Date(term.validUntil) <= new Date() ? 'Expired' : term.status}</p>) : <p>No paid monthly membership recorded.</p>}

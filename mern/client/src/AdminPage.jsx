@@ -5,6 +5,7 @@ import LessonEditor from './LessonEditor';
 import OwnerPanel from './OwnerPanel';
 import StaffInbox from './StaffInbox';
 import StaffBooking from './StaffBooking';
+import StaffDayCredits from './StaffDayCredits';
 import StaffScheduleEditor from './StaffScheduleEditor';
 import ClientDirectory from './ClientDirectory';
 import './trainer-schedules.css';
@@ -58,7 +59,7 @@ export default function AdminPage() {
           {agenda.length ? agenda.map(v => <div className="appointment-line" key={`${v.booking._id}-${v.time}`}><strong>{formatTime(v.time)} · {v.booking.dogName}</strong><span>{v.booking.userId?.name} · {v.booking.status}</span><a className="inline-link" href={`tel:${v.booking.phone.replace(/[^+0-9]/g, '')}`}>Call client</a></div>) : <p>No visits today for this view.</p>}
           <p className="helper">Requests need confirmation. Openings follow each assigned trainer’s working hours and saved visits.</p>
         </section>
-        <TrainerClients key={`clients-${resetVersion}`} staffId={user.id}/><WeekendSessions/><StaffScheduleEditor key={`personal-schedule-${resetVersion}`} team={data.team}/><StaffBooking key={`booking-${resetVersion}`} team={data.team} onSaved={load}/>
+        <TrainerClients key={`clients-${resetVersion}`} staffId={user.id}/><WeekendSessions/><StaffDayCredits key={`credits-${resetVersion}`}/><StaffScheduleEditor key={`personal-schedule-${resetVersion}`} team={data.team}/><StaffBooking key={`booking-${resetVersion}`} team={data.team} onSaved={load}/>
         <section id="customer-requests"><h2>Requests & upcoming visits.</h2>
           <div className="panel"><div className="form-grid"><label>Find a client or dog<input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Name, email, phone, or booking ID"/></label><label>Status<select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option value="active">Active requests, waitlist & visits</option><option value="waitlisted">Trainer waiting list</option><option value="requested">Awaiting confirmation</option><option value="confirmed">Confirmed</option><option value="cancelled">Cancelled</option><option value="all">All statuses</option></select></label><label>Visit date<input type="date" value={visitDate} onChange={e => setVisitDate(e.target.value)}/></label></div><button type="button" className="quiet-button" onClick={() => { setQuery(''); setStatusFilter('active'); setVisitDate(''); setTrainer('all'); }}>Reset filters</button><p className="helper">Showing {visible.length} of the latest {data.bookings.length} requests.</p></div>
           {!visible.length ? <div className="panel"><p>No requests match this view.</p></div> : <div className="admin-bookings">{visible.map(booking => <article className="panel" key={booking._id}>
