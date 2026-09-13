@@ -70,7 +70,7 @@ test('client removal is staff-only, confirmed, atomic and retains payment histor
       const assignments = (await call('staff', 'get', `/api/admin/trainers/${users.staff._id}/clients`).expect(200)).body.bookings; assert.equal(assignments.length, 0);
       await call('owner', 'patch', `/api/admin/users/${users.client._id}`, { blocked: false }).expect(404);
       const { createBooking } = await import('../server/bookings.js');
-      await assert.rejects(createBooking(users.client._id, { requestKey: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', serviceIds: ['training'], visits: [], dogName: 'Fixture', phone: '6055550100', address: 'Fixture address' }), /no longer active/);
+      await assert.rejects(createBooking(users.client._id, { requestKey: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', serviceIds: ['training'], visits: [{ date, time: '10:00', service: 'training' }], dogName: 'Fixture', phone: '6055550100', address: 'Fixture address' }), /no longer active/);
     });
     await t.test('owner and administrator can remove client-only accounts with no bookings', async () => {
       await call('owner', 'delete', path('empty'), confirmation).expect(200);
