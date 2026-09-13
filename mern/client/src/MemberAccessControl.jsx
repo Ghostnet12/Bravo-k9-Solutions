@@ -1,32 +1,35 @@
 import { useState } from 'react';
 import { api } from './api';
 import { Notice } from './ui';
+import MembershipDateFields, { membershipFromForm } from './MembershipDateFields';
+import { businessDate } from '../../shared/manual-membership';
 
 export default function MemberAccessControl({ person, onSaved }) {
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState('');
   const access = person.membership;
-  if (person.role !== 'member' && !access?.manual) return null;
-  async function change() {
+  if (person.role !== 'member' && !access?.enabled && !access?.manual) return null;
+  async function change(enabled, fields = {}) {
     if (!access || busy) return;
-    const enabled = !access.manual;
-    const prompt = enabled
-      ? `Make ${person.name} a Member? This unlocks published member lessons without creating a charge or giving them staff permissions.`
-      : `Remove manual Member access for ${person.name}? Any active paid subscriptions will stay unchanged.`;
-    if (!window.confirm(prompt)) return;
+    const membership = enabled ? membershipFromForm(fields) : {};
+    if (!window.confirm(enabled ? `Save ${person.name}’s membership month starting ${membership.startDate}? This grants only the selected services for that month. No card is charged and existing payments stay unchanged.` : `Remove manual Member access for ${person.name}? Any active paid subscriptions will stay unchanged.`)) return;
     setBusy(true); setError(''); setNotice('');
     try {
-      const result = await api(`/admin/memberships/${person._id}`, { method: 'PATCH', body: { enabled, expectedRevision: access.revision } });
+      const result = await api(`/admin/memberships/${person._id}`, { method: 'PATCH', body: { enabled, expectedRevision: access.revision || 0, ...membership } });
       await onSaved(); setNotice(result.message);
-    } catch (e) { setError(e.message); if (e.status === 409) { try { await onSaved(); } catch { /* Keep the actionable conflict message. */ } } }
+    } catch (e) { setError(e.message); if (e.status === 409) { try { await onSaved(); } catch {} } }
     finally { setBusy(false); }
   }
   return <section className="member-access-control" aria-label={`Member access for ${person.name}`}>
-    <div className="member-access-heading"><div><p className="kicker gold">EXISTING CUSTOMERS</p><h3>Member access</h3></div><span className="badge">{!access ? 'Not loaded' : access.manual ? 'Member · manual access' : access.paidMembership ? 'Paid membership' : 'Client · no manual access'}</span></div>
-    <p>Current customers can create their own account, then you can make them Members here. Member access unlocks published online lessons, not staff tools or media editing.</p>
-    <p className="helper">No charge or new subscription is created. Training, walks, and existing billing stay unchanged. New Member access lasts one month and then expires. Extend it manually when the client continues.</p>
-    {access?.endsAt && <p className="helper">Access ends {new Date(access.endsAt).toLocaleDateString()}.</p>}{access?.paidOnline && <p className="helper">This account also has paid online access. Removing manual access will not cancel or remove that subscription.</p>}
+    <div className="member-access-heading"><div><p className="kicker gold">EXISTING CUSTOMERS</p><h3>Member access</h3></div><span className="badge">{!access ? 'Not loaded' : access.manual ? 'Member · manual access' : access.enabled ? 'Manual month · not currently active' : access.paidMembership ? 'Paid membership' : 'Client · no manual access'}</span></div>
+    <p>Set an existing customer’s start date, including a date in the past. Select the services already arranged with Bravo. Staff tools and payment records stay separate.</p>
+    {access?.startsAt && access?.endsAt && <p className="helper">Saved month: {businessDate(access.startsAt)} → {businessDate(access.endsAt)} (end date exclusive).</p>}
+    {access?.paidOnline && <p className="helper">This account also has paid online access. Removing manual access will not cancel that paid access.</p>}
     {person.blocked && <Notice>This account is blocked. Restore it before granting Member access.</Notice>}
     <Notice error>{error}</Notice><Notice>{notice}</Notice>
-    <button type="button" className={`button button-small ${access?.manual ? 'button-ghost' : ''}`} disabled={busy || !access || (!access.manual && (person.blocked || person.role !== 'member'))} onClick={change}>{busy ? 'Saving Member access…' : access?.manual ? 'Remove manual Member access' : 'Make Member'}</button>
+    <form onSubmit={e => {e.preventDefault(); change(true, Object.fromEntries(new FormData(e.currentTarget)));}}>
+      <MembershipDateFields key={`${person._id}-${access?.revision || 0}`} initialStart={access?.startsAt ? businessDate(access.startsAt) : undefined} initialServices={access?.serviceIds || ['online']} initialDogCount={access?.dogCount || 1} disabled={busy || !access || person.blocked || person.role !== 'member'}/>
+      <div className="record-actions"><button type="submit" className="button button-small" disabled={busy || !access || person.blocked || person.role !== 'member'}>{busy ? 'Saving Member access…' : access?.enabled || access?.manual ? 'Save membership dates' : 'Make Member'}</button>
+      {(access?.enabled || access?.manual) && <button type="button" className="button button-small button-ghost" disabled={busy} onClick={() => change(false)}>Remove manual Member access</button>}</div>
+    </form>
   </section>;
 }

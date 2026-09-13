@@ -13,20 +13,15 @@ import { monthTerm, grantActive, activeTermQuery } from '../shared/membership-te
 
 // Member access is an entitlement, NOT an employee role or a Stripe subscription.
 // No grant is created during registration. Paid plans, quotes and billing records
-// remain independent; this grants access to published online member lessons only.
-export const MemberAccess = mongoose.models.BravoMemberAccess || mongoose.model('BravoMemberAccess', new mongoose.Schema({
-  _id: mongoose.Schema.Types.ObjectId,
-  enabled: { type: Boolean, default: false },
-  revision: { type: Number, default: 0 },
-  updatedBy: mongoose.Schema.Types.ObjectId,
-  startsAt: Date, endsAt: Date,
-}, { timestamps: true }));
+// remain independent; grants cover only the services explicitly selected by Bravo.
+import { MemberAccess, writeMemberGrant, manualGrantInput, manualOnlineAccess } from './member-grants.js';
+export { MemberAccess } from './member-grants.js';
 const idInput = z.string().regex(/^[a-f\d]{24}$/i);
-const changeInput = z.object({ enabled: z.boolean(), expectedRevision: z.number().int().min(0) }).strict();
+const changeInput = z.object({ enabled: z.boolean(), expectedRevision: z.number().int().min(0), ...manualGrantInput.shape }).strict();
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 export function membershipSummary(entitlements, grant) {
   const manual = grantActive(grant);
-  return { active: manual || entitlements.services.length > 0, manual, onlineAccess: manual || entitlements.services.includes('online') };
+  return { active: manual || entitlements.services.length > 0, manual, onlineAccess: manualOnlineAccess(grant) || entitlements.services.includes('online') };
 }
 const app = express();
 app.disable('x-powered-by'); app.set('trust proxy', process.env.VERCEL ? 1 : false);
@@ -47,7 +42,7 @@ app.get('/api/admin/memberships', ...session, requireUser, requireOwner, async (
   const byId = new Map(grants.map(grant => [String(grant._id), grant]));
   res.json({ memberships: Object.fromEntries(userIds.map(id => {
     const grant = byId.get(id), subscriptions = paid.filter(item => String(item.userId) === id);
-    return [id, { manual: grantActive(grant), startsAt: grant?.startsAt, endsAt: grant?.endsAt, revision: grant?.revision || 0, paidMembership: subscriptions.length > 0, paidOnline: subscriptions.some(item => item.serviceIds.some(service => ['online', 'all-access'].includes(service))) }];
+    return [id, { manual: grantActive(grant), enabled: grant?.enabled === true, serviceIds: grant?.serviceIds || ['online'], dogCount: grant?.dogCount || 1, startsAt: grant?.startsAt, endsAt: grant?.endsAt, revision: grant?.revision || 0, paidMembership: subscriptions.length > 0, paidOnline: subscriptions.some(item => item.serviceIds.some(service => ['online', 'all-access'].includes(service))) }];
   })) });
 });
 app.patch('/api/admin/memberships/:id', ...session, requireUser, requireOwner, sameOrigin, rateLimit('member-access-write', 80, 3600000), express.json({ limit: '4kb' }), async (req, res) => {
@@ -55,32 +50,16 @@ app.patch('/api/admin/memberships/:id', ...session, requireUser, requireOwner, s
   await MemberAccess.init();
   let result;
   await transaction(async dbSession => {
-    const actor = await User.findById(req.user._id).select('role blocked').session(dbSession);
-    if (!actor || actor.blocked || actor.role !== 'owner') throw fail('Administrator or owner access is required.', 403);
-    const target = await User.findById(userId).select('role blocked').session(dbSession);
-    if (!target) throw fail('Account not found.', 404);
-    if (input.enabled && target.blocked) throw fail('Restore this account before activating Member access.', 409);
-    if (input.enabled && target.role !== 'member') throw fail('Choose a client account. Staff and administrators already have separate work access.');
-    const grant = await MemberAccess.findById(userId).session(dbSession);
-    if ((grant?.revision || 0) !== input.expectedRevision) throw fail('Member access changed. Refresh this profile before saving.', 409);
-    const record = grant || new MemberAccess({ _id: userId });
-    const previous = record.enabled === true;
-    record.enabled = input.enabled; record.revision = input.expectedRevision + 1; record.updatedBy = req.user._id;
-    if (input.enabled) { const term = monthTerm(); record.startsAt = term.validFrom; record.endsAt = term.validUntil; }
-    await record.save({ session: dbSession });
-    if (input.enabled) await Subscription.create([{ stripeId: `grant:${userId}:${record.revision}`, userId, serviceIds: ['online'], dogCount: 1, source: 'grant', autoPayDisabled: true, status: 'active', validFrom: record.startsAt, validUntil: record.endsAt }], { session: dbSession });
-    else await Subscription.updateMany({ userId, source: 'grant', status: 'active' }, { $set: { status: 'revoked' } }, { session: dbSession });
-    await AuditEvent.create([{ actorId: req.user._id, action: input.enabled ? 'membership.granted' : 'membership.revoked', targetType: 'user', targetId: userId, details: { from: previous, to: input.enabled, revision: record.revision, scope: 'published-member-lessons' } }], { session: dbSession });
-    result = { manual: record.enabled, revision: record.revision };
+    result = await writeMemberGrant({ userId, actorId: req.user._id, ...input }, dbSession);
   });
-  res.json({ membership: result, message: input.enabled ? 'Member access activated. No payment, subscription, or staff permissions were created.' : 'Manual Member access removed. Existing paid subscriptions are unchanged.' });
+  res.json({ membership: result, message: input.enabled ? 'Membership dates saved. No charge was created; existing payments and staff permissions are unchanged.' : 'Manual Member access removed. Existing paid subscriptions are unchanged.' });
 });
 // Extend the existing protected player without exposing a public video endpoint.
 // Manual access never grants staff privileges or access to draft lessons.
 for (const type of ['video', 'captions', 'transcript']) app.get(`/api/lessons/:id/${type}`, ...session, requireUser, async (req, res) => {
   if (!/^[a-z0-9-]{1,80}$/.test(req.params.id)) return res.status(404).json({ error: 'Lesson not found.' });
   const grant = req.user.role === 'member' ? await MemberAccess.findById(req.user._id).lean() : null;
-  return protectedLesson(req, res, type, { manualMember: grantActive(grant) });
+  return protectedLesson(req, res, type, { manualMember: manualOnlineAccess(grant) });
 });
 app.use(mediaApp);
 app.use((error, _req, res, _next) => {

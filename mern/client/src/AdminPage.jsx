@@ -1,3 +1,4 @@
+import { trainerOptions, bookingTrainerIds, selectedTrainerId, SHARED_TRAINER_ID } from '../../shared/trainer-selection';
 import WeekendSessions from './WeekendSessions';
 import TrainerClients from './TrainerClients';
 import LessonEditor from './LessonEditor';
@@ -37,7 +38,7 @@ export default function AdminPage() {
     catch (err) { setError(err.message); } finally { setBusy(false); }
   }
   function toggle(field, value) { setSchedule(s => ({ ...s, [field]: s[field].includes(value) ? s[field].filter(v => v !== value) : [...s[field], value].sort() })); }
-  const mine = b => trainer === 'all' || (trainer === 'unassigned' ? !b.staffId && !b.requestedStaffId : (b.staffId || b.requestedStaffId) === trainer);
+  const mine = b => trainer === 'all' || (trainer === 'unassigned' ? !b.staffId && !b.requestedStaffId : bookingTrainerIds(b).includes(trainer));
   const visible = (data?.bookings || []).filter(b => mine(b) &&
     (statusFilter === 'all' || (statusFilter === 'active' ? b.status !== 'cancelled' : b.status === statusFilter)) &&
     (!visitDate || b.visits.some(v => v.date === visitDate)) &&
@@ -52,7 +53,7 @@ export default function AdminPage() {
       {tab === 'schedule' && <>
         <AppointmentNotice/>
         <section className="panel"><div className="section-label"><h2>Today’s visits.</h2><button className="quiet-button" disabled={busy} onClick={resetDesk}>Refresh & reset</button></div>
-          <div className="form-grid"><p>{formatDate(today())} · Aberdeen time</p><label>View schedule<select value={trainer} onChange={e => setTrainer(e.target.value)}><option value="all">Whole team</option><option value={user.id}>My visits</option><option value="unassigned">Unassigned visits</option>{data.team.filter(person => person._id !== user.id).map(person => <option key={person._id} value={person._id}>{person.name}</option>)}</select></label></div>
+          <div className="form-grid"><p>{formatDate(today())} · Aberdeen time</p><label>View schedule<select value={trainer} onChange={e => setTrainer(e.target.value)}><option value="all">Whole team</option><option value={user.id}>My visits</option><option value="unassigned">Unassigned visits</option>{data.team.filter(person => person._id !== user.id).map(person => <option key={person._id} value={person._id} disabled={person.unavailable}>{person.name}{person.unavailable ? ' — activate both staff profiles' : ''}</option>)}</select></label></div>
           {agenda.length ? agenda.map(v => <div className="appointment-line" key={`${v.booking._id}-${v.time}`}><strong>{formatTime(v.time)} · {v.booking.dogName}</strong><span>{v.booking.userId?.name} · {v.booking.status}</span><a className="inline-link" href={`tel:${v.booking.phone.replace(/[^+0-9]/g, '')}`}>Call client</a></div>) : <p>No visits today for this view.</p>}
           <p className="helper">Requests need confirmation. Each hourly opening is shared across the team.</p>
         </section>
@@ -64,7 +65,7 @@ export default function AdminPage() {
             {booking.userId?._id && <Link className="button button-small" to={`/schedule?client=${booking.userId._id}`}>Client schedule & PDF</Link>}
             {booking.status === 'waitlisted' && <Notice>Waiting-list request. These are preferred dates only and are not reserved. Choose a trainer below to activate it when capacity and the requested times are available.</Notice>}
             {booking.visits.map(v => <div className="appointment-line" key={`${v.date}-${v.time}`}><strong>{formatDate(v.date)}</strong><span>{formatTime(v.time)} · {v.service}</span></div>)}
-            {booking.trainerAcceptanceRequired&&<p className="helper">Awaiting trainer acceptance. Open Training clients above or the trainer’s profile to accept.</p>}<label>{booking.status === 'waitlisted' ? 'Preferred trainer / activate request' : 'Assigned trainer'}<select disabled={busy || booking.status === 'cancelled'} value={booking.staffId || ''} onChange={e => action(() => api(`/admin/bookings/${booking._id}/assignment`, { method: 'PATCH', body: { staffId: e.target.value || null } }))}><option value="">{booking.requestedStaffId ? `Waiting for ${data.team.find(person => person._id === booking.requestedStaffId)?.name || 'chosen trainer'}` : 'Unassigned'}</option>{booking.staffId && !data.team.some(person => person._id === booking.staffId) && <option value={booking.staffId}>Former staff — reassign this visit</option>}{data.team.map(person => <option key={person._id} value={person._id}>{person.name}</option>)}</select></label>
+            {booking.trainerAcceptanceRequired&&<p className="helper">Awaiting trainer acceptance. Open Training clients above or the trainer’s profile to accept.</p>}<label>{booking.status === 'waitlisted' ? 'Preferred trainer / activate request' : 'Assigned trainer'}<select disabled={busy || booking.status === 'cancelled'} value={booking.staffId ? selectedTrainerId(booking) : ''} onChange={e => action(() => api(`/admin/bookings/${booking._id}/assignment`, { method: 'PATCH', body: { staffId: e.target.value || null } }))}><option value="">{booking.requestedStaffId ? `Waiting for ${data.team.find(person => person._id === booking.requestedStaffId)?.name || 'chosen trainer'}` : 'Unassigned'}</option>{booking.staffId && !data.team.some(person => person._id === booking.staffId) && <option value={booking.staffId}>Former staff — reassign this visit</option>}{trainerOptions(data.team).map(person => <option key={person._id} value={person._id} disabled={person.unavailable}>{person.name}{person.unavailable ? ' — activate both staff profiles' : ''}</option>)}</select></label>
             {booking.status !== 'cancelled' && <div className="record-actions">{booking.status === 'confirmed' && booking.visits.length > 0 && <button className="quiet-button" onClick={() => downloadCalendar(booking)}>Add to calendar</button>}
               {booking.visits.length > 0 && !booking.stripeSessionId && <Link className="quiet-button" to={`/portal?edit=${booking._id}`}>Change dates or times</Link>}
               {booking.status === 'requested' && <button className="button button-small" disabled={busy} onClick={() => action(() => api(`/admin/bookings/${booking._id}`, { method: 'PATCH', body: { status: 'confirmed' } }))}>Confirm visit</button>}

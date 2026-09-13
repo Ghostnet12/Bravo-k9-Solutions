@@ -10,7 +10,6 @@ export function manualMembershipDates(startDate, now = new Date()) {
   if (typeof startDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) throw new Error('Choose a valid membership start date.');
   const [year, month, day] = startDate.split('-').map(Number);
   if (year < 1900 || year > 9998 || month < 1 || month > 12 || day < 1 || day > new Date(Date.UTC(year, month, 0)).getUTCDate()) throw new Error('Choose a valid membership start date.');
-  if (startDate > businessDate(now)) throw new Error('An existing paid month cannot start in the future.');
   const endYear = month === 12 ? year + 1 : year;
   const endMonth = month === 12 ? 1 : month + 1;
   const endDay = Math.min(day, new Date(Date.UTC(endYear, endMonth, 0)).getUTCDate());

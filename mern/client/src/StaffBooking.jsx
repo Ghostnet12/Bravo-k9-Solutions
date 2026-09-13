@@ -1,3 +1,4 @@
+import { trainerOptions, bookingTrainerIds, selectedTrainerId, SHARED_TRAINER_ID } from '../../shared/trainer-selection';
 import { useEffect, useState } from 'react';
 import { api } from './api';
 import { Notice, AppointmentNotice, formatTime } from './ui';
@@ -50,7 +51,7 @@ export default function StaffBooking({ team, onSaved }) {
     {client && <form key={client._id} onSubmit={save}><div className="form-grid">
       <label>Service<select name="service" value={service} onChange={e => setService(e.target.value)}>{catalog.filter(item => item.id !== 'online' && item.enabled !== false).map(item => <option key={item.id} value={item.id}>{item.name} · {money(item.cents)}{item.interval === 'walk' ? '/dog · 30 min' : item.interval === 'month' ? '/month' : ''}</option>)}</select></label>
       {service === 'training' && <label>Training focus<select name="trainingFocus" defaultValue="basic-obedience">{TRAINING_FOCUSES.map(focus => <option key={focus.id} value={focus.id}>{focus.name}</option>)}</select></label>}
-      <label>Trainer<select name="staffId" value={assignedTrainer} onChange={e => setAssignedTrainer(e.target.value)}><option value="">Unassigned</option>{team.map(person => <option key={person._id} value={person._id}>{person.name}</option>)}</select></label>
+      <label>Trainer<select name="staffId" value={assignedTrainer} onChange={e => setAssignedTrainer(e.target.value)}><option value="">Unassigned</option>{trainerOptions(team).map(person => <option key={person._id} value={person._id} disabled={person.unavailable}>{person.name}{person.unavailable ? ' — activate both staff profiles' : ''}</option>)}</select></label>
       <label>Date<input type="date" min={today()} value={date} required disabled={busy} onChange={e => chooseDate(e.target.value)}/></label>
       <label>Opening (Aberdeen time)<select value={time} required disabled={busy || !slots.length} onChange={e => setTime(e.target.value)}><option value="">{date && !slots.length ? 'No openings that day' : 'Choose a time'}</option>{slots.map(value => <option key={value} value={value}>{formatTime(value)}</option>)}</select></label>
       <label>Dog’s name<input name="dogName" required maxLength="80" defaultValue={client.dogName}/></label>

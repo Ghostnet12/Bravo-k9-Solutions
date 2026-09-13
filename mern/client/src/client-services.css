@@ -68,3 +68,5 @@
 .trainer-assignment .record-actions {display:flex;flex-wrap:wrap;gap:1rem}
 .trainer-clients .button,.trainer-assignment .button {max-width:100%;word-break:normal;overflow-wrap:normal}
 @media print {.trainer-assignment,.trainer-clients {display:none!important}}
+
+.membership-date-fields{min-width:0;max-width:100%;margin:1rem 0;padding:1rem;border:1px solid var(--gold,#ba9a64);border-radius:12px}.membership-date-fields legend{padding:0 .4rem;font-weight:600}.membership-date-fields input,.membership-date-fields select{max-width:100%;min-width:0;box-sizing:border-box}.membership-date-fields small{display:block;line-height:1.5;margin-top:.35rem}

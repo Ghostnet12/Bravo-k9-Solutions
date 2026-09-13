@@ -1,3 +1,4 @@
+import { bookingTrainerIds, selectedTrainerId } from '../shared/trainer-selection.js';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { DateTime } from 'luxon';
@@ -38,6 +39,7 @@ export async function saveScheduleChanges(req,res) {
     const remaining=booking.visits.filter(v=>v.service!=='training' || !removeKeys.has(key(v)));
     if(remaining.length+data.additions.length>62) throw fail('A request can contain up to 62 visits.');
     const trainer=booking.staffId || booking.requestedStaffId || data.staffId;
+    const trainerIds=bookingTrainerIds(booking).length?bookingTrainerIds(booking):[data.staffId].filter(Boolean);
     if(data.staffId && trainer && String(trainer)!==data.staffId) throw fail('This request already has a trainer. Use its assigned trainer.',409);
     const terms=await Subscription.find({userId:booking.userId,serviceIds:{$in:trainingIds},status:{$in:['active','trialing','canceled']},dogCount:{$gte:booking.dogCount||1}}).session(session).lean();
     for(const v of data.additions) {
@@ -50,19 +52,19 @@ export async function saveScheduleChanges(req,res) {
     if(data.openWeekends && weekends.length) {
       if(!trainer) throw fail('Choose a trainer to open weekend hours.');
       const days=[...new Set(weekends.map(v=>v.date))].map(date=>({date,hours:weekends.filter(v=>v.date===date).map(v=>v.time)}));
-      await openWeekendDates({actor:req.user,staffId:String(trainer),days,team,session});
+      for(const trainerId of trainerIds) await openWeekendDates({actor:req.user,staffId:trainerId,days,team,session});
     }
     if(data.additions.length && trainer) {
       if(!await User.exists({_id:trainer,role:{$in:['staff','owner']},blocked:{$ne:true}}).session(session)) throw fail('This trainer is unavailable. Contact Bravo.');
       if(!booking.staffId) {
-        const capacity=await trainerCapacity(trainer,{session,excludeUserId:booking.userId});
-        if(capacity.activeDogs+(booking.dogCount||1)>TRAINER_DOG_LIMIT) throw fail('That trainer is at the five-dog limit.',409);
-        await checkTrainerVisits(trainer,remaining,team.toObject(),session);
-        booking.staffId=trainer; booking.requestedStaffId ||= trainer;
+        for(const trainerId of trainerIds) { const capacity=await trainerCapacity(trainerId,{session,excludeUserId:booking.userId});
+        if(capacity.activeDogs+(booking.dogCount||1)>TRAINER_DOG_LIMIT) throw fail('That trainer is at the five-dog limit.',409); }
+        await checkTrainerVisits(trainerIds,remaining,team.toObject(),session);
+        booking.staffId=trainer; booking.coTrainerId=booking.requestedCoTrainerId || null; booking.requestedStaffId ||= trainer;
       }
     }
     for(const v of data.additions) if(!availability({from:v.date,to:v.date,settings:team.toObject()})[0].slots.includes(v.time)) throw fail(`${v.date} at ${v.time} is closed. No changes were saved.`,409);
-    await checkTrainerVisits(trainer,data.additions,team.toObject(),session);
+    await checkTrainerVisits(trainerIds,data.additions,team.toObject(),session);
     for(const v of data.removals) await Slot.deleteOne({_id:key(v),bookingId:booking._id},{session});
     for(const v of data.additions) {
       if(await Slot.exists({_id:key(v)}).session(session)) throw fail(`${v.date} at ${v.time} was taken or blocked. No changes were saved.`,409);

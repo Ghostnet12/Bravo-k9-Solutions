@@ -1,3 +1,4 @@
+import { trainerOptions, bookingTrainerIds, selectedTrainerId, SHARED_TRAINER_ID } from '../../shared/trainer-selection';
 import { useEffect, useState } from 'react';
 import { DateTime } from 'luxon';
 import { useBravo } from './context';
@@ -16,7 +17,7 @@ export default function ScheduleChanges({data,initialMonth,onSaved,onClose}) {
   const [bookingId,setBookingId]=useState(bookings[0]?._id||''),[month,setMonth]=useState(initialMonth),[draft,setDraft]=useState({}),[day,setDay]=useState('');
   const [hours,setHours]=useState({}),[loading,setLoading]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[note,setNote]=useState('');
   const [team,setTeam]=useState([]),[chosenTrainer,setChosenTrainer]=useState(user.id),[openWeekends,setOpenWeekends]=useState(true);
-  const booking=bookings.find(b=>b._id===bookingId),trainer=booking?.staffId||booking?.requestedStaffId||(isStaff?chosenTrainer:null);
+  const booking=bookings.find(b=>b._id===bookingId),trainer=selectedTrainerId(booking)||(isStaff?chosenTrainer:null);
   const canOpen=isStaff && (user.role==='owner'||trainer===user.id);
   const original={};
   for(const v of booking?.visits||[]) if(v.service==='training' && at(v.date,v.time)>DateTime.now()) (original[v.date]||=[]).push(v.time);

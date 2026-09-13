@@ -1,3 +1,4 @@
+import { bookingTrainerIds, selectedTrainerId } from '../shared/trainer-selection.js';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -38,8 +39,8 @@ app.get('/api/client-schedule', ...session, requireUser, async (req, res) => {
   if (!start.isValid) throw fail('Choose a valid month.');
   const person = await User.findById(client).select('name firstPaidAt').lean();
   if (!person) throw fail('Client not found.', 404);
-  const records = await Booking.find({ userId: client, $or: [{ 'visits.date': { $gte: start.toISODate(), $lt: start.plus({ months: 1 }).toISODate() } }, { 'cancelledVisits.date': { $gte: start.toISODate(), $lt: start.plus({ months: 1 }).toISODate() } }] }).select('visits cancelledVisits paidAt dogName dogCount serviceIds trainingFocus status paymentStatus staffId trainerAcceptanceRequired trainerAcceptedAt termStartsAt termEndsAt').populate({path:'staffId',model:User,select:'name'}).sort({ createdAt: 1 }).lean();
-  const visits = records.flatMap(record => [...record.visits, ...(record.cancelledVisits || []).map(v => ({ ...v, cancelled: true }))].filter(visit => visit.date.startsWith(input.month)).map(visit => ({ ...visit, bookingId: String(record._id), dogName: record.dogName, dogCount: record.dogCount, status: visit.cancelled ? 'cancelled' : record.status, staffId: record.staffId?._id || null, paymentStatus: record.paymentStatus, trainer: record.staffId?.name ? (record.trainerAcceptanceRequired ? `Awaiting acceptance from ${record.staffId.name}` : record.staffId.name) : 'Awaiting assignment', trainingFocus: record.trainingFocus }))).sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));
+  const records = await Booking.find({ userId: client, $or: [{ 'visits.date': { $gte: start.toISODate(), $lt: start.plus({ months: 1 }).toISODate() } }, { 'cancelledVisits.date': { $gte: start.toISODate(), $lt: start.plus({ months: 1 }).toISODate() } }] }).select('visits cancelledVisits paidAt dogName dogCount serviceIds trainingFocus status paymentStatus staffId coTrainerId trainerAcceptedIds trainerAcceptanceRequired trainerAcceptedAt termStartsAt termEndsAt').populate({path:'staffId',model:User,select:'name'}).populate({path:'coTrainerId',model:User,select:'name'}).sort({ createdAt: 1 }).lean();
+  const visits = records.flatMap(record => [...record.visits, ...(record.cancelledVisits || []).map(v => ({ ...v, cancelled: true }))].filter(visit => visit.date.startsWith(input.month)).map(visit => ({ ...visit, bookingId: String(record._id), dogName: record.dogName, dogCount: record.dogCount, status: visit.cancelled ? 'cancelled' : record.status, staffId: record.staffId?._id || null, paymentStatus: record.paymentStatus, trainer: record.staffId?.name ? (record.trainerAcceptanceRequired ? `Awaiting acceptance from ${(record.coTrainerId ? 'David and Ashley' : record.staffId.name)}` : (record.coTrainerId ? 'David and Ashley' : record.staffId.name)) : 'Awaiting assignment', trainingFocus: record.trainingFocus }))).sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));
   const terms = await Subscription.find({ userId: client }).select('stripeId serviceIds dogCount validFrom validUntil status autoPayDisabled renewalDeclined source').sort({ validUntil: -1 }).limit(100).lean();
   const first = await Booking.findOne({ userId: client, status: { $ne: 'cancelled' }, paymentStatus: { $in: ['paid', 'covered'] }, 'visits.0': { $exists: true } }).sort({ 'visits.date': 1 }).select('visits').lean();
   const paidTerms = terms.filter(t => t.source !== 'grant' && t.validFrom).sort((a,b) => a.validFrom - b.validFrom);
@@ -51,7 +52,7 @@ app.get('/api/client-schedule', ...session, requireUser, async (req, res) => {
     res.set('Content-Disposition', `attachment; filename="bravo-schedule-${input.month}.pdf"`);
     return res.type('application/pdf').send(bytes);
   }
-  schedule.trainingBookings = await Booking.find({ userId:client, serviceIds: {$in:ALL_SERVICES.filter(s=>s.includes.includes('training')).map(s=>s.id)}, status:{$in:['requested','confirmed']},paymentStatus:{$in:['paid','covered']} }).select('dogName dogCount trainingFocus staffId requestedStaffId trainerAcceptanceRequired trainerAcceptedAt visits updatedAt').lean();
+  schedule.trainingBookings = await Booking.find({ userId:client, serviceIds: {$in:ALL_SERVICES.filter(s=>s.includes.includes('training')).map(s=>s.id)}, status:{$in:['requested','confirmed']},paymentStatus:{$in:['paid','covered']} }).select('dogName dogCount trainingFocus staffId coTrainerId requestedStaffId requestedCoTrainerId trainerAcceptedIds trainerAcceptanceRequired trainerAcceptedAt visits updatedAt').lean();
   res.json(schedule);
 });
 app.get('/api/admin/trainers/:id/clients', ...session, requireStaff, trainerClients);
@@ -79,7 +80,7 @@ app.post('/api/client-schedule/visit', ...session, requireUser, ...write, rateLi
         const when = dateTime(next.date, next.time);
         if (when.diff(DateTime.now(), 'days').days > 92) throw fail('Choose a date within 92 days.', 400);
         if (!availability({ from: next.date, to: next.date, settings: team })[0].slots.includes(next.time)) throw fail('This time is not available.', 409);
-        await checkTrainerVisits(booking.staffId || booking.requestedStaffId, [next], team, session);
+        await checkTrainerVisits(bookingTrainerIds(booking), [next], team, session);
         if (next.service === 'training') {
           const terms = await Subscription.find({ userId: booking.userId, status: { $in: ['active', 'trialing', 'canceled'] }, serviceIds: { $in: ALL_SERVICES.filter(s => s.includes.includes('training')).map(s => s.id) } }).session(session).lean();
           if (!terms.some(t => t.validFrom && when.toJSDate() >= t.validFrom && when.toJSDate() < t.validUntil)) throw fail('Choose a date within your paid membership month.', 400);

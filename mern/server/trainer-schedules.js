@@ -44,7 +44,7 @@ export async function saveTrainerSchedule(req, res) {
     const team = await Settings.findOneAndUpdate({ _id: 'schedule' }, { $inc: { revision: 1 } }, { returnDocument: 'after', session }).lean();
     const previous = await TrainerSchedule.findById(id).session(session).lean();
     if ((previous?.revision || 0) !== data.revision) throw fail('This schedule changed in another window. Reset to the saved schedule before editing again.');
-    const bookings = await Booking.find({ staffId: id, status: { $in: ['requested', 'confirmed'] }, 'visits.date': { $gte: today } }).select('visits').session(session).lean();
+    const bookings = await Booking.find({ $or: [{ staffId: id }, { coTrainerId: id }], status: { $in: ['requested', 'confirmed'] }, 'visits.date': { $gte: today } }).select('visits').session(session).lean();
     const conflicts = bookings.flatMap(booking => booking.visits).filter(visit => visit.date >= today && workingHours(visit.date, previous, team).includes(visit.time) && !workingHours(visit.date, data, team).includes(visit.time));
     if (conflicts.length) throw fail(`This change overlaps ${conflicts.length} saved visit(s). Reschedule or reassign those visits first; nothing was cancelled.`);
     saved = await TrainerSchedule.findOneAndUpdate({ _id: id }, { $set: { ...data, revision: data.revision + 1 } }, { upsert: true, returnDocument: 'after', runValidators: true, session });
@@ -73,16 +73,23 @@ export async function publicTrainerSchedules(_req, res) {
   }) });
 }
 export async function filterTrainerAvailability(days, staffId, team, session) {
-  if (!staffId) return days;
-  let query = TrainerSchedule.findById(String(staffId));
-  if (session) query = query.session(session);
-  return restrictTrainerDays(days, await query.lean(), team);
+  const ids = (Array.isArray(staffId) ? staffId : [staffId]).filter(Boolean);
+  let filtered = days;
+  for (const id of ids) {
+    let query = TrainerSchedule.findById(String(id));
+    if (session) query = query.session(session);
+    filtered = restrictTrainerDays(filtered, await query.lean(), team);
+  }
+  return filtered;
 }
 export async function checkTrainerVisits(staffId, visits, team, session) {
-  if (!staffId || !visits.length) return;
-  let query = TrainerSchedule.findById(String(staffId));
-  if (session) query = query.session(session);
-  const personal = await query.lean();
+  if (!visits.length) return;
+  const ids = (Array.isArray(staffId) ? staffId : [staffId]).filter(Boolean);
   const today = DateTime.now().setZone(ZONE).toISODate();
-  if (visits.some(visit => visit.date >= today && !workingHours(visit.date, personal, team).includes(visit.time))) throw fail('The selected trainer is not working at one or more chosen times. Refresh availability and choose another time or trainer.');
+  for (const id of ids) {
+    let query = TrainerSchedule.findById(String(id));
+    if (session) query = query.session(session);
+    const personal = await query.lean();
+    if (visits.some(visit => visit.date >= today && !workingHours(visit.date, personal, team).includes(visit.time))) throw fail('The selected trainer is not working at one or more chosen times. Shared training requires both trainers to be available. Refresh availability and choose another time or trainer.');
+  }
 }

@@ -1,3 +1,6 @@
+import { createClientAccount } from './client-onboarding.js';
+import { trainerSelectionInput, resolveTrainerSelection } from './trainer-selection.js';
+import { trainerOptions, bookingTrainerIds } from '../shared/trainer-selection.js';
 import express from 'express';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
@@ -57,7 +60,7 @@ app.get('/api/team', async (_req, res) => {
   if (!process.env.MONGODB_URI) return res.json({ team: [] });
   await connectDb();
   const team = await User.find({ role: { $in: ['owner', 'staff'] }, blocked: { $ne: true } }).select('name role phone title bio showPhone').sort({ role: 1, name: 1 }).lean();
-  res.json({ team: team.map(user => ({ id: String(user._id), name: user.name, role: publicRole(user), title: user.title || (publicRole(user) === 'owner' ? 'Owner & Lead Trainer' : 'Bravo Trainer'), bio: user.bio || '', phone: user.showPhone ? user.phone : '' })) });
+  res.json({ team: team.map(user => ({ id: String(user._id), name: user.name, isPrimaryOwner: isPrimaryOwner(user), role: publicRole(user), title: user.title || (publicRole(user) === 'owner' ? 'Owner & Lead Trainer' : 'Bravo Trainer'), bio: user.bio || '', phone: user.showPhone ? user.phone : '' })) });
 });
 app.use('/api', sameOrigin, async (_req, _res, next) => { await connectDb(); next(); }, identify);
 app.use('/api', rateLimit('api', 240, 60000));
@@ -101,7 +104,7 @@ app.post('/api/auth/password', requireUser, rateLimit('password', 5, 900000), as
 });
 app.get('/api/availability', async (req, res) => res.json(await getAvailability(String(req.query.from), String(req.query.to), req.query.staffId ? String(req.query.staffId) : null)));
 app.post('/api/availability/auto', async (req, res) => {
-  const input = z.object({ count: z.number().int().min(1).max(31), startDate: z.string(), startTime: z.string(), endDate: z.string(), endTime: z.string(), preference: z.enum(['any', 'morning', 'afternoon', 'evening']), service: z.enum(['training', 'walking', 'aggression']), staffId: z.string().regex(/^[a-f\d]{24}$/i).optional() }).parse(req.body);
+  const input = z.object({ count: z.number().int().min(1).max(31), startDate: z.string(), startTime: z.string(), endDate: z.string(), endTime: z.string(), preference: z.enum(['any', 'morning', 'afternoon', 'evening']), service: z.enum(['training', 'walking', 'aggression']), staffId: trainerSelectionInput.optional() }).parse(req.body);
   const { days } = await getAvailability(input.startDate, input.endDate, input.staffId);
   res.json(autoSchedule(days, input));
 });
@@ -112,8 +115,8 @@ app.post('/api/quote', async (req, res) => {
 app.get('/api/bookings', requireUser, async (req, res) => res.json({ bookings: await Booking.find({ userId: req.user._id }).sort({ createdAt: -1 }).limit(100).lean() }));
 app.get('/api/trainers', requireUser, async (_req, res) => {
   const people = await User.find({ role: { $in: ['staff', 'owner'] }, blocked: { $ne: true } }).select('name role title').sort({ name: 1 }).lean();
-  const trainers = await Promise.all(people.map(async person => ({ id: String(person._id), name: person.name, title: person.title || 'Bravo Trainer', ...(await trainerCapacity(person._id)), limit: TRAINER_DOG_LIMIT })));
-  res.json({ trainers });
+  const trainers = await Promise.all(people.map(async person => ({ id: String(person._id), name: person.name, isPrimaryOwner: isPrimaryOwner(person), title: person.title || 'Bravo Trainer', ...(await trainerCapacity(person._id)), limit: TRAINER_DOG_LIMIT })));
+  res.json({ trainers: trainerOptions(trainers) });
 });
 app.post('/api/bookings', requireUser, rateLimit('booking', req => req.user?.role === 'owner' ? 50 : 10, 3600000), async (req, res) => res.status(201).json({ booking: await createBooking(req.user._id, req.body) }));
 async function ownedBooking(req) {
@@ -138,7 +141,7 @@ app.patch('/api/bookings/:id/visits', requireUser, async (req, res) => {
   if (dates.some(d => dateTime(d).diff(dateTime(new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })), 'days').days > 92)) throw new Error('Book within the next 92 days.');
   await transaction(async session => {
     const settings = await Settings.findOneAndUpdate({ _id: 'schedule' }, { $inc: { revision: 1 } }, { returnDocument: 'after', session }).lean();
-    await checkTrainerVisits(booking.staffId || booking.requestedStaffId, visits, settings, session);
+    await checkTrainerVisits(bookingTrainerIds(booking), visits, settings, session);
     const open = dates.length ? availability({ from: dates[0], to: dates.at(-1), settings }) : [];
     if (visits.some(v => !open.find(d => d.date === v.date)?.slots.includes(v.time))) throw new Error('Selected dates are outside current availability.');
     await Slot.deleteMany({ bookingId: booking._id }, { session });
@@ -241,7 +244,7 @@ app.get('/api/admin', requireUser, requireStaff, async (req, res) => {
   const [settings, bookings, blocks, inbox] = await Promise.all([Settings.findById('schedule'), Booking.find().sort({ createdAt: -1 }).limit(200).populate({ path: 'userId', model: User, select: 'name email' }), Slot.find({ bookingId: { $exists: false } }).sort({ _id: 1 }).limit(200), DirectMessage.aggregate([{ $match: { deleted: false, ...await chatFilter(req.user, 'inbox') } }, { $sort: { createdAt: -1 } }, { $group: { _id: '$memberId', lastMessage: { $first: '$body' }, updatedAt: { $first: '$createdAt' } } }, { $limit: 100 }])]);
   const names = await User.find({ _id: { $in: inbox.map(thread => thread._id) } }).select('name').lean(); const nameMap = new Map(names.map(person => [String(person._id), person.name]));
   const team = await User.find({ role: { $in: ['staff', 'owner'] }, blocked: { $ne: true } }).select('name role').sort({ name: 1 }).lean();
-  res.json({ settings, bookings, blocks, team: team.map(person => ({ ...person, role: publicRole(person) })), inbox: (await visibleInbox(req.user, inbox)).map(thread => ({ ...thread, memberName: nameMap.get(String(thread._id)) || 'Client' })), role: req.user.role });
+  res.json({ settings, bookings, blocks, team: team.map(person => ({ ...person, isPrimaryOwner: isPrimaryOwner(person), role: publicRole(person) })), inbox: (await visibleInbox(req.user, inbox)).map(thread => ({ ...thread, memberName: nameMap.get(String(thread._id)) || 'Client' })), role: req.user.role });
 });
 const objectId = z.string().regex(/^[a-f\d]{24}$/i);
 const searchPattern = value => new RegExp(String(value || '').trim().slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
@@ -250,18 +253,16 @@ app.get('/api/admin/clients', requireUser, requireStaff, async (req, res) => {
   const clients = await User.find({ blocked: { $ne: true }, $or: [{ name: pattern }, { email: pattern }] }).select('name email dogName phone address').sort({ name: 1 }).limit(30).lean();
   res.json({ clients });
 });
-async function validStaff(id) {
-  if (id && !await User.exists({ _id: id, role: { $in: ['staff', 'owner'] }, blocked: { $ne: true } })) throw new Error('Choose an active trainer.');
-}
+async function validStaff(id) { await resolveTrainerSelection(id); }
 app.post('/api/admin/bookings', requireUser, requireStaff, rateLimit('staff-booking', 30, 3600000), async (req, res) => {
-  const { userId, staffId } = z.object({ userId: objectId, staffId: objectId.nullable().default(null) }).parse(req.body);
+  const { userId, staffId } = z.object({ userId: objectId, staffId: trainerSelectionInput.nullable().default(null) }).parse(req.body);
   if (!await User.exists({ _id: userId, blocked: { $ne: true } })) return res.status(404).json({ error: 'Client not found.' });
   await validStaff(staffId);
   res.status(201).json({ booking: await createBooking(userId, req.body, { staffId, createdBy: req.user._id }) });
 });
 app.patch('/api/admin/bookings/:id/assignment', requireUser, requireStaff, async (req, res) => {
   const booking = await ownedBooking(req);
-  const { staffId } = z.object({ staffId: objectId.nullable() }).parse(req.body);
+  const { staffId } = z.object({ staffId: trainerSelectionInput.nullable() }).parse(req.body);
   if (booking.status === 'cancelled') throw new Error('A cancelled visit cannot be reassigned.');
   await validStaff(staffId); await assignTrainer(booking, staffId, {requireAcceptance:!!staffId}); res.json({ ok: true });
 });
@@ -271,21 +272,7 @@ app.get('/api/admin/users', requireUser, requireOwner, async (req, res) => {
   const users = await User.find(filter).select('name email role phone title bio showPhone mutedUntil blocked').sort({ createdAt: -1 }).limit(100).lean();
   res.json({ users: users.map(user => ({ ...user, _id: String(user._id), isPrimaryOwner: isPrimaryOwner(user) })) });
 });
-app.post('/api/admin/users', requireUser, requireOwner, rateLimit('admin-client', 20, 3600000), async (req, res) => {
-  const input = z.object({
-    email: z.string().trim().email().max(254).transform(value => value.toLowerCase()),
-    name: z.string().trim().min(2).max(80),
-    dogName: z.string().trim().max(80).default(''),
-    phone: z.string().trim().max(30).default(''),
-    address: z.string().trim().max(300).default(''),
-  }).parse(req.body);
-  // This credential is returned once to the authenticated administrator and is
-  // never stored in plaintext. It must be shared with the client privately.
-  const temporaryPassword = `Bravo-${randomUUID().replaceAll('-', '').slice(0, 18)}!`;
-  const user = await User.create({ ...input, role: 'member', passwordHash: await hashPassword(temporaryPassword) });
-  await AuditEvent.create({ actorId: req.user._id, action: 'client.created', targetType: 'user', targetId: String(user._id), details: { assistedOnboarding: true } });
-  res.status(201).json({ user: publicUser(user), temporaryPassword });
-});
+app.post('/api/admin/users', requireUser, requireOwner, rateLimit('admin-client', 20, 3600000), createClientAccount);
 app.patch('/api/admin/users/:id', requireUser, requireOwner, async (req, res) => {
   const target = await User.findById(objectId.parse(req.params.id));
   if (!target) return res.status(404).json({ error: 'Account not found.' });
