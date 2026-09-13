@@ -26,6 +26,8 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})){
     if(failLogout){failLogout=false;return route.fulfill({status:503,json:{error:'Try again shortly.'}});}
     signedIn=false;json={ok:true};
    }
+   else if(path==='/api/membership-terms')json={terms:[]};
+   else if(path==='/api/bookings')json={bookings:[]};
    else if(path==='/api/notifications')json={items:[]};
    else if(path==='/api/trainers')json={trainers:[{id,name:'David',spotsRemaining:4,limit:5}]};
    else if(path==='/api/team')json={team:[{id,_id:id,name:'David',role:'owner'}]};

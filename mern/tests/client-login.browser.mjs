@@ -99,6 +99,8 @@ try {
           await page.locator('.saved-calendar button.has-visits').click(); await page.getByRole('heading', { name: /10:00 AM/ }).waitFor();
           await page.reload(); await page.getByRole('heading', { name: 'New Fixture Client’s schedule.', exact: true }).waitFor();
           assert.equal(await page.getByRole('heading', { name: 'Create your password.', exact: true }).count(), 0);
+          await page.goto(`${origin}/account`); await page.getByRole('heading', { name: 'Membership dates & renewal', exact: true }).waitFor();
+          await page.getByRole('link', { name: 'My schedule', exact: true }).first().waitFor();
           activeUser = operator; await page.goto(`${origin}/admin?tab=people`); if (access !== 'staff') await page.locator('.owner-person > summary').click({ position: { x: 8, y: 20 } });
           assert.equal(await page.getByRole('button', { name: 'Create new temporary password', exact: true }).count(), 0);
           assert.deepEqual(errors, []); console.log(`${engineName} ${width} ${access}: create, copy, replace, name/email sign-in, required password setup and saved schedule passed`);
