@@ -75,7 +75,7 @@ export default function ScheduleChanges({data,initialMonth,onSaved,onClose}) {
       {canOpen&&<label className="check-label"><input type="checkbox" checked={openWeekends} disabled={busy} onChange={e=>setOpenWeekends(e.target.checked)}/>Open the selected weekend times when saving</label>}
       <p className="helper">Times follow the assigned trainer’s working hours. Unavailable times stay visible and are labelled “Reserved” or “Outside trainer hours”. Gold days are selected for editing. Tapping again deselects a date without cancelling its visit. “+” marks a change; “×” marks a cancellation; numbers show saved or drafted visits. {isStaff?'Your note will go to the client and the team.':'Your note will go to all staff, administrators and owners.'}</p>
       {loading&&<p role="status">Checking available times…</p>}
-      <CreditedCalendarDays dates={creditDates} month={month} onMonth={setMonth}/>
+      <CreditedCalendarDays editing dates={creditDates} month={month} onMonth={setMonth}/>
       <ScheduleDayGrid month={month} onMonth={setMonth} disabled={busy||loading} onDay={toggleDay} dayState={date=>{
         const times=selected(date),base=original[date]||[],changed=!same(times,base),free=options(date).filter(time=>available(date,time));
         return {selected:batchDates.includes(date),changed,credited:credited.has(date),disabled:!booking||(!times.length&&!base.length&&!free.length),marker:changed?(times.length?'+':'×'):(times.length||''),label:`${times.length} saved or drafted visit${times.length===1?'':'s'}${changed?(times.length?', pending changes':', pending cancellation'):''}${credited.has(date)?', credited membership day':''}`};
