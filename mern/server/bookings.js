@@ -85,6 +85,7 @@ export async function createBooking(userId, payload, assignment = {}) {
     await transaction(async session => {
       // Schedule updates and reservations share a write lock; closures cannot race a booking.
       const settings = await Settings.findOneAndUpdate({ _id: 'schedule' }, { $inc: { revision: 1 } }, { returnDocument: 'after', session }).lean();
+      if (!await User.exists({ _id: userId, blocked: { $ne: true }, removedAt: null }).session(session)) throw Object.assign(new Error('This client account is no longer active.'), { status: 409 });
       await resolveTrainerIds(chosenTrainerIds, session);
       await checkTrainerVisits(chosenTrainerIds, data.visits, settings, session);
       const capacities = [];

@@ -11,8 +11,8 @@ async function allowedTrainer(req, staffId) {
 }
 export async function trainerClients(req, res) {
   const staffId = id.parse(req.params.id); await allowedTrainer(req, staffId);
-  const bookings = await Booking.find({ serviceIds: 'training', status: { $in: ['requested', 'confirmed', 'waitlisted'] }, $or: [{ staffId }, { staffIds: staffId }, { staffId: null, requestedStaffId: staffId }, { staffId: null, requestedStaffIds: staffId }] }).select('userId dogName dogCount status staffId staffIds requestedStaffId requestedStaffIds trainerAcceptedIds trainerAcceptanceRequired trainerAcceptedAt updatedAt').populate({ path: 'userId', model: User, select: 'name' }).sort({ trainerAcceptanceRequired: -1, updatedAt: -1 }).limit(100).lean();
-  res.json({ bookings: bookings.map(b => ({ ...b, acceptedByThisTrainer: acceptedTrainerIds(b).includes(staffId), clientName: b.userId?.name || 'Former client', clientId: b.userId?._id || null, userId: undefined })) });
+  const bookings = await Booking.find({ serviceIds: 'training', status: { $in: ['requested', 'confirmed', 'waitlisted'] }, $or: [{ staffId }, { staffIds: staffId }, { staffId: null, requestedStaffId: staffId }, { staffId: null, requestedStaffIds: staffId }] }).select('userId dogName dogCount status staffId staffIds requestedStaffId requestedStaffIds trainerAcceptedIds trainerAcceptanceRequired trainerAcceptedAt updatedAt').populate({ path: 'userId', model: User, select: 'name role' }).sort({ trainerAcceptanceRequired: -1, updatedAt: -1 }).limit(100).lean();
+  res.json({ bookings: bookings.map(b => ({ ...b, acceptedByThisTrainer: acceptedTrainerIds(b).includes(staffId), clientRole: b.userId?.role, clientName: b.userId?.name || 'Former client', clientId: b.userId?._id || null, userId: undefined })) });
 }
 export async function acceptClient(req, res) {
   const bookingId = id.parse(req.params.id), { staffId, revision } = z.object({ staffId: trainerSelectionInput, revision: z.string().datetime() }).strict().parse(req.body);

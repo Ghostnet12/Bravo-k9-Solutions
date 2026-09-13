@@ -12,6 +12,7 @@ export const User = model('BravoUser', new Schema({
   phone: { type: String, default: '' }, dogName: { type: String, default: '' }, address: { type: String, default: '' },
   title: { type: String, default: '' }, bio: { type: String, default: '' }, showPhone: { type: Boolean, default: false },
   mutedUntil: Date, blocked: { type: Boolean, default: false },
+  removedAt: Date, removedBy: id,
   stripeCustomerId: String, firstPaidAt: Date,
 }, { timestamps: true }));
 export const Session = model('BravoSession', new Schema({ tokenHash: { type: String, unique: true }, userId: { type: id, required: true }, expiresAt: { type: Date, expires: 0 } }));

@@ -3,6 +3,7 @@ import express from 'express';
 import { trainerSelectionInput, resolveTrainerIds } from './trainer-selection.js';
 import { trainerOptions, bookingTrainerIds } from '../shared/trainers.js';
 import { createAssistedClient } from './onboarding.js';
+import { removeClient } from './client-removal.js';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import path from 'node:path';
@@ -259,7 +260,7 @@ const objectId = z.string().regex(/^[a-f\d]{24}$/i);
 const searchPattern = value => new RegExp(String(value || '').trim().slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
 app.get('/api/admin/clients', requireUser, requireStaff, async (req, res) => {
   const pattern = searchPattern(req.query.q);
-  const clients = await User.find({ blocked: { $ne: true }, $or: [{ name: pattern }, { email: pattern }] }).select('name email dogName phone address').sort({ name: 1 }).limit(30).lean();
+  const clients = await User.find({ removedAt: null, blocked: { $ne: true }, ...(req.query.clientsOnly === '1' ? { role: 'member' } : {}), $or: [{ name: pattern }, { email: pattern }] }).select('name email dogName phone address').sort({ name: 1 }).limit(30).lean();
   res.json({ clients });
 });
 app.post('/api/admin/bookings', requireUser, requireStaff, rateLimit('staff-booking', 30, 3600000), async (req, res) => {
@@ -277,13 +278,14 @@ app.patch('/api/admin/bookings/:id/assignment', requireUser, requireStaff, async
 app.get('/api/admin/bookings/:id', requireUser, requireStaff, async (req, res) => res.json({ booking: await ownedBooking(req) }));
 app.get('/api/admin/users', requireUser, requireOwner, async (req, res) => {
   const q = String(req.query.q || '').trim(); const filter = q ? { $or: [{ name: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }, { email: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }] } : {};
-  const users = await User.find(filter).select('name email role phone title bio showPhone mutedUntil blocked').sort({ createdAt: -1 }).limit(100).lean();
+  const users = await User.find({ ...filter, removedAt: null }).select('name email role phone title bio showPhone mutedUntil blocked').sort({ createdAt: -1 }).limit(100).lean();
   res.json({ users: users.map(user => ({ ...user, _id: String(user._id), isPrimaryOwner: isPrimaryOwner(user) })) });
 });
 app.post('/api/admin/users', requireUser, requireOwner, rateLimit('admin-client', 20, 3600000), createAssistedClient);
+app.delete('/api/admin/clients/:id', requireUser, requireStaff, rateLimit('client-removal', 30, 3600000), removeClient);
 app.patch('/api/admin/users/:id', requireUser, requireOwner, async (req, res) => {
   const target = await User.findById(objectId.parse(req.params.id));
-  if (!target) return res.status(404).json({ error: 'Account not found.' });
+  if (!target || target.removedAt) return res.status(404).json({ error: 'Account not found.' });
   const { confirmOwnerAccess, ...fields } = z.object({ role: z.enum(['member', 'staff', 'owner']).optional(), confirmOwnerAccess: z.boolean().optional(), name: z.string().trim().min(2).max(80).optional(), phone: z.string().trim().max(30).optional(), title: z.string().trim().max(80).optional(), bio: z.string().trim().max(500).optional(), showPhone: z.boolean().optional(), blocked: z.boolean().optional(), mutedUntil: z.union([z.string().datetime(), z.null()]).optional() }).parse(req.body);
   const changesRole = fields.role !== undefined && fields.role !== target.role;
   const removesAccess = (fields.role !== undefined && fields.role !== 'owner') || fields.blocked === true || !!fields.mutedUntil;
@@ -297,7 +299,7 @@ app.patch('/api/admin/users/:id', requireUser, requireOwner, async (req, res) =>
   let updated;
   await transaction(async session => {
     // Compare the role so concurrent saves cannot silently overwrite a promotion.
-    updated = await User.findOneAndUpdate({ _id: target._id, role: target.role, blocked: target.blocked }, { $set: fields }, { returnDocument: 'after', runValidators: true, session });
+    updated = await User.findOneAndUpdate({ _id: target._id, removedAt: null, role: target.role, blocked: target.blocked }, { $set: fields }, { returnDocument: 'after', runValidators: true, session });
     if (!updated) throw Object.assign(new Error('This account changed. Refresh it before saving again.'), { status: 409 });
     if (changesRole) await AuditEvent.create([{ actorId: req.user._id, action: 'user.access.changed', targetType: 'user', targetId: String(target._id), details: { from: target.role, to: fields.role } }], { session });
     if (fields.blocked) await Session.deleteMany({ userId: updated._id }, { session });
