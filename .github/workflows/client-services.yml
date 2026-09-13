@@ -12,6 +12,7 @@ jobs:
     defaults:
       run:
         working-directory: mern
+        shell: bash
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,10 +23,11 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
-      - run: node --test --test-concurrency=1 tests/client-services.integration.js tests/member-access.integration.js tests/trainer-schedules.integration.js
+      - run: node --test --test-concurrency=1 tests/client-services.integration.js tests/member-access.integration.js tests/trainer-schedules.integration.js tests/membership-trainers.integration.js
       - run: npm install --no-save --package-lock=false playwright@1.55.1
       - run: npx playwright install --with-deps chromium webkit
       - run: node tests/client-services.browser.mjs
+      - run: node tests/membership-trainers.browser.mjs
       - run: node tests/home-hero.browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
