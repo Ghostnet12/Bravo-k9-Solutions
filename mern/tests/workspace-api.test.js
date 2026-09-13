@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
 import request from 'supertest';
 import app from '../server/app.js';
 import { digest } from '../server/auth.js';
+import { MemberAccess } from '../server/member-grants.js';
 import { ALL_MODELS, TrainerSchedule, ChatReset, User, Session, RateBucket, Settings, ServiceSetting, Subscription, CommunityGroup, GroupMessage, DirectMessage, Message, Lesson, MediaUpload, MediaChunk, Booking, Review, AuditEvent } from '../server/models.js';
 const origin = 'http://localhost:5173';
 const ids = { owner: '6aa290cbd066f8feb3c1964f', staff: '111111111111111111111111', member: '222222222222222222222222', other: '333333333333333333333333' };
@@ -20,7 +21,7 @@ test('owner/staff workspace contracts over HTTP with isolated model mocks', asyn
   t.after(() => { for (const [key, value] of Object.entries({ MONGODB_URI: previous.uri, APP_ORIGIN: previous.origin, OWNER_USER_ID: previous.ownerId })) { if (value === undefined) delete process.env[key]; else process.env[key] = value; } });
   t.mock.method(mongoose, 'connect', async () => mongoose);
   t.mock.method(mongoose.connection, 'transaction', async work => work({}));
-  for (const model of ALL_MODELS) t.mock.method(model, 'init', async () => model);
+  for (const model of [...ALL_MODELS, MemberAccess]) t.mock.method(model, 'init', async () => model);
   const users = Object.fromEntries(Object.entries(ids).map(([role, id]) => [id, { _id: id, role: role === 'other' ? 'member' : role, name: role, email: `${role}@example.test`, blocked: false, save: async function() { return this; } }]));
   t.mock.method(User, 'findById', id => query(users[String(id)] || null));
   t.mock.method(User, 'findByIdAndUpdate', (id, change) => { Object.assign(users[id], change.$set); return query(users[id]); });
@@ -32,7 +33,7 @@ test('owner/staff workspace contracts over HTTP with isolated model mocks', asyn
   });
   const accessAudit = t.mock.method(AuditEvent, 'create', async events => events);
   t.mock.method(User, 'exists', filter => query(users[String(filter._id)] && !users[String(filter._id)].blocked ? { _id: filter._id } : null));
-  t.mock.method(User, 'find', () => query(Object.values(users)));
+  t.mock.method(User, 'find', (filter = {}) => query(Object.values(users).filter(user => !filter._id || (filter._id.$in ? filter._id.$in.map(String).includes(user._id) : String(filter._id) === user._id))));
   t.mock.method(Session, 'findOne', filter => query(Object.entries(ids).find(([token]) => digest(token) === filter.tokenHash) ? { userId: ids[Object.entries(ids).find(([token]) => digest(token) === filter.tokenHash)[0]] } : null));
   t.mock.method(Session, 'deleteMany', async () => ({ deletedCount: 1 }));
   t.mock.method(RateBucket, 'findOneAndUpdate', async () => ({ count: 1 }));
@@ -189,7 +190,8 @@ test('owner/staff workspace contracts over HTTP with isolated model mocks', asyn
     await call('member', 'get', '/api/lessons/test/video').expect(403);
   });
   await t.test('staff can reassign visits but members cannot', async () => {
-    const booking = { _id: ids.other, status: 'confirmed', save: async function() { return this; } };
+    const booking = { _id: ids.other, userId: ids.member, serviceIds: [], visits: [], status: 'confirmed', save: async function() { return this; } };
+    t.mock.method(Booking, 'findById', () => query(booking));
     t.mock.method(Booking, 'findOne', () => query(booking));
     await call('member', 'patch', `/api/admin/bookings/${ids.other}/assignment`, { staffId: ids.staff }).expect(403);
     await call('staff', 'patch', `/api/admin/bookings/${ids.other}/assignment`, { staffId: ids.owner }).expect(200);
@@ -206,7 +208,10 @@ test('owner/staff workspace contracts over HTTP with isolated model mocks', asyn
   });
   await t.test('owners and delegated administrators can create client-only accounts', async () => {
     const created = [];
-    const create = t.mock.method(User, 'create', async data => { created.push(data); return { ...data, _id: '444444444444444444444444' }; });
+    const create = t.mock.method(User, 'create', async input => {
+      assert.ok(Array.isArray(input), 'Assisted accounts use transactional inserts');
+      const [data] = input; created.push(data); return [{ ...data, _id: '444444444444444444444444' }];
+    });
     await call('staff', 'post', '/api/admin/users', { name: 'Assisted Client', email: 'assisted@example.test' }).expect(403);
     const ownerResult = await call('owner', 'post', '/api/admin/users', { name: 'Assisted Client', email: 'ASSISTED@example.test', role: 'owner', blocked: true }).expect(201);
     assert.equal(ownerResult.body.user.role, 'member'); assert.equal(ownerResult.body.user.email, 'assisted@example.test');
