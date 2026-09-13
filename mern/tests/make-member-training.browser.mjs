@@ -60,7 +60,8 @@ try {
           return route.fulfill({ json });
         });
         try {
-          await page.goto(`${origin}/admin?tab=people`); await page.locator('.owner-person > summary').click();
+          // Expand using the disclosure area; the row also contains a removal button.
+          await page.goto(`${origin}/admin?tab=people`); await page.locator('.owner-person > summary').click({ position: { x: 8, y: 20 } });
           const access = page.getByRole('region', { name: 'Member access for Current Client', exact: true });
           await access.getByLabel('Membership start date', { exact: true }).fill(startDate);
           await access.getByLabel('Dogs covered by this training membership', { exact: true }).fill('2');
@@ -89,7 +90,7 @@ try {
           assert.equal(calendarBody.bookingId, bookingId); assert.equal(calendarBody.additions.length, 2); assert.ok(calendarBody.additions.some(v => v.time === '10:00'));
           await setup.locator('.saved-calendar button.has-visits').first().waitFor();
           assert.equal(await setup.locator('.saved-calendar button.has-visits').count(), 2);
-          await page.reload(); await page.locator('.owner-person > summary').click();
+          await page.reload(); await page.locator('.owner-person > summary').click({ position: { x: 8, y: 20 } });
           await page.getByRole('region', { name: 'Training setup for Current Client', exact: true }).getByRole('button', { name: 'Add Days and Times', exact: true }).waitFor();
           assert.equal(await access.getByLabel('Dogs covered by this training membership', { exact: true }).inputValue(), '2');
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)); assert.deepEqual(errors, []);
