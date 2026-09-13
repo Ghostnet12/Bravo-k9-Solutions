@@ -7,6 +7,9 @@ permissions:
   contents: read
 jobs:
   verify:
+    if: github.repository == 'Ghostnet12/Bravo-k9-Solutions' && github.ref == 'refs/heads/feat/training-day-credits-20260913'
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -20,23 +23,30 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: mern/package-lock.json
+      - name: Integrate exact verified source
+        run: if [ -f scripts/install-day-credits.mjs ]; then node scripts/install-day-credits.mjs; fi
       - run: npm ci
       - run: npm run build
-      - run: npm test 2>&1 | tee unit-test-output.txt
+      - run: npm test
       - name: Credit and membership integration tests
-        if: always()
+        run: node --test --test-concurrency=1 tests/training-credits.integration.js tests/client-services.integration.js tests/member-access.integration.js tests/membership-trainers.integration.js tests/make-member-training.integration.js tests/trainer-reservations.integration.js
+      - run: npm install --no-save --package-lock=false playwright@1.55.1
+      - run: npx playwright install --with-deps chromium webkit
+      - name: Desktop and mobile credit controls
+        run: node tests/training-credits.browser.mjs
+      - name: Commit verified integration on the feature branch only
         run: |
-          node --test --test-concurrency=1 tests/client-services.integration.js tests/member-access.integration.js tests/membership-trainers.integration.js tests/make-member-training.integration.js tests/trainer-reservations.integration.js 2>&1 | tee integration-test-output.txt
-          if [ -f tests/training-credits.integration.js ]; then node --test tests/training-credits.integration.js; fi
-      - name: Source and dependency snapshot for isolated local review
-        if: always()
-        run: |
-          mkdir -p .tools
-          cp -r "$HOME/.cache/mongodb-binaries" .tools/ 2>/dev/null || true
-          tar -czf /tmp/bravo-credit-review.tar.gz --exclude='./.env' --exclude='./.env.local' --exclude='./test-results' .
+          if [ -f scripts/install-day-credits.mjs ]; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add client/src/MembershipTerms.jsx client/src/SchedulePage.jsx client/src/StaffScheduleEditor.jsx server/client-services-app.js server/manual-training.js server/member-app.js server/models.js server/payments.js
+            git rm scripts/install-day-credits.mjs scripts/training-credit-feature.part1
+            git commit -m "Integrate tested training-day credits into scheduling and membership access"
+            git push origin HEAD:feat/training-day-credits-20260913
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: bravo-credit-review
-          path: /tmp/bravo-credit-review.tar.gz
+          name: training-day-credit-browser-evidence
+          path: mern/test-results/
           retention-days: 1

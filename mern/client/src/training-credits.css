@@ -1,0 +1,14 @@
+.day-credit-panel{margin:1rem 0;border:1px solid rgba(186,154,100,.48);border-radius:12px;padding:1rem;background:rgba(186,154,100,.035);break-inside:avoid;min-width:0}
+.day-credit-panel summary,.day-credit-desk>summary{cursor:pointer;font-weight:700;color:var(--gold,#ba9a64);padding:.4rem 0;min-height:2.75rem}
+.day-credit-panel fieldset{border:0;padding:0;margin:0;min-width:0}
+.day-credit-panel label,.day-credit-desk>label{display:grid;gap:.4rem;margin:.8rem 0;min-width:0}
+.day-credit-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}
+.day-credit-panel input,.day-credit-panel select,.day-credit-panel textarea,.day-credit-desk select,.day-credit-desk input{box-sizing:border-box;max-width:100%;width:100%;min-width:0;min-height:44px}
+.day-credit-panel .check-label{display:flex;align-items:flex-start;gap:.75rem}
+.day-credit-panel input[type=checkbox]{width:20px;min-width:20px;height:20px;min-height:20px;margin-top:.2rem}
+.day-credit-preview{padding:1rem;border-left:3px solid #ba9a64;background:rgba(186,154,100,.08);margin:1rem 0;overflow-wrap:anywhere}
+.day-credit-preview>strong{font-size:1.1rem}
+.day-credit-history{padding:.75rem 0;border-top:1px solid rgba(186,154,100,.25);overflow-wrap:anywhere}
+.day-credit-panel .button{white-space:normal;max-width:100%}
+@media(max-width:640px){.day-credit-fields{grid-template-columns:1fr;gap:0}.day-credit-panel{padding:.8rem}.day-credit-panel .button{width:100%}}
+@media print{.day-credit-panel,.day-credit-desk{display:none!important}}
