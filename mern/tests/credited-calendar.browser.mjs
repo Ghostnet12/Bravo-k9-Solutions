@@ -59,11 +59,13 @@ try {
           await page.getByRole('button', { name: 'Save changes', exact: true }).click();
           await page.getByText('Schedule saved.', { exact: true }).waitFor();
           assert.equal(saved.additions[0].date, '2026-09-15');
+          await grid.locator('.has-visits').first().waitFor();
           assert.equal(await grid.locator('.has-visits').count(), 1); assert.equal(await grid.locator('.credited-day').count(), 5);
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
           beforeEnd = '2026-10-01T05:00:00.000Z'; afterEnd = '2026-10-06T05:00:00.000Z'; visits = [];
           await page.reload(); await page.getByRole('button', { name: 'View credited days in October 2026' }).click();
           await page.getByText('5 credited membership days highlighted this month.', { exact: true }).waitFor();
+          await grid.getByRole('button', { name: /Thu, Oct 1,.*credited membership day/ }).waitFor();
           assert.deepEqual(await grid.locator('.credited-day strong').allTextContents(), ['1','2','3','4','5']);
           assert.match(page.url(), /month=2026-10/); if (role !== 'member') assert.match(page.url(), new RegExp(`client=${clientId}`));
           assert.deepEqual(errors, []); console.log(`${engineName} ${roleName}: existing credits visible, 10th→15th, final-day booking and next-month navigation passed`);
