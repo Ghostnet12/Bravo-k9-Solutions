@@ -54,6 +54,7 @@ try {
         await page.getByRole('heading', { level: 1, name: 'Dog training in Aberdeen, SD.' }).waitFor();
         await page.locator('footer').getByRole('link', { name: 'Your account', exact: true }).click();
         await page.waitForURL('**/account');
+        await page.locator('meta[name="robots"][content*="noindex"]').waitFor({ state: 'attached' });
         assert.match(await page.locator('meta[name="robots"]').getAttribute('content'), /noindex/);
         assert.equal(await page.locator('#bravo-structured-data').count(), 0);
         assert.equal((await page.goto(origin + '/missing-bravo-page')).status(), 404);
