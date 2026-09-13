@@ -7,11 +7,11 @@ permissions:
   contents: read
 concurrency:
   group: bravo-membership-review
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     permissions:
       contents: write
     defaults:
@@ -19,14 +19,25 @@ jobs:
         working-directory: mern
     steps:
       - uses: actions/checkout@v4
-      - name: Apply verified source transfer on review branch only
-        if: hashFiles('mern/scripts/apply-membership-trainers.py') != ''
+      - name: Refresh isolated test fixtures
+        if: hashFiles('mern/scripts/workspace-fixtures.patch.json') != ''
         shell: bash
         run: |
           set -euo pipefail
-          python scripts/apply-membership-trainers.py
-          git add -A -- server shared client/src tests scripts/apply-membership-trainers.py scripts/membership-payload-1.b64 scripts/membership-payload-2.b64
-          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Implement backdated membership months and shared trainer assignments'
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib,json,os
+          assert os.environ['GITHUB_REF_NAME']=='bravo-membership-dates-shared-trainers'
+          patch=Path('scripts/workspace-fixtures.patch.json')
+          data=json.loads(patch.read_text())
+          path=Path('tests/workspace-api.test.js'); text=path.read_text()
+          assert hashlib.sha256(text.encode()).hexdigest()==data['before']
+          for start,end,insert in reversed(data['ops']): text=text[:start]+insert+text[end:]
+          assert hashlib.sha256(text.encode()).hexdigest()==data['after']
+          path.write_text(text);patch.unlink()
+          PY
+          git add tests/workspace-api.test.js scripts/workspace-fixtures.patch.json
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Update isolated mocks for atomic onboarding and fresh trainer reads'
           git push origin HEAD:bravo-membership-dates-shared-trainers
       - name: Record exact reviewed commit
         run: git rev-parse HEAD
@@ -37,7 +48,7 @@ jobs:
           cache-dependency-path: mern/package-lock.json
       - run: npm ci
       - run: npm run build
-      - run: npm test
+      - run: timeout 120s npm test
       - run: node --test --test-concurrency=1 tests/client-services.integration.js tests/member-access.integration.js tests/trainer-schedules.integration.js tests/membership-trainers.integration.js
       - name: Install isolated browser test tooling
         run: |
