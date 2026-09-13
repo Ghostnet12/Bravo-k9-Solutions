@@ -12,58 +12,43 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    permissions:
-      contents: write
     defaults:
       run:
         working-directory: mern
+        shell: bash
     steps:
       - uses: actions/checkout@v4
-      - name: Refresh isolated test fixtures
-        if: hashFiles('mern/scripts/workspace-fixtures.patch.json') != ''
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          from pathlib import Path
-          import hashlib,json,os
-          assert os.environ['GITHUB_REF_NAME']=='bravo-membership-dates-shared-trainers'
-          patch=Path('scripts/workspace-fixtures.patch.json')
-          data=json.loads(patch.read_text())
-          path=Path('tests/workspace-api.test.js'); text=path.read_text()
-          assert hashlib.sha256(text.encode()).hexdigest()==data['before']
-          for start,end,insert in reversed(data['ops']): text=text[:start]+insert+text[end:]
-          assert hashlib.sha256(text.encode()).hexdigest()==data['after']
-          path.write_text(text);patch.unlink()
-          PY
-          git add tests/workspace-api.test.js scripts/workspace-fixtures.patch.json
-          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Update isolated mocks for atomic onboarding and fresh trainer reads'
-          git push origin HEAD:bravo-membership-dates-shared-trainers
+        with:
+          persist-credentials: false
       - name: Record exact reviewed commit
-        run: git rev-parse HEAD
+        run: |
+          mkdir -p test-results
+          git rev-parse HEAD | tee test-results/reviewed-commit.txt
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: npm
           cache-dependency-path: mern/package-lock.json
       - run: npm ci
-      - run: npm run build
-      - run: timeout 120s npm test
-      - run: node --test --test-concurrency=1 tests/client-services.integration.js tests/member-access.integration.js tests/trainer-schedules.integration.js tests/membership-trainers.integration.js
+      - run: npm run build | tee test-results/build.log
+      - run: timeout 120s npm test | tee test-results/unit-tests.log
+      - run: node --test --test-concurrency=1 tests/client-services.integration.js tests/member-access.integration.js tests/trainer-schedules.integration.js tests/membership-trainers.integration.js | tee test-results/integration-tests.log
       - name: Install isolated browser test tooling
+        id: browser-install
         run: |
           npm install --no-save --package-lock=false playwright@1.55.1
           npx playwright install --with-deps chromium webkit
-      - run: node tests/membership-trainers.browser.mjs
-      - run: node tests/client-services.browser.mjs
+      - name: Membership and shared trainer browser checks
+        if: ${{ !cancelled() && steps.browser-install.outcome == 'success' }}
+        run: timeout 180s node tests/membership-trainers.browser.mjs 2>&1 | tee test-results/membership-browser.log
+      - name: Previous client-services browser regression checks
+        if: ${{ !cancelled() && steps.browser-install.outcome == 'success' }}
+        run: timeout 180s node tests/client-services.browser.mjs 2>&1 | tee test-results/client-services-browser.log
       - name: Capture checked source
         if: always()
-        shell: bash
         run: |
-          set -euo pipefail
           mkdir -p test-results
           git -C .. archive HEAD mern/server mern/shared mern/client/src mern/tests mern/package.json mern/package-lock.json .github/workflows | gzip > test-results/review-source.tar.gz
-          git rev-parse HEAD > test-results/reviewed-commit.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
