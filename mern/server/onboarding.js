@@ -1,10 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { User, Subscription, Booking, AuditEvent } from './models.js';
+import { User, AuditEvent } from './models.js';
 import { transaction } from './db.js';
 import { hashPassword, publicUser } from './auth.js';
-import { effectiveServices } from './services.js';
-import { quote } from '../shared/catalog.js';
+import { saveManualTraining } from './manual-training.js';
 import { manualMonthTerm, termActive } from '../shared/membership-terms.js';
 
 const inputSchema = z.object({
@@ -18,7 +17,6 @@ const inputSchema = z.object({
 export async function createAssistedClient(req, res) {
   const { membershipStartDate, trainingDogCount, ...input } = inputSchema.parse(req.body);
   const term = membershipStartDate ? manualMonthTerm(membershipStartDate) : null;
-  const catalog = term ? await effectiveServices() : null;
   const temporaryPassword = `Bravo-${randomUUID().replaceAll('-', '').slice(0, 18)}!`;
   const account = { ...input, role: 'member', passwordHash: await hashPassword(temporaryPassword) };
   let user;
@@ -27,8 +25,7 @@ export async function createAssistedClient(req, res) {
     if (term) {
       // Existing-client access is a manual grant, not evidence of a new payment.
       // A covered, empty request lets the team add dates in the shared calendar.
-      const [booking] = await Booking.create([{ userId: user._id, createdBy: req.user._id, requestKey: randomUUID(), serviceIds: ['training'], trainingFocus: 'basic-obedience', dogCount: trainingDogCount, dogName: input.dogName || 'Training membership', phone: input.phone, address: input.address, visits: [], status: 'requested', paymentStatus: 'covered', termStartsAt: term.validFrom, termEndsAt: term.validUntil, quote: quote(['training'], [], { dogCount: trainingDogCount }, catalog) }], { session });
-      await Subscription.create([{ userId: user._id, stripeId: `grant:training:${user._id}:${randomUUID()}`, bookingId: booking._id, source: 'grant', autoPayDisabled: true, status: 'active', serviceIds: ['training'], dogCount: trainingDogCount, ...term }], { session });
+      await saveManualTraining({ user, actorId: req.user._id, term, dogCount: trainingDogCount, session });
     }
     const audit = { actorId: req.user._id, action: 'client.created', targetType: 'user', targetId: String(user._id), details: { assistedOnboarding: true, ...(term ? { manualTrainingMonth: true, ...term, dogCount: trainingDogCount } : {}) } };
     if (session) await AuditEvent.create([audit], { session }); else await AuditEvent.create(audit);

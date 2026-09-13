@@ -50,6 +50,7 @@ export async function addTrainingVisit(req,res) {
     const trainingIds=ALL_SERVICES.filter(s=>s.includes.includes('training')).map(s=>s.id);
     if(!b || !['paid','covered'].includes(b.paymentStatus) || !['requested','confirmed'].includes(b.status) || !b.serviceIds.some(s=>trainingIds.includes(s))) throw fail('Choose a paid active training request.',409);
     if(b.visits.length>=62) throw fail('This request already has 62 visits.');
+    if((b.termStartsAt && when.toJSDate()<b.termStartsAt) || (b.termEndsAt && when.toJSDate()>=b.termEndsAt)) throw fail('This session must fall within this request’s training membership period.');
     if(!await Subscription.exists({userId:b.userId,serviceIds:{$in:trainingIds},status:{$in:['active','trialing','canceled']},validFrom:{$lte:when.toJSDate()},validUntil:{$gt:when.toJSDate()},dogCount:{$gte:b.dogCount||1}}).session(session)) throw fail('This session must fall within the client’s paid training month.');
     if(!availability({from:date,to:date,settings:team})[0].slots.includes(time)) throw fail('Open these days and times before adding a visit.');
     await checkTrainerVisits(bookingTrainerIds(b),[{date,time,service:'training'}],team,session);

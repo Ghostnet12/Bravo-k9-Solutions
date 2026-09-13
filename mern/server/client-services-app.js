@@ -52,7 +52,7 @@ app.get('/api/client-schedule', ...session, requireUser, async (req, res) => {
     res.set('Content-Disposition', `attachment; filename="bravo-schedule-${input.month}.pdf"`);
     return res.type('application/pdf').send(bytes);
   }
-  schedule.trainingBookings = await Booking.find({ userId:client, serviceIds: {$in:ALL_SERVICES.filter(s=>s.includes.includes('training')).map(s=>s.id)}, status:{$in:['requested','confirmed']},paymentStatus:{$in:['paid','covered']} }).select('dogName dogCount trainingFocus staffId staffIds requestedStaffId requestedStaffIds trainerAcceptedIds trainerAcceptanceRequired trainerAcceptedAt visits updatedAt').lean();
+  schedule.trainingBookings = await Booking.find({ userId:client, serviceIds: {$in:ALL_SERVICES.filter(s=>s.includes.includes('training')).map(s=>s.id)}, status:{$in:['requested','confirmed']},paymentStatus:{$in:['paid','covered']} }).select('dogName dogCount trainingFocus staffId staffIds requestedStaffId requestedStaffIds trainerAcceptedIds trainerAcceptanceRequired trainerAcceptedAt termStartsAt termEndsAt visits updatedAt').lean();
   res.json(schedule);
 });
 app.get('/api/admin/trainers/:id/clients', ...session, requireStaff, trainerClients);
@@ -82,6 +82,7 @@ app.post('/api/client-schedule/visit', ...session, requireUser, ...write, rateLi
         if (!availability({ from: next.date, to: next.date, settings: team })[0].slots.includes(next.time)) throw fail('This time is not available.', 409);
         await checkTrainerVisits(bookingTrainerIds(booking), [next], team, session);
         if (next.service === 'training') {
+          if ((booking.termStartsAt && when.toJSDate() < booking.termStartsAt) || (booking.termEndsAt && when.toJSDate() >= booking.termEndsAt)) throw fail('Choose a date within this request’s training membership period.');
           const terms = await Subscription.find({ userId: booking.userId, status: { $in: ['active', 'trialing', 'canceled'] }, serviceIds: { $in: ALL_SERVICES.filter(s => s.includes.includes('training')).map(s => s.id) } }).session(session).lean();
           if (!terms.some(t => t.validFrom && when.toJSDate() >= t.validFrom && when.toJSDate() < t.validUntil)) throw fail('Choose a date within your paid membership month.', 400);
         }

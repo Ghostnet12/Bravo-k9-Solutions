@@ -4,7 +4,7 @@ import { api } from './api';
 import { Notice } from './ui';
 import { trainerOptions, trainerChoice, bookingTrainerIds, acceptedTrainerIds, JOINT_TRAINER_ID } from '../../shared/trainers';
 
-export default function ClientTrainer({ bookings, onSaved }) {
+export default function ClientTrainer({ bookings, onSaved, initiallyOpen = false }) {
   const { user } = useBravo();
   const [bookingId, setBookingId] = useState(bookings[0]?._id || ''), [trainer, setTrainer] = useState(trainerChoice(bookings[0]) || user.id), [team, setTeam] = useState(null), [error, setError] = useState(''), [busy, setBusy] = useState(false);
   const booking = bookings.find(b => b._id === bookingId), assigned = trainerChoice(booking);
@@ -17,7 +17,7 @@ export default function ClientTrainer({ bookings, onSaved }) {
       else { await api(`/admin/bookings/${bookingId}/assignment`, { method: 'PATCH', body: { staffId: trainer } }); onSaved('Trainer assigned. Each assigned trainer can now accept from their staff profile.'); }
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
-  return <details className="panel trainer-assignment" onToggle={e => { if (e.currentTarget.open && !team) load(); }}><summary>Assign trainer & accept client</summary><Notice error>{error}</Notice>{!bookings.length ? <p>No active paid training request to assign.</p> : <>
+  return <details className="panel trainer-assignment" open={initiallyOpen || undefined} onToggle={e => { if (e.currentTarget.open && !team) load(); }}><summary>Assign trainer & accept client</summary><Notice error>{error}</Notice>{!bookings.length ? <p>No active covered or paid training request to assign.</p> : <>
     <label>Training request<select aria-label="Assignment training request" disabled={busy} value={bookingId} onChange={e => { const b = bookings.find(b => b._id === e.target.value); setBookingId(b._id); setTrainer(trainerChoice(b) || user.id); }}>{bookings.map(b => <option key={b._id} value={b._id}>{b.dogName} · #{b._id.slice(-6)}</option>)}</select></label>
     <label>Trainer<select aria-label="Assigned trainer" value={trainer} disabled={busy || !team} onChange={e => setTrainer(e.target.value)}>{(team || []).map(t => <option key={t.id} value={t.id} disabled={t.disabled}>{t.name}</option>)}</select></label>
     {team?.find(t => t.joint)?.disabled && <p className="helper">David and Ashley requires both real profiles to have active staff access. An administrator can activate the missing staff profile in People &amp; permissions.</p>}

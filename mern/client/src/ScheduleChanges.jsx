@@ -32,7 +32,7 @@ export default function ScheduleChanges({data,initialMonth,onSaved,onClose}) {
     api(`/availability?from=${start.toISODate()}&to=${start.endOf('month').toISODate()}${trainer?`&staffId=${trainer}`:''}`).then(r=>{if(current)setHours(Object.fromEntries((r.days||[]).map(d=>[d.date,d.slots])))}).catch(e=>{if(current)setError(e.message)}).finally(()=>{if(current)setLoading(false)});
     return()=>{current=false};
   },[month,trainer]);
-  function paid(date,time) {const instant=at(date,time);return instant>DateTime.now() && instant.diffNow('days').days<=92 && data.terms.some(t=>['active','trialing','canceled'].includes(t.status)&&t.serviceIds.some(id=>trainingIds.includes(id))&&(t.dogCount||1)>=(booking?.dogCount||1)&&t.validFrom&&instant>=DateTime.fromISO(t.validFrom)&&instant<DateTime.fromISO(t.validUntil));}
+  function paid(date,time) {const instant=at(date,time);return (!booking?.termStartsAt||instant>=DateTime.fromISO(booking.termStartsAt))&&(!booking?.termEndsAt||instant<DateTime.fromISO(booking.termEndsAt))&&instant>DateTime.now() && instant.diffNow('days').days<=92 && data.terms.some(t=>['active','trialing','canceled'].includes(t.status)&&t.serviceIds.some(id=>trainingIds.includes(id))&&(t.dogCount||1)>=(booking?.dogCount||1)&&t.validFrom&&instant>=DateTime.fromISO(t.validFrom)&&instant<DateTime.fromISO(t.validUntil));}
   function options(date) {
     const weekend=at(date,'12:00').weekday>=6;
     const offered=canOpen&&openWeekends&&weekend?TRAINER_HOURS:(hours[date]||[]);

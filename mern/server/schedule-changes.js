@@ -47,6 +47,7 @@ export async function saveScheduleChanges(req,res) {
     for(const v of data.additions) {
       const at=when(v);
       if(at<=DateTime.now() || at.diff(DateTime.now(),'days').days>92) throw fail('Choose a future session within 92 days.');
+      if((booking.termStartsAt && at.toJSDate()<booking.termStartsAt) || (booking.termEndsAt && at.toJSDate()>=booking.termEndsAt)) throw fail('Every added session must be within this request’s training membership period.');
       if(!terms.some(t=>t.validFrom && at.toJSDate()>=t.validFrom && at.toJSDate()<t.validUntil)) throw fail('Every added session must be within the client’s paid training month.');
       if(remaining.some(old=>key(old)===key(v))) throw fail('This visit is already on the schedule.',409);
     }
