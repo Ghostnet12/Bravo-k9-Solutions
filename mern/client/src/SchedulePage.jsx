@@ -6,7 +6,6 @@ import { api } from './api';
 import { Page, Notice, formatDate, formatTime } from './ui';
 import { trainingFocusName } from '../../shared/catalog';
 import './client-services.css';
-import WeekendSessions from './WeekendSessions';
 import SavedScheduleCalendar from './SavedScheduleCalendar';
 export default function SchedulePage() {
   const { user, authReady } = useBravo(), [params, setParams] = useSearchParams();
@@ -20,6 +19,13 @@ export default function SchedulePage() {
     if (user) api(`/client-schedule?month=${month}${client ? `&client=${encodeURIComponent(client)}` : ''}`).then(result => { if (current) setData(result); }).catch(e => { if (current) setError(e.message); }).finally(() => { if (current) setLoading(false); });
     return () => { current = false; };
   }, [user?.id, month, client, revision]);
+  useEffect(() => {
+    if(!user)return;
+    let current=true;
+    const refresh=()=>{if(!document.hidden) api(`/client-schedule?month=${month}${client?`&client=${encodeURIComponent(client)}`:''}`).then(result=>{if(current)setData(result)}).catch(()=>{});};
+    const timer=setInterval(refresh,20000);window.addEventListener('focus',refresh);
+    return()=>{current=false;clearInterval(timer);window.removeEventListener('focus',refresh)};
+  },[user?.id,month,client]);
   const activeTerm = data?.terms.find(term => ['active','trialing','canceled'].includes(term.status) && term.validFrom && new Date(term.validFrom) <= new Date() && new Date(term.validUntil) > new Date());
   function chooseMonth(value) { const next = new URLSearchParams(params); next.set('month', value); setParams(next); }
   return <Page title={data ? `${data.client.name}’s schedule.` : 'Monthly schedule.'} eyebrow="YOUR SAVED VISITS" className="schedule-print-page">
@@ -37,7 +43,6 @@ export default function SchedulePage() {
       {activeTerm && <p className="membership-counter"><strong>Current paid month:</strong> Day {Math.floor(DateTime.now().diff(DateTime.fromISO(activeTerm.validFrom), 'days').days)+1}. Ends {DateTime.fromISO(activeTerm.validUntil, {zone:'America/Chicago'}).toFormat('LLL d, yyyy · h:mm a')} · {Math.max(0,Math.ceil(DateTime.fromISO(activeTerm.validUntil).diffNow('days').days))} days remaining.</p>}
       {data.firstTrainingDay && <p>First paid scheduled visit: {formatDate(data.firstTrainingDay)}</p>}
       <p className="helper">These are your saved booking dates, not suggested openings. Requested visits await Bravo’s confirmation. Cancelled visits are labelled below.</p>
-      {['staff','owner'].includes(user.role) && <WeekendSessions bookings={data.trainingBookings || []} onSaved={message=>{setNotice(message);setRevision(n=>n+1);}}/>}
       <SavedScheduleCalendar key={`${month}-${revision}`} data={data} month={month} reload={message => { setNotice(message);setRevision(n => n+1); }}/>
       <h2>Membership dates</h2>{data.terms.length ? data.terms.map(term => <p key={term.stripeId}>{term.serviceIds.join(' + ')}: {term.validFrom ? new Date(term.validFrom).toLocaleDateString('en-US', { timeZone: 'America/Chicago' }) : 'Start date not yet recorded'} – {new Date(term.validUntil).toLocaleDateString('en-US', { timeZone: 'America/Chicago' })} · {new Date(term.validUntil) <= new Date() ? 'Expired' : term.status}</p>) : <p>No paid monthly membership recorded.</p>}
     </section>}

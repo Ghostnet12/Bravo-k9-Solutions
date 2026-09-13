@@ -10,25 +10,35 @@ import { ALL_SERVICES } from '../shared/catalog.js';
 const id=z.string().regex(/^[a-f\d]{24}$/i);
 const fail=(message,status=400)=>Object.assign(new Error(message),{status});
 function future(date,time='21:00') { const d=dateTime(date,time); if(d<=DateTime.now() || d.diff(DateTime.now(),'days').days>92) throw fail('Choose a future date within 92 days.');return d; }
+export async function openWeekendDates({actor,staffId,days,team,session}) {
+  if(actor.role!=='owner' && (actor.role!=='staff' || String(actor._id)!==staffId)) throw fail('Staff can open their own weekend hours. Administrators and owners can choose any trainer.',403);
+  if(!await User.exists({_id:staffId,role:{$in:['staff','owner']},blocked:{$ne:true}}).session(session)) throw fail('Choose an active trainer.');
+  if(!team?.enabled) throw fail('Enable online booking before opening weekend sessions.');
+  if(new Set(days.map(d=>d.date)).size!==days.length) throw fail('Use one set of hours per date.');
+  for(const day of days) { if(future(day.date).weekday<6) throw fail('Choose Saturdays and Sundays.'); for(const time of day.hours) future(day.date,time); }
+  const own=await TrainerSchedule.findById(staffId).session(session);
+  if(own && !own.enabled) throw fail('Enable this trainer’s working schedule first.');
+  const today=DateTime.now().setZone('America/Chicago').toISODate();
+  const personal=own?.toObject()||{enabled:true,weekdays:[...team.weekdays],hours:[...team.hours],overrides:[]};
+  for(const {date,hours} of days) {
+    const teamHours=[...new Set([...personalHours(date,team.toObject()),...hours])].sort();
+    team.overrides=[...(team.overrides||[]).filter(d=>d.date!==date && d.date>=today),{date,hours:teamHours}];
+    const ownHours=[...new Set([...personalHours(date,personal),...hours])].sort();
+    personal.overrides=[...(personal.overrides||[]).filter(d=>d.date!==date && d.date>=today),{date,hours:ownHours}];
+  }
+  await team.save({session});
+  await TrainerSchedule.findOneAndUpdate({_id:staffId},{$set:{enabled:true,weekdays:personal.weekdays,hours:personal.hours,overrides:personal.overrides},$inc:{revision:1}},{upsert:true,session});
+  await AuditEvent.create([{actorId:actor._id,action:'weekend.opened',targetType:'trainer',targetId:staffId,details:{days}}],{session});
+}
 export async function openWeekend(req,res) {
-  const {staffId,date,hours}=z.object({staffId:id,date:z.string(),hours:z.array(z.enum(HOURS)).min(1).max(13)}).strict().parse(req.body);
-  if(req.user.role!=='owner' && String(req.user._id)!==staffId) throw fail('Staff can open their own weekend hours. Administrators and owners can choose any trainer.',403);
-  if(future(date).weekday<6) throw fail('Choose a Saturday or Sunday.');
-  if(!await User.exists({_id:staffId,role:{$in:['staff','owner']},blocked:{$ne:true}})) throw fail('Choose an active trainer.');
+  const day=z.object({date:z.string(),hours:z.array(z.enum(HOURS)).min(1).max(13)}).strict();
+  const input=z.union([z.object({staffId:id,days:z.array(day).min(1).max(62)}).strict(),z.object({staffId:id,date:z.string(),hours:z.array(z.enum(HOURS)).min(1).max(13)}).strict()]).parse(req.body);
+  const days=input.days||[{date:input.date,hours:input.hours}];
   await transaction(async session=>{
     const team=await Settings.findOneAndUpdate({_id:'schedule'},{$inc:{revision:1}},{returnDocument:'after',session});
-    if(!team?.enabled) throw fail('Enable online booking before opening weekend sessions.');
-    const own=await TrainerSchedule.findById(staffId).session(session);
-    if(own && !own.enabled) throw fail('Enable this trainer’s working schedule first.');
-    const normalTeam={enabled:team.enabled,weekdays:team.weekdays,hours:team.hours,overrides:[]};
-    const teamHours=[...new Set([...personalHours(date,team.toObject()),...hours])].sort();
-    team.overrides=[...(team.overrides||[]).filter(d=>d.date!==date && d.date>=DateTime.now().setZone('America/Chicago').toISODate()),{date,hours:teamHours}];await team.save({session});
-    const personal=own?.toObject()||{enabled:true,weekdays:normalTeam.weekdays,hours:normalTeam.hours,overrides:[],revision:0};
-    const ownHours=[...new Set([...personalHours(date,personal),...hours])].sort();
-    await TrainerSchedule.findOneAndUpdate({_id:staffId},{$set:{enabled:true,weekdays:personal.weekdays,hours:personal.hours,overrides:[...(personal.overrides||[]).filter(d=>d.date!==date && d.date>=DateTime.now().setZone('America/Chicago').toISODate()),{date,hours:ownHours}]},$inc:{revision:1}},{upsert:true,session});
-    await AuditEvent.create([{actorId:req.user._id,action:'weekend.opened',targetType:'trainer',targetId:staffId,details:{date,hours}}],{session});
+    await openWeekendDates({actor:req.user,staffId:input.staffId,days,team,session});
   });
-  res.json({ok:true,message:'Weekend hours opened for this date and trainer. Normal weekly hours are unchanged. Add the client’s visit below.'});
+  res.json({ok:true,message:`${days.length} weekend date(s) opened for this trainer. Add visits from the client’s schedule.`});
 }
 export async function addTrainingVisit(req,res) {
   const {bookingId,date,time}=z.object({bookingId:id,date:z.string(),time:z.enum(HOURS)}).strict().parse(req.body);

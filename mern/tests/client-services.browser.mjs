@@ -7,7 +7,7 @@ import { chromium, webkit } from 'playwright';
 import { schedulePdf } from '../server/schedule-pdf.js';
 const dist = fileURLToPath(new URL('../client/dist/', import.meta.url));
 const html = await readFile(`${dist}/bravo-shell.html`, 'utf8');
-const fixtureSchedule = month => ({client:{id:'aaaaaaaaaaaaaaaaaaaaaaaa',name:'Fixture client'},month,firstTrainingDay:'2026-09-21',terms:[],visits:['2026-09-21','2026-09-28','2026-10-05'].filter(d=>d.startsWith(month)).map(date=>({bookingId:'bbbbbbbbbbbbbbbbbbbbbbbb',date,time:'10:00',dogName:'Fixture Dog',service:'training',status:'confirmed',paymentStatus:'paid',trainer:'Fixture Trainer'}))});
+const fixtureSchedule = month => ({client:{id:'aaaaaaaaaaaaaaaaaaaaaaaa',name:'Fixture client'},month,firstTrainingDay:'2026-09-21',terms:[{stripeId:'term_fixture',serviceIds:['training'],dogCount:1,status:'active',validFrom:'2026-09-01T00:00:00Z',validUntil:'2026-11-01T00:00:00Z'}],visits:['2026-09-21','2026-09-28','2026-10-05'].filter(d=>d.startsWith(month)).map(date=>({bookingId:'bbbbbbbbbbbbbbbbbbbbbbbb',date,time:'10:00',dogName:'Fixture Dog',service:'training',status:'confirmed',paymentStatus:'paid',trainer:'Fixture Trainer'}))});
 const app = express();
 // Browser downloads may bypass Playwright page routing; serve a real PDF response.
 app.get('/api/client-schedule', async (req, res) => {
@@ -24,7 +24,8 @@ try {
     try {
       for (const width of [320, 390, 1440]) {
         const context = await browser.newContext({ viewport: { width, height: 844 }, isMobile: width < 700 });
-        const page = await context.newPage(), errors = []; let printed = false, read = false, role = 'member', opened = false, added = false;
+        const page = await context.newPage(), errors = []; let printed = false, read = false, role = 'member', changeBody = null, saved = false;
+        let savedVisits=['2026-09-21','2026-09-28','2026-10-05'].map(date=>({date,time:'10:00',service:'training'}));
         page.on('pageerror', error => errors.push(error.message));
         await page.exposeFunction('recordPrint', () => { printed = true; });
         await page.addInitScript(() => { window.print = () => window.recordPrint(); });
@@ -33,13 +34,13 @@ try {
           if (url.pathname === '/api/config') json = { connected: true, paymentsReady: true };
           else if (url.pathname === '/api/auth/me') json = { user: { id: 'aaaaaaaaaaaaaaaaaaaaaaaa', name: 'Fixture client', role }, services: [] };
           else if (url.pathname === '/api/team') json = {team:[{id:'aaaaaaaaaaaaaaaaaaaaaaaa',name:'Fixture Trainer'}]};
-          else if (url.pathname === '/api/admin/weekend-sessions') { opened=true; json={ok:true,message:'Weekend hours opened.'}; }
-          else if (url.pathname === '/api/availability') json={days:[{date:'2026-09-19',slots:['10:00']}],enabled:true};
-          else if (url.pathname === '/api/admin/training-visits') {added=true; json={ok:true,message:'Training visit added.'};}
+          else if (url.pathname === '/api/client-schedule/changes') { changeBody=route.request().postDataJSON(); saved=true; savedVisits=savedVisits.filter(v=>!changeBody.removals.some(r=>r.date===v.date&&r.time===v.time)).concat(changeBody.additions.map(v=>({...v,service:'training'})));json={ok:true,message:'Schedule saved and note sent.'}; }
+          else if (url.pathname === '/api/availability') {const start=new Date(url.searchParams.get('from')+'T12:00:00Z'),end=new Date(url.searchParams.get('to')+'T12:00:00Z'),days=[];for(let d=start;d<=end;d=new Date(d.getTime()+86400000))days.push({date:d.toISOString().slice(0,10),slots:[0,6].includes(d.getUTCDay())?[]:['10:00','13:00']});json={days,enabled:true};}
+
           else if (url.pathname === '/api/site-images') json = { images: {} };
           else if (url.pathname === '/api/notifications') json = { items: [{ id: 'term:fixture', body: 'Your membership expires tomorrow. Renew manually.', href: '/account', unread: !read }] };
           else if (url.pathname === '/api/notifications/read') { read = true; json = { ok: true }; }
-          else if (url.pathname === '/api/client-schedule') json = {...fixtureSchedule(url.searchParams.get('month')), trainingBookings:[{_id:'bbbbbbbbbbbbbbbbbbbbbbbb',dogName:'Fixture Dog'}]};
+          else if (url.pathname === '/api/client-schedule') {json=fixtureSchedule(url.searchParams.get('month'));json.visits=savedVisits.filter(v=>v.date.startsWith(json.month)).map(v=>({...fixtureSchedule(v.date.slice(0,7)).visits[0],...v,bookingId:'bbbbbbbbbbbbbbbbbbbbbbbb',dogName:'Fixture Dog',status:'confirmed',paymentStatus:'paid'}));json.trainingBookings=[{_id:'bbbbbbbbbbbbbbbbbbbbbbbb',dogName:'Fixture Dog',dogCount:1,staffId:'aaaaaaaaaaaaaaaaaaaaaaaa',updatedAt:'2026-09-01T00:00:00.000Z',visits:savedVisits}];}
           if (url.pathname === '/api/client-schedule' && url.searchParams.get('format') === 'pdf') return route.fulfill({ body: await schedulePdf(json), contentType: 'application/pdf', headers: { 'Content-Disposition': 'attachment; filename="bravo-schedule.pdf"' } });
           await route.fulfill({ json });
         });
@@ -70,20 +71,45 @@ try {
         await page.getByRole('button', { name: 'Mark read', exact: true }).click();
         await page.getByRole('button', { name: 'Mark read', exact: true }).waitFor({ state: 'detached' });
         assert.ok(read);
-        role = width === 320 ? 'staff' : 'owner';
+        // Client toggles stay in a draft, work across months, and save together.
+        await page.goto(`${origin}/schedule?month=2026-09`);
+        await page.getByRole('button',{name:'Add Days and Times',exact:true}).click();
+        const editor=page.getByRole('region',{name:'Add Days and Times',exact:true});
+        await editor.getByRole('button',{name:/Tue, Sep 22,/}).click();
+        await editor.getByRole('button',{name:/Tue, Sep 22,/}).click();
+        assert.equal(await editor.getByRole('button',{name:/Tue, Sep 22,/}).getAttribute('aria-pressed'),'false');
+        assert.equal(saved,false);
+        await editor.getByRole('button',{name:/Tue, Sep 22,/}).click();
+        await editor.getByRole('button',{name:/Mon, Sep 21,/}).click();
+        await editor.getByRole('button',{name:'Next month',exact:true}).click();
+        await editor.getByRole('button',{name:/Tue, Oct 6,/}).click();
+        await editor.getByLabel('Note to Bravo',{exact:true}).fill('Tuesday works better for us.');
+        await editor.getByRole('button',{name:'Save changes',exact:true}).click();
+        await page.getByText('Schedule saved and note sent.',{exact:true}).waitFor();
+        assert.deepEqual(changeBody.additions.map(v=>v.date).sort(),['2026-09-22','2026-10-06']);
+        assert.deepEqual(changeBody.removals,[{date:'2026-09-21',time:'10:00'}]);
+        assert.equal(changeBody.openWeekends,false);
+        await page.getByRole('button',{name:'Tue, Sep 22, 1 visit',exact:true}).waitFor();
+        role = width === 320 ? 'staff' : 'owner'; saved=false;
         await page.goto(`${origin}/schedule?month=2026-09&client=cccccccccccccccccccccccc`);
-        await page.getByText('Weekend sessions & extra training visits', {exact:true}).click();
-        await page.getByLabel('Weekend date', {exact:true}).fill('2026-09-19');
-        await page.getByRole('checkbox',{name:'10:00 AM',exact:true}).check();
-        await page.getByRole('button',{name:'Open weekend hours',exact:true}).click();
-        await page.getByText('Weekend hours opened.',{exact:true}).waitFor(); assert.ok(opened);
-        await page.getByLabel('Paid training request').selectOption('bbbbbbbbbbbbbbbbbbbbbbbb');
-        await page.getByRole('button',{name:'Find available times',exact:true}).click();
-        await page.getByLabel('Session time',{exact:true}).selectOption('10:00');
-        await page.getByRole('button',{name:'Add training visit & notify client',exact:true}).click();
-        await page.getByText('Training visit added.',{exact:true}).first().waitFor();assert.ok(added);
+        await page.getByRole('button',{name:'Add Days and Times',exact:true}).click();
+        await editor.getByRole('button',{name:/Sat, Sep 19,/}).click();
+        await editor.getByRole('button',{name:/Sun, Sep 20,/}).click();
+        await editor.getByRole('checkbox',{name:'1:00 PM',exact:true}).check();
+        await editor.getByRole('checkbox',{name:'10:00 AM',exact:true}).uncheck();
+        await editor.getByRole('button',{name:/Tue, Sep 22,/}).click();
+        await editor.getByLabel('Note to the client',{exact:true}).fill('Sorry, we are sick Tuesday. Weekend sessions added.');
+        assert.equal(saved,false);
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+        await page.screenshot({path:`test-results/calendar-edit-${name}-${width}.png`,fullPage:true});
+        await editor.getByRole('button',{name:'Save changes',exact:true}).click();
+        await page.getByText('Schedule saved and note sent.',{exact:true}).waitFor();
+        assert.equal(changeBody.openWeekends,true);
+        assert.deepEqual(changeBody.additions,[{date:'2026-09-19',time:'10:00'},{date:'2026-09-20',time:'13:00'}]);
+        assert.deepEqual(changeBody.removals,[{date:'2026-09-22',time:'10:00'}]);
+        await page.getByRole('button',{name:'Sun, Sep 20, 1 visit',exact:true}).waitFor();
         assert.deepEqual(errors, []);
-        await context.close(); console.log(`${name} ${width}: schedule filtering, print, notification read and layout passed`);
+        await context.close(); console.log(`${name} ${width}: PDF, client/staff batch calendars, notes, notifications and layout passed`);
       }
     } finally { await browser.close(); }
   }

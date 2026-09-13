@@ -1,7 +1,7 @@
 name: Client schedules and manual memberships
 on:
   push:
-    branches: [bravo-mern, client-services-20260912, fix/schedule-print-20260912, fix/weekend-sessions-20260913]
+    branches: [bravo-mern, client-services-20260912, fix/schedule-print-20260912, fix/weekend-sessions-20260913, fix/calendar-batch-20260913]
     paths: ['mern/**', '.github/workflows/client-services.yml']
 permissions:
   contents: read

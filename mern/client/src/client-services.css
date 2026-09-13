@@ -41,3 +41,20 @@
 .calendar-legend {font-size:.9rem}.calendar-key {display:inline-block;width:1rem;height:1rem;background:#cfb173;border:1px solid #e8ce97;vertical-align:middle;margin-right:.4rem}
 .weekend-tools form {margin-top:1.2rem}.weekend-tools .button {max-width:100%}
 @media print {.weekend-tools,.calendar-legend {display:none!important}}
+
+.calendar-month-nav {display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-top:1rem}
+.calendar-month-nav h3 {font-size:1.15rem;text-align:center;margin:0}
+.calendar-month-nav button {min-width:44px;min-height:44px;flex-shrink:0}
+.schedule-change-editor {border:1px solid #cfb173;padding:clamp(.7rem,3vw,1.5rem);border-radius:.5rem;margin:1rem 0}
+.schedule-change-editor form {display:grid;gap:1rem;min-width:0}
+.schedule-change-editor label,.schedule-change-editor select {min-width:0;max-width:100%}
+.schedule-change-editor .record-actions,.weekend-tools .record-actions {display:flex;flex-wrap:wrap;gap:1rem}
+.schedule-change-editor .button,.schedule-edit-toggle {max-width:100%;white-space:normal;overflow-wrap:normal;word-break:normal}
+.edit-calendar button[aria-pressed=true] {outline:none}
+.edit-calendar button:focus-visible {outline:3px solid #fff;outline-offset:2px}
+.edit-calendar button.pending-day {border-style:dashed;border-width:2px}
+.edit-calendar button:disabled {opacity:.5}
+.calendar-time-options {min-width:0}.calendar-time-options legend {max-width:100%;font-weight:700}
+.schedule-change-summary {padding:1rem;border:1px solid #80734f;border-radius:.3rem}
+.schedule-change-summary ul {margin-bottom:0;padding-left:1.2rem}
+@media print {.schedule-change-editor,.schedule-edit-toggle {display:none!important}}
