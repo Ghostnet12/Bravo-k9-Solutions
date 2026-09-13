@@ -34,11 +34,11 @@ for (const [p,[,after]] of Object.entries(hashes)) if(sha(p)!==after) throw new 
 const added = {
  'shared/training-credits.js':'6cf4a0900adc40e1f98459585e5fa34f60c0160d4e3279665110c7a97a3ac1c3',
  'server/training-credits.js':'8123fa4041f269d0a90babc7055c4d9393af3aa08004ecfa23d99f311daa7ecd',
- 'client/src/TrainingDayCredits.jsx':'24dc9f30fb6fa5a613cd0ccee91f76c33dfebc79bb2b5a11f9472e0bb92c0b12',
+ 'client/src/TrainingDayCredits.jsx':'4f95f4707dacdde952eafd793cdf2adeef6d46c889de62ad38abe328b402dc20',
  'client/src/training-credits.css':'bde6059f774e1b291b3386a2a8b388b12b8c141cd2bb4dc56d97a4b757b250db',
  'tests/training-credits.test.js':'6f16adc18830c7485df51fa08f5bf90f1c39736d6da72c36be372a4176bd51e7',
  'tests/training-credits.integration.js':'beb121447916e3488083489b544fc83c7d9e5e4489bc54b157479a6b7920e187',
  'tests/training-credits.browser.mjs':'5f051fae9cda0ffe8363b61f28231430fde22144bb9a0b8e6fe2ece1561e9f9a'
 };
 for(const [p,expected]of Object.entries(added))if(sha(p)!==expected)throw new Error(`New source checksum mismatch: ${p}`);
-console.log('Exact tested source installed; all 15 SHA-256 checks passed.');
+console.log('Exact source installed; all 15 SHA-256 checks passed.');
