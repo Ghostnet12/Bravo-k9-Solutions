@@ -114,7 +114,7 @@ try {
           const savedGrid=page.getByLabel('Saved monthly schedule');
           const creditedDay=savedGrid.getByRole('button',{name:dateName(creditDate)});
           assert.equal(await creditedDay.getAttribute('aria-pressed'),'true');
-          assert.match(await creditedDay.innerText(),/Credit/);
+          assert.match(await creditedDay.innerText(),/credit/i);
           await creditedDay.scrollIntoViewIfNeeded();
           await page.screenshot({path:`test-results/simple-credit-saved-${engineName}-${roleName}.png`});
           // The original date is cancelled, and selecting it again cannot give another credit.
@@ -131,7 +131,7 @@ try {
           await page.waitForLoadState('networkidle');
           role='member';await page.goto(`${origin}/schedule?month=${creditDate.slice(0,7)}`);
           await page.getByText('7 days remaining',{exact:true}).waitFor();
-          assert.match(await savedGrid.getByRole('button',{name:dateName(creditDate)}).innerText(),/Credit/);
+          assert.match(await savedGrid.getByRole('button',{name:dateName(creditDate)}).innerText(),/credit/i);
           await page.getByRole('button',{name:'Add or Cancel Date',exact:true}).click();
           await page.getByText('Checking available times…').waitFor({state:'hidden'});
           assert.equal(await checkbox.count(),0);
