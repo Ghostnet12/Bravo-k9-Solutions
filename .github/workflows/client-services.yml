@@ -27,6 +27,7 @@ jobs:
       - run: npm install --no-save --package-lock=false playwright@1.55.1
       - run: npx playwright install --with-deps chromium webkit
       - run: node tests/day-credits.browser.mjs
+      - run: node tests/client-login.browser.mjs
       - run: node tests/site-operations.browser.mjs
       - run: node tests/usability-polish.browser.mjs
       - run: node tests/credited-calendar.browser.mjs
@@ -38,7 +39,6 @@ jobs:
       - run: node tests/make-member-training.browser.mjs
       - run: node tests/client-removal.browser.mjs
       - run: node tests/simple-client-membership.browser.mjs
-      - run: node tests/client-login.browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

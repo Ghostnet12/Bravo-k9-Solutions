@@ -23,7 +23,19 @@ try {
         let activeUser = operator, client, acceptedReplacement = false, createdBody, lastLogin, replacementCalls = 0, scheduleReads = 0;
         let temporaryPassword = 'Isolated-temporary-password-123!'; const ownPassword = 'Isolated-client-chosen-password-456!';
         const errors = [];
-        page.on('pageerror', e => errors.push(e.message));
+        page.on('pageerror', e => errors.push({ message:e.message, cause:e.cause?.message, url:page.url() }));
+        // Forced fixture navigation must not abort an in-flight lazy route or
+        // change the mocked account while the previous page is still fetching.
+        async function navigate(url) {
+          await page.waitForLoadState('networkidle');
+          await page.goto(url);
+          await page.waitForLoadState('networkidle');
+        }
+        async function reload() {
+          await page.waitForLoadState('networkidle');
+          await page.reload();
+          await page.waitForLoadState('networkidle');
+        }
         page.on('dialog', dialog => acceptedReplacement ? dialog.accept() : dialog.dismiss());
         await page.addInitScript(() => Object.defineProperty(navigator, 'clipboard', { value: { writeText: async text => { window.fixtureCopiedText = text; } }, configurable: true }));
         const membership = { active: true, enabled: true, manual: true, revision: 1, startsAt: now.toISO(), endsAt: now.plus({ months: 1 }).toISO() };
@@ -63,7 +75,7 @@ try {
           await route.fulfill({ status, json });
         });
         try {
-          await page.goto(`${origin}/admin?tab=people`);
+          await navigate(`${origin}/admin?tab=people`);
           await page.getByRole('button', { name: 'People & access', exact: true }).waitFor();
           await page.getByRole('button', { name: 'Schedule', exact: true }).click();
           await page.locator('main').getByRole('button', { name: 'Back', exact: true }).click();
@@ -82,7 +94,7 @@ try {
           await form.getByText('Sign-in instructions copied.', { exact: false }).waitFor();
           const copied = await page.evaluate(() => window.fixtureCopiedText); assert.match(copied, /New Fixture Client/); assert.match(copied, /bravounleashed.com\/account/); assert.ok(copied.includes(temporaryPassword));
           assert.equal(await page.evaluate(() => JSON.stringify([localStorage, sessionStorage]).includes('Isolated-temporary-password')), false);
-          await page.reload(); if (access !== 'staff') await page.locator('.owner-person > summary').click({ position: { x: 8, y: 20 } });
+          await reload(); if (access !== 'staff') await page.locator('.owner-person > summary').click({ position: { x: 8, y: 20 } });
           assert.equal(await page.getByLabel('Temporary password', { exact: true }).count(), 0);
           await page.getByRole('button', { name: 'Create new temporary password', exact: true }).click(); assert.equal(replacementCalls, 0);
           acceptedReplacement = true; await page.getByRole('button', { name: 'Create new temporary password', exact: true }).click();
@@ -90,24 +102,24 @@ try {
           assert.equal(await page.getByLabel('Temporary password', { exact: true }).inputValue(), temporaryPassword);
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
           await page.screenshot({ path: `test-results/client-signin-staff-${engineName}-${access}-${width}.png`, fullPage: true });
-          activeUser = null; await page.goto(`${origin}/account`);
+          await page.waitForLoadState('networkidle'); activeUser = null; await navigate(`${origin}/account`);
           await page.getByLabel('Name or email', { exact: true }).fill(client.email || client.name);
           await page.getByLabel('Password', { exact: true }).fill(temporaryPassword);
           await page.locator('.account-auth form').getByRole('button', { name: 'Sign in', exact: true }).click();
           await page.getByRole('heading', { name: 'Create your password.', exact: true }).waitFor(); assert.equal(lastLogin.identifier, client.email || client.name);
           assert.equal(scheduleReads, 0);
-          await page.goto(`${origin}/learn`); await page.getByRole('heading', { name: 'Create your password.', exact: true }).waitFor();
+          await navigate(`${origin}/learn`); await page.getByRole('heading', { name: 'Create your password.', exact: true }).waitFor();
           await page.getByLabel('New password', { exact: true }).fill(ownPassword); await page.getByLabel('Confirm new password', { exact: true }).fill('Different-long-password-123!');
           await page.getByRole('button', { name: 'Save password & open schedule', exact: true }).click(); await page.getByText('The passwords do not match.', { exact: true }).waitFor();
           await page.getByLabel('Confirm new password', { exact: true }).fill(ownPassword);
           await page.getByRole('button', { name: 'Save password & open schedule', exact: true }).click();
           await page.getByRole('heading', { name: 'New Fixture Client’s schedule.', exact: true }).waitFor(); assert.ok(scheduleReads > 0);
           await page.locator('.saved-calendar button.has-visits').click(); await page.getByRole('heading', { name: /10:00 AM/ }).waitFor();
-          await page.reload(); await page.getByRole('heading', { name: 'New Fixture Client’s schedule.', exact: true }).waitFor();
+          await reload(); await page.getByRole('heading', { name: 'New Fixture Client’s schedule.', exact: true }).waitFor();
           assert.equal(await page.getByRole('heading', { name: 'Create your password.', exact: true }).count(), 0);
-          await page.goto(`${origin}/account`); await page.getByRole('heading', { name: 'Membership dates & renewal', exact: true }).waitFor();
+          await navigate(`${origin}/account`); await page.getByRole('heading', { name: 'Membership dates & renewal', exact: true }).waitFor();
           await page.locator('main').getByRole('link', { name: 'My schedule', exact: true }).waitFor();
-          activeUser = operator; await page.goto(`${origin}/admin?tab=people`); if (access !== 'staff') await page.locator('.owner-person > summary').click({ position: { x: 8, y: 20 } });
+          await page.waitForLoadState('networkidle'); activeUser = operator; await navigate(`${origin}/admin?tab=people`); if (access !== 'staff') await page.locator('.owner-person > summary').click({ position: { x: 8, y: 20 } });
           assert.equal(await page.getByRole('button', { name: 'Create new temporary password', exact: true }).count(), 0);
           assert.deepEqual(errors, []); console.log(`${engineName} ${width} ${access}: create, copy, replace, name/email sign-in, required password setup and saved schedule passed`);
         } catch (error) { await page.screenshot({ path: `test-results/client-signin-failure-${engineName}-${access}-${width}.png`, fullPage: true }); throw error; }
