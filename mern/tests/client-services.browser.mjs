@@ -85,7 +85,8 @@ try {
         await page.emulateMedia({ media: 'print' }); assert.equal(await page.locator('.app-header').isVisible(), false); assert.equal(await page.locator('.schedule-visit').first().isVisible(), true); await page.screenshot({ path: `test-results/schedule-print-${name}-${width}.png`, fullPage: true }); await page.emulateMedia({ media: 'screen' });
         await page.getByLabel('Schedule month').fill('2026-10'); await page.getByRole('button',{name:'Mon, Oct 5, 1 visit',exact:true}).waitFor(); assert.equal(await page.locator('.saved-calendar button.has-visits').count(),1);
         await page.getByLabel('Schedule month').fill('2026-11'); await page.getByText('No saved visits on this day.', { exact: false }).waitFor();
-        if (width < 700) await page.getByRole('button', { name: /Menu/ }).click();
+        const menuToggle = page.getByRole('button', { name: /Menu/ });
+        if (await menuToggle.isVisible()) await menuToggle.click();
         await page.getByRole('button', { name: /Notifications/ }).filter({ hasText: 'Notifications' }).click();
         await page.locator('#notification-inbox').getByText('Read',{exact:true}).waitFor();
         assert.ok(read);assert.equal(await page.locator('.notification-count').count(),0);

@@ -107,9 +107,10 @@ try {
           await nav.getByRole('link', { name: 'Account', exact: true }).press('Escape');
           assert.equal(await page.getByRole('button', { name: 'Menu', exact: true }).getAttribute('aria-expanded'), 'false');
           assert.equal(await page.evaluate(() => document.activeElement?.textContent), 'Menu');
-          for (const width of [320, 1280, 1440]) {
+          for (const width of [320, 1280, 1440, 1601, 1920]) {
             await page.setViewportSize({ width, height: 900 });
             assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `No overflow at ${width}`);
+            if (width >= 1601) assert.ok((await page.locator('.app-header').boundingBox()).height <= 90, 'Expanded desktop navigation stays on one row');
           }
           assert.deepEqual(errors, []);
           console.log(`${engineName} ${access}: visible save/error, retry, menu, task shortcuts, month/back navigation and responsive layouts passed`);
