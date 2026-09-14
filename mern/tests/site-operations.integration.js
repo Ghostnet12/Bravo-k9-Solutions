@@ -32,6 +32,10 @@ test('owner monitoring and server-authoritative booking funnel', { timeout: 1800
       await report().expect(200);
       await call('owner', 'get', '/api/admin/site-health?days=9999').expect(400);
       const ready = await call(null, 'get', '/api/health/ready').expect(200); assert.equal(ready.body.databaseConnected, true);
+      const command = mongoose.connection.db.command;
+      mongoose.connection.db.command = () => { throw new Error('private connection details'); };
+      try { const unavailable = await call(null, 'get', '/api/health/ready').expect(503); assert.equal(unavailable.body.databaseConnected, false); }
+      finally { mongoose.connection.db.command = command; }
     });
     await t.test('strict private schemas, origin and staff/privacy exclusions', async () => {
       await call(null, 'post', '/api/telemetry/visit', { ...visit, email: 'private@example.test' }).expect(400);

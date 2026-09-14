@@ -1,4 +1,4 @@
-import { monitorRequests, ingestVisit, ingestError, monitoringSummary } from './monitoring.js';
+import { monitorRequests, ingestVisit, ingestError, monitoringSummary, pingDatabase } from './monitoring.js';
 import { isPrimaryOwner } from './auth.js';
 import { reserveVisits, releaseVisit } from './reservations.js';
 import express from 'express';
@@ -44,8 +44,11 @@ app.get('/api/admin/site-health', ...session, requireUser, (req, _res, next) => 
   next();
 }, monitoringSummary);
 app.get('/api/health/ready', async (_req, res) => {
-  await connectDb();
-  res.set('Cache-Control', 'no-store').json({ ok: true, databaseConnected: true });
+  res.set('Cache-Control', 'no-store');
+  try {
+    await connectDb(); await pingDatabase();
+    res.json({ ok: true, databaseConnected: true });
+  } catch { res.status(503).json({ ok: false, databaseConnected: false }); }
 });
 
 app.get('/api/client-schedule', ...session, requireUser, async (req, res) => {

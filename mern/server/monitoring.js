@@ -10,6 +10,9 @@ const tokenInput = z.string().uuid();
 const staff = user => ['staff', 'owner'].includes(user?.role);
 const optedOut = req => req.get('DNT') === '1' || req.get('Sec-GPC') === '1';
 const hash = value => createHash('sha256').update(value).digest('hex');
+export async function pingDatabase() {
+  await mongoose.connection.db.command({ ping: 1 }, { timeoutMS: 5000 });
+}
 export async function recordError({ source, area, kind, status = 0, requestId = null }) {
   const now = new Date(), day = now.toISOString().slice(0, 10);
   const safe = { source: source === 'server' ? 'server' : 'browser', area: AREAS.includes(area) ? area : 'other', kind: CLIENT_ERRORS.includes(kind) ? kind : 'server_error', status: Number.isInteger(status) && status >= 500 && status <= 599 ? status : 0 };
