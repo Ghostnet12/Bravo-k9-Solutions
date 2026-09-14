@@ -93,7 +93,7 @@ try {
           const note=editor.getByLabel('Note to the client',{exact:true});
           assert.equal(await note.getAttribute('required'),null);
           if(roleName==='admin')await note.fill('Rain day');
-          await editor.locator('.calendar-credit-action').filter({has:checkbox}).scrollIntoViewIfNeeded();
+          await checkbox.scrollIntoViewIfNeeded();
           assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
           await page.screenshot({path:`test-results/simple-credit-form-${engineName}-${roleName}.png`});
           await editor.getByRole('button',{name:'Save',exact:true}).click();
