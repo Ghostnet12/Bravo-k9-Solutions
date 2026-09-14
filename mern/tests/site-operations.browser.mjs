@@ -51,6 +51,9 @@ try {
         await page.goto(`${origin}/`);
         await page.getByRole('button', { name: 'Menu', exact: true }).waitFor();
         await authReady;
+        // Let initial media/notification requests finish before this test forces
+        // a full document navigation; WebKit cancels intercepted requests on unload.
+        await page.waitForLoadState('networkidle');
         if (['visitor', 'member'].includes(access)) {
           await page.waitForFunction(() => !!sessionStorage.getItem('bravo-visit-v1'));
           const first = await page.evaluate(() => JSON.parse(sessionStorage.getItem('bravo-visit-v1')).token);
@@ -80,7 +83,8 @@ try {
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
           await page.screenshot({ path: `test-results/site-health-${engineName}.png`, fullPage: true });
         }
-        assert.deepEqual(jsErrors, []);
+        await page.waitForLoadState('networkidle');
+        assert.deepEqual(jsErrors, [], `${engineName} ${access}`);
         await context.close();
       }
     } finally { await browser.close(); }
