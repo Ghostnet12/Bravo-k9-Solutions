@@ -1,3 +1,5 @@
+import { monitorRequests, ingestVisit, ingestError, monitoringSummary } from './monitoring.js';
+import { isPrimaryOwner } from './auth.js';
 import { reserveVisits, releaseVisit } from './reservations.js';
 import express from 'express';
 import { bookingTrainerIds, trainerChoice, scheduledTrainerLabel } from '../shared/trainers.js';
@@ -25,6 +27,7 @@ import { trainerClients, acceptClient } from './trainer-clients.js';
 import { stripeClient, processStripeEvent } from './payments.js';
 
 const app = express();
+app.use(monitorRequests);
 app.disable('x-powered-by'); app.set('trust proxy', process.env.VERCEL ? 1 : false);
 const session = [helmet(), (_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); }, cookieParser(), async (_req, _res, next) => { await connectDb(); next(); }, identify, rateLimit('api', 240, 60000)];
 const write = [sameOrigin, express.json({ limit: '8kb' })];
@@ -32,6 +35,18 @@ const id = z.string().regex(/^[a-f\d]{24}$/i);
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const staff = user => ['staff', 'owner'].includes(user.role);
 const audience = user => staff(user) ? { $or: [{ staff: true }, { staff: false, userId: user._id }] } : { staff: false, userId: user._id };
+
+// Bounded, same-origin telemetry; aggregate reports require the actual Owner.
+app.post('/api/telemetry/visit', ...session, ...write, rateLimit('telemetry-visit', 30, 60000), ingestVisit);
+app.post('/api/telemetry/error', ...session, ...write, rateLimit('telemetry-error', 10, 60000), ingestError);
+app.get('/api/admin/site-health', ...session, requireUser, (req, _res, next) => {
+  if (req.user.role !== 'owner' || !isPrimaryOwner(req.user)) throw fail('Only the Owner can view website monitoring.', 403);
+  next();
+}, monitoringSummary);
+app.get('/api/health/ready', async (_req, res) => {
+  await connectDb();
+  res.set('Cache-Control', 'no-store').json({ ok: true, databaseConnected: true });
+});
 
 app.get('/api/client-schedule', ...session, requireUser, async (req, res) => {
   const input = z.object({ client: id.optional(), month: z.string().regex(/^\d{4}-\d{2}$/), format: z.enum(['pdf']).optional() }).parse(req.query);

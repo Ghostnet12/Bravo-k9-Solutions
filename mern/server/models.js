@@ -27,6 +27,7 @@ export const RateBucket = model('BravoRateBucket', new Schema({ _id: String, cou
 const visitSchema = new Schema({ date: String, time: String, service: String }, { _id: false });
 const bookingSchema = new Schema({
   userId: { type: id, required: true, index: true }, requestKey: String,
+  analyticsSession: { type: String, select: false, index: true, sparse: true },
   staffId: { type: id, default: null, index: true }, requestedStaffId: { type: id, default: null, index: true }, createdBy: id,
   staffIds: [{ type: id, index: true }], requestedStaffIds: [{ type: id, index: true }], trainerAcceptedIds: [id],
   trainerAcceptanceRequired: { type: Boolean, default: false }, trainerAcceptedAt: Date, trainerAcceptedBy: id,
@@ -73,4 +74,6 @@ export const MediaUpload = model('BravoMediaUpload', new Schema({ _id: String, l
 const mediaChunkSchema = new Schema({ uploadId: { type: String, index: true }, index: Number, size: Number, data: Buffer, expiresAt: { type: Date, expires: 0 } }, { timestamps: true });
 mediaChunkSchema.index({ uploadId: 1, index: 1 }, { unique: true });
 export const MediaChunk = model('BravoMediaChunk', mediaChunkSchema);
-export const ALL_MODELS = [MembershipCredit, MemberAccess, Notification, NotificationRead, PasswordReset, TrainerSchedule, ChatReset, User, Session, RateBucket, Booking, Slot, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Subscription, StripeEvent, Lesson, BillingLock, MediaUpload, MediaChunk];
+export const FunnelVisit = model('BravoFunnelVisit', new Schema({ _id: String, channel: String, started: { type: Boolean, default: false }, firstSeen: { type: Date, index: true }, expiresAt: { type: Date, expires: 0 } }, { bufferCommands: false }));
+export const SiteError = model('BravoSiteError', new Schema({ _id: String, source: String, area: String, kind: String, status: Number, count: Number, firstSeen: Date, lastSeen: { type: Date, index: true }, requestId: String, expiresAt: { type: Date, expires: 0 } }, { bufferCommands: false }));
+export const ALL_MODELS = [FunnelVisit, SiteError, MembershipCredit, MemberAccess, Notification, NotificationRead, PasswordReset, TrainerSchedule, ChatReset, User, Session, RateBucket, Booking, Slot, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Subscription, StripeEvent, Lesson, BillingLock, MediaUpload, MediaChunk];

@@ -1,3 +1,4 @@
+import { bookingTrackingHeaders } from './telemetry';
 import { trainerChoice, JOINT_TRAINER_ID } from '../../shared/trainers';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
@@ -136,7 +137,7 @@ export default function BookingPage() {
       if (!editId && ids.includes('training') && !trainerId) throw new Error('Choose your trainer before saving this training request.');
       if (!editId) await api('/quote', { method: 'POST', body: { serviceIds: ids, visits, dogCount } });
       if (editId) { await api(`/bookings/${editId}/visits`, { method: 'PATCH', body: { visits } }); setNotice('Your updated schedule is saved for Bravo to review.'); }
-      else { const { booking } = await api('/bookings', { method: 'POST', body: { requestKey, serviceIds: ids, visits, trainingFocus: ids.includes('training') ? trainingFocus : undefined, preferredTrainerId: ids.includes('training') ? trainerId : undefined, dogCount, ...form } }); setSaved(booking); setBookingDraft(null); setNotice(booking.status === 'waitlisted' ? `You joined ${chosenTrainer?.name || 'this trainer'}’s waiting list. Your preferred dates were saved, no calendar time was reserved, and no card was charged.` : 'Request saved. Bravo will confirm the visit details. No card has been charged.'); }
+      else { const { booking } = await api('/bookings', { method: 'POST', headers: bookingTrackingHeaders(), body: { requestKey, serviceIds: ids, visits, trainingFocus: ids.includes('training') ? trainingFocus : undefined, preferredTrainerId: ids.includes('training') ? trainerId : undefined, dogCount, ...form } }); setSaved(booking); setBookingDraft(null); setNotice(booking.status === 'waitlisted' ? `You joined ${chosenTrainer?.name || 'this trainer'}’s waiting list. Your preferred dates were saved, no calendar time was reserved, and no card was charged.` : 'Request saved. Bravo will confirm the visit details. No card has been charged.'); }
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
   async function pay() { if (!saved || covered || waitlisted || !config?.paymentsReady) return; setBusy(true); setError(''); try { const result = await api(`/bookings/${saved._id}/checkout`, { method: 'POST', body: {} }); window.location.assign(result.url); } catch (e) { setError(e.message); setBusy(false); } }

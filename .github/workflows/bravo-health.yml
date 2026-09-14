@@ -1,0 +1,50 @@
+name: Bravo live website health
+on:
+  schedule:
+    - cron: '17,47 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [bravo-mern]
+    paths: ['.github/workflows/bravo-health.yml']
+permissions:
+  contents: read
+concurrency:
+  group: bravo-live-health
+  cancel-in-progress: false
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check public website, connected database, and sitemap
+        shell: bash
+        run: |
+          python - <<'PY'
+          import urllib.request, xml.etree.ElementTree as ET, json, time
+          checks = [('/', 'page'), ('/api/health/ready', 'database'), ('/sitemap.xml', 'sitemap')]
+          failures = []
+          for path, kind in checks:
+              passed = False
+              for attempt in range(2):
+                  try:
+                      req = urllib.request.Request('https://bravounleashed.com' + path, headers={'User-Agent': 'Bravo-Health-Check/1.0'})
+                      with urllib.request.urlopen(req, timeout=20) as response:
+                          data = response.read(1500000)
+                          assert response.status == 200
+                          assert response.url.startswith('https://bravounleashed.com/')
+                          if kind == 'database':
+                              result = json.loads(data)
+                              assert result.get('ok') is True and result.get('databaseConnected') is True
+                          elif kind == 'sitemap':
+                              root = ET.fromstring(data)
+                              assert root.tag == '{http://www.sitemaps.org/schemas/sitemap/0.9}urlset' and len(root) > 0
+                          else:
+                              assert b'Bravo' in data and b'<html' in data.lower()
+                      passed = True
+                      break
+                  except Exception:
+                      if attempt == 0: time.sleep(5)
+              print(kind + ': ' + ('passed' if passed else 'FAILED'))
+              if not passed: failures.append(kind)
+          if failures: raise SystemExit('Bravo health check failed: ' + ', '.join(failures) + '. Review Vercel logs. No customer data is printed by this check.')
+          PY

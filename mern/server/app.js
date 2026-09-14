@@ -1,3 +1,4 @@
+import { attributeBooking } from './monitoring.js';
 import { reserveVisits, assertVisitsFree } from './reservations.js';
 import express from 'express';
 import { trainerSelectionInput, resolveTrainerIds } from './trainer-selection.js';
@@ -50,7 +51,7 @@ app.get('/api/config', async (_req, res) => {
   const paymentsReady = connected && !!stripeClient();
   const paymentsMode = paymentsReady ? stripeMode() : 'paused';
   const services = connected ? await effectiveServices({ includeDisabled: true }) : SERVICES.map(service => ({ ...service, enabled: true }));
-  res.json({ connected, connectionIssue, paymentsReady, paymentsPaused: !paymentsReady, paymentsMode, workspaceVersion: 'owner-staff-3', schedule, timezone: 'America/Chicago', services });
+  res.json({ monitoringEnabled: true, connected, connectionIssue, paymentsReady, paymentsPaused: !paymentsReady, paymentsMode, workspaceVersion: 'owner-staff-3', schedule, timezone: 'America/Chicago', services });
 });
 app.get('/api/lessons', async (_req, res) => {
   if (!process.env.MONGODB_URI) return res.json({ lessons: LESSON_PREVIEWS });
@@ -123,7 +124,11 @@ app.get('/api/trainers', requireUser, async (_req, res) => {
   const trainers = await Promise.all(people.map(async person => ({ id: String(person._id), name: person.name, title: person.title || 'Bravo Trainer', ...(await trainerCapacity(person._id)), limit: TRAINER_DOG_LIMIT })));
   res.json({ trainers: trainerOptions(trainers) });
 });
-app.post('/api/bookings', requireUser, rateLimit('booking', req => req.user?.role === 'owner' ? 50 : 10, 3600000), async (req, res) => res.status(201).json({ booking: await createBooking(req.user._id, req.body) }));
+app.post('/api/bookings', requireUser, rateLimit('booking', req => req.user?.role === 'owner' ? 50 : 10, 3600000), async (req, res) => {
+  const booking = await createBooking(req.user._id, req.body);
+  await attributeBooking(req, booking);
+  res.status(201).json({ booking });
+});
 async function ownedBooking(req) {
   if (!/^[a-f\d]{24}$/i.test(req.params.id)) throw Object.assign(new Error('Booking not found.'), { status: 404 });
   const booking = await Booking.findOne({ _id: req.params.id, ...(['staff', 'owner'].includes(req.user.role) ? {} : { userId: req.user._id }) });

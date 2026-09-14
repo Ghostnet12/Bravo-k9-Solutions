@@ -1,7 +1,7 @@
 name: Client schedules and manual memberships
 on:
   push:
-    branches: [bravo-mern, client-services-20260912, fix/schedule-print-20260912, fix/weekend-sessions-20260913, fix/calendar-batch-20260913, fix/trainer-acceptance-20260913, fix/make-member-training-20260913, fix/existing-member-recovery-20260913, fix/trainer-time-availability-20260913, fix/client-trash-icon-20260913, fix/simple-client-membership-20260913, fix/owner-admin-removal-20260913, fix/client-temporary-login-20260913, fix/simple-scheduling-menu-20260913, fix/clear-schedule-navigation-20260913, fix/optional-schedule-notes-20260913, fix/usability-shortcuts-20260913, feat/bravo-seo-20260913, feat/membership-day-credits-20260913, fix/credited-calendar-days-20260913, polish/easier-navigation-20260913]
+    branches: [feat/site-operations-20260914, bravo-mern, client-services-20260912, fix/schedule-print-20260912, fix/weekend-sessions-20260913, fix/calendar-batch-20260913, fix/trainer-acceptance-20260913, fix/make-member-training-20260913, fix/existing-member-recovery-20260913, fix/trainer-time-availability-20260913, fix/client-trash-icon-20260913, fix/simple-client-membership-20260913, fix/owner-admin-removal-20260913, fix/client-temporary-login-20260913, fix/simple-scheduling-menu-20260913, fix/clear-schedule-navigation-20260913, fix/optional-schedule-notes-20260913, fix/usability-shortcuts-20260913, feat/bravo-seo-20260913, feat/membership-day-credits-20260913, fix/credited-calendar-days-20260913, polish/easier-navigation-20260913]
     paths: ['mern/**', '.github/workflows/client-services.yml']
 permissions:
   contents: read
@@ -23,9 +23,10 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
-      - run: node --test --test-concurrency=1 tests/client-services.integration.js tests/member-access.integration.js tests/trainer-schedules.integration.js tests/membership-trainers.integration.js tests/make-member-training.integration.js tests/trainer-reservations.integration.js tests/client-removal.integration.js tests/simple-client-membership.integration.js tests/administrator-removal.integration.js tests/client-login.integration.js tests/day-credits.integration.js
+      - run: node --test --test-concurrency=1 tests/client-services.integration.js tests/member-access.integration.js tests/trainer-schedules.integration.js tests/membership-trainers.integration.js tests/make-member-training.integration.js tests/trainer-reservations.integration.js tests/client-removal.integration.js tests/simple-client-membership.integration.js tests/administrator-removal.integration.js tests/client-login.integration.js tests/day-credits.integration.js tests/site-operations.integration.js
       - run: npm install --no-save --package-lock=false playwright@1.55.1
       - run: npx playwright install --with-deps chromium webkit
+      - run: node tests/site-operations.browser.mjs
       - run: node tests/usability-polish.browser.mjs
       - run: node tests/credited-calendar.browser.mjs
       - run: node tests/home-hero.browser.mjs

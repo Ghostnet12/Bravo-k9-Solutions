@@ -15,6 +15,7 @@
     "staff": "node --env-file-if-exists=.env scripts/staff.js"
   },
   "dependencies": {
+    "@vercel/functions": "^3.9.7",
     "cookie-parser": "^1.4.7",
     "express": "^5.1.0",
     "helmet": "^8.1.0",

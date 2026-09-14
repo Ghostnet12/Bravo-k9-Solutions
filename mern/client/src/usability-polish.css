@@ -61,3 +61,16 @@
 @media print{.action-feedback,.page-return-row,.schedule-shortcuts{display:none!important}}
 
 @media(min-width:1601px){.app-header .header-inner{width:calc(100% - 64px)}}
+
+/* Owner reporting stays readable on the same phone layouts as the desk. */
+.site-health-controls { display:flex; flex-wrap:wrap; align-items:end; gap:1rem; margin-bottom:1rem; }
+.site-health-controls label { min-width:12rem; }
+.site-health-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1rem; }
+.site-health-metrics .panel { display:flex; flex-direction:column; gap:.4rem; margin:0; }
+.site-health-metrics strong { font-size:2rem; color:var(--gold,#d2b576); }
+.site-health-table { overflow-x:auto; }
+.site-health-table table { width:100%; border-collapse:collapse; }
+.site-health-table th,.site-health-table td { padding:.75rem .4rem; text-align:left; border-bottom:1px solid #494638; }
+.site-error-list { padding:0; list-style:none; }
+.site-error-list li { display:grid; gap:.3rem; padding:1rem 0; border-bottom:1px solid #494638; overflow-wrap:anywhere; }
+@media (max-width:700px) { .site-health-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } .site-health-metrics .panel { padding:1rem; } }
