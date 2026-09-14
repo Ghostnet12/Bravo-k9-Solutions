@@ -120,6 +120,8 @@ try {
         role = width === 320 ? 'staff' : 'owner'; saved=false;
         await page.goto(`${origin}/schedule?month=2026-09&client=cccccccccccccccccccccccc`);
         await page.getByRole('button',{name:'Add or Cancel Date',exact:true}).click();
+        const weekendToggle=editor.getByRole('checkbox',{name:'Open the selected weekend times when saving',exact:true});
+        assert.equal(await weekendToggle.isChecked(),false);await weekendToggle.check();
         await editor.getByRole('button',{name:/Sat, Sep 19,/}).click();
         await editor.getByRole('button',{name:/Sun, Sep 20,/}).click();
         await editor.getByRole('button',{name:'10:00 AM',exact:true}).click();

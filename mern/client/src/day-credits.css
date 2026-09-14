@@ -15,3 +15,7 @@
 .credited-calendar-summary p { margin: .5rem 0; }
 .credit-key { background: #3b2f17; border: 3px solid #e7c57a; box-sizing: border-box; }
 @media print { .credited-calendar-summary { display: none; } }
+
+.calendar-credit-action fieldset { border: 0; padding: 0; min-width: 0; }
+.calendar-credit-action label:not(.check-label) { display: grid; gap: .5rem; margin-block: 1rem; }
+.calendar-credit-action input:not([type=checkbox]), .calendar-credit-action select, .calendar-credit-action textarea { width: 100%; min-width: 0; box-sizing: border-box; }

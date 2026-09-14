@@ -56,6 +56,9 @@ const subscriptionSchema = new Schema({ userId: { type: id, index: true }, strip
 export const Subscription = model('BravoSubscription', subscriptionSchema);
 export const MembershipCredit = model('BravoMembershipCredit', new Schema({
   _id: String, userId: { type: id, required: true, index: true }, termId: String, actorId: id, days: Number, reason: String, note: String, missedDate: String, beforeEnd: Date, afterEnd: Date,
+  creditDates: { type: [String], default: undefined }, missedDates: { type: [String], default: undefined },
+  revision: { type: Number, default: 0 }, includeWeekends: Boolean,
+  moves: [new Schema({ requestKey: String, from: String, to: String, note: String, actorId: id, createdAt: Date }, { _id: false })],
   cancelled: [new Schema({ bookingId: id, date: String, time: String }, { _id: false })],
 }, { timestamps: true }).index({ userId: 1, missedDate: 1 }, { unique: true, partialFilterExpression: { missedDate: { $type: 'string' } } }));
 export const Notification = model('BravoNotification', new Schema({ _id: String, userId: id, staff: Boolean, body: String, href: String, createdAt: { type: Date, default: Date.now } }));

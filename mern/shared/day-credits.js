@@ -42,14 +42,31 @@ export function creditedCalendarDates(terms = [], credits = [], termId) {
   for (const credit of credits) {
     const term = terms.find(item => item.stripeId === credit.termId && (!termId || item.stripeId === termId));
     if (!term || !isTrainingTerm(term) || !['active', 'trialing', 'canceled'].includes(term.status)) continue;
-    const first = DateTime.fromISO(lastCoveredDay(credit.beforeEnd) || '', { zone: MEMBERSHIP_ZONE }).plus({ days: 1 });
-    const end = DateTime.fromISO(lastCoveredDay(credit.afterEnd) || '', { zone: MEMBERSHIP_ZONE });
     const termEnd = lastCoveredDay(term.validUntil), termStart = DateTime.fromJSDate(new Date(term.validFrom), { zone: MEMBERSHIP_ZONE }).toISODate();
-    if (!first.isValid || !end.isValid || !termEnd || !termStart) continue;
-    for (let date = first, count = 0; date <= end && count < 31; date = date.plus({ days: 1 }), count++) {
-      const key = date.toISODate();
-      if (key >= termStart && key <= termEnd) dates.add(key);
-    }
+    if (!termEnd || !termStart) continue;
+    for (const key of creditPlacementDates(credit)) if (key >= termStart && key <= termEnd) dates.add(key);
   }
   return [...dates].sort();
+}
+
+// Explicit placements allow a credit to move without changing its original audit dates.
+export function creditPlacementDates(credit) {
+  if (Array.isArray(credit.creditDates)) return [...credit.creditDates].sort();
+  const first = DateTime.fromISO(lastCoveredDay(credit.beforeEnd) || '', { zone: MEMBERSHIP_ZONE }).plus({ days: 1 });
+  const last = lastCoveredDay(credit.afterEnd);
+  if (!first.isValid || !last) return [];
+  const dates = [];
+  for (let day = first; day.toISODate() <= last && dates.length < 366; day = day.plus({ days: 1 })) dates.push(day.toISODate());
+  return dates;
+}
+export function planCreditDays(end, count, includeWeekends = false) {
+  if (!Number.isInteger(count) || count < 1 || count > 366) throw new Error('Choose 1 to 366 days per save. You can add more afterwards.');
+  let day = DateTime.fromISO(lastCoveredDay(end) || '', { zone: MEMBERSHIP_ZONE });
+  if (!day.isValid) throw new Error('A valid membership end date is required.');
+  const dates = [];
+  while (dates.length < count) {
+    day = day.plus({ days: 1 });
+    if (includeWeekends || day.weekday <= 5) dates.push(day.toISODate());
+  }
+  return { dates, afterEnd: day.plus({ days: 1 }).startOf('day').toJSDate() };
 }

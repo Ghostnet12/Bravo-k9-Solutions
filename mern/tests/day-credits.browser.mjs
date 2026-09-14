@@ -47,9 +47,9 @@ try {
             creditRequests.push(savedBody);
             if(roleName==='staff'&&creditRequests.length===1)return route.fulfill({status:503,json:{error:'Could not save. Try again.'}});
             const afterEnd = creditedEnd(term.validUntil, savedBody.days).toISOString();
-            credits = [{ _id: 'credit-fixture', days: savedBody.days, termId: term.stripeId, reason: savedBody.reason||'Other', note: savedBody.note, missedDate: savedBody.missedDate, beforeEnd: term.validUntil, afterEnd, createdAt: now.toISO() }];
+            credits = [{ _id: 'credit-fixture', days: savedBody.days, termId: term.stripeId, reason: savedBody.reason||'Other', note: savedBody.note, missedDate: savedBody.missedDates?.[0], missedDates:savedBody.missedDates, beforeEnd: term.validUntil, afterEnd, createdAt: now.toISO() }];
             term = { ...term, validUntil: afterEnd, creditedDays: savedBody.days };
-            booking = { ...booking, termEndsAt: afterEnd, visits: booking.visits.filter(v=>v.date!==savedBody.missedDate), cancelledVisits: booking.visits.filter(v=>v.date===savedBody.missedDate), updatedAt: now.plus({ seconds: 1 }).toUTC().toISO() };
+            booking = { ...booking, termEndsAt: afterEnd, visits: booking.visits.filter(v=>v.date!==savedBody.missedDates?.[0]), cancelledVisits: booking.visits.filter(v=>v.date===savedBody.missedDates?.[0]), updatedAt: now.plus({ seconds: 1 }).toUTC().toISO() };
             json = { ok: true, credit:{afterEnd}, message: '1 day credited. The membership end date and client schedule are updated. No charge was made.' };
           } else if (path === '/api/client-schedule/changes') {
             changesBody = route.request().postDataJSON(); booking.visits.push(...changesBody.additions.map(visit => ({ ...visit, service: 'training' }))); json = { ok: true, message: 'Schedule saved.' };
@@ -79,7 +79,7 @@ try {
           assert.equal(await checkbox.isEnabled(),true);
           if(roleName==='admin'){
             await grid.getByRole('button',{name:dateName(otherDate)}).click();
-            assert.equal(await checkbox.isDisabled(),true);
+            assert.equal(await editor.getByRole('checkbox',{name:'Give credit for selected days',exact:true}).isEnabled(),true);
             await grid.getByRole('button',{name:dateName(otherDate)}).click();
             await editor.getByRole('button',{name:'11:00 AM',exact:true}).click();
             assert.equal(await checkbox.isDisabled(),true);
@@ -105,7 +105,7 @@ try {
           }
           await page.getByText('7 days remaining',{exact:true}).waitFor();
           assert.equal(savedBody.days,1);assert.equal(savedBody.note,roleName==='admin'?'Rain day':'');
-          assert.equal(savedBody.missedDate,missed);assert.equal(savedBody.termId,term.stripeId);
+          assert.deepEqual(savedBody.missedDates,[missed]);assert.equal(savedBody.includeWeekends,false);assert.equal(savedBody.termId,term.stripeId);
           assert.match(savedBody.requestKey,/^[a-f\d-]{36}$/);assert.equal(changesBody,undefined);
           assert.equal(booking.cancelledVisits.length,2);assert.equal(booking.visits.length,1);
           assert.equal(booking.visits[0].date,otherDate);
@@ -125,7 +125,7 @@ try {
           await page.getByRole('button',{name:'Add or Cancel Date',exact:true}).click();
           await page.getByText('Checking available times…').waitFor({state:'hidden'});
           await grid.getByRole('button',{name:dateName(missed)}).click();
-          await editor.getByText('This day has already been credited.',{exact:true}).waitFor();
+          await editor.getByText('A selected day has already been credited.',{exact:true}).waitFor();
           assert.equal(await checkbox.isDisabled(),true);
           // Clients see the same Credit day and can book it, but cannot issue credits.
           await page.waitForLoadState('networkidle');

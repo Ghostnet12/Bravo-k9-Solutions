@@ -68,3 +68,19 @@ test('calendar credit resolves the selected request and date without guessing an
   assert.equal(termForDayCredit([term,other], { ...booking, _id: 'exact-period' }, '2026-09-14'), null);
   assert.equal(termForDayCredit([term], { ...booking, _id: 'different-period', termEndsAt: '2026-09-20' }, '2026-09-14'), null);
 });
+
+test('new credit placement skips weekends by default and supports more than one day', async () => {
+  const { planCreditDays, creditPlacementDates, creditedCalendarDates }=await import('../shared/day-credits.js');
+  const end='2026-09-19T05:00:00Z'; // last covered day Friday
+  assert.deepEqual(planCreditDays(end,3).dates,['2026-09-21','2026-09-22','2026-09-23']);
+  assert.deepEqual(planCreditDays(end,3,true).dates,['2026-09-19','2026-09-20','2026-09-21']);
+  assert.equal(planCreditDays(end,3).afterEnd.toISOString(),'2026-09-24T05:00:00.000Z');
+  assert.equal(planCreditDays(end,60).dates.length,60);
+  assert.deepEqual(planCreditDays('2026-10-31T05:00:00Z',2).dates,['2026-11-02','2026-11-03']);
+  assert.equal(planCreditDays('2026-10-31T05:00:00Z',2).afterEnd.toISOString(),'2026-11-04T06:00:00.000Z');
+  const term={stripeId:'term',serviceIds:['training'],status:'active',validFrom:'2026-09-01T05:00:00Z',validUntil:'2026-10-02T05:00:00Z'};
+  const credit={termId:'term',beforeEnd:end,afterEnd:'2026-09-22T05:00:00Z',creditDates:['2026-10-01']};
+  assert.deepEqual(creditPlacementDates(credit),['2026-10-01']);
+  assert.deepEqual(creditedCalendarDates([term],[credit]),['2026-10-01']);
+  assert.deepEqual(creditPlacementDates({beforeEnd:'2026-09-20T05:00:00Z',afterEnd:'2026-09-21T05:00:00Z'}),['2026-09-20']);
+});

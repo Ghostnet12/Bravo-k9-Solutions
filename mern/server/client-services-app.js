@@ -21,7 +21,7 @@ import { monthTerm } from '../shared/membership-terms.js';
 import { availability, dateTime, HOURS } from './scheduling.js';
 import { checkTrainerVisits } from './trainer-schedules.js';
 import { openWeekend, addTrainingVisit } from './weekend-sessions.js';
-import { creditMembershipDays } from './day-credits.js';
+import { creditMembershipDays, moveMembershipCredit } from './day-credits.js';
 import { saveScheduleChanges } from './schedule-changes.js';
 import { trainerClients, acceptClient } from './trainer-clients.js';
 import { stripeClient, processStripeEvent } from './payments.js';
@@ -66,7 +66,7 @@ app.get('/api/client-schedule', ...session, requireUser, async (req, res) => {
   const paidTerms = terms.filter(t => t.source !== 'grant' && t.validFrom).sort((a,b) => a.validFrom - b.validFrom);
   const firstPayment = await Booking.findOne({ userId: client, paidAt: { $exists: true } }).sort({ paidAt: 1 }).select('paidAt').lean();
   const schedule = { firstPaidAt: person.firstPaidAt || firstPayment?.paidAt || paidTerms[0]?.validFrom || null, client: { id: client, name: person.name }, month: input.month, visits, terms, firstTrainingDay: first?.visits.map(visit => visit.date).sort()[0] || null };
-  schedule.dayCredits = await MembershipCredit.find({ userId: client }).select('termId days reason note missedDate beforeEnd afterEnd createdAt').sort({ createdAt: -1 }).limit(100).lean();
+  schedule.dayCredits = await MembershipCredit.find({ userId: client }).select('termId days reason note missedDate missedDates creditDates revision beforeEnd afterEnd createdAt').sort({ createdAt: -1 }).lean();
   if (input.format === 'pdf') {
     const { schedulePdf } = await import('./schedule-pdf.js');
     const bytes = await schedulePdf(schedule);
@@ -81,6 +81,7 @@ app.post('/api/admin/bookings/:id/accept-client', ...session, requireStaff, ...w
 app.post('/api/admin/weekend-sessions', ...session, requireStaff, ...write, openWeekend);
 app.post('/api/admin/training-visits', ...session, requireStaff, ...write, addTrainingVisit);
 app.post('/api/client-schedule/credits', ...session, requireUser, requireStaff, ...write, rateLimit('membership-credit', 80, 3600000), creditMembershipDays);
+app.post('/api/client-schedule/credits/move', ...session, requireUser, requireStaff, ...write, rateLimit('membership-credit', 80, 3600000), moveMembershipCredit);
 app.post('/api/client-schedule/changes', ...session, requireUser, sameOrigin, express.json({limit:'20kb'}), rateLimit('visit-change',30,3600000), saveScheduleChanges);
 app.post('/api/client-schedule/visit', ...session, requireUser, ...write, rateLimit('visit-change', 30, 3600000), async (req, res) => {
   const visit = z.object({ date: z.string(), time: z.enum(HOURS), service: z.string() }).strict();

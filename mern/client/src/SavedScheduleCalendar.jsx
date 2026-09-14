@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useBravo } from './context';
 import ScheduleChanges from './ScheduleChanges';
+import CreditActions from './CreditActions';
 import { CreditHistory } from './MembershipDayCredits';
 import { DateTime } from 'luxon';
 import { api } from './api';
@@ -10,6 +11,7 @@ import { creditedCalendarDates } from '../../shared/day-credits';
 import { trainingFocusName } from '../../shared/catalog';
 
 export default function SavedScheduleCalendar({ data, month, reload, onMonth, startEditing=false, focusDate, onCloseEditor }) {
+  const [creditBusy,setCreditBusy]=useState(false);
   const [editData,setEditData]=useState(null), [openingData]=useState(data);
   // Query navigation can settle after the saved-data refresh. Keep entry from
   // the staff shortcut controlled by the query so removing it closes the editor.
@@ -20,15 +22,16 @@ export default function SavedScheduleCalendar({ data, month, reload, onMonth, st
   const credited = new Set(creditDates);
   const start = DateTime.fromISO(`${month}-01`), padding = start.weekday % 7;
   if(activeEditData) return <ScheduleChanges data={activeEditData} initialMonth={month} onSaved={reload} onClose={()=>{setEditData(null);onCloseEditor?.()}}/>;
-  return <><button type="button" className="button schedule-edit-toggle" onClick={()=>setEditData(data)}>Add or Cancel Date</button><p className="calendar-legend"><span className="calendar-key"/> {trainingDays.size} training days saved this month. Filled gold highlights saved visits; the outline marks the day you are viewing.</p><CreditedCalendarDays dates={creditDates} month={month} onMonth={onMonth}/><div className="saved-calendar" aria-label="Saved monthly schedule">
+  return <><button type="button" className="button schedule-edit-toggle" disabled={creditBusy} onClick={()=>setEditData(data)}>Add or Cancel Date</button><p className="calendar-legend"><span className="calendar-key"/> {trainingDays.size} training days saved this month. Filled gold highlights saved visits; the outline marks the day you are viewing.</p><CreditedCalendarDays dates={creditDates} month={month} onMonth={onMonth}/><div className="saved-calendar" aria-label="Saved monthly schedule">
     {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => <span className="calendar-weekday" key={d}>{d}</span>)}
     {Array.from({ length: padding }, (_,i) => <span key={`empty-${i}`}/>)}
     {Array.from({ length: start.daysInMonth }, (_,i) => {
       const date = start.plus({days:i}).toISODate(), visits = data.visits.filter(v => v.date === date), active = visits.filter(v => v.status !== 'cancelled');
-      return <button type="button" key={date} aria-pressed={day === date} aria-label={`${formatDate(date)}, ${active.length} visit${active.length === 1 ? '' : 's'}${visits.length > active.length ? ', cancelled visits' : ''}${credited.has(date) ? ', credited membership day' : ''}`} className={`${active.length ? 'has-visits' : ''} ${credited.has(date) ? 'credited-day' : ''}`} onClick={() => setDay(date)}><strong>{i+1}</strong>{visits.length > 0 && <small>{active.length || '×'}<span className="sr-only"> visits</span></small>}{credited.has(date) && <small className="credit-day-label">Credit</small>}</button>;
+      return <button type="button" key={date} disabled={creditBusy} aria-pressed={day === date} aria-label={`${formatDate(date)}, ${active.length} visit${active.length === 1 ? '' : 's'}${visits.length > active.length ? ', cancelled visits' : ''}${credited.has(date) ? ', credited membership day' : ''}`} className={`${active.length ? 'has-visits' : ''} ${credited.has(date) ? 'credited-day' : ''}`} onClick={() => setDay(date)}><strong>{i+1}</strong>{visits.length > 0 && <small>{active.length || '×'}<span className="sr-only"> visits</span></small>}{credited.has(date) && <small className="credit-day-label">Credit</small>}</button>;
     })}
   </div><p className="calendar-day-heading" role="status">{formatDate(day)} · Select a highlighted day to see its visits.</p>
   {!data.visits.some(v => v.date === day) && <p className="calendar-day-heading">{credited.has(day) ? 'Credited membership day. No visit booked yet—choose Add or Cancel Date to select a trainer’s available time.' : 'No saved visits on this day.'}</p>}
+  <CreditActions key={`move-${day}`} data={data} date={day} onSaved={reload} disabled={creditBusy} onBusyChange={setCreditBusy}/><CreditActions data={data} onSaved={reload} disabled={creditBusy} onBusyChange={setCreditBusy}/>
   <CreditHistory credits={data.dayCredits}/><div className="schedule-list">{data.visits.map((visit,i) => <article hidden={visit.date !== day} className="schedule-visit" key={`${visit.bookingId}-${i}`}>
     <h3>{formatDate(visit.date)} · {formatTime(visit.time)}</h3><p>{visit.service === 'training' ? trainingFocusName(visit.trainingFocus) : visit.service} · {visit.dogName}</p><p>Trainer: {visit.trainer}</p><p><strong>{visit.status.toUpperCase()}</strong> · {visit.paymentStatus === 'covered' ? 'Membership covered' : visit.paymentStatus} · #{visit.bookingId.slice(-6)}</p>
     {visit.status !== 'cancelled' && <VisitEditor visit={visit} reload={reload}/>}
