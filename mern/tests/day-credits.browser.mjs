@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import express from 'express';
 import { once } from 'node:events';
-import { readFile, mkdir } from 'node:fs/promises';
+import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { chromium, webkit } from 'playwright';
 import { DateTime } from 'luxon';
@@ -142,6 +142,10 @@ try {
           assert.equal(changesBody.additions[0].date,creditDate);assert.equal(changesBody.note,'');
           assert.deepEqual(errors,[]);
           console.log(`${engineName} ${roleName}: select date, optional note, atomic cancel/credit, retry, duplicate guard and replacement booking passed`);
+        } catch(error) {
+          await page.screenshot({path:`test-results/simple-credit-failure-${engineName}-${roleName}.png`,fullPage:true}).catch(()=>{});
+          await writeFile(`test-results/simple-credit-failure-${engineName}-${roleName}.txt`,JSON.stringify({url:page.url(),errors,body:await page.locator('body').innerText()},null,2));
+          throw error;
         } finally { await context.close(); }
       }
     } finally { await browser.close(); }

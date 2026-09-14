@@ -10,13 +10,16 @@ import { creditedCalendarDates } from '../../shared/day-credits';
 import { trainingFocusName } from '../../shared/catalog';
 
 export default function SavedScheduleCalendar({ data, month, reload, onMonth, startEditing=false, focusDate, onCloseEditor }) {
-  const [editData,setEditData]=useState(startEditing?data:null);
+  const [editData,setEditData]=useState(null), [openingData]=useState(data);
+  // Query navigation can settle after the saved-data refresh. Keep entry from
+  // the staff shortcut controlled by the query so removing it closes the editor.
+  const activeEditData=editData||(startEditing?openingData:null);
   const [day, setDay] = useState(focusDate||data.visits[0]?.date || `${month}-01`);
   const trainingDays = new Set(data.visits.filter(v=>v.service==='training' && v.status!=='cancelled').map(v=>v.date));
   const creditDates = creditedCalendarDates(data.terms, data.dayCredits);
   const credited = new Set(creditDates);
   const start = DateTime.fromISO(`${month}-01`), padding = start.weekday % 7;
-  if(editData) return <ScheduleChanges data={editData} initialMonth={month} onSaved={reload} onClose={()=>{setEditData(null);onCloseEditor?.()}}/>;
+  if(activeEditData) return <ScheduleChanges data={activeEditData} initialMonth={month} onSaved={reload} onClose={()=>{setEditData(null);onCloseEditor?.()}}/>;
   return <><button type="button" className="button schedule-edit-toggle" onClick={()=>setEditData(data)}>Add or Cancel Date</button><p className="calendar-legend"><span className="calendar-key"/> {trainingDays.size} training days saved this month. Filled gold highlights saved visits; the outline marks the day you are viewing.</p><CreditedCalendarDays dates={creditDates} month={month} onMonth={onMonth}/><div className="saved-calendar" aria-label="Saved monthly schedule">
     {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => <span className="calendar-weekday" key={d}>{d}</span>)}
     {Array.from({ length: padding }, (_,i) => <span key={`empty-${i}`}/>)}
