@@ -1,0 +1,61 @@
+/* Shared navigation and action feedback, in Bravo's existing palette. */
+.app-header .nav-group{display:contents}
+.app-header .nav-group-label{display:none}
+.page-return-row{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1.25rem;margin-bottom:1.25rem}
+.page-return-row .page-back,.page-return-row .inline-link{margin:0}
+.page-return-row .inline-link{min-height:44px;display:inline-flex;align-items:center;font-size:.875rem}
+.action-feedback{position:fixed;z-index:90;left:1rem;bottom:max(1rem,env(safe-area-inset-bottom));width:min(32rem,calc(100% - 6.5rem));max-height:38dvh;overflow:auto;display:flex;align-items:flex-start;gap:.75rem;padding:1rem;background:#23271f;color:#f6f0e3;border:2px solid #c7aa70;border-radius:8px;box-shadow:0 8px 28px #0008;font:500 1rem/1.55 Montserrat,sans-serif}
+.action-feedback>div{display:flex;align-items:flex-start;gap:.7rem;flex:1;min-width:0}
+.action-feedback p{margin:0;overflow-wrap:anywhere}
+.feedback-icon{color:#efd497;font-size:1.3rem;font-weight:800}
+.action-feedback>button{flex:none;min-height:44px;min-width:44px;margin:-.5rem -.5rem 0 0;border:0;border-radius:4px;background:transparent;color:inherit;font-size:1.7rem;line-height:1}
+.action-feedback.is-error{background:#321e1b;border-color:#d3937e;color:#ffe0d4}
+.action-feedback.is-error .feedback-icon{color:#ffe0d4}
+.schedule-shortcuts{display:flex;flex-wrap:wrap;gap:.5rem;margin:0 0 1.5rem}
+.schedule-shortcuts :is(a,button){display:inline-flex;align-items:center;min-height:44px;padding:.6rem .9rem;border:1px solid #756342;border-radius:6px;color:#ead3a5;background:#191b18;font-size:.875rem;text-decoration:none}
+.schedule-shortcuts :is(a,button):hover{background:#2b281e;border-color:#c8aa72}
+.staff-page .desk-tabs{display:flex;flex-wrap:wrap;overflow:visible;gap:.5rem;margin-bottom:1.5rem}
+.staff-page .desk-tabs button{flex:1 1 130px;white-space:normal;min-height:48px;font-size:.875rem;padding:.75rem}
+.desk-section-description{color:#c4beaf;margin:0 0 1.5rem}
+.account-next-visit{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem;padding:1.1rem 1.3rem;margin-bottom:1.5rem;border:1px solid #79633d;border-left:4px solid #c4a46d;border-radius:6px;background:#211f18}
+.account-next-visit p{margin:0}
+.account-next-visit small{display:block;color:#d2c6af;margin-top:.25rem}
+.account-next-visit .inline-link{margin:0}
+.account-layout aside details.panel>summary{font-size:1rem;min-height:48px;align-content:center;cursor:pointer}
+.account-layout aside details.panel[open]>summary{padding-bottom:.75rem;border-bottom:1px solid var(--line)}
+.account-layout aside details.panel form{margin-top:1rem}
+.schedule-help{display:flex;flex-wrap:wrap;gap:.75rem;list-style:none;padding:0;margin:1rem 0 1.5rem;counter-reset:schedule-step}
+.schedule-help li{flex:1 1 140px;display:flex;align-items:center;gap:.65rem;font-size:.9375rem;counter-increment:schedule-step}
+.schedule-help li::before{content:counter(schedule-step);display:grid;place-items:center;flex:none;width:1.8rem;height:1.8rem;border:1px solid #b79860;border-radius:50%;color:#edcf98;font-weight:700}
+.schedule-more-help{margin:1rem 0}
+.schedule-more-help>summary{cursor:pointer;min-height:44px;align-content:center;color:#e7cf9e}
+.schedule-change-editor h4{font-size:1.1rem;margin:1.5rem 0 .5rem}
+.saved-calendar-section{scroll-margin-top:7rem}
+.staff-page :is(#credit-client-days,#my-working-schedule,#customer-requests){scroll-margin-top:13rem}
+@media(max-width:1360px){
+  .app-header .header-inner{flex-wrap:wrap;gap:0}
+  .app-header .menu-toggle{display:flex;align-items:center;gap:.7rem;min-height:44px;border:1px solid #766344;border-radius:5px;padding:.6rem .85rem;color:#e5d5b4;font-size:.875rem;background:#1a1c17}
+  .menu-lines{display:flex;flex-direction:column;gap:5px}.menu-lines i{display:block;width:15px;height:1px;background:currentColor}
+  .app-header #bravo-navigation{display:none;flex-basis:100%;width:100%;flex-direction:column;align-items:stretch;gap:0;padding:14px 0 20px;max-height:calc(100dvh - 100px);overflow-y:auto;overscroll-behavior:contain}
+  .app-header #bravo-navigation.is-open{display:flex}
+  .app-header .nav-group{display:flex;flex-direction:column}
+  .app-header .nav-workspace{order:-1}
+  .app-header .nav-group-label{display:block;font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#bea575;margin:1rem 0 .35rem}
+  .app-header #bravo-navigation a{font-size:1rem;min-height:48px;padding:12px 8px;border-bottom:1px solid var(--line);white-space:normal}
+  .app-header #bravo-navigation .nav-book{margin:0 0 .4rem;padding:12px 16px;justify-content:space-between}
+  .app-header #bravo-navigation a[aria-current=page]:not(.nav-book){border-left:3px solid #e6c77f;padding-left:12px;background:#28251b;color:#f4dfb1}
+  .app-header .nav-sign-out{padding-top:.75rem;margin-top:.75rem;border-top:1px solid var(--line)}
+  .app-header .nav-sign-out button{width:100%;text-align:left;min-height:48px}
+}
+@media(max-width:600px){
+  .staff-page :is(#credit-client-days,#my-working-schedule,#customer-requests){scroll-margin-top:7rem}
+  .staff-page .desk-tabs{position:static;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .staff-page .desk-tabs button{width:100%;min-width:0;font-size:.875rem}
+  .schedule-shortcuts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .schedule-shortcuts :is(a,button){justify-content:center;text-align:center;min-width:0;font-size:.875rem}
+  .action-feedback{padding:.75rem;gap:.4rem;font-size:.875rem}
+  .action-feedback>div{gap:.4rem}
+  .schedule-help{display:grid;gap:.6rem}
+}
+@media(prefers-contrast:more){.action-feedback{background:#000;color:#fff;border-color:#fff}}
+@media print{.action-feedback,.page-return-row,.schedule-shortcuts{display:none!important}}

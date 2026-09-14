@@ -20,7 +20,7 @@ export default function StaffDayCredits() {
     try { setData(await api(`/client-schedule?client=${clientId}&month=${DateTime.now().setZone('America/Chicago').toFormat('yyyy-MM')}`)); setRevision(value => value + 1); }
     catch (err) { setData(null); setError(err.message); } finally { setBusy(false); }
   }
-  return <details className="panel staff-day-credits"><summary>Credit days to a client</summary>
+  return <details className="panel staff-day-credits" id="credit-client-days"><summary>Credit days to a client</summary>
     <p>Missed training because of weather or a day off? Find the client and extend their membership here.</p>
     <form onSubmit={search} className="owner-search"><label>Client name or email<input type="search" minLength="2" required value={query} disabled={busy} onChange={event => setQuery(event.target.value)}/></label><button className="button button-small button-ghost" disabled={busy}>Find client for credit</button></form>
     <Notice error>{error}</Notice><Notice>{notice}</Notice>

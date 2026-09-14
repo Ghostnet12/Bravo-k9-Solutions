@@ -17,6 +17,7 @@ import './professional.css';
 import './site-image-editor.css';
 import './accessibility-layout.css';
 import './reset-layout.css';
+import './usability-polish.css';
 const DogTrainingPage = lazy(() => import('./DogTrainingPage'));
 const BehaviorAssessmentPage = lazy(() => import('./BehaviorAssessmentPage'));
 const MediaRightsPage = lazy(() => import('./MediaRightsPage'));
@@ -35,7 +36,7 @@ function SiteImageTools() {
   return null;
 }
 function RouteBehavior() {
-  const { pathname, search, hash } = useLocation();
+  const { pathname, hash } = useLocation();
   useEffect(() => {
     history.scrollRestoration = 'manual';
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
@@ -43,7 +44,7 @@ function RouteBehavior() {
       let anchor = hash.slice(1);
       try { anchor = decodeURIComponent(anchor); } catch { /* Malformed links must not crash navigation. */ }
       const target = hash ? document.getElementById(anchor) : document.getElementById('main-content');
-      if (hash) target?.scrollIntoView({ behavior: 'instant' });
+      if (hash) { if (target?.tagName === 'DETAILS') target.open = true; target?.scrollIntoView({ behavior: 'instant' }); }
       else target?.focus({ preventScroll: true });
     }, 100);
     const metadata = PAGE_METADATA[pathname] || NOT_FOUND_METADATA;
@@ -70,7 +71,7 @@ function RouteBehavior() {
       schema.textContent = JSON.stringify(data);
     } else schema?.remove();
     return () => clearTimeout(timer);
-  }, [pathname, search, hash]);
+  }, [pathname, hash]);
   return null;
 }
 class ErrorBoundary extends React.Component {
