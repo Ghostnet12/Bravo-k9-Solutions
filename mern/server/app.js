@@ -1,4 +1,4 @@
-import { attributeBooking } from './monitoring.js';
+import { attributeBooking, monitoringEnabled } from './monitoring.js';
 import { reserveVisits, assertVisitsFree } from './reservations.js';
 import express from 'express';
 import { trainerSelectionInput, resolveTrainerIds } from './trainer-selection.js';
@@ -51,7 +51,7 @@ app.get('/api/config', async (_req, res) => {
   const paymentsReady = connected && !!stripeClient();
   const paymentsMode = paymentsReady ? stripeMode() : 'paused';
   const services = connected ? await effectiveServices({ includeDisabled: true }) : SERVICES.map(service => ({ ...service, enabled: true }));
-  res.json({ monitoringEnabled: true, connected, connectionIssue, paymentsReady, paymentsPaused: !paymentsReady, paymentsMode, workspaceVersion: 'owner-staff-3', schedule, timezone: 'America/Chicago', services });
+  res.json({ monitoringEnabled: monitoringEnabled(), connected, connectionIssue, paymentsReady, paymentsPaused: !paymentsReady, paymentsMode, workspaceVersion: 'owner-staff-3', schedule, timezone: 'America/Chicago', services });
 });
 app.get('/api/lessons', async (_req, res) => {
   if (!process.env.MONGODB_URI) return res.json({ lessons: LESSON_PREVIEWS });

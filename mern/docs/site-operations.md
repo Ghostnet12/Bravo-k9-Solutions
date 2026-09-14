@@ -1,6 +1,6 @@
 # Website health and booking conversion
 
-The actual Owner can open `/admin?tab=health`. Staff, administrators and clients cannot read the reporting API. The report is explicitly refreshed and uses a 7- or 30-day window.
+The actual Owner can open `/admin?tab=health`. Staff, administrators and clients cannot read the reporting API. The report is explicitly refreshed and uses a 7- or 30-day window. Vercel preview/development deployments do not record or display production telemetry, even if they share a database connection.
 
 ## What is measured
 
