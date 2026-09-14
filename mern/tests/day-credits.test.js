@@ -50,3 +50,21 @@ test('credited dates cross months and DST with no extra day at the exclusive cut
     assert.deepEqual(creditedCalendarDates([term], [{ termId: 'term', beforeEnd, afterEnd, days }]), expected);
   }
 });
+
+test('calendar credit resolves the selected request and date without guessing another membership', async () => {
+  const { termForDayCredit } = await import('../shared/day-credits.js');
+  const term = { stripeId: 'manual:first', bookingId: 'request', serviceIds: ['training'], status: 'active', validFrom: '2026-09-01T05:00:00Z', validUntil: '2026-10-01T05:00:00Z' };
+  const booking = { _id: 'request', termStartsAt: term.validFrom, termEndsAt: term.validUntil };
+  const other = { ...term, stripeId: 'manual:other', bookingId: 'other' };
+  assert.equal(termForDayCredit([other,term], booking, '2026-09-14'), term);
+  assert.equal(termForDayCredit([term], booking, '2026-08-31'), null);
+  assert.equal(termForDayCredit([term], booking, '2026-10-01'), null);
+  assert.equal(termForDayCredit([term], booking, '2026-09-31'), null);
+  assert.equal(termForDayCredit([{ ...term, status: 'refunded' }], booking, '2026-09-14'), null);
+  const legacy = { _id: 'old-request' };
+  assert.equal(termForDayCredit([term], legacy, '2026-09-14'), term);
+  assert.equal(termForDayCredit([term,other], legacy, '2026-09-14'), null);
+  assert.equal(termForDayCredit([term], { ...booking, _id: 'exact-period' }, '2026-09-14'), term);
+  assert.equal(termForDayCredit([term,other], { ...booking, _id: 'exact-period' }, '2026-09-14'), null);
+  assert.equal(termForDayCredit([term], { ...booking, _id: 'different-period', termEndsAt: '2026-09-20' }, '2026-09-14'), null);
+});

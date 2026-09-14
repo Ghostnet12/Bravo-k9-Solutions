@@ -8,6 +8,23 @@ export const isTrainingTerm = term => term.serviceIds?.some(id => trainingServic
 export const creditableTerm = term => isTrainingTerm(term) && ['active', 'trialing', 'canceled'].includes(term.status)
   && !!term.validFrom && new Date(term.validUntil) > new Date(term.validFrom)
   && (!term.stripeId?.startsWith('sub_') || term.autoPayDisabled === true);
+
+// Resolve the membership from the selected request and date, without making
+// staff choose internal membership records or guessing between legacy terms.
+export function termForDayCredit(terms = [], booking, date) {
+  if (!booking || !date) return null;
+  const day = DateTime.fromISO(date, { zone: MEMBERSHIP_ZONE });
+  if (!day.isValid || day.toISODate() !== date) return null;
+  const candidates = terms.filter(term => creditableTerm(term)
+    && day.endOf('day').toMillis() >= new Date(term.validFrom).getTime()
+    && day.toMillis() < new Date(term.validUntil).getTime());
+  const direct = candidates.filter(term => String(term.bookingId || '') === String(booking._id));
+  if (direct.length) return direct.length === 1 ? direct[0] : null;
+  const exact = candidates.filter(term => new Date(term.validFrom).getTime() === new Date(booking.termStartsAt).getTime()
+    && new Date(term.validUntil).getTime() === new Date(booking.termEndsAt).getTime());
+  if (exact.length) return exact.length === 1 ? exact[0] : null;
+  return !booking.termEndsAt && candidates.length === 1 ? candidates[0] : null;
+}
 export function creditedEnd(end, days) {
   const date = DateTime.fromJSDate(new Date(end), { zone: MEMBERSHIP_ZONE });
   if (!date.isValid || !Number.isInteger(days) || days < 1 || days > 31) throw new Error('Choose 1 to 31 whole days to credit.');

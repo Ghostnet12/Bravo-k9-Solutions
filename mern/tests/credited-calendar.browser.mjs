@@ -51,7 +51,7 @@ try {
           await grid.getByRole('button', { name: /Fri, Sep 11,.*credited membership day/ }).click();
           await page.getByText('Credited membership day. No visit booked yet', { exact: false }).waitFor();
           await page.screenshot({ path: `test-results/credited-calendar-${engineName}-${roleName}.png`, fullPage: true });
-          await page.getByRole('button', { name: 'Add Days and Times', exact: true }).click();
+          await page.getByRole('button', { name: 'Add or Cancel Date', exact: true }).click();
           await page.getByText('Checking available times…').waitFor({ state: 'hidden' });
           const editor = page.locator('.edit-calendar'); assert.equal(await editor.locator('.credited-day').count(), 5);
           await editor.getByRole('button', { name: /Tue, Sep 15,.*credited membership day/ }).click();

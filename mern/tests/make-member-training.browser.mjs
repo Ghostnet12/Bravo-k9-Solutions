@@ -77,7 +77,7 @@ try {
           assert.deepEqual(await trainer.locator('option').allTextContents(), ['David Northrop', 'Ashley Northrop', 'David and Ashley']);
           await trainer.selectOption(JOINT_TRAINER_ID); await setup.getByRole('button', { name: 'Assign trainer', exact: true }).click();
           await setup.getByText('Trainer assigned. Each assigned trainer can now accept from their staff profile.', { exact: true }).waitFor();
-          await setup.getByRole('button', { name: 'Add Days and Times', exact: true }).click();
+          await setup.getByRole('button', { name: 'Add or Cancel Date', exact: true }).click();
           await setup.getByText('Checking available times…', { exact: true }).waitFor({ state: 'hidden' });
           await setup.getByRole('checkbox', { name: 'Open the selected weekend times when saving', exact: true }).uncheck();
           const available = setup.locator('.edit-calendar button:not([disabled])');
@@ -94,14 +94,14 @@ try {
           await setup.locator('.saved-calendar button.has-visits').first().waitFor();
           assert.equal(await setup.locator('.saved-calendar button.has-visits').count(), 2);
           await page.reload(); await page.locator('.owner-person > summary').click({ position: { x: 8, y: 20 } });
-          await page.getByRole('region', { name: 'Training setup for Current Client', exact: true }).getByRole('button', { name: 'Add Days and Times', exact: true }).waitFor();
+          await page.getByRole('region', { name: 'Training setup for Current Client', exact: true }).getByRole('button', { name: 'Add or Cancel Date', exact: true }).waitFor();
           assert.equal(await access.getByLabel('Dogs covered by this training membership', { exact: true }).inputValue(), '2');
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)); assert.deepEqual(errors, []);
           await page.screenshot({ path: `test-results/make-member-${engineName}-${width}.png`, fullPage: true });
           booking = null;
           await page.goto(`${origin}/schedule?client=${client._id}`);
           await page.getByRole('heading', { name: 'Finish this client’s training setup' }).waitFor();
-          assert.equal(await page.getByRole('button', { name: 'Add Days and Times', exact: true }).count(), 0);
+          assert.equal(await page.getByRole('button', { name: 'Add or Cancel Date', exact: true }).count(), 0);
           await page.getByLabel('Dogs covered', { exact: true }).fill('2');
           await page.getByRole('button', { name: 'Enable training & scheduling', exact: true }).click();
           await page.getByText('Assign trainer & accept client', { exact: true }).click();
@@ -110,7 +110,7 @@ try {
           await recoveredTrainer.selectOption(JOINT_TRAINER_ID);
           await page.getByRole('button', { name: 'Assign trainer', exact: true }).click();
           await page.getByText('Trainer assigned. Each assigned trainer can now accept from their staff profile.', { exact: true }).waitFor();
-          await page.getByRole('button', { name: 'Add Days and Times', exact: true }).click();
+          await page.getByRole('button', { name: 'Add or Cancel Date', exact: true }).click();
           await page.getByText('Checking available times…', { exact: true }).waitFor({ state: 'hidden' });
           const recoveredDays = page.locator('.edit-calendar button:not([disabled])');
           await recoveredDays.nth(0).click(); await recoveredDays.nth(1).click();

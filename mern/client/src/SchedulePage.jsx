@@ -17,7 +17,7 @@ export default function SchedulePage() {
   const month = /^\d{4}-\d{2}$/.test(params.get('month') || '') ? params.get('month') : DateTime.now().setZone('America/Chicago').toFormat('yyyy-MM');
   const calendarSurface = useRef(null), [calendarHeight, setCalendarHeight] = useState(0);
   const [data, setData] = useState(null), [error, setError] = useState(''), [loading, setLoading] = useState(true);
-  const [revision, setRevision] = useState(0), [notice, setNotice] = useState('');
+  const [revision, setRevision] = useState(0), [notice, setNotice] = useState(''), [focusDate,setFocusDate]=useState('');
   const pdfUrl = `/api/client-schedule?month=${month}${client ? `&client=${encodeURIComponent(client)}` : ''}&format=pdf`;
   useEffect(() => {
     let current = true; setData(null); setError(''); setLoading(true);
@@ -33,6 +33,12 @@ export default function SchedulePage() {
   },[user?.id,month,client]);
   const activeTerm = data?.terms.find(term => isTrainingTerm(term) && ['active','trialing','canceled'].includes(term.status) && term.validFrom && new Date(term.validFrom) <= new Date() && new Date(term.validUntil) > new Date());
   function chooseMonth(value) { if (value === month) return; setCalendarHeight(calendarSurface.current?.getBoundingClientRect().height || 0); setLoading(true); const next = new URLSearchParams(params); next.set('month', value); setParams(next, { replace: true }); }
+  function closeEditor() { const next=new URLSearchParams(params);next.delete('edit');setParams(next,{replace:true}); }
+  function saved(message,date) {
+    setNotice(message);setFocusDate(date||'');
+    const next=new URLSearchParams(params);next.delete('edit');if(date)next.set('month',date.slice(0,7));
+    setParams(next,{replace:true});setRevision(n=>n+1);
+  }
   return <Page title={data ? `${data.client.name}’s schedule.` : 'Monthly schedule.'} eyebrow="YOUR SAVED VISITS" className="schedule-print-page">
     <div className="schedule-controls">
       <label>Schedule month<input type="month" value={month} onChange={e => { if (e.target.value) { chooseMonth(e.target.value); } }}/></label>
@@ -44,10 +50,10 @@ export default function SchedulePage() {
     <ActionFeedback error={error} notice={notice} onDismiss={() => { setError(''); setNotice(''); }}/>
     <div ref={calendarSurface} style={loading && calendarHeight ? { minHeight: calendarHeight } : undefined}>{!authReady ? <p role="status">Checking your account…</p> : !user ? <div className="panel empty-state"><h2>Your schedule is waiting.</h2><p>Sign in to view saved visits and manage your dates.</p><Link className="button" to="/account?next=/schedule">Sign in to view your schedule</Link></div> : loading ? <p role="status">Loading saved visits…</p> : !data ? <div className="panel"><p>Your schedule couldn’t load. Try again to get the latest saved visits.</p><button className="button button-ghost" type="button" onClick={() => setRevision(n => n + 1)}>Try again</button></div> : <section className="printable-schedule saved-calendar-section" id="saved-calendar">
       <h2>{DateTime.fromISO(`${month}-01`).toFormat('MMMM yyyy')}</h2><p>Bravo K9 Solutions · {data.client.name}<br/>All times are local to Aberdeen, South Dakota.</p>
-      <p className="helper">Choose “Add Days and Times” to edit your schedule, or tap a saved date to see its visits. All times are local to Aberdeen.</p>
+      <p className="helper">Choose “Add or Cancel Date” to edit your schedule, or tap a saved date to see its visits. All times are local to Aberdeen.</p>
       {user.role === 'owner' && !data.trainingBookings?.length && <TrainingRecovery client={data.client} onSaved={message=>{setNotice(message);setRevision(n=>n+1)}}/>}
       {['staff','owner'].includes(user.role)&&!!data.trainingBookings?.length&&<ClientTrainer key={`trainer-${revision}`} bookings={data.trainingBookings||[]} onSaved={message=>{setNotice(message);setRevision(n=>n+1)}}/>}
-      {(user.role !== 'owner' || !!data.trainingBookings?.length) && <SavedScheduleCalendar key={`${month}-${revision}`} data={data} month={month} onMonth={chooseMonth} reload={message => { setNotice(message);setRevision(n => n+1); }}/>}
+      {(user.role !== 'owner' || !!data.trainingBookings?.length) && <SavedScheduleCalendar key={`${month}-${revision}`} data={data} month={month} onMonth={chooseMonth} reload={saved} startEditing={params.get('edit')==='1'} focusDate={focusDate?.startsWith(month)?focusDate:undefined} onCloseEditor={closeEditor}/>}
       {activeTerm && <p className="membership-counter"><strong>{remainingDays(activeTerm.validUntil)} days remaining</strong> · Training coverage through {formatDate(lastCoveredDay(activeTerm.validUntil))}. Membership ends {DateTime.fromISO(activeTerm.validUntil, {zone: 'America/Chicago'}).toFormat('LLL d, yyyy · h:mm a')}.{activeTerm.creditedDays > 0 && <> Includes {activeTerm.creditedDays} credited {activeTerm.creditedDays === 1 ? 'day' : 'days'}.</>}</p>}
       <details className="schedule-membership-details"><summary>Membership details</summary>
       {data.firstPaidAt && <div className="membership-payment-start"><p><strong>Membership payment / start:</strong> {DateTime.fromISO(data.firstPaidAt, {zone:'America/Chicago'}).toFormat('LLL d, yyyy · h:mm a')}</p><p>First month: {DateTime.fromISO(data.firstPaidAt, {zone:'America/Chicago'}).toFormat('LLL d, yyyy')} - {DateTime.fromISO(data.firstPaidAt, {zone:'America/Chicago'}).plus({months:1}).toFormat('LLL d, yyyy')}. {Math.max(0, Math.floor(DateTime.now().diff(DateTime.fromISO(data.firstPaidAt), 'days').days))} days since membership began.</p></div>}

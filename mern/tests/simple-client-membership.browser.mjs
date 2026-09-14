@@ -66,7 +66,7 @@ try {
           await trainer.locator(`option[value="${david.id}"]`).waitFor({ state: 'attached' });
           await trainer.selectOption(david.id); await setup.getByRole('button', { name: 'Assign trainer', exact: true }).click();
           await setup.getByText('Trainer assigned. Each assigned trainer can now accept from their staff profile.', { exact: true }).waitFor();
-          await setup.getByRole('button', { name: 'Add Days and Times', exact: true }).click();
+          await setup.getByRole('button', { name: 'Add or Cancel Date', exact: true }).click();
           await setup.getByText('Checking available times…', { exact: true }).waitFor({ state: 'hidden' });
           await setup.getByRole('checkbox', { name: 'Open the selected weekend times when saving', exact: true }).uncheck();
           await setup.locator('.edit-calendar button:not([disabled])').first().click();

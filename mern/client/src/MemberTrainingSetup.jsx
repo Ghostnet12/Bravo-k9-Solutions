@@ -12,7 +12,7 @@ export default function MemberTrainingSetup({ person, access }) {
     const today = membershipToday(), start = membershipDate(access.startsAt), end = membershipDate(access.endsAt);
     return (today >= start && today < end ? today : start).slice(0, 7);
   });
-  const [data, setData] = useState(null), [error, setError] = useState(''), [notice, setNotice] = useState(''), [revision, setRevision] = useState(0);
+  const [data, setData] = useState(null), [error, setError] = useState(''), [notice, setNotice] = useState(''), [revision, setRevision] = useState(0), [focusDate,setFocusDate]=useState('');
   useEffect(() => {
     let current = true; setData(null); setError('');
     api(`/client-schedule?client=${person._id}&month=${month}`).then(result => {
@@ -20,7 +20,7 @@ export default function MemberTrainingSetup({ person, access }) {
     }).catch(e => { if (current) setError(e.message); });
     return () => { current = false; };
   }, [person._id, access.trainingBookingId, month, revision]);
-  const reload = message => { setNotice(message); setRevision(value => value + 1); };
+  const reload = (message,date) => { setNotice(message);setFocusDate(date||'');if(date)setMonth(date.slice(0,7));setRevision(value=>value+1); };
   return <section className="member-training-setup" aria-label={`Training setup for ${person.name}`}>
     <h3>Trainer &amp; schedule</h3>
     <Notice error>{error}</Notice><Notice>{notice}</Notice>
@@ -29,7 +29,7 @@ export default function MemberTrainingSetup({ person, access }) {
     {data && <>
       <ClientTrainer key={`trainer-${revision}-${month}`} bookings={data.trainingBookings} onSaved={reload} initiallyOpen/>
       <label>Schedule month<input type="month" value={month} onChange={event => { if (event.target.value) setMonth(event.target.value); }}/></label>
-      <SavedScheduleCalendar key={`calendar-${revision}-${month}`} data={data} month={month} onMonth={setMonth} reload={reload}/>
+      <SavedScheduleCalendar key={`calendar-${revision}-${month}`} data={data} month={month} onMonth={setMonth} reload={reload} focusDate={focusDate?.startsWith(month)?focusDate:undefined}/>
     </>}
     <Link className="inline-link" to={`/schedule?client=${person._id}&month=${month}`}>Open full schedule &amp; PDF</Link>
   </section>;

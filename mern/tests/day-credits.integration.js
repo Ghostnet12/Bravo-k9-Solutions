@@ -47,7 +47,7 @@ test('staff day credits extend real membership access and scheduling atomically'
       assert.equal(await MembershipCredit.countDocuments(), 0);
     });
     await t.test('one day changes six to seven, cancels weather visit, releases slot and preserves assignments and money', async () => {
-      first = payload({ missedDate: missed }); await credit('staff', first).expect(200);
+      first = payload({ missedDate: missed, reason: undefined }); await credit('staff', first).expect(200);
       const updated = await Subscription.findById(term._id), b = await Booking.findById(booking._id), grant = await MemberAccess.findById(people.client._id);
       assert.equal(remainingDays(end, now.toJSDate()), 6); assert.equal(remainingDays(updated.validUntil, now.toJSDate()), 7);
       assert.equal(updated.validUntil.toISOString(), creditedEnd(end, 1).toISOString()); assert.equal(b.termEndsAt.toISOString(), updated.validUntil.toISOString());
@@ -64,7 +64,7 @@ test('staff day credits extend real membership access and scheduling atomically'
     });
     await t.test('client sees history and can schedule a replacement on the newly covered day', async () => {
       const schedule = await call('client', 'get', `/api/client-schedule?month=${now.toFormat('yyyy-MM')}`).expect(200);
-      assert.equal(schedule.body.dayCredits.length, 1); assert.equal(schedule.body.dayCredits[0].note, ''); assert.equal(schedule.body.dayCredits[0].actorId, undefined);
+      assert.equal(schedule.body.dayCredits.length, 1); assert.equal(schedule.body.dayCredits[0].note, ''); assert.equal(schedule.body.dayCredits[0].reason, 'Other'); assert.equal(schedule.body.dayCredits[0].actorId, undefined);
       assert.equal(schedule.body.terms.find(t => t.stripeId === term.stripeId).creditedDays, 1);
       const at = DateTime.fromJSDate(end, { zone: 'America/Chicago' }), b = await Booking.findById(booking._id);
       await call('client', 'post', '/api/client-schedule/changes', { bookingId: String(b._id), revision: b.updatedAt.toISOString(), additions: [{ date: at.toISODate(), time: '10:00' }], removals: [] }).expect(200);

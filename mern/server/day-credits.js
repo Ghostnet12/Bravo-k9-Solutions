@@ -80,7 +80,7 @@ export async function creditMembershipDays(req, res) {
     // Remove stale expiry reminders; the normal reminder job uses the new date.
     for (const reminderTerm of reminderTerms) for (const phase of ['tomorrow', 'expired']) await Notification.deleteMany({ _id: { $in: ['staff', 'client'].map(audience => `term:${reminderTerm}:${beforeEnd.toISOString()}:${phase}:${audience}`) } }, { session });
     const endLabel = DateTime.fromJSDate(afterEnd, { zone: MEMBERSHIP_ZONE }).toFormat('LLL d, yyyy · h:mm a');
-    const body = `Bravo credited ${input.days} ${input.days === 1 ? 'day' : 'days'} to your training membership. It now ends ${endLabel} (Aberdeen time).${input.missedDate ? ` Training on ${input.missedDate} is cancelled.` : ''} Reason: ${input.reason}.${input.note ? ` ${input.note}` : ''}`;
+    const body = `Bravo credited ${input.days} ${input.days === 1 ? 'day' : 'days'} to your training membership. It now ends ${endLabel} (Aberdeen time).${input.missedDate ? ` Training on ${input.missedDate} is cancelled.` : ''}${input.reason !== 'Other' ? ` Reason: ${input.reason}.` : ''}${input.note ? ` ${input.note}` : ''}`;
     await Notification.create([
       { _id: `credit:${creditId}:client`, userId: client._id, staff: false, body, href: '/schedule' },
       { _id: `credit:${creditId}:staff`, userId: client._id, staff: true, body: `${client.name}: ${body}`, href: `/schedule?client=${client._id}` },

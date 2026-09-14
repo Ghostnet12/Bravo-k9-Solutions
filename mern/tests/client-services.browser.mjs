@@ -95,8 +95,8 @@ try {
         await page.getByText('No unread notifications.',{exact:true}).waitFor();
         // Client toggles stay in a draft, work across months, and save together.
         await page.goto(`${origin}/schedule?month=2026-09`);
-        await page.getByRole('button',{name:'Add Days and Times',exact:true}).click();
-        const editor=page.getByRole('region',{name:'Add Days and Times',exact:true});
+        await page.getByRole('button',{name:'Add or Cancel Date',exact:true}).click();
+        const editor=page.getByRole('region',{name:'Add or Cancel Date',exact:true});
         await editor.getByRole('button',{name:/Tue, Sep 22,/}).click();
         await editor.getByRole('button',{name:/Tue, Sep 22,/}).click();
         assert.equal(await editor.getByRole('button',{name:/Tue, Sep 22,/}).getAttribute('aria-pressed'),'false');
@@ -119,7 +119,7 @@ try {
         await page.getByRole('button',{name:'Tue, Sep 22, 1 visit',exact:true}).waitFor();
         role = width === 320 ? 'staff' : 'owner'; saved=false;
         await page.goto(`${origin}/schedule?month=2026-09&client=cccccccccccccccccccccccc`);
-        await page.getByRole('button',{name:'Add Days and Times',exact:true}).click();
+        await page.getByRole('button',{name:'Add or Cancel Date',exact:true}).click();
         await editor.getByRole('button',{name:/Sat, Sep 19,/}).click();
         await editor.getByRole('button',{name:/Sun, Sep 20,/}).click();
         await editor.getByRole('button',{name:'10:00 AM',exact:true}).click();
