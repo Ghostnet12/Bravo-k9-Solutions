@@ -32,7 +32,7 @@
 .schedule-change-editor h4{font-size:1.1rem;margin:1.5rem 0 .5rem}
 .saved-calendar-section{scroll-margin-top:7rem}
 .staff-page :is(#credit-client-days,#my-working-schedule,#customer-requests){scroll-margin-top:13rem}
-@media(max-width:1360px){
+@media(max-width:1600px){
   .app-header .header-inner{flex-wrap:wrap;gap:0}
   .app-header .menu-toggle{display:flex;align-items:center;gap:.7rem;min-height:44px;border:1px solid #766344;border-radius:5px;padding:.6rem .85rem;color:#e5d5b4;font-size:.875rem;background:#1a1c17}
   .menu-lines{display:flex;flex-direction:column;gap:5px}.menu-lines i{display:block;width:15px;height:1px;background:currentColor}
@@ -59,3 +59,5 @@
 }
 @media(prefers-contrast:more){.action-feedback{background:#000;color:#fff;border-color:#fff}}
 @media print{.action-feedback,.page-return-row,.schedule-shortcuts{display:none!important}}
+
+@media(min-width:1601px){.app-header .header-inner{width:calc(100% - 64px)}}
