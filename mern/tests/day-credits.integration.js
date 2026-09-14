@@ -121,7 +121,7 @@ test('staff day credits extend real membership access and scheduling atomically'
       const updated = await Subscription.findById(old._id); assert.equal(updated.validUntil.toISOString(), creditedEnd(oldEnd, 1).toISOString()); assert.ok(updated.validUntil < new Date());
     });
     await t.test('batch credits, weekday defaults and legacy credit moves preserve coverage atomically', async () => {
-      const client=await User.create({name:'Credit move fixture',role:'member',dogName:'Gunner'});
+      const client=await User.create({name:'Credit move fixture',role:'member',dogName:'Gunner',passwordHash:'isolated-test-only'});
       const start=new Date('2026-09-01T05:00:00Z'),end=new Date('2026-09-19T05:00:00Z');
       const visits=[{date:'2026-09-17',time:'10:00',service:'training'},{date:'2026-09-17',time:'11:00',service:'training'},{date:'2026-09-18',time:'10:00',service:'training'}];
       const booking=await Booking.create({userId:client._id,requestKey:randomUUID(),serviceIds:['training'],dogName:'Gunner',status:'confirmed',paymentStatus:'covered',staffId:people.staff._id,visits,termStartsAt:start,termEndsAt:end});
