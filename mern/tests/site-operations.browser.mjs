@@ -81,6 +81,7 @@ try {
           await page.getByText('20.0%', { exact: true }).first().waitFor();
           assert.ok(await page.getByRole('button', { name: 'Website health', exact: true }).getAttribute('aria-pressed') === 'true');
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+          await page.evaluate(() => window.scrollTo(0, 0));
           await page.screenshot({ path: `test-results/site-health-${engineName}.png`, fullPage: true });
         }
         await page.waitForLoadState('networkidle');
