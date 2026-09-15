@@ -12,6 +12,11 @@ import { framingStyle } from '../../shared/site-images.js';
 import { getSiteImages } from './site-image-state.js';
 
 const secondary = ['walking', 'aggression'];
+const proofClips = [
+  { id: '1850999522754029', title: 'Consistency in the real world', text: 'Two dogs holding structure during a nighttime public training session.', image: '/images/proof/bravo-proof-consistency.jpg', alt: 'Bravo trainer working two dogs through a public nighttime training session' },
+  { id: '1068433732560103', title: 'Off-leash vocal direction', text: 'Beginning service-dog work using left and right vocal commands.', image: '/images/proof/bravo-proof-service-dog.jpg', alt: 'Dog practicing off-leash directional vocal commands during a Bravo session' },
+  { id: '1079472767813329', title: 'Confidence around distractions', text: 'Beau’s first real-world exposure visit in an unfamiliar environment.', image: '/images/proof/bravo-proof-real-world.jpg', alt: 'Beau calmly investigating an unfamiliar display during real-world exposure training' },
+];
 const serviceDetails: Record<string, { label: string; text: string; features: string[] }> = {
   training: { label: 'BUILD A BETTER EVERYDAY', text: 'Calmer walks. Clearer boundaries. A dog you can depend on.', features: ['$200/month for one dog', '+$100/month each additional dog', 'Private training at your home'] },
   walking: { label: '30 MINUTES. REAL MOVEMENT.', text: 'Reliable dog walking from the Bravo team, scheduled around your day.', features: ['$25 per dog', '30-minute walk', 'Simple multi-dog pricing'] },
@@ -20,6 +25,7 @@ const serviceDetails: Record<string, { label: string; text: string; features: st
 };
 export default function Home() {
   const [hero] = useState(() => getSiteImages()['home-hero']);
+  const [activeProofReel, setActiveProofReel] = useState<string | null>(null);
   const { config } = useBravo();
   const liveSchedules = useLiveTrainerSchedules();
   const catalog = config?.services?.length ? config.services : SERVICES;
@@ -46,6 +52,23 @@ export default function Home() {
       <section className="home-section shell home-proof" id="reviews" aria-labelledby="reviews-title">
         <div className="home-section-heading"><div><p className="eyebrow">01 / PROOF BEFORE PROMISES</p><h2 id="reviews-title">Real clients.<br/><em>Real progress.</em></h2></div><p>{reviews.count ? <><strong>{reviews.average} out of 5</strong> from {reviews.count} verified Bravo account {reviews.count === 1 ? 'review' : 'reviews'}.</> : 'Verified feedback will appear here as Bravo clients choose to share it.'}</p></div>
         <div className="home-proof-grid" aria-label="Why clients choose Bravo"><article><strong>PRIVATE</strong><span>One trainer, one household, and a plan built around your dog.</span></article><article><strong>FULL-TIME</strong><span>Professional Bravo trainers serving clients in and around Aberdeen.</span></article><article><strong>MOBILE</strong><span>Training where everyday behavior actually happens—we come to you.</span></article><article><strong>ACCOUNT VERIFIED</strong><span>Published reviews are tied to real Bravo client accounts.</span></article></div>
+        <div className="home-work-proof" aria-labelledby="work-proof-title">
+          <div className="home-work-proof-heading"><div><p className="eyebrow">WATCH THE WORK</p><h3 id="work-proof-title">Training you can actually see.</h3></div><p>Authentic Bravo sessions published on our public Facebook page. Tap a clip to watch it here.</p></div>
+          <div className="home-work-proof-grid">{proofClips.map(clip => {
+            const facebookUrl = `https://www.facebook.com/reel/${clip.id}/`;
+            return <article key={clip.id} data-facebook-reel={clip.id}>
+              <div className="home-work-proof-media">
+                {activeProofReel === clip.id ? <>
+                  <iframe src={`https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(facebookUrl)}&show_text=false&autoplay=true&width=475`} title={`${clip.title} — Bravo K9 Solutions on Facebook`} width="475" height="844" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" allowFullScreen referrerPolicy="strict-origin-when-cross-origin"/>
+                  <button type="button" className="home-work-proof-close" onClick={() => setActiveProofReel(null)} aria-label={`Close ${clip.title} video`}>Close</button>
+                </> : <button type="button" className="home-work-proof-play" onClick={() => setActiveProofReel(clip.id)} aria-label={`Play ${clip.title} video`}>
+                  <img src={clip.image} width="475" height="844" loading="lazy" alt={clip.alt}/><span aria-hidden="true">▶</span>
+                </button>}
+              </div>
+              <div className="home-work-proof-copy"><h4>{clip.title}</h4><p>{clip.text}</p><a href={facebookUrl} target="_blank" rel="noreferrer">View original on Facebook <span aria-hidden="true">↗</span></a></div>
+            </article>;
+          })}</div>
+        </div>
         {reviews.reviews.length > 0 && <div className="review-grid home-proof-reviews">{reviews.reviews.slice(0, 3).map(review => <article key={review._id} className="panel"><div className="review-stars" role="img" aria-label={`${review.rating} out of 5 stars`}><span aria-hidden="true">{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</span></div><p>“{review.body}”</p><strong>{review.authorName}</strong><small>Verified Bravo account</small></article>)}</div>}
         {team.length > 0 && <div className="home-proof-team"><p className="eyebrow">THE PROFESSIONALS BEHIND THE WORK</p><div>{team.slice(0, 3).map(person => <span key={person.id}><strong>{person.name}</strong><small>{person.title}</small></span>)}</div></div>}
         <div className="home-proof-links"><a className="inline-link" href="#team">Meet the trainers →</a><Link className="inline-link" href="/account#your-review">Share your experience →</Link></div>

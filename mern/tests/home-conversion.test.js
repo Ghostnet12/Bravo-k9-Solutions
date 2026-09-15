@@ -12,6 +12,9 @@ test('homepage puts verified proof before the primary training decision', async 
   assert.match(source, /href="\/portal\?program=training"/);
   assert.match(source, /Start with private training/);
   assert.equal((source.match(/id="reviews"/g) || []).length, 1);
+  assert.equal((source.match(/data-facebook-reel=/g) || []).length, 1);
+  for (const reel of ['1850999522754029', '1068433732560103', '1079472767813329']) assert.match(source, new RegExp(reel));
+  assert.match(source, /Tap a clip to watch it here/);
 });
 
 test('homepage keeps specialist choices subordinate and does not invent credentials', async () => {

@@ -46,6 +46,13 @@ try {
         const trainingTop = await page.locator('#training').evaluate(element => element.offsetTop);
         assert.ok(proofTop < trainingTop, `${engineName}-${width}: proof must precede training`);
         assert.equal(await page.locator('.home-proof-reviews article').count(), 3);
+        assert.equal(await page.locator('.home-work-proof-grid article').count(), 3);
+        const firstProofClip = page.locator('.home-work-proof-grid article').first();
+        await firstProofClip.getByRole('button', { name: /Play Consistency in the real world video/ }).click();
+        const proofFrame = firstProofClip.locator('iframe');
+        await proofFrame.waitFor();
+        assert.match(await proofFrame.getAttribute('src'), /facebook\.com\/plugins\/video\.php/);
+        await firstProofClip.getByRole('button', { name: /Close Consistency in the real world video/ }).click();
         assert.equal(await page.locator('.home-proof-team').getByText('David Northrop', { exact: true }).count(), 1);
         assert.equal(await page.locator('.home-training-offer').getByRole('link', { name: /Start with private training/ }).getAttribute('href'), '/portal?program=training');
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${engineName}-${width}: homepage overflow`);
