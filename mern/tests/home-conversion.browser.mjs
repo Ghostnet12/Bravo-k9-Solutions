@@ -47,12 +47,27 @@ try {
         assert.ok(proofTop < trainingTop, `${engineName}-${width}: proof must precede training`);
         assert.equal(await page.locator('.home-proof-reviews article').count(), 3);
         assert.equal(await page.locator('.home-work-proof-grid article').count(), 3);
-        const firstProofClip = page.locator('.home-work-proof-grid article').first();
-        await firstProofClip.getByRole('button', { name: /Play Consistency in the real world video/ }).click();
-        const proofFrame = firstProofClip.locator('iframe');
-        await proofFrame.waitFor();
-        assert.match(await proofFrame.getAttribute('src'), /facebook\.com\/plugins\/video\.php/);
-        await firstProofClip.getByRole('button', { name: /Close Consistency in the real world video/ }).click();
+        // Exercise the mobile/desktop outbound action without relying on Facebook
+        // availability in CI. Real video playback is checked separately on live pages.
+        const reelIds = ['1850999522754029', '1068433732560103', '1079472767813329'];
+        await context.route('https://www.facebook.com/**', route => route.fulfill({ contentType: 'text/html', body: '<title>Original video destination</title><p>Facebook destination fixture</p>' }));
+        for (const reelId of reelIds) {
+          const card = page.locator(`[data-facebook-reel="${reelId}"]`);
+          const watch = card.getByRole('link', { name: /^Watch .+ on Facebook \(opens in a new tab\)$/ });
+          const originalUrl = `https://www.facebook.com/reel/${reelId}/`;
+          assert.equal(await watch.getAttribute('href'), originalUrl);
+          assert.equal(await watch.getAttribute('target'), '_blank');
+          assert.equal(await watch.getAttribute('rel'), 'noopener noreferrer');
+          assert.equal(await card.getByRole('link', { name: /^View original/ }).getAttribute('href'), originalUrl);
+          const destinationPromise = context.waitForEvent('page');
+          await watch.click();
+          const destination = await destinationPromise;
+          await destination.waitForURL(originalUrl);
+          await destination.getByText('Facebook destination fixture').waitFor();
+          await destination.close();
+          assert.equal(await card.locator('iframe').count(), 0);
+          assert.equal(await watch.isVisible(), true, `${engineName}-${width}: proof poster must remain visible after opening a video`);
+        }
         assert.equal(await page.locator('.home-proof-team').getByText('David Northrop', { exact: true }).count(), 1);
         assert.equal(await page.locator('.home-training-offer').getByRole('link', { name: /Start with private training/ }).getAttribute('href'), '/portal?program=training');
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${engineName}-${width}: homepage overflow`);

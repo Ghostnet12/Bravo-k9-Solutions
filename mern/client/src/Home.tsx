@@ -25,7 +25,6 @@ const serviceDetails: Record<string, { label: string; text: string; features: st
 };
 export default function Home() {
   const [hero] = useState(() => getSiteImages()['home-hero']);
-  const [activeProofReel, setActiveProofReel] = useState<string | null>(null);
   const { config } = useBravo();
   const liveSchedules = useLiveTrainerSchedules();
   const catalog = config?.services?.length ? config.services : SERVICES;
@@ -53,19 +52,16 @@ export default function Home() {
         <div className="home-section-heading"><div><p className="eyebrow">01 / PROOF BEFORE PROMISES</p><h2 id="reviews-title">Real clients.<br/><em>Real progress.</em></h2></div><p>{reviews.count ? <><strong>{reviews.average} out of 5</strong> from {reviews.count} verified Bravo account {reviews.count === 1 ? 'review' : 'reviews'}.</> : 'Verified feedback will appear here as Bravo clients choose to share it.'}</p></div>
         <div className="home-proof-grid" aria-label="Why clients choose Bravo"><article><strong>PRIVATE</strong><span>One trainer, one household, and a plan built around your dog.</span></article><article><strong>FULL-TIME</strong><span>Professional Bravo trainers serving clients in and around Aberdeen.</span></article><article><strong>MOBILE</strong><span>Training where everyday behavior actually happens—we come to you.</span></article><article><strong>ACCOUNT VERIFIED</strong><span>Published reviews are tied to real Bravo client accounts.</span></article></div>
         <div className="home-work-proof" aria-labelledby="work-proof-title">
-          <div className="home-work-proof-heading"><div><p className="eyebrow">WATCH THE WORK</p><h3 id="work-proof-title">Training you can actually see.</h3></div><p>Authentic Bravo sessions published on our public Facebook page. Tap a clip to watch it here.</p></div>
+          <div className="home-work-proof-heading"><div><p className="eyebrow">WATCH THE WORK</p><h3 id="work-proof-title">Training you can actually see.</h3></div><p>Authentic Bravo sessions from our public Facebook page. Each video opens on Facebook in a new tab.</p></div>
           <div className="home-work-proof-grid">{proofClips.map(clip => {
             const facebookUrl = `https://www.facebook.com/reel/${clip.id}/`;
             return <article key={clip.id} data-facebook-reel={clip.id}>
               <div className="home-work-proof-media">
-                {activeProofReel === clip.id ? <>
-                  <iframe src={`https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(facebookUrl)}&show_text=false&autoplay=true&width=475`} title={`${clip.title} — Bravo K9 Solutions on Facebook`} width="475" height="844" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" allowFullScreen referrerPolicy="strict-origin-when-cross-origin"/>
-                  <button type="button" className="home-work-proof-close" onClick={() => setActiveProofReel(null)} aria-label={`Close ${clip.title} video`}>Close</button>
-                </> : <button type="button" className="home-work-proof-play" onClick={() => setActiveProofReel(clip.id)} aria-label={`Play ${clip.title} video`}>
-                  <img src={clip.image} width="475" height="844" loading="lazy" alt={clip.alt}/><span aria-hidden="true">▶</span>
-                </button>}
+                <a className="home-work-proof-play" href={facebookUrl} target="_blank" rel="noopener noreferrer" aria-label={`Watch ${clip.title} on Facebook (opens in a new tab)`}>
+                  <img src={clip.image} width="475" height="844" loading="lazy" alt={clip.alt}/><span className="home-work-proof-play-icon" aria-hidden="true">▶</span><span className="home-work-proof-destination" aria-hidden="true">Watch on Facebook ↗</span>
+                </a>
               </div>
-              <div className="home-work-proof-copy"><h4>{clip.title}</h4><p>{clip.text}</p><a href={facebookUrl} target="_blank" rel="noreferrer">View original on Facebook <span aria-hidden="true">↗</span></a></div>
+              <div className="home-work-proof-copy"><h4>{clip.title}</h4><p>{clip.text}</p><a href={facebookUrl} target="_blank" rel="noopener noreferrer" aria-label={`View original ${clip.title} video on Facebook (opens in a new tab)`}>View original on Facebook <span aria-hidden="true">↗</span></a></div>
             </article>;
           })}</div>
         </div>
