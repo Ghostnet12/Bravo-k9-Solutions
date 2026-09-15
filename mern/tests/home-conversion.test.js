@@ -14,7 +14,15 @@ test('homepage puts verified proof before the primary training decision', async 
   assert.equal((source.match(/id="reviews"/g) || []).length, 1);
   assert.equal((source.match(/data-facebook-reel=/g) || []).length, 1);
   for (const reel of ['1850999522754029', '1068433732560103', '1079472767813329']) assert.match(source, new RegExp(reel));
-  assert.match(source, /Tap a clip to watch it here/);
+  assert.match(source, /Each video opens on Facebook in a new tab/);
+});
+
+test('proof cards link directly to the original videos without blank third-party players', async () => {
+  const source = await readFile(new URL('../client/src/Home.tsx', import.meta.url), 'utf8');
+  assert.match(source, /<a className="home-work-proof-play" href=\{facebookUrl\} target="_blank" rel="noopener noreferrer"/);
+  assert.match(source, /Watch \$\{clip.title\} on Facebook \(opens in a new tab\)/);
+  assert.match(source, /https:\/\/www\.facebook\.com\/reel\/\$\{clip.id\}\//);
+  assert.doesNotMatch(source, /<iframe|activeProofReel|plugins\/video\.php|watch it here/);
 });
 
 test('homepage keeps specialist choices subordinate and does not invent credentials', async () => {
