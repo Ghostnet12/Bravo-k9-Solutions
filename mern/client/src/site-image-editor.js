@@ -245,7 +245,7 @@ export function mountSiteImages({ canEdit = false } = {}) {
     on(fields.library, 'change', choose); on(fields.files, 'change', choose);
     on(fields.close, 'click', () => close()); on(fields.cancel, 'click', () => close()); on(fields.publish, 'click', () => publish()); on(fields.undo, 'click', () => publish(true));
     on(dialog, 'cancel', e => { e.preventDefault(); close(); });
-    on(toolbar.querySelector('button'), 'click', e => { editMode = !editMode; e.currentTarget.setAttribute('aria-pressed', String(editMode)); e.currentTarget.textContent = editMode ? 'Done editing' : 'Edit photos & videos'; document.documentElement.classList.toggle('site-photo-edit-mode', editMode); });
+    on(toolbar.querySelector('button'), 'click', e => { editMode = !editMode; e.currentTarget.setAttribute('aria-pressed', String(editMode)); e.currentTarget.textContent = editMode ? 'Done editing' : 'Edit photos & videos'; document.documentElement.classList.toggle('site-photo-edit-mode', editMode); window.dispatchEvent(new CustomEvent('bravo-media-edit-mode', { detail: { active: editMode } })); });
     on(document, 'pointerdown', e => {
       cancelGesture(); if (!allowed || e.button !== 0 || e.isPrimary === false || dialog.open) return;
       const element = hit(e); if (!element) return;
@@ -265,6 +265,7 @@ export function mountSiteImages({ canEdit = false } = {}) {
   return () => {
     disposed = true; generation++; cancelGesture(); abort.abort(); observer.disconnect(); clearInterval(interval); cancelAnimationFrame(frame); clearPreview();
     dialog?.remove(); toolbar?.remove(); document.documentElement.classList.remove('site-photo-edit-mode');
+    window.dispatchEvent(new CustomEvent('bravo-media-edit-mode', { detail: { active: false } }));
     for (const [element, record] of records) { record.cleanup?.(); element.removeAttribute('data-site-image-editable'); element.removeAttribute('aria-keyshortcuts'); if (record.tabIndex == null) element.removeAttribute('tabindex'); else element.setAttribute('tabindex', record.tabIndex); }
   };
 }
