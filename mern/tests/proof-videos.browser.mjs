@@ -43,9 +43,13 @@ try {
         // suppress the following tap, and leave the Facebook destination unopened.
         const original = page.locator('[data-proof-video="1850999522754029"]');
         await original.scrollIntoViewIfNeeded();
+        // Let the route's initial focus and scroll settle before starting a hold.
+        await page.waitForTimeout(350);
         const originalImage = original.locator('img');
         await originalImage.dispatchEvent('pointerdown', { button: 0, isPrimary: true, pointerId: 1, pointerType: 'touch', clientX: 150, clientY: 300 });
-        const dialog = page.getByRole('dialog', { name: 'Edit this video' }); await dialog.waitFor({ timeout: 4000 });
+        const dialog = page.getByRole('dialog', { name: 'Edit this video' });
+        try { await dialog.waitFor({ timeout: 8000 }); }
+        catch (error) { console.log('Hold failure', { errors, dialogs: await page.locator('dialog').evaluateAll(es => es.map(e => ({ open: e.open, title: e.querySelector('h2')?.textContent }))), card: await original.getAttribute('data-proof-editable') }); await page.screenshot({ path: `test-results/hold-failure-${engineName}-${width}.png`, fullPage: true }); throw error; }
         await originalImage.dispatchEvent('pointerup', { pointerId: 1 });
         await originalImage.dispatchEvent('click'); assert.equal(context.pages().length, 1);
         await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();

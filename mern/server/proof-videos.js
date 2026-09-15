@@ -30,6 +30,9 @@ const publicClip = row => {
 const after = (clip, cursor) => !cursor || compareProofVideos(clip, cursor) > 0;
 const router = express.Router();
 router.use(helmet(), (_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
+// Unconfigured previews retain the existing public proof, just as the rest of
+// the homepage keeps its static content. Never mask a configured database error.
+router.get('/', (_req, res, next) => !process.env.MONGODB_URI ? res.json({ clips: DEFAULT_PROOF_VIDEOS, nextCursor: null }) : next());
 router.use(async (_req, _res, next) => { await connectDb(); next(); });
 router.param('id', (_req, _res, next, id) => { idInput.parse(id); next(); });
 router.get('/', async (req, res) => {
@@ -148,9 +151,9 @@ router.delete('/:id', rateLimit('proof-video-edit', 240, 3600000), express.json(
   res.json({ removed: true });
 });
 router.use((_req, res) => res.status(404).json({ error: 'Video endpoint not found.' }));
-router.use((error, _req, res, _next) => {
+router.use((error, req, res, _next) => {
   if (res.headersSent) return res.end();
   const status = error instanceof z.ZodError ? 400 : error.code === 11000 ? 409 : Number(error.status) || 500;
-  res.status(status).json({ error: error instanceof z.ZodError ? 'Check the video size, title and description, then try again.' : status === 409 ? 'This video changed. Close and reopen the editor before saving.' : status >= 500 ? 'Unable to confirm this update. Refresh to check before retrying.' : error.message });
+  res.status(status).json({ error: error instanceof z.ZodError ? 'Check the video size, title and description, then try again.' : status === 409 ? 'This video changed. Close and reopen the editor before saving.' : status >= 500 ? req.method === 'GET' ? 'Videos are temporarily unavailable. Please try again.' : 'Unable to confirm this update. Refresh to check before retrying.' : error.message });
 });
 export default router;
