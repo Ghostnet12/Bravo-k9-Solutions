@@ -75,3 +75,62 @@ html.access-high-contrast :is(.home-price-card,.home-package-row,.home-service-s
 .app-page .badge.waitlisted{background:#302819;border-color:#8f7448;color:#f0d49d}
 
 .home-hero-inner{position:relative;z-index:2}
+
+/* Conversion hierarchy: credible proof first, one primary training decision, quieter branches. */
+.home-proof{padding-top:72px;padding-bottom:84px;border-bottom:1px solid var(--line)}
+.home-proof .home-section-heading{margin-bottom:30px}
+.home-proof .home-section-heading>p strong{display:block;color:#f1d9a7;font:400 2rem/1.1 var(--heading);letter-spacing:.02em}
+.home-proof-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-block:1px solid var(--line);margin-bottom:28px}
+.home-proof-grid article{padding:24px 22px}
+.home-proof-grid article+article{border-left:1px solid var(--line)}
+.home-proof-grid strong{display:block;margin-bottom:.6rem;color:var(--gold-light);font-size:.75rem;letter-spacing:.12em}
+.home-proof-grid span{display:block;color:#c4c0b5;font-size:.82rem;line-height:1.7}
+.home-proof-reviews{margin-top:0}
+.home-proof-reviews .panel{display:flex;flex-direction:column;min-height:100%;background:#171916;border-color:#4e493d}
+.home-proof-reviews .panel>p{flex:1;color:#e4dfd4;line-height:1.8}
+.home-proof-reviews .panel>small{display:block;margin-top:.25rem;color:#96948c;font-size:.7rem}
+.home-proof-team{display:flex;align-items:center;justify-content:space-between;gap:2rem;padding:20px 0;border-top:1px solid var(--line)}
+.home-proof-team>.eyebrow{margin:0}
+.home-proof-team>div{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:1rem 2.5rem}
+.home-proof-team span{display:flex;flex-direction:column}
+.home-proof-team strong{font-size:.85rem}
+.home-proof-team small{color:var(--muted);font-size:.72rem}
+.home-proof-links{display:flex;flex-wrap:wrap;gap:1.5rem}
+.home-proof-links .inline-link{margin-top:.5rem}
+.home-training-offer{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(280px,.75fr);border:1px solid #9f8355;border-radius:14px;overflow:hidden;background:#f6f1e8;color:#171815;box-shadow:0 22px 55px rgba(0,0,0,.22)}
+.home-training-main{padding:36px 38px}
+.home-training-main>.service-icon{margin-bottom:22px;background:#d9bc84;color:#171815}
+.home-training-main>.eyebrow{margin-bottom:.5rem;color:#775d2d}
+.home-training-main h3{margin:.25rem 0 .6rem;font-size:1.7rem}
+.home-training-main>p:not(.eyebrow){margin:0;color:#56564f}
+.home-training-main .home-price{color:#171815}
+.home-training-main .home-price span{color:#5d5c55}
+.home-training-main ul,.home-training-offer aside ul{list-style:none;margin:0;padding:1rem 0;border-top:1px solid #d9cdb9}
+.home-training-main li,.home-training-offer aside li{position:relative;padding:.45rem 0 .45rem 1.2rem;font-size:.875rem}
+.home-training-main li:before,.home-training-offer aside li:before{content:'✓';position:absolute;left:0;color:#8a6833;font-weight:700}
+.home-training-actions{display:flex;flex-wrap:wrap;align-items:center;gap:1rem 1.5rem;margin-top:1rem}
+.home-training-actions .button{background:#171815;color:#f7eddd;border-color:#171815}
+.home-training-actions .home-text-link{color:#5b431f;border-color:#9d8154}
+.home-training-offer aside{display:flex;flex-direction:column;justify-content:center;padding:34px;background:#25251f;color:#f4ead8}
+.home-training-offer aside>.eyebrow{margin-bottom:1rem}
+.home-training-offer aside ul{border-color:#5b5548}
+.home-training-offer aside li{line-height:1.65}
+.home-training-offer aside li:before{color:#dfc58f}
+.home-training-offer aside>p:last-child{margin:1rem 0 0;color:#c7c0b2;font-size:.78rem;line-height:1.7}
+.home-secondary-heading{display:flex;align-items:end;justify-content:space-between;gap:2rem;margin:48px 0 18px}
+.home-secondary-heading .eyebrow{margin:0 0 .4rem}
+.home-secondary-heading h3{margin:0;font-size:1.2rem}
+.home-secondary-heading>p{max-width:390px;margin:0;color:var(--muted);font-size:.82rem}
+.home-secondary-services{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.home-secondary-services article{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:18px;padding:22px;border:1px solid var(--line);border-radius:10px;background:#171916}
+.home-secondary-services .eyebrow{margin:0 0 .25rem;font-size:.68rem}
+.home-secondary-services h3{margin:0;font-size:1rem}
+.home-secondary-services p:not(.eyebrow){margin:.35rem 0 0;color:var(--muted);font-size:.78rem;line-height:1.65}
+.home-secondary-action{display:flex;flex-direction:column;align-items:flex-end}
+.home-secondary-action>strong{font-size:.9rem;color:#ebd5a9;white-space:nowrap}
+.home-secondary-action small{font-weight:400;color:var(--muted)}
+.home-secondary-action .home-text-link{padding:.4rem 0;font-size:.78rem}
+@media(max-width:850px){.home-proof-grid{grid-template-columns:1fr 1fr}.home-proof-grid article:nth-child(3){border-left:0;border-top:1px solid var(--line)}.home-proof-grid article:nth-child(4){border-top:1px solid var(--line)}.home-proof-team{align-items:flex-start;flex-direction:column}.home-proof-team>div{justify-content:flex-start}.home-training-offer{grid-template-columns:1fr}.home-training-offer aside{padding:28px}.home-secondary-services{grid-template-columns:1fr}}
+@media(max-width:700px){.home-training-main{padding:28px 24px}.home-training-main .home-price{align-items:flex-start;flex-direction:column;gap:.25rem}.home-training-actions{align-items:stretch;flex-direction:column}.home-training-actions :is(.button,.home-text-link){width:100%;justify-content:space-between}.home-secondary-heading{align-items:flex-start;flex-direction:column}.home-secondary-services article{grid-template-columns:auto minmax(0,1fr)}.home-secondary-action{grid-column:2;align-items:flex-start}.accessibility-tools{bottom:max(10px,env(safe-area-inset-bottom))}body:has(.booking-page) .accessibility-tools{bottom:calc(92px + env(safe-area-inset-bottom))}body:has(.booking-page) .bravo-footer{padding-bottom:calc(92px + env(safe-area-inset-bottom))}}
+@media(max-width:580px){.home-proof{padding-block:52px}.home-proof-grid{grid-template-columns:1fr}.home-proof-grid article+article{border-left:0;border-top:1px solid var(--line)}.home-proof-team>div{display:grid;justify-content:stretch}.home-training-offer aside{padding:24px}.home-secondary-services article{padding:18px;gap:14px}}
+html.access-high-contrast :is(.home-training-offer,.home-training-offer aside,.home-proof-reviews .panel,.home-secondary-services article){background:#000!important;color:#fff!important;border-color:#fff!important}
