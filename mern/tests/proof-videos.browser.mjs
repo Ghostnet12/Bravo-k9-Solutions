@@ -107,6 +107,48 @@ try {
         await saved.getByRole('button', { name: `Edit video: ${title}`, exact: true }).click();
         await edit.screenshot({ path: `test-results/proof-editor-${engineName}-${width}.png` });
         await edit.getByRole('button', { name: 'Cancel', exact: true }).click();
+
+        // A URL-only card is saved without uploading a file. It navigates in the
+        // same tab, and browser Back returns to the real, persisted Bravo page.
+        await add.click();
+        await create.getByRole('radio', { name: 'Facebook Reel URL', exact: true }).check();
+        const linkedTitle = `Facebook progress ${engineName} ${width}`;
+        await create.getByLabel('Video title', { exact: true }).fill(linkedTitle);
+        await create.getByRole('textbox', { name: 'Facebook Reel URL', exact: true }).fill('https://unrelated.example/reel/123/');
+        assert.equal(await create.getByRole('button', { name: 'Publish video', exact: true }).isDisabled(), true);
+        const reelUrl = 'https://www.facebook.com/reel/1079472767813329/';
+        await create.getByRole('textbox', { name: 'Facebook Reel URL', exact: true }).fill(`${reelUrl}?mibextid=fixture`);
+        await create.getByLabel('Description', { exact: true }).fill('A Facebook Reel with its own description.');
+        await create.getByRole('button', { name: 'Publish video', exact: true }).click();
+        await create.waitFor({ state: 'hidden' });
+        assert.equal(await MediaUpload.countDocuments({ completed: true }), 1);
+        await page.reload();
+        const linked = page.locator('[data-proof-video]').filter({ has: page.getByRole('heading', { name: linkedTitle, exact: true }) });
+        const linkedWatch = linked.getByRole('link', { name: `Watch ${linkedTitle} on Facebook`, exact: true });
+        await linkedWatch.waitFor();
+        assert.equal(await linkedWatch.getAttribute('href'), reelUrl);
+        assert.equal(await linkedWatch.getAttribute('target'), null);
+        assert.equal(await linked.locator('img,video,iframe').count(), 0);
+        await context.route('https://www.facebook.com/**', route => route.fulfill({ contentType: 'text/html', body: '<title>Facebook destination fixture</title><p>Reel destination</p>' }));
+        await linkedWatch.click();
+        await page.waitForURL(reelUrl);
+        await page.getByText('Reel destination', { exact: true }).waitFor();
+        assert.equal(context.pages().length, 1);
+        await page.goBack();
+        await page.waitForURL(`${origin}/`);
+        await linkedWatch.waitFor();
+        await linked.scrollIntoViewIfNeeded(); await page.waitForTimeout(350);
+        await linked.locator('.proof-reel-placeholder').dispatchEvent('pointerdown', { button: 0, isPrimary: true, pointerId: 3, pointerType: 'touch', clientX: 150, clientY: 300 });
+        await edit.waitFor();
+        await linked.locator('.proof-reel-placeholder').dispatchEvent('pointerup', { pointerId: 3 });
+        assert.equal(await edit.getByRole('textbox', { name: 'Facebook Reel URL', exact: true }).inputValue(), reelUrl);
+        await edit.getByLabel('Description', { exact: true }).fill('The Reel description can be edited later.');
+        await edit.screenshot({ path: `test-results/reel-url-editor-${engineName}-${width}.png` });
+        await edit.getByRole('button', { name: 'Publish changes', exact: true }).click();
+        await edit.waitFor({ state: 'hidden' });
+        await page.reload();
+        await linked.getByText('The Reel description can be edited later.', { exact: true }).waitFor();
+        console.log(`${engineName}-${width}: Reel URL saved; same-tab navigation, Back and hold-to-edit passed`);
         assert.deepEqual(errors, []);
         await context.close();
 
