@@ -7,7 +7,7 @@ import { connectDb, transaction } from './db.js';
 import { ProofVideo, MediaUpload, MediaChunk, AuditEvent } from './models.js';
 import { identify, requireUser, requireOwner, sameOrigin, rateLimit } from './auth.js';
 import { CHUNK_SIZE, MEDIA_LIMITS, validMediaHeader, mediaBytes, sendUploadedMedia } from './media.js';
-import { DEFAULT_PROOF_VIDEOS, PROOF_PAGE_SIZE, PROOF_VIDEO_TYPES, compareProofVideos } from '../shared/proof-videos.js';
+import { DEFAULT_PROOF_VIDEOS, PROOF_PAGE_SIZE, PROOF_VIDEO_TYPES, compareProofVideos, normalizeFacebookReelUrl } from '../shared/proof-videos.js';
 
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const idInput = z.string().regex(/^[a-z0-9][a-z0-9-]{0,80}$/);
@@ -15,17 +15,19 @@ const revision = z.number().int().min(0);
 const editInput = z.object({
   expectedRevision: revision, mutationId: z.uuid(), title: z.string().trim().min(1).max(120),
   description: z.string().trim().max(5000), fit: z.enum(['contain', 'cover']), uploadId: z.uuid().optional(),
+  facebookUrl: z.string().max(2048).refine(value => !!normalizeFacebookReelUrl(value)).transform(normalizeFacebookReelUrl).optional(),
   posterData: z.string().max(256 * 1024).regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/).optional(),
-}).strict();
+}).strict().refine(input => !(input.uploadId && input.facebookUrl) && !(input.facebookUrl && input.posterData));
 const uploadInput = z.object({ filename: z.string().trim().min(1).max(160), contentType: z.enum(PROOF_VIDEO_TYPES), size: z.number().int().min(1).max(MEDIA_LIMITS.video), chunks: z.number().int().min(1).max(Math.ceil(MEDIA_LIMITS.video / CHUNK_SIZE)) }).strict();
 const chunkInput = z.object({ data: z.string().min(4).max(Math.ceil(CHUNK_SIZE / 3) * 4).regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/) }).strict();
 const defaultFor = id => DEFAULT_PROOF_VIDEOS.find(clip => clip.id === id);
 const scope = id => `proof:${id}`;
 const publicClip = row => {
   const original = defaultFor(row._id);
+  const facebookUrl = row.uploadId ? null : normalizeFacebookReelUrl(row.facebookUrl || original?.facebookUrl);
   return { id: row._id, title: row.title, description: row.description, order: row.order, revision: row.revision,
     fit: row.fit || 'contain', src: row.uploadId ? `/api/proof-videos/${row._id}/video?v=${row.revision}` : null,
-    poster: row.uploadId ? row.hasPoster ? `/api/proof-videos/${row._id}/poster?v=${row.revision}` : null : original?.poster || null, facebookUrl: row.uploadId ? null : original?.facebookUrl || null };
+    poster: row.uploadId ? row.hasPoster ? `/api/proof-videos/${row._id}/poster?v=${row.revision}` : null : facebookUrl === original?.facebookUrl ? original.poster : null, facebookUrl };
 };
 const after = (clip, cursor) => !cursor || compareProofVideos(clip, cursor) > 0;
 const router = express.Router();
@@ -97,7 +99,7 @@ router.put('/:id', rateLimit('proof-video-edit', 240, 3600000), express.json({ l
     if (row?.lastMutation === input.mutationId && String(row.updatedBy) === String(req.user._id)) { result = publicClip(row); return; }
     if (row?.deleted || (row?.revision || 0) !== input.expectedRevision) throw fail('This video changed. Close and reopen the editor to get the latest version.', 409);
     const original = defaultFor(id);
-    if (!row && !original && !input.uploadId) throw fail('Choose a video before publishing.');
+    if (!row && !original && !input.uploadId && !input.facebookUrl) throw fail('Choose a video or paste a Facebook Reel URL before publishing.');
     const oldUploadId = row?.uploadId;
     if (input.uploadId) {
       const upload = await MediaUpload.findOneAndUpdate({ _id: input.uploadId, lessonId: scope(id), kind: 'video', uploadedBy: req.user._id, completed: false, expiresAt: { $gt: new Date() } }, { $set: { updatedAt: new Date() } }, { returnDocument: 'after', session });
@@ -112,16 +114,18 @@ router.put('/:id', rateLimit('proof-video-edit', 240, 3600000), express.json({ l
     row ||= new ProofVideo({ _id: id, order: original?.order ?? Date.now() });
     row.title = input.title; row.description = input.description; row.fit = input.fit;
     if (input.uploadId) {
-      row.uploadId = input.uploadId; row.poster = undefined; row.hasPoster = false;
+      row.uploadId = input.uploadId; row.facebookUrl = undefined; row.poster = undefined; row.hasPoster = false;
       if (input.posterData) {
         const poster = Buffer.from(input.posterData, 'base64');
         if (!validMediaHeader('image/jpeg', poster)) throw fail('Invalid video preview. Choose the video again.');
         row.poster = poster; row.hasPoster = true;
       }
+    } else if (input.facebookUrl) {
+      row.facebookUrl = input.facebookUrl; row.uploadId = undefined; row.poster = undefined; row.hasPoster = false;
     } else if (input.posterData) throw fail('A thumbnail requires a replacement video.');
     row.revision = input.expectedRevision + 1; row.updatedBy = req.user._id; row.lastMutation = input.mutationId;
     await row.save({ session });
-    await AuditEvent.create([{ actorId: req.user._id, action: input.uploadId ? 'proof-video.published' : 'proof-video.edited', targetType: 'proof-video', targetId: id, details: { revision: row.revision } }], { session });
+    await AuditEvent.create([{ actorId: req.user._id, action: input.uploadId || input.facebookUrl ? 'proof-video.published' : 'proof-video.edited', targetType: 'proof-video', targetId: id, details: { revision: row.revision } }], { session });
     if (oldUploadId && oldUploadId !== row.uploadId) {
       const removed = await MediaUpload.deleteOne({ _id: oldUploadId, lessonId: scope(id) }, { session });
       if (removed.deletedCount) await MediaChunk.deleteMany({ uploadId: oldUploadId }, { session });

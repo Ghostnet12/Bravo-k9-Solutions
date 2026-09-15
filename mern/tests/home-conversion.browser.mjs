@@ -55,20 +55,20 @@ try {
         await context.route('https://www.facebook.com/**', route => route.fulfill({ contentType: 'text/html', body: '<title>Original video destination</title><p>Facebook destination fixture</p>' }));
         for (const reelId of reelIds) {
           const card = page.locator(`[data-facebook-reel="${reelId}"]`);
-          const watch = card.getByRole('link', { name: /^Watch .+ on Facebook \(opens in a new tab\)$/ });
+          const watch = card.getByRole('link', { name: /^Watch .+ on Facebook$/ });
           const originalUrl = `https://www.facebook.com/reel/${reelId}/`;
           assert.equal(await watch.getAttribute('href'), originalUrl);
-          assert.equal(await watch.getAttribute('target'), '_blank');
-          assert.equal(await watch.getAttribute('rel'), 'noopener noreferrer');
+          assert.equal(await watch.getAttribute('target'), null);
           assert.equal(await card.getByRole('link', { name: /^View original/ }).getAttribute('href'), originalUrl);
-          const destinationPromise = context.waitForEvent('page');
           await watch.click();
-          const destination = await destinationPromise;
-          await destination.waitForURL(originalUrl);
-          await destination.getByText('Facebook destination fixture').waitFor();
-          await destination.close();
+          await page.waitForURL(originalUrl);
+          await page.getByText('Facebook destination fixture').waitFor();
+          assert.equal(context.pages().length, 1);
+          await page.goBack();
+          await page.waitForURL(`${origin}/`);
+          await watch.waitFor();
           assert.equal(await card.locator('iframe').count(), 0);
-          assert.equal(await watch.isVisible(), true, `${engineName}-${width}: proof poster must remain visible after opening a video`);
+          assert.equal(await watch.isVisible(), true, `${engineName}-${width}: Back must return to the Bravo carousel`);
         }
         assert.equal(await page.locator('.home-proof-team').getByText('David Northrop', { exact: true }).count(), 1);
         assert.equal(await page.locator('.home-training-offer').getByRole('link', { name: /Start with private training/ }).getAttribute('href'), '/portal?program=training');

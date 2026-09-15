@@ -88,6 +88,37 @@ test('homepage video publishing, isolation, and persistence', { timeout: 180000 
       assert.equal((await request(app).get('/api/proof-videos')).body.clips.some(clip => clip.id === clipId), false);
       assert.equal(await MediaChunk.countDocuments({ uploadId }), 0);
     });
+    await t.test('Reel links persist, reject unsafe URLs, and switch cleanly to and from uploads', async () => {
+      const id = 'reel-url-card', facebookUrl = 'https://www.facebook.com/share/r/AbC123/';
+      const linked = { ...edit, mutationId: randomUUID(), facebookUrl: `${facebookUrl}?mibextid=test` };
+      for (const who of [null, 'staff', 'client']) await call(who, 'put', `/${id}`, linked).expect(who ? 403 : 401);
+      for (const value of ['javascript:alert(1)', 'https://facebook.com.evil.example/reel/123/', 'https://facebook.com/profile.php?id=123']) await call('owner', 'put', `/${id}`, { ...linked, facebookUrl: value }).expect(400);
+      await call('owner', 'put', `/${id}`, { ...linked, uploadId: randomUUID() }).expect(400);
+      const saved = await call('owner', 'put', `/${id}`, linked).expect(200);
+      assert.equal(saved.body.clip.facebookUrl, facebookUrl); assert.equal(saved.body.clip.src, null); assert.equal(saved.body.clip.poster, null);
+      await call('owner', 'put', `/${id}`, linked).expect(200);
+      assert.equal((await ProofVideo.findById(id)).revision, 1);
+      const description = { ...edit, expectedRevision: 1, mutationId: randomUUID(), description: 'Saved Reel description' };
+      await call('administrator', 'put', `/${id}`, description).expect(200);
+      assert.equal((await ProofVideo.findById(id)).facebookUrl, facebookUrl);
+      const started = await call('owner', 'post', `/${id}/uploads`, meta).expect(201), replacement = started.body.uploadId;
+      for (const index of [0, 1]) await call('owner', 'put', `/${id}/uploads/${replacement}/chunks/${index}`, { data: data.subarray(index * CHUNK_SIZE, (index + 1) * CHUNK_SIZE).toString('base64') }).expect(200);
+      const uploaded = await call('owner', 'put', `/${id}`, { ...description, expectedRevision: 2, mutationId: randomUUID(), uploadId: replacement }).expect(200);
+      assert.equal(uploaded.body.clip.facebookUrl, null); assert.ok(uploaded.body.clip.src);
+      await request(app).head(`/api/proof-videos/${id}/video`).expect(200);
+      const switched = await call('owner', 'put', `/${id}`, { ...description, expectedRevision: 3, mutationId: randomUUID(), facebookUrl }).expect(200);
+      assert.equal(switched.body.clip.facebookUrl, facebookUrl); assert.equal(switched.body.clip.src, null);
+      assert.equal(await MediaUpload.countDocuments({ _id: replacement }), 0); assert.equal(await MediaChunk.countDocuments({ uploadId: replacement }), 0);
+      await request(app).get(`/api/proof-videos/${id}/video`).expect(404);
+      // A replacement Reel must never display the thumbnail of an unrelated original.
+      const original = DEFAULT_PROOF_VIDEOS[1];
+      const replaced = await call('owner', 'put', `/${original.id}`, { ...edit, mutationId: randomUUID(), facebookUrl }).expect(200);
+      assert.equal(replaced.body.clip.poster, null);
+      const listed = (await request(app).get('/api/proof-videos')).body.clips.find(clip => clip.id === original.id);
+      assert.equal(listed.facebookUrl, facebookUrl);
+      await call('owner', 'delete', `/${id}`, { expectedRevision: 4 }).expect(200);
+      assert.equal((await ProofVideo.findById(id)).deleted, true);
+    });
     await t.test('role revocation applies to active uploads and edits', async () => {
       const begin = await call('administrator', 'post', '/new-admin-card/uploads', meta).expect(201);
       await User.updateOne({ _id: users.administrator._id }, { $set: { role: 'staff' } });

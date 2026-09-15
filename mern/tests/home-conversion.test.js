@@ -17,8 +17,9 @@ test('homepage puts verified proof before the primary training decision', async 
 
 test('proof cards link directly to the original videos without blank third-party players', async () => {
   const source = await readFile(new URL('../client/src/ProofVideoCarousel.tsx', import.meta.url), 'utf8');
-  assert.match(source, /<a className="home-work-proof-play" href=\{clip.facebookUrl!\} target="_blank" rel="noopener noreferrer"/);
-  assert.match(source, /Watch \$\{clip.title\} on Facebook \(opens in a new tab\)/);
+  assert.match(source, /<a className="home-work-proof-play" href=\{clip.facebookUrl!\} aria-label=/);
+  assert.match(source, /Watch \$\{clip.title\} on Facebook/);
+  assert.doesNotMatch(source, /target="_blank"|opens in a new tab/);
   assert.doesNotMatch(source, /<iframe|activeProofReel|plugins\/video\.php/);
 });
 
