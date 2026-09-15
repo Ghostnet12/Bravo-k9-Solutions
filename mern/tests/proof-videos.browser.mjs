@@ -28,7 +28,8 @@ try {
   server = app.listen(0, '127.0.0.1'); await once(server, 'listening');
   const origin = `http://127.0.0.1:${server.address().port}`; process.env.APP_ORIGIN = origin;
   for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
-    const browser = await engine.launch({ headless: true });
+    // Branded Chrome includes MP4/H.264; the bundled open-source Chromium does not.
+    const browser = await engine.launch({ headless: true, ...(engineName === 'chromium' ? { channel: 'chrome' } : {}) });
     try {
       for (const width of [390, 1440]) {
         await ProofVideo.deleteMany({}); await MediaUpload.deleteMany({}); await MediaChunk.deleteMany({});
