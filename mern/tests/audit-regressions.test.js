@@ -74,6 +74,7 @@ test('production static pages get CSP and frame protections, with enough checkou
   for (const route of ['/', '/account', '/assets/app.js']) assert.match(route, new RegExp(`^${rule.source}$`));
   const headers = Object.fromEntries(rule.headers.map(header => [header.key, header.value]));
   assert.match(headers['Content-Security-Policy'], /frame-ancestors 'none'/);
+  assert.match(headers['Content-Security-Policy'], /frame-src https:\/\/www\.facebook\.com/);
   assert.match(headers['Content-Security-Policy'], /script-src 'self'/);
   assert.equal(headers['X-Frame-Options'], 'DENY'); assert.ok(config.functions['api/index.js'].maxDuration >= 60);
 });
