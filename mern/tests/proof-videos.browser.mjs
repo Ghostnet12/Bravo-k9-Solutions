@@ -36,7 +36,7 @@ try {
         await context.addCookies([{ name: 'bravo_session', value: tokens.owner, url: origin }]);
         const page = await context.newPage(), errors = [];
         page.on('pageerror', error => errors.push(error.message));
-        await page.goto(origin); const add = page.getByRole('button', { name: /Add video/ }); await add.waitFor();
+        const response = await page.goto(origin); const add = page.getByRole('button', { name: /Add video/ }); await add.waitFor();
         await page.waitForFunction(() => document.querySelectorAll('[data-proof-video]').length === 3);
 
         // Press and hold on the existing Facebook thumbnail must open the editor,
@@ -68,6 +68,8 @@ try {
         const title = `Training progress ${engineName} ${width}`;
         await create.getByLabel('Video title', { exact: true }).fill(title);
         await create.getByLabel('Description', { exact: true }).fill('A real saved description.\nSecond line stays readable.');
+        await page.waitForFunction(() => { const video = document.querySelector('.proof-video-dialog video'); return video && (video.readyState >= 1 || video.error); }, null, { timeout: 8000 }).catch(() => {});
+        console.log('Video preview', { engineName, width, policy: response.headers()['content-security-policy'], preview: await create.locator('video').evaluate(v => ({ ready: v.readyState, error: v.error?.message, code: v.error?.code, supported: v.canPlayType('video/mp4; codecs="avc1.42E01E"') })), message: await create.locator('[role="alert"]').allTextContents() });
         await create.getByRole('button', { name: 'Publish video', exact: true }).click();
         await create.waitFor({ state: 'hidden', timeout: 30000 });
         assert.equal(await page.locator('[data-proof-video]').count(), 4);
