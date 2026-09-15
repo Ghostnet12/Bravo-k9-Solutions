@@ -11,7 +11,7 @@ export function mediaBytes(value) {
   throw new Error('Invalid stored media.');
 }
 export function validMediaHeader(type, bytes) {
-  if (type === 'video/mp4') return bytes.subarray(4, 8).toString() === 'ftyp';
+  if (type === 'video/mp4' || type === 'video/quicktime') return bytes.subarray(4, 8).toString() === 'ftyp';
   if (type === 'video/webm') return bytes.subarray(0, 4).toString('hex') === '1a45dfa3';
   if (type === 'image/jpeg') return bytes.subarray(0, 3).toString('hex') === 'ffd8ff';
   if (type === 'image/png') return bytes.subarray(0, 8).toString('hex') === '89504e470d0a1a0a';

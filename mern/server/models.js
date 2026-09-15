@@ -77,6 +77,14 @@ export const MediaUpload = model('BravoMediaUpload', new Schema({ _id: String, l
 const mediaChunkSchema = new Schema({ uploadId: { type: String, index: true }, index: Number, size: Number, data: Buffer, expiresAt: { type: Date, expires: 0 } }, { timestamps: true });
 mediaChunkSchema.index({ uploadId: 1, index: 1 }, { unique: true });
 export const MediaChunk = model('BravoMediaChunk', mediaChunkSchema);
+const proofVideoSchema = new Schema({
+  _id: String, title: String, description: String, uploadId: String, poster: { type: Buffer, select: false }, hasPoster: Boolean,
+  fit: { type: String, default: 'contain' }, order: { type: Number, index: true },
+  revision: { type: Number, default: 0 }, deleted: { type: Boolean, default: false },
+  updatedBy: id, lastMutation: String,
+}, { timestamps: true });
+proofVideoSchema.index({ deleted: 1, order: 1, _id: 1 });
+export const ProofVideo = model('BravoProofVideo', proofVideoSchema);
 export const FunnelVisit = model('BravoFunnelVisit', new Schema({ _id: String, channel: String, started: { type: Boolean, default: false }, firstSeen: { type: Date, index: true }, expiresAt: { type: Date, expires: 0 } }, { bufferCommands: false }));
 export const SiteError = model('BravoSiteError', new Schema({ _id: String, source: String, area: String, kind: String, status: Number, count: Number, firstSeen: Date, lastSeen: { type: Date, index: true }, requestId: String, expiresAt: { type: Date, expires: 0 } }, { bufferCommands: false }));
-export const ALL_MODELS = [FunnelVisit, SiteError, MembershipCredit, MemberAccess, Notification, NotificationRead, PasswordReset, TrainerSchedule, ChatReset, User, Session, RateBucket, Booking, Slot, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Subscription, StripeEvent, Lesson, BillingLock, MediaUpload, MediaChunk];
+export const ALL_MODELS = [ProofVideo, FunnelVisit, SiteError, MembershipCredit, MemberAccess, Notification, NotificationRead, PasswordReset, TrainerSchedule, ChatReset, User, Session, RateBucket, Booking, Slot, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Subscription, StripeEvent, Lesson, BillingLock, MediaUpload, MediaChunk];

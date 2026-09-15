@@ -5,6 +5,7 @@ import { readFile, mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { chromium, webkit } from 'playwright';
 import { SERVICES } from '../shared/catalog.js';
+import { DEFAULT_PROOF_VIDEOS } from '../shared/proof-videos.js';
 
 const dist = fileURLToPath(new URL('../client/dist/', import.meta.url));
 const html = await readFile(`${dist}/bravo-shell.html`, 'utf8');
@@ -18,6 +19,7 @@ const team = [
   { id: 'ashley', name: 'Ashley Northrop', role: 'staff', title: 'Trainer & Pitbull Specialist', bio: 'Fixture profile.' },
 ];
 const app = express();
+app.get('/api/proof-videos', (_req, res) => res.json({ clips: DEFAULT_PROOF_VIDEOS, nextCursor: null }));
 app.get('/api/config', (_req, res) => res.json({ connected: false, paymentsReady: false, services: SERVICES, schedule: { enabled: false, weekdays: [1,2,3,4,5], hours: [] } }));
 app.get('/api/auth/me', (_req, res) => res.json({ user: null, services: [], membership: { active: false } }));
 app.get('/api/site-images', (_req, res) => res.json({ images: {} }));
