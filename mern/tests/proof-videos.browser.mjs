@@ -37,6 +37,7 @@ try {
         await context.addCookies([{ name: 'bravo_session', value: tokens.owner, url: origin }]);
         const page = await context.newPage(), errors = [];
         page.on('pageerror', error => errors.push(error.message));
+        await page.addInitScript(() => { window.proofClicks = []; document.addEventListener('click', event => { window.proofClicks.push({ tag: event.target.tagName, label: event.target.getAttribute('aria-label'), text: event.target.textContent?.slice(0, 80) }); window.proofClicks = window.proofClicks.slice(-6); }, true); });
         const response = await page.goto(origin); const add = page.getByRole('button', { name: /Add video/ }); await add.waitFor();
         await page.waitForFunction(() => document.querySelectorAll('[data-proof-video]').length === 3);
 
@@ -85,6 +86,8 @@ try {
         const uploadedBefore = await MediaUpload.countDocuments({ completed: true });
         await saved.getByRole('button', { name: `Edit video: ${title}`, exact: true }).click();
         const edit = page.getByRole('dialog', { name: 'Edit this video' });
+        try { await edit.waitFor({ timeout: 8000 }); }
+        catch (error) { console.log('Reopen failure', { engineName, width, errors, state: await page.evaluate(() => ({ clicks: window.proofClicks, dialogs: [...document.querySelectorAll('dialog')].map(d => ({ open: d.open, title: d.querySelector('h2')?.textContent, text: d.textContent?.slice(0, 300) })) })) }); await page.screenshot({ path: `test-results/reopen-failure-${engineName}-${width}.png`, fullPage: true }); throw error; }
         await edit.getByLabel('Description', { exact: true }).fill('Description changed without re-uploading.');
         await edit.getByRole('button', { name: 'Publish changes', exact: true }).click();
         await edit.waitFor({ state: 'hidden' });
