@@ -68,6 +68,11 @@ try {
           await page.getByRole('button', { name: 'Pause banner' }).click();
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
           await page.screenshot({ path: `test-results/banner-${engineName}-${width}.png`, fullPage: false });
+          await page.getByRole('button',{name:'Accessibility',exact:true}).click();await page.getByRole('button',{name:/^Reduce motion/}).click();
+          await page.waitForFunction(()=>document.querySelector('.home-status-banner').classList.contains('is-paused'));
+          assert.equal(await page.locator('.banner-viewport').evaluate(el=>getComputedStyle(el).overflowX),'auto');assert.ok((await banner.boundingBox()).height < 100);
+          assert.equal(await page.locator('.banner-controls button').count(),0);
+          await page.getByRole('button',{name:/^Reduce motion/}).click();await page.getByRole('button',{name:'Close accessibility options',exact:true}).click();
           await page.emulateMedia({ reducedMotion: 'reduce' });
           assert.equal(await page.locator('.banner-track').evaluate(el => getComputedStyle(el).animationName), 'none');assert.ok((await banner.boundingBox()).height < 100, 'paused or reduced-motion banner stays compact');assert.equal(await page.locator('.banner-viewport').evaluate(el=>getComputedStyle(el).overflowX),'auto');
           for (const visitorRole of ['staff', 'member', null]) {

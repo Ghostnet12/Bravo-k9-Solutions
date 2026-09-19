@@ -59,7 +59,9 @@ export default function HomeBanner() {
   const cancelHold = () => { clearTimeout(hold.current); hold.current = null; };
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const changed = () => setReduced(media.matches); changed(); media.addEventListener('change', changed);
+    const changed = () => setReduced(media.matches || document.documentElement.classList.contains('access-reduced-motion')); changed(); media.addEventListener('change', changed);
+    const preferenceObserver = new MutationObserver(changed);
+    preferenceObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
     let active = true;
     const refresh = () => {
       if (document.hidden) return;
@@ -68,7 +70,7 @@ export default function HomeBanner() {
     };
     refresh(); const dataTimer = setInterval(refresh, 300000), clockTimer = setInterval(() => setNow(new Date()), 15000);
     document.addEventListener('visibilitychange', refresh);
-    return () => { active = false; clearInterval(dataTimer); clearInterval(clockTimer); cancelHold(); media.removeEventListener('change', changed); document.removeEventListener('visibilitychange', refresh); };
+    return () => { active = false; clearInterval(dataTimer); clearInterval(clockTimer); cancelHold(); preferenceObserver.disconnect(); media.removeEventListener('change', changed); document.removeEventListener('visibilitychange', refresh); };
   }, []);
   async function openEditor() {
     if (!canEdit) return;
