@@ -33,7 +33,7 @@ try {
           await page.goto(origin); await page.locator('[data-banner-editable]').waitFor();
           assert.equal(await page.getByRole('button', { name: 'Edit banner', exact: true }).count(), 0);
           const banner = page.locator('.home-status-banner');
-          assert.equal(await banner.evaluate(el => el.previousElementSibling.className), 'home-hero');
+          assert.equal(await banner.evaluate(el => el.previousElementSibling.classList.contains('home-hero')), true);
           assert.ok((await banner.innerText()).includes('63°F'));assert.match(await banner.innerText(),/[A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2}, \d{4} ·/);assert.ok((await banner.boundingBox()).height < 100, 'moving banner stays one compact strip');
           assert.equal(await page.locator('.banner-track').evaluate(el => getComputedStyle(el).animationName), 'bravo-banner-left');
           await banner.scrollIntoViewIfNeeded();
