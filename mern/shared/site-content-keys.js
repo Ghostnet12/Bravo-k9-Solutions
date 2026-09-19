@@ -3013,5 +3013,212 @@ export const CONTENT_KEYS = {
   },
   "home-specialty-3-copy": {
     "text": true
+  },
+  "page-home-layout": {
+    "text": false
+  },
+  "page-home-heading": {
+    "text": false
+  },
+  "page-home-heading-inner": {
+    "text": false
+  },
+  "page-home-title": {
+    "text": true
+  },
+  "page-home-intro": {
+    "text": true
+  },
+  "page-home-eyebrow": {
+    "text": true
+  },
+  "page-dog-training-layout": {
+    "text": false
+  },
+  "page-dog-training-heading": {
+    "text": false
+  },
+  "page-dog-training-heading-inner": {
+    "text": false
+  },
+  "page-behavior-assessment-layout": {
+    "text": false
+  },
+  "page-behavior-assessment-heading": {
+    "text": false
+  },
+  "page-behavior-assessment-heading-inner": {
+    "text": false
+  },
+  "page-dog-walking-layout": {
+    "text": false
+  },
+  "page-dog-walking-heading": {
+    "text": false
+  },
+  "page-dog-walking-heading-inner": {
+    "text": false
+  },
+  "page-learn-layout": {
+    "text": false
+  },
+  "page-learn-heading": {
+    "text": false
+  },
+  "page-learn-heading-inner": {
+    "text": false
+  },
+  "page-contact-layout": {
+    "text": false
+  },
+  "page-contact-heading": {
+    "text": false
+  },
+  "page-contact-heading-inner": {
+    "text": false
+  },
+  "page-accessibility-layout": {
+    "text": false
+  },
+  "page-accessibility-heading": {
+    "text": false
+  },
+  "page-accessibility-heading-inner": {
+    "text": false
+  },
+  "page-media-rights-layout": {
+    "text": false
+  },
+  "page-media-rights-heading": {
+    "text": false
+  },
+  "page-media-rights-heading-inner": {
+    "text": false
+  },
+  "page-portal-layout": {
+    "text": false
+  },
+  "page-portal-heading": {
+    "text": false
+  },
+  "page-portal-heading-inner": {
+    "text": false
+  },
+  "page-portal-title": {
+    "text": false
+  },
+  "page-portal-intro": {
+    "text": false
+  },
+  "page-portal-eyebrow": {
+    "text": false
+  },
+  "page-account-layout": {
+    "text": false
+  },
+  "page-account-heading": {
+    "text": false
+  },
+  "page-account-heading-inner": {
+    "text": false
+  },
+  "page-account-title": {
+    "text": false
+  },
+  "page-account-intro": {
+    "text": false
+  },
+  "page-account-eyebrow": {
+    "text": false
+  },
+  "page-schedule-layout": {
+    "text": false
+  },
+  "page-schedule-heading": {
+    "text": false
+  },
+  "page-schedule-heading-inner": {
+    "text": false
+  },
+  "page-schedule-title": {
+    "text": false
+  },
+  "page-schedule-intro": {
+    "text": false
+  },
+  "page-schedule-eyebrow": {
+    "text": false
+  },
+  "page-reset-password-layout": {
+    "text": false
+  },
+  "page-reset-password-heading": {
+    "text": false
+  },
+  "page-reset-password-heading-inner": {
+    "text": false
+  },
+  "page-reset-password-title": {
+    "text": false
+  },
+  "page-reset-password-intro": {
+    "text": false
+  },
+  "page-reset-password-eyebrow": {
+    "text": false
+  },
+  "page-community-layout": {
+    "text": false
+  },
+  "page-community-heading": {
+    "text": false
+  },
+  "page-community-heading-inner": {
+    "text": false
+  },
+  "page-community-title": {
+    "text": false
+  },
+  "page-community-intro": {
+    "text": false
+  },
+  "page-community-eyebrow": {
+    "text": false
+  },
+  "page-admin-layout": {
+    "text": false
+  },
+  "page-admin-heading": {
+    "text": false
+  },
+  "page-admin-heading-inner": {
+    "text": false
+  },
+  "page-admin-title": {
+    "text": false
+  },
+  "page-admin-intro": {
+    "text": false
+  },
+  "page-admin-eyebrow": {
+    "text": false
+  },
+  "page-not-found-layout": {
+    "text": false
+  },
+  "page-not-found-heading": {
+    "text": false
+  },
+  "page-not-found-heading-inner": {
+    "text": false
+  },
+  "page-not-found-title": {
+    "text": false
+  },
+  "page-not-found-intro": {
+    "text": false
+  },
+  "page-not-found-eyebrow": {
+    "text": false
   }
 };

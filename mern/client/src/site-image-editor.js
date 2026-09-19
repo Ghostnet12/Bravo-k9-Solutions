@@ -221,10 +221,11 @@ export function mountSiteImages({ canEdit = false } = {}) {
     const target = event.target instanceof Element ? event.target : null;
     if (!target || target.closest('[data-site-image-editor],[data-site-image-ignore]')) return null;
     const direct = target.closest('img[data-site-image-key],video[data-site-image-key]'); if (direct && records.has(direct)) return direct;
-    if (target.closest('button,input,textarea,select,summary,a,[role="button"]')) return null;
+    if (target.closest('button,input,textarea,select,summary,a,[role="button"],[data-site-content-key]')) return null;
     return [...records.keys()].reverse().find(element => { const r = element.getBoundingClientRect(); return element.parentElement?.contains(target) && event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top && event.clientY <= r.bottom; }) || null;
   }
   if (allowed) {
+    on(window, 'bravo-edit-photo', event => { const key = event.detail?.key; if (!isEditableMediaKey(key)) return; const element = [...records.keys()].find(element => records.get(element).key === key); if (element) open(element); });
     toolbar = document.createElement('div'); toolbar.className = 'site-photo-tools'; toolbar.dataset.siteImageEditor = '';
     toolbar.hidden = true;
     toolbar.innerHTML = '<button type="button" class="site-photo-toggle" aria-pressed="false" aria-describedby="site-photo-help">Edit photos & videos</button><span id="site-photo-help" class="site-photo-hint">Turn on editing, then select a photo or video. Keyboard: focus the media and press F2.</span><span class="site-photo-status" role="status" aria-live="polite"></span>';
