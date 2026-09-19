@@ -9,13 +9,13 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import legacyApp from './app.js';
 import { connectDb, transaction } from './db.js';
-import { MediaUpload, MediaChunk, AuditEvent } from './models.js';
+import { MediaUpload, MediaChunk, AuditEvent, HeroVideo } from './models.js';
 import { identify, requireUser, requireOwner, sameOrigin, rateLimit } from './auth.js';
 import { CHUNK_SIZE, validMediaHeader, sendUploadedMedia } from './media.js';
 import { isEditableMediaKey, SITE_IMAGE_MAX_BYTES } from '../shared/site-images.js';
 import { HOME_HERO_KEY } from '../shared/home-hero.js';
 import { createHomepageHandler } from './homepage.js';
-import proofVideoRouter from './proof-videos.js';
+import proofVideoRouter, { createProofVideoRouter } from './proof-videos.js';
 import heroCarouselRouter from './hero-carousel.js';
 import siteBannerRouter from './site-banner.js';
 
@@ -122,6 +122,7 @@ app.disable('x-powered-by'); app.set('trust proxy', process.env.VERCEL ? 1 : fal
 app.get(['/', '/api/homepage'], helmet({ contentSecurityPolicy: { directives: { mediaSrc: ["'self'", 'blob:'], upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null } } }), homepageHandler);
 app.use('/api/site-images', router);
 app.use('/api/proof-videos', proofVideoRouter);
+app.use('/api/hero-videos', createProofVideoRouter({ VideoModel: HeroVideo, defaults: [], apiPath: '/api/hero-videos', mediaScope: 'hero', withSettings: false }));
 app.use('/api/hero-carousel', heroCarouselRouter);
 app.use('/api/site-banner', siteBannerRouter);
 app.use('/api/site-content', siteContentRouter);

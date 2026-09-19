@@ -61,6 +61,29 @@ test('homepage video publishing, isolation, and persistence', { timeout: 180000 
       await save('administrator', { expectedRevision: 1, intervalSeconds: 3, photos: [] }).expect(200);
       assert.equal(await AuditEvent.countDocuments({ action: 'hero-carousel.published' }), 2);
     });
+    await t.test('hero video uploads are editable, range-playable and isolated from proof and lessons', async () => {
+      const id = randomUUID();
+      const hero = (who, method, path, body={}) => { let req=request(app)[method](`/api/hero-videos${path}`).set('Origin',process.env.APP_ORIGIN); if(who)req=req.set('Cookie',cookies[who]); return req.send(body); };
+      assert.deepEqual((await request(app).get('/api/hero-videos').expect(200)).body.clips,[]);
+      for (const who of [null,'staff','client']) { await hero(who,'post',`/${id}/uploads`,meta).expect(who?403:401); await hero(who,'put',`/${id}`,edit).expect(who?403:401); await hero(who,'delete',`/${id}`,{expectedRevision:0}).expect(who?403:401); }
+      await request(app).post(`/api/hero-videos/${id}/uploads`).set('Origin','https://unrelated.example').set('Cookie',cookies.owner).send(meta).expect(403);
+      const uploadId=(await hero('owner','post',`/${id}/uploads`,meta).expect(201)).body.uploadId;
+      for(const index of [0,1]) await hero('owner','put',`/${id}/uploads/${uploadId}/chunks/${index}`,{data:data.subarray(index*CHUNK_SIZE,(index+1)*CHUNK_SIZE).toString('base64')}).expect(200);
+      await call('owner','put',`/${id}`,{...edit,uploadId,mutationId:randomUUID()}).expect(400);
+      const clip=(await hero('owner','put',`/${id}`,{...edit,uploadId,mutationId:randomUUID()}).expect(200)).body.clip;
+      assert.match(clip.src,/^\/api\/hero-videos\//);
+      await request(app).get(`/api/hero-videos/${id}/video`).set('Range','bytes=0-23').expect(206);
+      await request(app).get(`/api/proof-videos/${id}/video`).expect(404);
+      assert.equal((await request(app).get('/api/proof-videos')).body.clips.some(clip=>clip.id===id),false);
+      const carousel=(await request(app).get('/api/hero-carousel')).body.carousel;
+      await request(app).put('/api/hero-carousel').set('Origin',process.env.APP_ORIGIN).set('Cookie',cookies.owner).send({expectedRevision:carousel.revision,intervalSeconds:2,photos:[`hero-video-${id}`]}).expect(200);
+      assert.deepEqual((await request(app).get('/api/hero-carousel')).body.carousel.photos,[`hero-video-${id}`]);
+      await hero('administrator','put',`/${id}`,{...edit,expectedRevision:1,mutationId:randomUUID(),description:'Updated hero description'}).expect(200);
+      assert.equal((await request(app).get('/api/hero-videos')).body.clips[0].description,'Updated hero description');
+      await hero('owner','delete',`/${id}`,{expectedRevision:2}).expect(200);
+      await request(app).get(`/api/hero-videos/${id}/video`).expect(404);
+      assert.equal(await MediaUpload.countDocuments({_id:uploadId}),0);
+    });
     const start = await call('owner', 'post', `/${clipId}/uploads`, meta).expect(201), uploadId = start.body.uploadId;
     const uploadChunk = index => call('owner', 'put', `/${clipId}/uploads/${uploadId}/chunks/${index}`, { data: data.subarray(index * CHUNK_SIZE, (index + 1) * CHUNK_SIZE).toString('base64') }).expect(200);
     await t.test('incomplete files stay private and cannot replace the current video', async () => {

@@ -85,8 +85,9 @@ const proofVideoSchema = new Schema({
 }, { timestamps: true });
 proofVideoSchema.index({ deleted: 1, order: 1, _id: 1 });
 export const ProofVideo = model('BravoProofVideo', proofVideoSchema);
+export const HeroVideo = model('BravoHeroVideo', proofVideoSchema.clone());
 export const FunnelVisit = model('BravoFunnelVisit', new Schema({ _id: String, channel: String, started: { type: Boolean, default: false }, firstSeen: { type: Date, index: true }, expiresAt: { type: Date, expires: 0 } }, { bufferCommands: false }));
 export const SiteError = model('BravoSiteError', new Schema({ _id: String, source: String, area: String, kind: String, status: Number, count: Number, firstSeen: Date, lastSeen: { type: Date, index: true }, requestId: String, expiresAt: { type: Date, expires: 0 } }, { bufferCommands: false }));
 export const ProofCarousel = model('BravoProofCarousel', new Schema({ _id: String, intervalSeconds: { type: Number, default: 8 }, revision: { type: Number, default: 0 }, updatedBy: id }, { timestamps: true }));
 export const HeroCarousel = model('BravoHeroCarousel', new Schema({ _id: String, photos: [String], intervalSeconds: { type: Number, default: 5 }, revision: { type: Number, default: 0 }, updatedBy: id }, { timestamps: true }));
-export const ALL_MODELS = [HeroCarousel, ProofCarousel, ProofVideo, FunnelVisit, SiteError, MembershipCredit, MemberAccess, Notification, NotificationRead, PasswordReset, TrainerSchedule, ChatReset, User, Session, RateBucket, Booking, Slot, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Subscription, StripeEvent, Lesson, BillingLock, MediaUpload, MediaChunk];
+export const ALL_MODELS = [HeroVideo, HeroCarousel, ProofCarousel, ProofVideo, FunnelVisit, SiteError, MembershipCredit, MemberAccess, Notification, NotificationRead, PasswordReset, TrainerSchedule, ChatReset, User, Session, RateBucket, Booking, Slot, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Subscription, StripeEvent, Lesson, BillingLock, MediaUpload, MediaChunk];

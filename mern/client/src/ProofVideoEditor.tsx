@@ -20,7 +20,7 @@ function thumbnail(video: HTMLVideoElement | null) {
     return data.length <= 256 * 1024 ? data : undefined;
   } catch { return undefined; }
 }
-export default function ProofVideoEditor({ clip, onClose, onSaved, onRemoved }: { clip: ProofClip; onClose: () => void; onSaved: (clip: ProofClip) => void; onRemoved: (id: string) => void }) {
+export default function ProofVideoEditor({ clip, onClose, onSaved, onRemoved, apiBase = '/proof-videos' }: { apiBase?: '/proof-videos' | '/hero-videos'; clip: ProofClip; onClose: () => void; onSaved: (clip: ProofClip) => void; onRemoved: (id: string) => void }) {
   const dialog = useRef<HTMLDialogElement>(null), preview = useRef<HTMLVideoElement>(null), mounted = useRef(true);
   const [title, setTitle] = useState(clip.title), [description, setDescription] = useState(clip.description), [fit, setFit] = useState(clip.fit || 'contain');
   const [selectedPoster, setSelectedPoster] = useState<string | undefined>();
@@ -72,20 +72,20 @@ export default function ProofVideoEditor({ clip, onClose, onSaved, onRemoved }: 
         const chunks = Math.ceil(file.size / MEDIA_CHUNK_BYTES);
         if (!upload.current) {
           setProgress('Starting upload…');
-          const started = await api(`/proof-videos/${clip.id}/uploads`, { method: 'POST', body: { filename: file.name.slice(0, 160), contentType: proofVideoType(file), size: file.size, chunks } });
+          const started = await api(`${apiBase}/${clip.id}/uploads`, { method: 'POST', body: { filename: file.name.slice(0, 160), contentType: proofVideoType(file), size: file.size, chunks } });
           upload.current = { id: started.uploadId, next: 0 };
         }
         for (let index = upload.current.next; index < chunks; index++) {
           if (!mounted.current) return;
           const data = base64(await file.slice(index * MEDIA_CHUNK_BYTES, (index + 1) * MEDIA_CHUNK_BYTES).arrayBuffer());
-          await api(`/proof-videos/${clip.id}/uploads/${upload.current.id}/chunks/${index}`, { method: 'PUT', body: { data } });
+          await api(`${apiBase}/${clip.id}/uploads/${upload.current.id}/chunks/${index}`, { method: 'PUT', body: { data } });
           upload.current.next = index + 1;
           if (mounted.current) setProgress(`Uploading video: ${Math.round((index + 1) / chunks * 100)}%`);
         }
       }
       if (!mounted.current) return;
       setProgress('Publishing video and description…');
-      const result = await api(`/proof-videos/${clip.id}`, { method: 'PUT', body: { expectedRevision: clip.revision, mutationId: mutation.current, title, description, fit, ...(isFacebook ? { facebookUrl: reelUrl } : file ? { uploadId: upload.current!.id, ...(posterData ? { posterData } : {}) } : posterData ? { posterData } : {}) } });
+      const result = await api(`${apiBase}/${clip.id}`, { method: 'PUT', body: { expectedRevision: clip.revision, mutationId: mutation.current, title, description, fit, ...(isFacebook ? { facebookUrl: reelUrl } : file ? { uploadId: upload.current!.id, ...(posterData ? { posterData } : {}) } : posterData ? { posterData } : {}) } });
       if (mounted.current) onSaved(result.clip);
     } catch (cause: any) {
       if (mounted.current) { setError(cause.message); setProgress(''); }
@@ -95,7 +95,7 @@ export default function ProofVideoEditor({ clip, onClose, onSaved, onRemoved }: 
   async function remove() {
     if (saving.current || !window.confirm(`Remove “${clip.title}” from the homepage?`)) return;
     saving.current = true; setBusy(true); setError('');
-    try { await api(`/proof-videos/${clip.id}`, { method: 'DELETE', body: { expectedRevision: clip.revision } }); if (mounted.current) onRemoved(clip.id); }
+    try { await api(`${apiBase}/${clip.id}`, { method: 'DELETE', body: { expectedRevision: clip.revision } }); if (mounted.current) onRemoved(clip.id); }
     catch (cause: any) { if (mounted.current) setError(cause.message); }
     finally { saving.current = false; if (mounted.current) setBusy(false); }
   }
