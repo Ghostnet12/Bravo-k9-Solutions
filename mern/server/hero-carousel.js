@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { connectDb, transaction } from './db.js';
 import { HeroCarousel, AuditEvent } from './models.js';
 import { identify, requireUser, requireOwner, sameOrigin, rateLimit } from './auth.js';
-import { DEFAULT_HERO_CAROUSEL, isHeroPhotoKey } from '../shared/hero-carousel.js';
+import { DEFAULT_HERO_CAROUSEL, isHeroMediaKey } from '../shared/hero-carousel.js';
 const router = express.Router();
 const visible = row => row ? { revision: row.revision, intervalSeconds: row.intervalSeconds, photos: row.photos } : DEFAULT_HERO_CAROUSEL;
 router.use(helmet(), (_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
@@ -14,7 +14,7 @@ router.get('/', async (_req, res) => {
   await connectDb(); res.json({ carousel: visible(await HeroCarousel.findById('home').lean()) });
 });
 router.put('/', sameOrigin, cookieParser(), async (_req, _res, next) => { await connectDb(); next(); }, identify, requireUser, requireOwner, rateLimit('hero-carousel-edit', 60, 3600000), express.json({ limit: '16kb' }), async (req, res) => {
-  const data = z.object({ expectedRevision: z.number().int().min(0), intervalSeconds: z.number().int().min(2).max(60), photos: z.array(z.string().refine(isHeroPhotoKey)).max(100).refine(photos => new Set(photos).size === photos.length) }).strict().parse(req.body);
+  const data = z.object({ expectedRevision: z.number().int().min(0), intervalSeconds: z.number().int().min(2).max(60), photos: z.array(z.string().refine(isHeroMediaKey)).max(100).refine(photos => new Set(photos).size === photos.length) }).strict().parse(req.body);
   await HeroCarousel.init(); let saved;
   await transaction(async session => {
     const current = await HeroCarousel.findById('home').session(session);
@@ -27,5 +27,5 @@ router.put('/', sameOrigin, cookieParser(), async (_req, _res, next) => { await 
   });
   res.json({ carousel: saved });
 });
-router.use((error, _req, res, _next) => res.status(error instanceof z.ZodError ? 400 : error.status || 500).json({ error: error instanceof z.ZodError ? 'Choose 2–60 seconds and valid, unique photos (up to 100 additional photos).' : error.status === 409 ? error.message : 'Unable to load or save the photo carousel. Please try again.' }));
+router.use((error, _req, res, _next) => res.status(error instanceof z.ZodError ? 400 : error.status || 500).json({ error: error instanceof z.ZodError ? 'Choose 2–60 seconds and valid, unique photos or videos (up to 100 additional items).' : error.status === 409 ? error.message : 'Unable to load or save the photo carousel. Please try again.' }));
 export default router;
