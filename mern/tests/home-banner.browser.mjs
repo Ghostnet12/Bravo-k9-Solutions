@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import express from 'express';
 import { once } from 'node:events';
-import { readFile, mkdir } from 'node:fs/promises';
+import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { chromium, webkit } from 'playwright';
 const dist = fileURLToPath(new URL('../client/dist/', import.meta.url)), html = await readFile(`${dist}/bravo-shell.html`, 'utf8');
@@ -59,6 +59,10 @@ try {
             role = visitorRole; await page.reload(); await page.waitForLoadState('networkidle'); assert.equal(await page.getByRole('button', { name: 'Edit alerts' }).count(), 0);
           }
           assert.deepEqual(errors, []); console.log(`PASS ${engineName} ${width}: placement, weather, movement, pause, long-press, editing, persistence, conflicts and restricted editor`);
+        } catch (error) {
+          await page.screenshot({ path: `test-results/banner-failure-${engineName}-${width}.png`, fullPage: true });
+          await writeFile(`test-results/banner-failure-${engineName}-${width}.json`, JSON.stringify({ error: error.message, errors, text: await page.locator('body').innerText() }, null, 2));
+          throw error;
         } finally { await context.close(); }
       }
     } finally { await browser.close(); }
