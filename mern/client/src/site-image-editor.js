@@ -34,6 +34,7 @@ export function mountSiteImages({ canEdit = false } = {}) {
   const framed = saved => saved?.framed ?? !!saved?.src;
   function keyFor(element, source) {
     if (element.tagName === 'VIDEO') return element.dataset.siteMediaKey || sourceVideoKey(source, location.origin);
+    if (element.dataset.siteImageKey && isEditableMediaKey(element.dataset.siteImageKey)) return element.dataset.siteImageKey;
     if (!sourceImageKey(source, location.origin)) return null;
     const person = element.closest('.home-team-grid article')?.querySelector('.home-person h3')?.textContent;
     if (person) return `team-${slug(person)}`;

@@ -8,7 +8,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: mern
@@ -30,6 +30,7 @@ jobs:
       - run: node tests/site-content.browser.mjs
       - run: node tests/proof-carousel.browser.mjs
       - run: node tests/home-hero.browser.mjs
+      - run: node tests/hero-carousel.browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

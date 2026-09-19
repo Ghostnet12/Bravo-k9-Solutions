@@ -53,19 +53,19 @@ try {
           assert.equal(await page.getByLabel('Time between videos (seconds)').count(),0);
           const heading=page.getByRole('heading',{name:'Training you can actually see.',exact:true});await heading.scrollIntoViewIfNeeded();const hb=await heading.boundingBox();await page.mouse.move(hb.x+20,hb.y+10);await page.mouse.down();await page.waitForTimeout(750);await page.mouse.up();
           await page.getByRole('dialog',{name:'Edit video section',exact:true}).waitFor();
-          await page.getByLabel('Time between videos (seconds)').fill('6');
+          await page.getByLabel('Time between videos (seconds)').fill('2');
           await page.getByRole('button', { name: 'Publish carousel timing', exact: true }).click();
-          await page.getByText('Carousel timing published: 6 seconds.', { exact: true }).waitFor();
-          assert.equal(carousel.intervalSeconds, 6);await page.getByRole('button',{name:'Close video section editor'}).click();
+          await page.getByText('Carousel timing published: 2 seconds.', { exact: true }).waitFor();
+          assert.equal(carousel.intervalSeconds, 2);await page.getByRole('button',{name:'Close video section editor'}).click();
           await page.reload(); await page.locator('[data-proof-video]').first().waitFor();
           assert.equal(await page.getByLabel('Time between videos (seconds)').count(), 0);
           await page.getByText('Swipe to explore. Pause to take a closer look.',{exact:true}).waitFor();
           await rail.scrollIntoViewIfNeeded(); await page.mouse.move(0, 0);
-          const customStart = await rail.evaluate(el => el.scrollLeft); await page.waitForTimeout(6700);
+          const customStart = await rail.evaluate(el => el.scrollLeft); await page.waitForTimeout(2700);
           assert.ok((await rail.evaluate(el => el.scrollLeft)) > customStart + 20, 'saved five-second timing changes movement');
           // A real touch plus retained focus must not create a permanent pause.
           const tb=await heading.boundingBox(); await page.touchscreen.tap(tb.x+15,tb.y+10); await rail.focus();
-          const touched=await rail.evaluate(el=>el.scrollLeft);await page.waitForTimeout(6700);assert.ok(Math.abs((await rail.evaluate(el=>el.scrollLeft))-touched)>20,'resumes after touch even when focus stays in the carousel');
+          const touched=await rail.evaluate(el=>el.scrollLeft);await page.waitForTimeout(2700);assert.ok(Math.abs((await rail.evaluate(el=>el.scrollLeft))-touched)>20,'resumes after touch even when focus stays in the carousel');
           for (const visitorRole of ['staff', 'member', null]) { role = visitorRole; await page.reload(); await page.waitForLoadState('networkidle'); assert.equal(await page.getByLabel('Time between videos (seconds)').count(), 0); }
           assert.deepEqual(errors, []); console.log(`PASS ${name} ${width}: five-second advance, pause, arrows, playing-video guard, reduced motion and same-tab Facebook link`);
         } catch (error) { await page.screenshot({ path: `test-results/proof-carousel-failure-${name}-${width}.png`, fullPage: true }); await writeFile(`test-results/proof-carousel-failure-${name}-${width}.json`, JSON.stringify({ error: error.message, errors })); throw error; }

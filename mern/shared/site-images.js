@@ -17,7 +17,7 @@ const PHOTO_ASSETS = new Set([
 const PHOTO_SLOTS = new Set(['home-hero', 'home-training-hero', 'home-method', 'home-learning', 'learning-banner']);
 export function isEditableMediaKey(key) {
   return typeof key === 'string' && SITE_IMAGE_KEY.test(key) && (
-    PHOTO_SLOTS.has(key) || PHOTO_ASSETS.has(key.replace(/^asset-/, '')) && key.startsWith('asset-') ||
+    PHOTO_SLOTS.has(key) || /^hero-photo-[a-f0-9-]{36}$/.test(key) || PHOTO_ASSETS.has(key.replace(/^asset-/, '')) && key.startsWith('asset-') ||
     /^(?:team|lesson)-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(key) || !!videoTarget(key)
   );
 }
