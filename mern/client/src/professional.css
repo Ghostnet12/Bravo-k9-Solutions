@@ -167,3 +167,8 @@ html.access-high-contrast :is(.home-training-offer,.home-training-offer aside,.h
 @media(min-width:1000px){.hero-field-note{display:block;max-width:220px}.hero-field-note p{font-size:clamp(2.2rem,3vw,3.5rem)}.hero-field-note>span{font-size:10px}}
 
 .first-visit-intro .price-total{flex-wrap:wrap;gap:12px}.first-visit-intro .price-total strong{white-space:nowrap;font-size:2.1rem}.first-visit-intro .price-total strong small{font:500 .95rem Montserrat,sans-serif;margin-left:4px}
+
+/* First visits use one calendar and one time choice; full scheduling keeps its controls. */
+.first-visit-mode #choose-dates>[data-site-content-key="bookingpage-41"],.first-visit-mode .booking-schedule-actions,.first-visit-mode .single-date-editor{display:none}
+.first-visit-date-range{margin:18px 0}.first-visit-date-range summary{cursor:pointer;color:var(--gold);padding:12px 0;min-height:44px}.first-visit-date-range[open]{display:grid;grid-template-columns:1fr 1fr;gap:12px}.first-visit-date-range summary{grid-column:1/-1}
+.home-person .trainer-introduction{white-space:pre-line;line-height:1.8}.home-person .trainer-specialty{font-size:.8rem;color:#ead5ab}
