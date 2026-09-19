@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import express from 'express';
 import { once } from 'node:events';
-import { readFile, mkdir } from 'node:fs/promises';
+import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { chromium, webkit } from 'playwright';
 const dist = fileURLToPath(new URL('../client/dist/', import.meta.url)), html = await readFile(`${dist}/bravo-shell.html`, 'utf8');
@@ -23,6 +23,7 @@ try { for (const [name, engine] of Object.entries({ chromium, webkit })) {
    if (path === '/api/site-banner') json={revision:0,alerts:[],settings:{motion:'never'}};
    await route.fulfill({json});
   });
+  try {
   const gallery=page.getByRole('region',{name:'Trainer photos'}),track=page.locator('.hero-photo-track');
   await page.goto(origin); await gallery.scrollIntoViewIfNeeded(); await page.waitForTimeout(800);
   assert.equal(await page.getByRole('button',{name:'Add photos',exact:true}).count(),0);
@@ -42,5 +43,6 @@ try { for (const [name, engine] of Object.entries({ chromium, webkit })) {
   await page.reload();await gallery.scrollIntoViewIfNeeded();await page.waitForTimeout(700);assert.equal(await page.locator('.hero-photo-slide').count(),4);
   await page.emulateMedia({reducedMotion:'reduce'});await page.waitForTimeout(650);const reduced=await track.evaluate(el=>getComputedStyle(el).transform);await page.waitForTimeout(3200);assert.equal(await track.evaluate(el=>getComputedStyle(el).transform),reduced);
   assert.deepEqual(errors,[]);await page.screenshot({path:`test-results/hero-carousel-${name}-${width}.png`});console.log(`PASS ${name}/${width}: left rotation, touch resume, owner hold, upload, timing, editor and reduced motion`);await page.close();
+  } catch(error) { await page.screenshot({path:`test-results/hero-failed-${name}-${width}.png`}); await writeFile(`test-results/hero-failed-${name}-${width}.txt`,`${error.stack}\n${await page.locator('body').innerText()}\n${JSON.stringify(errors)}`); throw error; }
  }} finally {await browser.close();}
 }} finally {await new Promise(resolve=>server.close(resolve));}
