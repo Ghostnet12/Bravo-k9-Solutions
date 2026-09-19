@@ -5,5 +5,9 @@ export const DEFAULT_BANNER = {
   alertLabel: 'BRAVO ALERT', showAlerts: true,
   fallbackLabel: 'BRAVO', fallback: 'Trust. Train. Deploy.',
   textColor: '#101010', borderColor: '#101010', centerColor: '#ffe8a4', edgeColor: '#f58a24',
-  motion: 'alerts', speed: 1, fontSize: 14, borderWidth: 2,
+  motion: 'always', speed: 1, fontSize: 14, borderWidth: 2,
 };
+
+export const bannerDate = date => new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Chicago', weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+}).format(date);
