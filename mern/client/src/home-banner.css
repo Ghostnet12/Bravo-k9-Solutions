@@ -26,3 +26,4 @@
 @keyframes bravo-banner-left{to{transform:translateX(-50%)}}
 @media(prefers-reduced-motion:reduce){.home-status-banner .banner-track{animation:none;width:100%}.home-status-banner .banner-group{flex-wrap:wrap;flex:1}.home-status-banner .banner-group[aria-hidden]{display:none}.home-status-banner .banner-item{white-space:normal;overflow-wrap:anywhere;max-width:100%;flex-wrap:wrap}}
 @media(max-width:600px){.banner-item{font-size:12px;padding:15px 12px}.banner-controls{padding:5px;gap:4px}.banner-editor{padding:18px}.banner-editor h2{font-size:24px}}
+@media(max-width:600px){.home-status-banner.is-paused{flex-direction:column}.home-status-banner.is-paused .banner-controls{justify-content:flex-end;border-left:0;border-top:1px solid #101010}.home-status-banner.is-paused .banner-item{width:100%;box-sizing:border-box}}

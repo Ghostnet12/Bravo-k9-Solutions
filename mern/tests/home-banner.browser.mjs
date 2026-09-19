@@ -35,6 +35,8 @@ try {
           assert.equal(await banner.evaluate(el => el.previousElementSibling.className), 'home-hero');
           assert.ok((await banner.innerText()).includes('63°F'));
           assert.equal(await page.locator('.banner-track').evaluate(el => getComputedStyle(el).animationName), 'bravo-banner-left');
+          await banner.scrollIntoViewIfNeeded();
+          await page.screenshot({ path: `test-results/banner-moving-${engineName}-${width}.png` });
           await page.getByRole('button', { name: 'Pause banner', exact: true }).click();
           assert.equal(await page.locator('.banner-track').evaluate(el => getComputedStyle(el).animationName), 'none');
           await page.getByRole('button', { name: 'Edit alerts', exact: true }).click();
