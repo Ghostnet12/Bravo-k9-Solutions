@@ -13,6 +13,7 @@ import { CHUNK_SIZE, validMediaHeader, sendUploadedMedia } from './media.js';
 import { isEditableMediaKey, SITE_IMAGE_MAX_BYTES } from '../shared/site-images.js';
 import { createHomepageHandler } from './homepage.js';
 import proofVideoRouter from './proof-videos.js';
+import siteBannerRouter from './site-banner.js';
 
 // Existing collection and image URLs remain compatible with saved portraits.
 // Video records store framing only; actual video bytes still use the protected
@@ -117,6 +118,7 @@ app.disable('x-powered-by'); app.set('trust proxy', process.env.VERCEL ? 1 : fal
 app.get(['/', '/api/homepage'], helmet({ contentSecurityPolicy: { directives: { mediaSrc: ["'self'", 'blob:'], upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null } } }), homepageHandler);
 app.use('/api/site-images', router);
 app.use('/api/proof-videos', proofVideoRouter);
+app.use('/api/site-banner', siteBannerRouter);
 // Close the old upload/delete/publish routes too, not just the inline editor.
 // Staff keep scheduling and other operational tools, but cannot change media
 // indirectly through lesson saves or an already-open upload screen.
