@@ -25,6 +25,11 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){const br
  });
  try{
   await page.goto(origin);await page.waitForLoadState('networkidle');
+  assert.equal(await page.locator('.home-hero-image').getAttribute('src'),'/images/bravo-client-training.jpeg');
+  assert.equal(await page.locator('.home-hero-image').evaluate(el=>el.complete && el.naturalWidth>0),true);
+  assert.equal(await page.locator('.home-hero-image').evaluate(el=>getComputedStyle(el).objectFit),'contain');
+  assert.ok(await page.getByText('One hour per day · Monday–Friday',{exact:true}).isVisible());
+  await page.screenshot({path:`test-results/authentic-home-${engineName}-${width}.png`});
   assert.equal(await page.locator('.review-stars').count(),0);assert.equal(await page.locator('.banner-track').evaluate(el=>getComputedStyle(el).animationName),'none');
   await page.getByRole('link',{name:'Start private training',exact:true}).click();await page.getByRole('heading',{name:'Let’s start with your dog.',exact:true}).waitFor();
   assert.equal(await page.getByText('IMPORTANT APPOINTMENT NOTICE',{exact:true}).count(),0);assert.equal(await page.getByRole('heading',{name:'Build your schedule',exact:true}).count(),0);

@@ -1,7 +1,9 @@
 import { normalizeFraming } from './site-images.js';
 
-export const HOME_HERO_SOURCE = '/images/hero-bravo-launch.webp';
-export const HOME_HERO_ALT = 'Professional Bravo K9 trainer working with an attentive Belgian Malinois near Aberdeen';
+// A new photo slot preserves the previous hero and its saved framing.
+export const HOME_HERO_KEY = 'home-training-hero';
+export const HOME_HERO_SOURCE = '/images/bravo-client-training.jpeg';
+export const HOME_HERO_ALT = 'Bravo training session: a dog sitting attentively beside its trainer in a store aisle';
 export const HOME_HERO_META = 'bravo-home-hero';
 
 // Only public photo metadata belongs in the document. Never embed a database
@@ -9,7 +11,7 @@ export const HOME_HERO_META = 'bravo-home-hero';
 export function homeHeroSnapshot(value) {
   if (!value || typeof value !== 'object') return null;
   const revision = Number.isSafeInteger(value.revision) && value.revision >= 0 ? value.revision : 0;
-  const source = `/api/site-images/home-hero/image?v=${revision}`;
+  const source = `/api/site-images/${HOME_HERO_KEY}/image?v=${revision}`;
   return {
     ...normalizeFraming(value),
     alt: String(value.alt ?? '').slice(0, 240),

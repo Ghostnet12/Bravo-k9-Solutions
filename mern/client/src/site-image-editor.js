@@ -1,3 +1,4 @@
+import { HOME_HERO_KEY } from '../../shared/home-hero.js';
 import { api } from './api.js';
 import { isEditableMediaKey, SITE_IMAGE_MAX_BYTES, SITE_VIDEO_MAX_BYTES, MEDIA_CHUNK_BYTES, defaultSiteImage, sourceImageKey, sourceVideoKey, videoTarget, normalizeFraming, mediaSettingsChanged } from '../../shared/site-images.js';
 import { applyFraming, videoControls } from './media-framing.js';
@@ -36,7 +37,7 @@ export function mountSiteImages({ canEdit = false } = {}) {
     if (!sourceImageKey(source, location.origin)) return null;
     const person = element.closest('.home-team-grid article')?.querySelector('.home-person h3')?.textContent;
     if (person) return `team-${slug(person)}`;
-    if (element.matches('.home-hero-image')) return 'home-hero';
+    if (element.matches('.home-hero-image')) return HOME_HERO_KEY;
     if (element.closest('.home-method-photo')) return 'home-method';
     if (element.closest('.home-lesson-preview')) return 'home-learning';
     if (element.closest('.learn-banner')) return 'learning-banner';
