@@ -49,7 +49,7 @@ try { for (const [name, engine] of Object.entries({ chromium, webkit })) {
   await editor.getByRole('button',{name:'Add video',exact:true}).click();
   const videoEditor=page.getByRole('dialog',{name:'Add a video'});await videoEditor.waitFor();
   await page.getByLabel('Choose video from your photo library').setInputFiles(videoFixture);
-  await page.getByLabel('Video title',{exact:true}).fill('Hero training video');await page.getByLabel('Description',{exact:true}).fill('Real training session description.');
+  await page.getByLabel('Video title',{exact:true}).fill('Hero training video');await videoEditor.getByLabel('Description',{exact:true}).fill('Real training session description.');
   await page.getByRole('button',{name:'Publish video',exact:true}).click();await editor.waitFor();await page.getByText('Hero carousel saved.',{exact:true}).waitFor();
   assert.equal(settings.photos.length,4);const videoKey=settings.photos.find(key=>key.startsWith('hero-video-'));assert.ok(videoKey);
   await page.screenshot({path:`test-results/hero-editor-${name}-${width}.png`});
