@@ -30,7 +30,7 @@ const publicClip = row => {
     fit: row.fit || 'contain', src: row.uploadId ? `/api/proof-videos/${row._id}/video?v=${row.revision}` : null,
     poster: row.uploadId ? row.hasPoster ? `/api/proof-videos/${row._id}/poster?v=${row.revision}` : null : facebookUrl === original?.facebookUrl ? original.poster : null, facebookUrl };
 };
-const publicCarousel = row => ({ intervalSeconds: row?.intervalSeconds ?? 5, revision: row?.revision ?? 0 });
+const publicCarousel = row => ({ intervalSeconds: Math.max(5, row?.intervalSeconds ?? 8), revision: row?.revision ?? 0 });
 const after = (clip, cursor) => !cursor || compareProofVideos(clip, cursor) > 0;
 const router = express.Router();
 router.use(helmet(), (_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
@@ -75,7 +75,7 @@ router.get('/:id/poster', async (req, res) => {
 // Reuse the photo editor's real Owner/Administrator permission checks.
 router.use(sameOrigin, cookieParser(), identify, requireUser, requireOwner);
 router.put('/settings', rateLimit('proof-carousel-edit', 60, 3600000), express.json({ limit: '2kb' }), async (req, res) => {
-  const data = z.object({ expectedRevision: revision, intervalSeconds: z.number().int().min(2).max(60) }).strict().parse(req.body);
+  const data = z.object({ expectedRevision: revision, intervalSeconds: z.number().int().min(5).max(60) }).strict().parse(req.body);
   await ProofCarousel.init();
   let saved;
   await transaction(async session => {
@@ -139,7 +139,12 @@ router.put('/:id', rateLimit('proof-video-edit', 240, 3600000), express.json({ l
       }
     } else if (input.facebookUrl) {
       row.facebookUrl = input.facebookUrl; row.uploadId = undefined; row.poster = undefined; row.hasPoster = false;
-    } else if (input.posterData) throw fail('A thumbnail requires a replacement video.');
+    } else if (input.posterData) {
+      if (!row.uploadId) throw fail('A thumbnail requires an uploaded video.');
+      const poster = Buffer.from(input.posterData, 'base64');
+      if (!validMediaHeader('image/jpeg', poster)) throw fail('Invalid video preview.');
+      row.poster = poster; row.hasPoster = true;
+    }
     row.revision = input.expectedRevision + 1; row.updatedBy = req.user._id; row.lastMutation = input.mutationId;
     await row.save({ session });
     await AuditEvent.create([{ actorId: req.user._id, action: input.uploadId || input.facebookUrl ? 'proof-video.published' : 'proof-video.edited', targetType: 'proof-video', targetId: id, details: { revision: row.revision } }], { session });
@@ -177,6 +182,6 @@ router.use((error, req, res, _next) => {
   const transport = requestError(error);
   if (transport) return res.status(transport.status).json({ error: transport.message });
   const status = error instanceof z.ZodError ? 400 : error.code === 11000 ? 409 : Number(error.status) || 500;
-  res.status(status).json({ error: error instanceof z.ZodError ? (req.path === '/settings' ? 'Choose a whole number from 2 to 60 seconds.' : 'Check the video size, title and description, then try again.') : status === 409 ? (req.path === '/settings' ? 'Carousel timing changed. Reload the page before saving.' : 'This video changed. Close and reopen the editor before saving.') : status >= 500 ? req.method === 'GET' ? 'Videos are temporarily unavailable. Please try again.' : 'Unable to confirm this update. Refresh to check before retrying.' : error.message });
+  res.status(status).json({ error: error instanceof z.ZodError ? (req.path === '/settings' ? 'Choose a whole number from 5 to 60 seconds.' : 'Check the video size, title and description, then try again.') : status === 409 ? (req.path === '/settings' ? 'Carousel timing changed. Reload the page before saving.' : 'This video changed. Close and reopen the editor before saving.') : status >= 500 ? req.method === 'GET' ? 'Videos are temporarily unavailable. Please try again.' : 'Unable to confirm this update. Refresh to check before retrying.' : error.message });
 });
 export default router;

@@ -3222,3 +3222,8 @@ export const CONTENT_KEYS = {
     "text": false
   }
 };
+
+Object.assign(CONTENT_KEYS, {"first-visit-title": {"text": true}, "first-visit-copy": {"text": true}, "first-visit-terms": {"text": true}, "training-facts-included": {"text": true}, "training-facts-first": {"text": true}, "training-facts-support": {"text": true}, "training-facts-renewal": {"text": true}});
+Object.assign(CONTENT_KEYS, {"first-visit-intro":{"text":false},"training-facts":{"text":false}});
+
+for (let i=1;i<=4;i++) CONTENT_KEYS[`training-question-${i}`]={text:true};

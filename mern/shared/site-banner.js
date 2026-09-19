@@ -5,5 +5,5 @@ export const DEFAULT_BANNER = {
   alertLabel: 'BRAVO ALERT', showAlerts: true,
   fallbackLabel: 'BRAVO', fallback: 'Trust. Train. Deploy.',
   textColor: '#101010', borderColor: '#101010', centerColor: '#ffe8a4', edgeColor: '#f58a24',
-  speed: 1, fontSize: 14, borderWidth: 2,
+  motion: 'alerts', speed: 1, fontSize: 14, borderWidth: 2,
 };

@@ -8,7 +8,7 @@ test('homepage puts verified proof before the primary training decision', async 
   const training = source.indexOf('id="training"');
   assert.ok(proof > 0 && training > proof);
   assert.match(source, /Verified Bravo account/);
-  assert.match(source, /Published reviews are tied to real Bravo client accounts/);
+  assert.match(source, /Calmer walks, clearer routines, and practical help at home/);
   assert.match(source, /href="\/portal\?program=training"/);
   assert.match(source, /Start with private training/);
   assert.equal((source.match(/id="reviews"/g) || []).length, 1);

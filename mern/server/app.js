@@ -184,12 +184,19 @@ app.post('/api/billing/portal', requireUser, rateLimit('billing-portal', 10, 360
   res.json({ url: portal.url });
 });
 app.get('/api/reviews', async (_req, res) => {
-  const reviews = await Review.find({ hidden: false }).select('authorName rating body createdAt updatedAt').sort({ createdAt: -1 }).limit(100).lean();
+  const reviews = await Review.aggregate([
+    { $match: { hidden: false } },
+    { $lookup: { from: User.collection.name, localField: 'userId', foreignField: '_id', as: 'author' } },
+    { $match: { 'author.0.role': 'member', 'author.0.removedAt': null } },
+    { $sort: { createdAt: -1 } }, { $limit: 100 },
+    { $project: { authorName: 1, rating: 1, body: 1, createdAt: 1, updatedAt: 1 } },
+  ]);
   const average = reviews.length ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length : 0;
   res.json({ reviews, average: Number(average.toFixed(1)), count: reviews.length });
 });
 app.get('/api/reviews/mine', requireUser, async (req, res) => res.json({ review: await Review.findOne({ userId: req.user._id }).select('rating body hidden createdAt updatedAt').lean() }));
 app.put('/api/reviews/mine', requireUser, rateLimit('review', 6, 3600000), async (req, res) => {
+  if (req.user.role !== 'member') return res.status(403).json({ error: 'Customer reviews are reserved for client accounts. Team accounts cannot contribute to customer ratings.' });
   const data = z.object({ rating: z.number().int().min(1).max(5), body: z.string().trim().min(10).max(1200) }).parse(req.body);
   const review = await Review.findOneAndUpdate({ userId: req.user._id }, { $set: { ...data, authorName: req.user.name }, $setOnInsert: { hidden: false } }, { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true });
   res.json({ review });
