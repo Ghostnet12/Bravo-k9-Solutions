@@ -26,8 +26,6 @@ jobs:
           cache: npm
           cache-dependency-path: mern/package-lock.json
       - run: npm ci
-      - name: Known dependency vulnerabilities
-        run: npm audit --audit-level=moderate
       - run: npm run build
       - run: npm test
       - name: Isolated authentication, authorization, media and client regressions
@@ -38,6 +36,13 @@ jobs:
         run: |
           node tests/seo.browser.mjs
           node tests/client-login.browser.mjs
+      - name: Known dependency vulnerabilities (retry registry maintenance)
+        run: |
+          for attempt in 1 2 3; do
+            if npm audit --audit-level=moderate; then exit 0; fi
+            if [ "$attempt" -lt 3 ]; then sleep 15; fi
+          done
+          exit 1
       - uses: actions/upload-artifact@v4
         if: always()
         with:
