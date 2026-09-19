@@ -40,7 +40,7 @@ export async function identify(req, res, next) {
       if (req.user && isPrimaryOwner(req.user) && req.user.role !== 'owner' && !req.user.blocked) {
         req.user.role = 'owner'; await req.user.save();
       }
-      if (req.user?.blocked) { await Session.deleteMany({ userId: req.user._id }); req.user = null; }
+      if (req.user?.blocked || req.user?.removedAt) { await Session.deleteMany({ userId: req.user._id }); req.user = null; }
     }
   }
   // A temporary sign-in can only finish password setup or sign out. Enforce this
@@ -67,10 +67,10 @@ export function sameOrigin(req, _res, next) {
   next();
 }
 // Database-backed buckets apply across Node instances, not only one process.
-export function rateLimit(scope, limit, milliseconds) {
+export function rateLimit(scope, limit, milliseconds, identityFor = req => req.user ? String(req.user._id) : req.ip) {
   return async (req, res, next) => {
     const bucket = Math.floor(Date.now() / milliseconds);
-    const identity = req.user ? String(req.user._id) : req.ip;
+    const identity = identityFor(req);
     const key = digest(`${scope}:${identity}:${bucket}`);
     let doc;
     try {

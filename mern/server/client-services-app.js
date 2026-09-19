@@ -2,6 +2,7 @@ import { monitorRequests, ingestVisit, ingestError, monitoringSummary, pingDatab
 import { isPrimaryOwner } from './auth.js';
 import { reserveVisits, releaseVisit } from './reservations.js';
 import express from 'express';
+import { requestError } from './errors.js';
 import { bookingTrainerIds, trainerChoice, scheduledTrainerLabel } from '../shared/trainers.js';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -196,7 +197,7 @@ app.post('/api/admin/recovery/:id', ...session, requireUser, requireOwner, ...wr
   });
   res.json({ url: `${process.env.APP_ORIGIN}/reset-password#${token}`, expiresAt });
 });
-app.post('/api/auth/recover', ...session, ...write, rateLimit('recovery-complete', 10, 3600000), async (req, res) => {
+app.post('/api/auth/recover', ...session, ...write, rateLimit('recovery-complete-ip', 10, 3600000, req => req.ip), async (req, res) => {
   const input = z.object({ token: z.string().regex(/^[a-f\d]{64}$/), password: z.string().min(12).max(128) }).strict().parse(req.body);
   const passwordHash = await hashPassword(input.password);
   await transaction(async dbSession => {
@@ -251,6 +252,8 @@ app.get('/api/admin/membership-status', ...session, requireUser, requireOwner, a
 app.use(memberApp);
 app.use((error, _req, res, _next) => {
   if (res.headersSent) return res.end();
+  const transport = requestError(error);
+  if (transport) return res.status(transport.status).json({ error: transport.message });
   const status = error instanceof z.ZodError ? 400 : Number(error.status) || 500;
   res.status(status).json({ error: error instanceof z.ZodError ? 'Check the form fields and try again.' : status >= 500 ? 'This operation could not be completed. Please try again.' : error.message });
 });

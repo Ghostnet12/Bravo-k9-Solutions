@@ -1,4 +1,5 @@
 import express from 'express';
+import { requestError } from './errors.js';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import mongoose from 'mongoose';
@@ -33,6 +34,8 @@ export const homepageHandler = createHomepageHandler({ loadHero: async () => {
 } });
 function mediaError(error, _req, res, _next) {
   if (res.headersSent) return res.end();
+  const transport = requestError(error);
+  if (transport) return res.status(transport.status).json({ error: transport.message });
   const status = error instanceof z.ZodError ? 400 : error.code === 11000 ? 409 : Number(error.status) || 500;
   const message = error instanceof z.ZodError ? 'Check the file format, size, zoom and description, then try again.' : status === 409 ? 'This media changed while you were editing. Close and reopen the editor.' : status === 413 ? 'That file is too large. Choose a smaller file.' : status >= 500 ? 'Unable to confirm this update. Refresh to check before retrying.' : error.message;
   if (status >= 500) console.error('Bravo media operation failed', { status });

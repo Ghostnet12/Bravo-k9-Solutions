@@ -52,7 +52,7 @@ const routes = publicRoutes().map(([route]) => canonicalUrl(route));
 // for live catalog/team content. No fabricated priorities or freshness dates.
 await writeFile(new URL('sitemap.xml', directory), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${routes.map(url => `  <url><loc>${escape(url)}</loc></url>`).join('\n')}\n</urlset>\n`);
 // Allow crawling of noindex pages so crawlers can actually read the directive.
-await writeFile(new URL('robots.txt', directory), `User-agent: *\nAllow: /\nDisallow: /api/\nAllow: /api/site-images/\nAllow: /api/config$\nAllow: /api/team$\nAllow: /api/reviews$\nAllow: /api/lessons$\n\nSitemap: ${SITE_ORIGIN}/sitemap.xml\n`);
+await writeFile(new URL('robots.txt', directory), `User-agent: *\nAllow: /\nDisallow: /api/\nAllow: /api/site-images/\nAllow: /api/config$\nAllow: /api/team$\nAllow: /api/team/schedules$\nAllow: /api/reviews$\nAllow: /api/lessons$\nAllow: /api/proof-videos$\nAllow: /api/proof-videos?\nAllow: /api/proof-videos/*/video\nAllow: /api/proof-videos/*/poster\n\nSitemap: ${SITE_ORIGIN}/sitemap.xml\n`);
 // Keep the homepage handler responsible for the owner's current hero framing.
 await rename(new URL('index.html', directory), new URL('bravo-shell.html', directory));
 console.log(`Rendered ${routes.length} public pages, private route metadata, 404, sitemap.xml and robots.txt.`);

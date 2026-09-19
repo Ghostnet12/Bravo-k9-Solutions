@@ -1,4 +1,5 @@
 import express from 'express';
+import { requestError } from './errors.js';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { z } from 'zod';
@@ -110,6 +111,8 @@ for (const type of ['video', 'captions', 'transcript']) app.get(`/api/lessons/:i
 app.use(mediaApp);
 app.use((error, _req, res, _next) => {
   if (res.headersSent) return res.end();
+  const transport = requestError(error);
+  if (transport) return res.status(transport.status).json({ error: transport.message });
   const status = error instanceof z.ZodError ? 400 : error.code === 11000 ? 409 : Number(error.status) || 500;
   const message = error instanceof z.ZodError ? 'Check the account and Member access settings.' : error.code === 11000 ? 'This account or its Member access changed. Refresh it and try again.' : status >= 500 ? 'Member access could not be confirmed. Refresh the profile before trying again.' : error.message;
   if (status >= 500) console.error('Bravo member access operation failed', { status });
