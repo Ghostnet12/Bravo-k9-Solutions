@@ -23,10 +23,12 @@ try{for(const [name,engine]of Object.entries({chromium,webkit})){const browser=a
     await dialog.getByLabel('Text',{exact:true}).fill('Training edited by the owner. <script>plain text</script>');
     await dialog.getByLabel('Font',{exact:true}).selectOption('georgia');
     await dialog.getByLabel('Background',{exact:true}).selectOption('gradient');
+    await page.waitForFunction(()=>getComputedStyle(document.querySelector('.home-intro')).backgroundImage.includes('linear-gradient'));
     assert.ok((await intro.innerText()).includes('Training edited'));assert.ok((await intro.evaluate(el=>getComputedStyle(el).backgroundImage)).includes('linear-gradient'));
     await dialog.getByRole('button',{name:'Cancel',exact:true}).click();assert.equal(await intro.innerText(),original);
     await hold(intro);await dialog.waitFor();await dialog.getByLabel('Edit this part',{exact:true}).selectOption('site-theme');await dialog.getByLabel('Font',{exact:true}).selectOption('georgia');
     await dialog.getByLabel('Text color',{exact:true}).evaluate(el=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,'#abcdef');el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));});
+    await page.waitForFunction(()=>getComputedStyle(document.querySelector('#home-title')).color==='rgb(171, 205, 239)');
     assert.ok((await page.locator('#home-title').evaluate(el=>getComputedStyle(el).fontFamily)).includes('Georgia'));assert.equal(await page.locator('#home-title').evaluate(el=>getComputedStyle(el).color),'rgb(171, 205, 239)');
     await dialog.getByRole('button',{name:'Cancel',exact:true}).click();
     await hold(intro);await dialog.waitFor();await dialog.getByLabel('Text',{exact:true}).fill('Owner published training information.');
