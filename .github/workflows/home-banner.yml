@@ -8,7 +8,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: mern
@@ -25,6 +25,7 @@ jobs:
       - run: node --test --test-concurrency=1 tests/site-banner.integration.js tests/proof-videos.integration.js tests/site-content.integration.js tests/customer-reviews.integration.js
       - run: npm install --no-save --package-lock=false playwright@1.55.1
       - run: npx playwright install --with-deps chromium webkit
+      - run: node tests/hero-carousel.browser.mjs
       - run: node tests/customer-clarity.browser.mjs
       - run: node tests/home-banner.browser.mjs
       - run: node tests/site-content.browser.mjs

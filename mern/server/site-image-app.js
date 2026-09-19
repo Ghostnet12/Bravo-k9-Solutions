@@ -16,6 +16,7 @@ import { isEditableMediaKey, SITE_IMAGE_MAX_BYTES } from '../shared/site-images.
 import { HOME_HERO_KEY } from '../shared/home-hero.js';
 import { createHomepageHandler } from './homepage.js';
 import proofVideoRouter from './proof-videos.js';
+import heroCarouselRouter from './hero-carousel.js';
 import siteBannerRouter from './site-banner.js';
 
 // Existing collection and image URLs remain compatible with saved portraits.
@@ -121,6 +122,7 @@ app.disable('x-powered-by'); app.set('trust proxy', process.env.VERCEL ? 1 : fal
 app.get(['/', '/api/homepage'], helmet({ contentSecurityPolicy: { directives: { mediaSrc: ["'self'", 'blob:'], upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null } } }), homepageHandler);
 app.use('/api/site-images', router);
 app.use('/api/proof-videos', proofVideoRouter);
+app.use('/api/hero-carousel', heroCarouselRouter);
 app.use('/api/site-banner', siteBannerRouter);
 app.use('/api/site-content', siteContentRouter);
 app.get(['/api/public-page', ...publicPagePaths], publicPageHandler);

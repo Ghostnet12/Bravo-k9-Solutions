@@ -60,7 +60,7 @@ export function SiteContentProvider({ children }) {
     if(!canEdit)return;
     let hold=null, suppressUntil=0, pending=false, disposed=false;
     const cancel=()=>{clearTimeout(hold?.timer);hold=null;};
-    const ignored=target=>target.closest('dialog,[data-site-image-editor],.home-status-banner,.home-work-proof,input,textarea,select,[data-site-image-editable]');
+    const ignored=target=>target.closest('dialog,[data-site-image-editor],.home-status-banner,.home-work-proof,.home-hero-gallery,input,textarea,select,[data-site-image-editable]');
     async function open(target){
       if(pending || !allowed.current)return;pending=true;cancel();setError('');
       const options=[];

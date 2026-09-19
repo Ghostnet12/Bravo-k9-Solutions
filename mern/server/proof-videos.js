@@ -30,7 +30,7 @@ const publicClip = row => {
     fit: row.fit || 'contain', src: row.uploadId ? `/api/proof-videos/${row._id}/video?v=${row.revision}` : null,
     poster: row.uploadId ? row.hasPoster ? `/api/proof-videos/${row._id}/poster?v=${row.revision}` : null : facebookUrl === original?.facebookUrl ? original.poster : null, facebookUrl };
 };
-const publicCarousel = row => ({ intervalSeconds: Math.max(5, row?.intervalSeconds ?? 8), revision: row?.revision ?? 0 });
+const publicCarousel = row => ({ intervalSeconds: Math.max(2, row?.intervalSeconds ?? 8), revision: row?.revision ?? 0 });
 const after = (clip, cursor) => !cursor || compareProofVideos(clip, cursor) > 0;
 const router = express.Router();
 router.use(helmet(), (_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
@@ -75,7 +75,7 @@ router.get('/:id/poster', async (req, res) => {
 // Reuse the photo editor's real Owner/Administrator permission checks.
 router.use(sameOrigin, cookieParser(), identify, requireUser, requireOwner);
 router.put('/settings', rateLimit('proof-carousel-edit', 60, 3600000), express.json({ limit: '2kb' }), async (req, res) => {
-  const data = z.object({ expectedRevision: revision, intervalSeconds: z.number().int().min(5).max(60) }).strict().parse(req.body);
+  const data = z.object({ expectedRevision: revision, intervalSeconds: z.number().int().min(2).max(60) }).strict().parse(req.body);
   await ProofCarousel.init();
   let saved;
   await transaction(async session => {
@@ -182,6 +182,6 @@ router.use((error, req, res, _next) => {
   const transport = requestError(error);
   if (transport) return res.status(transport.status).json({ error: transport.message });
   const status = error instanceof z.ZodError ? 400 : error.code === 11000 ? 409 : Number(error.status) || 500;
-  res.status(status).json({ error: error instanceof z.ZodError ? (req.path === '/settings' ? 'Choose a whole number from 5 to 60 seconds.' : 'Check the video size, title and description, then try again.') : status === 409 ? (req.path === '/settings' ? 'Carousel timing changed. Reload the page before saving.' : 'This video changed. Close and reopen the editor before saving.') : status >= 500 ? req.method === 'GET' ? 'Videos are temporarily unavailable. Please try again.' : 'Unable to confirm this update. Refresh to check before retrying.' : error.message });
+  res.status(status).json({ error: error instanceof z.ZodError ? (req.path === '/settings' ? 'Choose a whole number from 2 to 60 seconds.' : 'Check the video size, title and description, then try again.') : status === 409 ? (req.path === '/settings' ? 'Carousel timing changed. Reload the page before saving.' : 'This video changed. Close and reopen the editor before saving.') : status >= 500 ? req.method === 'GET' ? 'Videos are temporarily unavailable. Please try again.' : 'Unable to confirm this update. Refresh to check before retrying.' : error.message });
 });
 export default router;

@@ -1,3 +1,4 @@
+import HeroPhotoCarousel from './HeroPhotoCarousel';
 import TrainingFacts from './TrainingFacts';
 import TrainerIntroduction from './TrainerIntroduction';
 import { Editable } from './SiteContent';
@@ -36,7 +37,7 @@ export default function Home() {
   return <Editable as="div" contentKey="home-1" className="bravo-home"><Header/>
     <Editable as="main" contentKey="home-2" id="main-content" tabIndex={-1}>
       <Editable as="section" contentKey="home-3" className="home-hero home-hero-authentic" aria-labelledby="home-title">
-        <img className="home-hero-image" src={hero?.src || HOME_HERO_SOURCE} width="828" height="1121" loading="eager" fetchPriority="high" alt={hero?.framed ? hero.alt : HOME_HERO_ALT} style={hero?.framed ? framingStyle(hero) : undefined} data-site-image-original={HOME_HERO_SOURCE} data-site-image-original-alt={HOME_HERO_ALT} data-site-media-original-styles='{"objectFit":"","objectPosition":"","transform":"","transformOrigin":"","clipPath":""}'/>
+        <HeroPhotoCarousel><img className="home-hero-image" src={hero?.src || HOME_HERO_SOURCE} width="828" height="1121" loading="eager" fetchPriority="high" alt={hero?.framed ? hero.alt : HOME_HERO_ALT} style={hero?.framed ? framingStyle(hero) : undefined} data-site-image-original={HOME_HERO_SOURCE} data-site-image-original-alt={HOME_HERO_ALT} data-site-media-original-styles='{"objectFit":"","objectPosition":"","transform":"","transformOrigin":"","clipPath":""}'/></HeroPhotoCarousel>
         <Editable as="div" contentKey="home-4" className="home-hero-shade"/>
         <Editable as="div" contentKey="home-5" className="shell home-hero-inner"><Editable as="div" contentKey="home-6" className="home-hero-copy">
           <Editable as="p" contentKey="home-7" canEditText className="eyebrow">ABERDEEN, SOUTH DAKOTA <Editable as="span" contentKey="home-8" canEditText> / </Editable> MOBILE DOG TRAINING</Editable>

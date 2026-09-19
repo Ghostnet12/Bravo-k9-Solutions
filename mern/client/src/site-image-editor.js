@@ -34,6 +34,7 @@ export function mountSiteImages({ canEdit = false } = {}) {
   const framed = saved => saved?.framed ?? !!saved?.src;
   function keyFor(element, source) {
     if (element.tagName === 'VIDEO') return element.dataset.siteMediaKey || sourceVideoKey(source, location.origin);
+    if (element.dataset.siteImageKey && isEditableMediaKey(element.dataset.siteImageKey)) return element.dataset.siteImageKey;
     if (!sourceImageKey(source, location.origin)) return null;
     const person = element.closest('.home-team-grid article')?.querySelector('.home-person h3')?.textContent;
     if (person) return `team-${slug(person)}`;
@@ -222,7 +223,7 @@ export function mountSiteImages({ canEdit = false } = {}) {
   }
   function hit(event) {
     const target = event.target instanceof Element ? event.target : null;
-    if (!target || target.closest('[data-site-image-editor],[data-site-image-ignore]')) return null;
+    if (!target || target.closest('[data-site-image-editor],[data-site-image-ignore],.home-hero-gallery')) return null;
     const direct = target.closest('img[data-site-image-key],video[data-site-image-key]'); if (direct && records.has(direct)) return direct;
     if (target.closest('button,input,textarea,select,summary,a,[role="button"],[data-site-content-key]')) return null;
     return [...records.keys()].reverse().find(element => { const r = element.getBoundingClientRect(); return element.parentElement?.contains(target) && event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top && event.clientY <= r.bottom; }) || null;
