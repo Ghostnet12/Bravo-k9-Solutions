@@ -3,7 +3,7 @@ import { useBravo } from './context';
 import { api } from './api';
 import './home-banner.css';
 import { isImageEditor } from '../../shared/site-images.js';
-import { DEFAULT_BANNER } from '../../shared/site-banner.js';
+import { DEFAULT_BANNER, bannerDate } from '../../shared/site-banner.js';
 
 const localTime = date => new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }).format(date);
 function AlertEditor({ saved, publish, close }) {
@@ -81,18 +81,18 @@ export default function HomeBanner() {
   const items = [
     ...(settings.showAlerts ? (saved?.alerts?.length ? saved.alerts.map(text => ({ label: settings.alertLabel, text })) : [{ label: settings.fallbackLabel, text: settings.fallback }]) : []),
     ...(settings.showLocation ? [{ label: settings.locationLabel, text: settings.location }] : []),
-    ...(settings.showTime ? [{ label: settings.timeLabel, text: settings.timeOverride || localTime(now) }] : []),
+    ...(settings.showTime ? [{ label: settings.timeLabel, text: `${bannerDate(now)} · ${settings.timeOverride || localTime(now)}` }] : []),
     ...(settings.showWeather ? [{ label: settings.weatherLabel, text: settings.weatherOverride || (freshWeather ? `${freshWeather.temperature}°F · ${freshWeather.description} · observed ${localTime(new Date(freshWeather.observedAt))}` : 'Weather temporarily unavailable') }] : []),
 
   ];
   const routine = settings.motion !== 'always' && !(settings.motion === 'alerts' && settings.showAlerts && saved?.alerts?.length);
   const stopped = (paused ?? routine) || reduced || editing;
   return <>
-    <section className={`home-status-banner ${stopped ? 'is-paused' : ''}`} aria-label="Location, weather, time and Bravo alerts" data-banner-editable={canEdit || undefined} style={{ '--banner-text': settings.textColor, '--banner-border': settings.borderColor, '--banner-center': settings.centerColor, '--banner-edge': settings.edgeColor, '--banner-size': `${settings.fontSize}px`, '--banner-outline': `${settings.borderWidth}px` }}
+    <section className={`home-status-banner ${stopped ? 'is-paused' : ''}`} aria-label="Location, weather, date, time and Bravo alerts" data-banner-editable={canEdit || undefined} style={{ '--banner-text': settings.textColor, '--banner-border': settings.borderColor, '--banner-center': settings.centerColor, '--banner-edge': settings.edgeColor, '--banner-size': `${settings.fontSize}px`, '--banner-outline': `${settings.borderWidth}px` }}
       onPointerDown={event => { if (!canEdit || event.button !== 0 || event.target.closest('button, a')) return; origin.current = { x: event.clientX, y: event.clientY }; cancelHold(); hold.current = setTimeout(openEditor, 650); }}
       onPointerMove={event => { if (origin.current && Math.hypot(event.clientX - origin.current.x, event.clientY - origin.current.y) > 10) cancelHold(); }} onPointerUp={cancelHold} onPointerCancel={cancelHold} onPointerLeave={cancelHold}
       onContextMenu={event => { if (canEdit && !event.target.closest('button, a')) event.preventDefault(); }}>
-      <div className="banner-viewport"><div className="banner-track" style={{ '--banner-duration': `${Math.max(35, items.reduce((sum, item) => sum + item.text.length + item.label.length, 0) * .18) / settings.speed}s` }}>
+      <div className="banner-viewport" tabIndex={stopped ? 0 : undefined} aria-label={stopped ? 'Banner information — scroll sideways for more' : undefined}><div className="banner-track" style={{ '--banner-duration': `${Math.max(35, items.reduce((sum, item) => sum + item.text.length + item.label.length, 0) * .18) / settings.speed}s` }}>
         {[0, 1].map(copy => <div className="banner-group" key={copy} aria-hidden={copy === 1 ? true : undefined}>{items.map((item, index) => <span className="banner-item" key={index}>{item.label.trim() && <strong>{item.label}</strong>}<span>{item.text}</span><i aria-hidden="true">✦</i></span>)}</div>)}
       </div></div>
       <div className="banner-controls">{!reduced && <button type="button" aria-label={stopped ? 'Resume banner' : 'Pause banner'} aria-pressed={stopped} onClick={() => setPaused(!stopped)}>{stopped ? '▶' : 'Ⅱ'}</button>}</div>

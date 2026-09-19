@@ -18,3 +18,11 @@ test('weather coalesces concurrent requests, caches successes, and expires failu
   await read(); assert.equal(requests, 2);
   time += 60001; fails = false; assert.equal((await read()).temperature, 63); assert.equal(requests, 3);
 });
+
+test('banner date follows Aberdeen midnight rather than UTC midnight', async () => {
+  const { bannerDate } = await import('../shared/site-banner.js');
+  assert.equal(bannerDate(new Date('2026-09-20T04:59:00Z')), 'Sat, Sep 19, 2026');
+  assert.equal(bannerDate(new Date('2026-09-20T05:00:00Z')), 'Sun, Sep 20, 2026');
+  assert.equal(bannerDate(new Date('2026-12-20T05:59:00Z')), 'Sat, Dec 19, 2026');
+  assert.equal(bannerDate(new Date('2026-12-20T06:00:00Z')), 'Sun, Dec 20, 2026');
+});

@@ -5,14 +5,16 @@
 .banner-item{display:flex;align-items:center;gap:14px;white-space:nowrap;padding:18px 18px;font-size:14px;font-weight:600;line-height:1.4}
 .banner-item strong{font-size:10px;letter-spacing:.12em;border:1px solid #101010;padding:5px 7px;border-radius:3px;font-weight:800}
 .banner-item i{font-style:normal;margin-left:22px;font-size:18px}
-.banner-controls{position:relative;display:flex;align-items:center;gap:6px;padding:7px 10px;background:#f59a35;border-left:1px solid #101010}
+.banner-controls{position:relative;display:flex;flex-shrink:0;align-items:center;gap:6px;padding:7px 10px;background:#f59a35;border-left:1px solid #101010}
 .home-status-banner .banner-controls button{min-width:44px;min-height:44px;padding:8px;border:1px solid #101010;border-radius:5px;background:transparent;color:#101010;font:700 11px Montserrat,sans-serif;cursor:pointer}
 .home-status-banner button:focus-visible{outline:3px solid #101010;outline-offset:2px}
-.home-status-banner:hover .banner-track,.home-status-banner:focus-within .banner-track{animation-play-state:paused}
-.home-status-banner.is-paused .banner-track{animation:none;width:100%;transform:none}
-.home-status-banner.is-paused .banner-group{flex-wrap:wrap;flex:1}
+.home-status-banner:focus-within .banner-track{animation-play-state:paused}
+@media(hover:hover){.home-status-banner:hover .banner-track{animation-play-state:paused}}
+.home-status-banner.is-paused .banner-viewport{overflow-x:auto;scrollbar-width:thin}
+.home-status-banner.is-paused .banner-track{animation:none;width:max-content;transform:none}
+.home-status-banner.is-paused .banner-group{flex-wrap:nowrap;flex:none}
 .home-status-banner.is-paused .banner-group[aria-hidden]{display:none}
-.home-status-banner.is-paused .banner-item{white-space:normal;overflow-wrap:anywhere;max-width:100%;padding:12px;flex-wrap:wrap;gap:8px}
+.home-status-banner.is-paused .banner-item{white-space:nowrap;padding:12px;flex-wrap:nowrap;gap:8px}
 .banner-editor{width:min(620px,calc(100vw - 28px));max-height:85dvh;overflow:auto;border:2px solid #101010;border-radius:14px;padding:24px;background:#fff2d3;color:#101010;box-shadow:0 24px 90px #0009}
 .banner-editor::backdrop{background:#000b}
 .banner-editor h2{color:#101010;margin:0;font-size:28px}
@@ -24,9 +26,9 @@
 .banner-editor textarea{display:block;width:100%;box-sizing:border-box;background:#fff;color:#101010;border:1px solid #101010;border-radius:5px;padding:10px;font:inherit;resize:vertical;margin:8px 0}
 .banner-alert-field{margin:18px 0}.banner-alert-field label{color:#101010;font-weight:700}.banner-editor-note{margin:20px 0}.banner-editor-actions{margin-top:22px}
 @keyframes bravo-banner-left{to{transform:translateX(-50%)}}
-@media(prefers-reduced-motion:reduce){.home-status-banner .banner-track{animation:none;width:100%}.home-status-banner .banner-group{flex-wrap:wrap;flex:1}.home-status-banner .banner-group[aria-hidden]{display:none}.home-status-banner .banner-item{white-space:normal;overflow-wrap:anywhere;max-width:100%;flex-wrap:wrap}}
+@media(prefers-reduced-motion:reduce){.home-status-banner .banner-viewport{overflow-x:auto}.home-status-banner .banner-track{animation:none;width:max-content}.home-status-banner .banner-group{flex-wrap:nowrap;flex:none}.home-status-banner .banner-group[aria-hidden]{display:none}.home-status-banner .banner-item{white-space:nowrap;flex-wrap:nowrap}}
 @media(max-width:600px){.banner-item{font-size:12px;padding:15px 12px}.banner-controls{padding:5px;gap:4px}.banner-editor{padding:18px}.banner-editor h2{font-size:24px}}
-@media(max-width:600px){.home-status-banner.is-paused{flex-direction:column}.home-status-banner.is-paused .banner-controls{justify-content:flex-end;border-left:0;border-top:1px solid #101010}.home-status-banner.is-paused .banner-item{width:100%;box-sizing:border-box}}
+
 
 .home-status-banner{border-width:var(--banner-outline,2px);border-color:var(--banner-border,#101010);background:linear-gradient(90deg,var(--banner-edge,#f58a24),var(--banner-center,#ffe8a4) 45%,var(--banner-center,#ffe8a4) 55%,var(--banner-edge,#f58a24));color:var(--banner-text,#101010)}
 .home-status-banner .banner-item{font-size:var(--banner-size,14px)}

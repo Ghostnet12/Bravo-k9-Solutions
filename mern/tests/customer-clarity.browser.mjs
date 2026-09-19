@@ -17,6 +17,7 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){const br
   if(path==='/api/auth/me')json={user:signedIn?{id:'fixture',name:'Fixture Client',role:'member',phone:'6055550100',address:'Fixture address'}:null,services:[],subscriptions:[],membership:{active:false}};
   if(path==='/api/auth/login'){signedIn=true;json={user:{id:'fixture',name:'Fixture Client',role:'member'}};}
   if(path==='/api/trainers')json={trainers:[{id:'111111111111111111111111',name:'Fixture Trainer',spotsRemaining:4,limit:5}]};
+  if(path==='/api/site-banner')json={alerts:[],settings:{motion:'never'},revision:0};
   if(path==='/api/site-banner/weather')json={weather:{temperature:63,description:'Cloudy',observedAt:new Date().toISOString()}};
   if(path==='/api/availability'){const start=new URL(route.request().url()).searchParams.get('from');json={days:[{date:start,slots:['09:00','10:00']},{date:new Date(Date.parse(start+'T12:00:00Z')+86400000).toISOString().slice(0,10),slots:['09:00','10:00']}]};}
   if(route.request().method()!=='GET')writes.push(path);
