@@ -8,7 +8,6 @@
 .banner-controls{position:relative;display:flex;flex-shrink:0;align-items:center;gap:6px;padding:7px 10px;background:#f59a35;border-left:1px solid #101010}
 .home-status-banner .banner-controls button{min-width:44px;min-height:44px;padding:8px;border:1px solid #101010;border-radius:5px;background:transparent;color:#101010;font:700 11px Montserrat,sans-serif;cursor:pointer}
 .home-status-banner button:focus-visible{outline:3px solid #101010;outline-offset:2px}
-.home-status-banner:focus-within .banner-track{animation-play-state:paused}
 @media(hover:hover){.home-status-banner:hover .banner-track{animation-play-state:paused}}
 .home-status-banner.is-paused .banner-viewport{overflow-x:auto;scrollbar-width:thin}
 .home-status-banner.is-paused .banner-track{animation:none;width:max-content;transform:none}

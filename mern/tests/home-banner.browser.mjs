@@ -40,6 +40,7 @@ try {
           await page.screenshot({ path: `test-results/banner-moving-${engineName}-${width}.png` });
           await page.getByRole('button', { name: 'Pause banner', exact: true }).click();
           assert.equal(await page.locator('.banner-track').evaluate(el => getComputedStyle(el).animationName), 'none');assert.ok((await banner.boundingBox()).height < 100, 'paused or reduced-motion banner stays compact');assert.equal(await page.locator('.banner-viewport').evaluate(el=>getComputedStyle(el).overflowX),'auto');
+          await page.getByRole('button', { name: 'Resume banner', exact: true }).click();await page.mouse.move(0,0);assert.equal(await page.locator('.banner-track').evaluate(el=>getComputedStyle(el).animationPlayState),'running');await page.getByRole('button',{name:'Pause banner',exact:true}).click();
           await banner.scrollIntoViewIfNeeded();
           const openByHold = async () => { const b = await banner.boundingBox(); await page.mouse.move(b.x + 40, b.y + 20); await page.mouse.down(); await page.waitForTimeout(750); await page.mouse.up(); };
           await openByHold(); await page.getByRole('dialog').waitFor();
