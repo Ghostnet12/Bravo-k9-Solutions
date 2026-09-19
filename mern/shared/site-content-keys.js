@@ -3227,3 +3227,8 @@ Object.assign(CONTENT_KEYS, {"first-visit-title": {"text": true}, "first-visit-c
 Object.assign(CONTENT_KEYS, {"first-visit-intro":{"text":false},"training-facts":{"text":false}});
 
 for (let i=1;i<=4;i++) CONTENT_KEYS[`training-question-${i}`]={text:true};
+
+Object.assign(CONTENT_KEYS, {
+  'trainer-david-introduction': {text:true},
+  'trainer-ashley-introduction': {text:true},
+});
