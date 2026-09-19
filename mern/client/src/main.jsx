@@ -53,7 +53,7 @@ const AdminPage = lazy(() => import('./AdminPage'));
 const DogWalkingPage = publicPage('/dog-walking');
 function SiteImageTools() {
   const { user } = useBravo();
-  useEffect(() => mountSiteImages({ canEdit: isImageEditor(user) && !user?.mustChangePassword }), [user?.id, user?.role]);
+  useEffect(() => mountSiteImages({ canEdit: isImageEditor(user) && !user?.mustChangePassword }), [user?.id, user?.role, user?.mustChangePassword]);
   return null;
 }
 function RouteBehavior() {
