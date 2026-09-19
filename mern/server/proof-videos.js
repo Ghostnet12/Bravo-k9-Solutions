@@ -50,13 +50,13 @@ router.get('/', async (req, res) => {
   }
   const ids = defaults.map(clip => clip.id);
   const savedDefaults = await VideoModel.find({ _id: { $in: ids } }).lean();
-  const defaults = defaults.flatMap(clip => {
+  const resolvedDefaults = defaults.flatMap(clip => {
     const row = savedDefaults.find(row => row._id === clip.id);
     return row ? row.deleted ? [] : [publicClip(row)] : [clip];
   });
   const filter = { _id: { $nin: ids }, deleted: false, ...(cursor ? { $or: [{ order: { $gt: cursor.order } }, { order: cursor.order, _id: { $gt: cursor.id, $nin: ids } }] } : {}) };
   const added = await VideoModel.find(filter).sort({ order: 1, _id: 1 }).limit(PROOF_PAGE_SIZE + 1).lean();
-  const clips = [...defaults, ...added.map(publicClip)].filter(clip => after(clip, cursor)).sort(compareProofVideos);
+  const clips = [...resolvedDefaults, ...added.map(publicClip)].filter(clip => after(clip, cursor)).sort(compareProofVideos);
   const page = clips.slice(0, PROOF_PAGE_SIZE), last = page.at(-1);
   res.json({ carousel: publicCarousel(await ProofCarousel.findById('home').lean()), clips: page, nextCursor: clips.length > PROOF_PAGE_SIZE ? Buffer.from(JSON.stringify({ id: last.id, order: last.order })).toString('base64url') : null });
 });
