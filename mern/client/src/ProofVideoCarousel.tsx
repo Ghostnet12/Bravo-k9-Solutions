@@ -27,6 +27,34 @@ export default function ProofVideoCarousel() {
   const [loaded, setLoaded] = useState(false), [loading, setLoading] = useState(false), [error, setError] = useState(''), [status, setStatus] = useState('');
   const [editing, setEditing] = useState<ProofClip | null>(null), [editMode, setEditMode] = useState(false);
   const root = useRef<HTMLDivElement>(null), mounted = useRef(true), inFlight = useRef(false);
+  const rail = useRef<HTMLDivElement>(null), manualUntil = useRef(0);
+  const [paused, setPaused] = useState(false), [hovered, setHovered] = useState(false), [focused, setFocused] = useState(false), [reduced, setReduced] = useState(false);
+  const [inView, setInView] = useState(false);
+  const advance = useCallback((direction = 1) => {
+    const node = rail.current;
+    if (!node) return;
+    const cards = [...node.querySelectorAll<HTMLElement>('article[data-proof-video]')];
+    const max = node.scrollWidth - node.clientWidth;
+    if (max < 2 || cards.length < 2) return;
+    const positions = [...new Set(cards.map(card => Math.min(max, card.offsetLeft - cards[0].offsetLeft)))];
+    const next = direction > 0 ? positions.find(x => x > node.scrollLeft + 8) : [...positions].reverse().find(x => x < node.scrollLeft - 8);
+    node.scrollTo({ left: next ?? (direction > 0 ? 0 : max), behavior: next === undefined || reduced ? 'instant' : 'smooth' });
+  }, [reduced]);
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const changed = () => setReduced(media.matches); changed(); media.addEventListener('change', changed);
+    const observer = new IntersectionObserver(entries => setInView(entries[0].isIntersecting), { threshold: .2 });
+    if (rail.current) observer.observe(rail.current);
+    return () => { media.removeEventListener('change', changed); observer.disconnect(); };
+  }, []);
+  useEffect(() => {
+    if (paused || reduced || hovered || focused || !inView || editing || editMode || clips.length < 2) return;
+    const timer = setInterval(() => {
+      if (document.hidden || Date.now() < manualUntil.current || gesture.current || [...(root.current?.querySelectorAll('video') || [])].some(video => !video.paused && !video.ended)) return;
+      advance();
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [paused, reduced, hovered, focused, inView, editing, editMode, clips.length, advance]);
   const gesture = useRef<{ x: number; y: number; pointer: number; timer: ReturnType<typeof setTimeout> } | null>(null), suppressUntil = useRef(0);
   const cancelHold = useCallback(() => { if (gesture.current) clearTimeout(gesture.current.timer); gesture.current = null; }, []);
   const load = useCallback(async (after: string | null = null) => {
@@ -55,13 +83,13 @@ export default function ProofVideoCarousel() {
     if (video && event.clientY > video.getBoundingClientRect().bottom - 48) return;
     gesture.current = { x: event.clientX, y: event.clientY, pointer: event.pointerId, timer: setTimeout(() => { suppressUntil.current = Date.now() + 1000; open(clip); }, 600) };
   }
-  return <div ref={root} className="home-work-proof" aria-labelledby="work-proof-title" data-site-image-ignore="">
+  return <div ref={root} className="home-work-proof" aria-labelledby="work-proof-title" data-site-image-ignore="" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocusCapture={() => setFocused(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setFocused(false); }}>
     <div className="home-work-proof-heading"><div><p className="eyebrow">WATCH THE WORK</p><h3 id="work-proof-title">Training you can actually see.</h3></div><p>Real Bravo training sessions and progress. Play a video here, or follow a card marked “Watch on Facebook.”</p></div>
     {canEdit && <div className="proof-video-tools"><button type="button" className="button" disabled={!loaded} onClick={() => open({ id: crypto.randomUUID(), title: '', description: '', order: Date.now(), revision: 0, src: null })}>Add video <span aria-hidden="true">＋</span></button><p>Press and hold a card to change its video or description. You can also use Edit video or focus a card and press F2.</p></div>}
     {(!loaded && loading) && <p role="status">Loading videos…</p>}
     {error && <p role="alert">{error} <button type="button" disabled={loading} onClick={() => load(loaded ? cursor : null)}>Retry loading videos</button></p>}
     {loaded && !clips.length && <p>No training videos published yet.</p>}
-    <div className="home-work-proof-grid proof-video-carousel" role="region" aria-label="Training video carousel" tabIndex={0} onScroll={cancelHold}>
+    <div ref={rail} className="home-work-proof-grid proof-video-carousel" role="region" aria-roledescription="carousel" aria-label="Training video carousel" tabIndex={0} onScroll={cancelHold} onPointerDown={() => { manualUntil.current = Date.now() + 10000; }} onWheel={() => { manualUntil.current = Date.now() + 10000; }}>
       {clips.map(clip => <article key={clip.id} data-proof-video={clip.id} data-facebook-reel={clip.facebookUrl ? clip.id : undefined} data-proof-editable={canEdit || undefined} tabIndex={canEdit ? 0 : undefined} aria-keyshortcuts={canEdit ? 'F2' : undefined}
         onPointerDownCapture={event => beginHold(event, clip)} onPointerUpCapture={cancelHold} onPointerCancelCapture={cancelHold}
         onPointerMoveCapture={event => { const hold = gesture.current; if (hold && (event.pointerId !== hold.pointer || Math.hypot(event.clientX - hold.x, event.clientY - hold.y) > 12)) cancelHold(); }}
@@ -72,7 +100,7 @@ export default function ProofVideoCarousel() {
         <div className="home-work-proof-copy"><h4>{clip.title}</h4><p id={`proof-description-${clip.id}`}>{clip.description}</p>{clip.facebookUrl && <a href={clip.facebookUrl} aria-label={`View original ${clip.title} video on Facebook`}>View original on Facebook <span aria-hidden="true">→</span></a>}{canEdit && <button type="button" className="proof-edit-button" data-proof-action="" onClick={() => open(clip)} aria-label={`Edit video: ${clip.title}`}>Edit video</button>}</div>
       </article>)}
     </div>
-    {(clips.length > 1 || cursor) && <div className="proof-carousel-navigation"><p>Swipe or scroll to see more videos.</p>{cursor && <button type="button" disabled={loading} onClick={() => load(cursor)}>{loading ? 'Loading…' : 'Load more videos'}</button>}</div>}
+    {(clips.length > 1 || cursor) && <div className="proof-carousel-navigation"><p>{reduced ? 'Swipe or use the arrows to see more videos.' : 'Advances every 5 seconds. Pauses while you watch or interact.'}</p><div className="proof-carousel-buttons"><button type="button" aria-label="Previous video" onClick={() => advance(-1)}>←</button>{!reduced && <button type="button" aria-pressed={paused} onClick={() => setPaused(value => !value)}>{paused ? 'Resume videos' : 'Pause videos'}</button>}<button type="button" aria-label="Next video" onClick={() => advance(1)}>→</button>{cursor && <button type="button" disabled={loading} onClick={() => load(cursor)}>{loading ? 'Loading…' : 'Load more videos'}</button>}</div></div>}
     <p className="proof-video-status" role="status" aria-live="polite">{status}</p>
     {editing && canEdit && <Suspense fallback={<p role="status">Opening video editor…</p>}><Editor key={editing.id} clip={editing} onClose={() => setEditing(null)} onSaved={clip => { setClips(old => [...old.filter(item => item.id !== clip.id), clip].sort(compareProofVideos)); setStatus('Video and description published.'); setEditing(null); }} onRemoved={id => { setClips(old => old.filter(clip => clip.id !== id)); setStatus('Video removed from the carousel.'); setEditing(null); }}/></Suspense>}
   </div>;
