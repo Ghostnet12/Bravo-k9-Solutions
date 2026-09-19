@@ -46,6 +46,12 @@ try {
           else if (path === '/api/team') json = { team: [operator] };
           else if (path === '/api/notifications') json = { items: [] };
           else if (path === '/api/site-images') json = { images: {} };
+          // A public page can mount before /auth/me resolves. Match the real
+          // lesson API rather than returning an invalid successful empty object.
+          else if (path === '/api/lessons') {
+            if (activeUser?.mustChangePassword) { status = 403; json = { error: 'Create your own password before continuing.', code: 'PASSWORD_SETUP_REQUIRED' }; }
+            else json = { lessons: [] };
+          }
           else if (path === '/api/admin') json = { role: operator.role, team: [operator], bookings: [], inbox: [], blocks: [], settings: { enabled: true, weekdays: [1, 2, 3, 4, 5], hours: ['10:00'] } };
           else if (path === '/api/admin/reviews') json = { reviews: [] };
           else if (path === '/api/admin/services') json = { services: SERVICES };
