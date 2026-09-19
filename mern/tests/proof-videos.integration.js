@@ -34,16 +34,16 @@ test('homepage video publishing, isolation, and persistence', { timeout: 180000 
       await request(app).put(`/api/proof-videos/${clipId}`).set('Origin', 'https://unrelated.example').set('Cookie', cookies.owner).send(edit).expect(403);
     });
     await t.test('carousel timing is owner/admin-only, validated, durable and revision protected', async () => {
-      assert.deepEqual(before.body.carousel, { intervalSeconds: 5, revision: 0 });
+      assert.deepEqual(before.body.carousel, { intervalSeconds: 8, revision: 0 });
       const settings = { expectedRevision: 0, intervalSeconds: 12 };
       for (const who of [null, 'staff', 'client']) await call(who, 'put', '/settings', settings).expect(who ? 403 : 401);
       await request(app).put('/api/proof-videos/settings').set('Origin', 'https://unrelated.example').set('Cookie', cookies.owner).send(settings).expect(403);
-      for (const intervalSeconds of [0, 1, 61, 2.5, '5']) await call('owner', 'put', '/settings', { ...settings, intervalSeconds }).expect(400);
+      for (const intervalSeconds of [0, 1, 2, 3, 4, 61, 2.5, '5']) await call('owner', 'put', '/settings', { ...settings, intervalSeconds }).expect(400);
       await call('owner', 'put', '/settings', settings).expect(200);
       assert.deepEqual((await request(app).get('/api/proof-videos')).body.carousel, { intervalSeconds: 12, revision: 1 });
       await call('administrator', 'put', '/settings', settings).expect(409);
-      await call('administrator', 'put', '/settings', { expectedRevision: 1, intervalSeconds: 2 }).expect(200);
-      assert.deepEqual((await request(app).get('/api/proof-videos')).body.carousel, { intervalSeconds: 2, revision: 2 });
+      await call('administrator', 'put', '/settings', { expectedRevision: 1, intervalSeconds: 5 }).expect(200);
+      assert.deepEqual((await request(app).get('/api/proof-videos')).body.carousel, { intervalSeconds: 5, revision: 2 });
       assert.equal(await AuditEvent.countDocuments({ action: 'proof-carousel.published' }), 2);
       assert.equal(await ProofVideo.countDocuments(), 0, 'timing changes do not modify videos');
     });
@@ -74,9 +74,11 @@ test('homepage video publishing, isolation, and persistence', { timeout: 180000 
       await request(app).get(`/api/proof-videos/${clipId}/video`).set('Range', 'bytes=999999999-').expect(416);
     });
     await t.test('description-only edits persist without replacing bytes and reject stale changes', async () => {
-      const changed = { ...edit, expectedRevision: 1, mutationId: randomUUID(), description: '<b>Plain text</b>\nProgress update' };
+      const changed = { ...edit, expectedRevision: 1, mutationId: randomUUID(), description: '<b>Plain text</b>\nProgress update', posterData: Buffer.from([0xff,0xd8,0xff,0xdb,0,0]).toString('base64') };
       await call('administrator', 'put', `/${clipId}`, changed).expect(200);
       assert.equal((await ProofVideo.findById(clipId)).uploadId, uploadId);
+      assert.equal((await ProofVideo.findById(clipId)).hasPoster, true);
+      await request(app).get(`/api/proof-videos/${clipId}/poster`).expect(200).expect('Content-Type', /image\/jpeg/);
       assert.equal(await MediaChunk.countDocuments({ uploadId }), 2);
       assert.equal((await request(app).get('/api/proof-videos')).body.clips[0].description, changed.description);
       await call('owner', 'put', `/${clipId}`, { ...edit, mutationId: randomUUID() }).expect(409);

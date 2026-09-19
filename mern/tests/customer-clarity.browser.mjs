@@ -1,0 +1,39 @@
+import assert from 'node:assert/strict';
+import express from 'express';
+import {once} from 'node:events';
+import {readFile,mkdir,writeFile} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import {chromium,webkit} from 'playwright';
+import {SERVICES} from '../shared/catalog.js';
+const dist=fileURLToPath(new URL('../client/dist/',import.meta.url)),html=await readFile(`${dist}/bravo-shell.html`,'utf8');
+const app=express();app.use(express.static(dist));app.get('/{*path}',(_req,res)=>res.type('html').send(html));const server=app.listen(0,'127.0.0.1');await once(server,'listening');const origin=`http://127.0.0.1:${server.address().port}`;await mkdir('test-results',{recursive:true});
+try {for(const [engineName,engine]of Object.entries({chromium,webkit})){const browser=await engine.launch();try{for(const width of [390,1440]){
+ const context=await browser.newContext({viewport:{width,height:900},hasTouch:true}),page=await context.newPage(),errors=[];let signedIn=false;const writes=[];
+ page.on('pageerror',e=>errors.push(e.message));
+ await page.route('**/api/**',async route=>{const path=new URL(route.request().url()).pathname;let json={services:[],images:{},entries:{},team:[],schedules:[],reviews:[],count:0,clips:[],bookings:[],messages:[],notifications:[],alerts:[],revision:0};
+  if(path==='/api/config')json={connected:true,paymentsReady:false,services:SERVICES};
+  if(path==='/api/auth/me')json={user:signedIn?{id:'fixture',name:'Fixture Client',role:'member',phone:'6055550100',address:'Fixture address'}:null,services:[],membership:{active:false}};
+  if(path==='/api/auth/login'){signedIn=true;json={user:{id:'fixture',name:'Fixture Client',role:'member'}};}
+  if(path==='/api/trainers')json={trainers:[{id:'111111111111111111111111',name:'Fixture Trainer',spotsRemaining:4,limit:5}]};
+  if(path==='/api/site-banner/weather')json={weather:{temperature:63,description:'Cloudy',observedAt:new Date().toISOString()}};
+  if(path==='/api/availability')json={days:[]};
+  if(route.request().method()!=='GET')writes.push(path);
+  await route.fulfill({json});
+ });
+ try{
+  await page.goto(origin);await page.waitForLoadState('networkidle');
+  assert.equal(await page.locator('.review-stars').count(),0);assert.equal(await page.locator('.banner-track').evaluate(el=>getComputedStyle(el).animationName),'none');
+  await page.getByRole('link',{name:'Start private training',exact:true}).click();await page.getByRole('heading',{name:'Let’s start with your dog.',exact:true}).waitFor();
+  assert.equal(await page.getByText('IMPORTANT APPOINTMENT NOTICE',{exact:true}).count(),0);assert.equal(await page.getByRole('heading',{name:'Build your schedule',exact:true}).count(),0);
+  await page.getByLabel('Dog’s name',{exact:true}).fill('Biscuit');await page.getByLabel('Number of dogs',{exact:true}).fill('2');await page.getByLabel('What would you like help with?',{exact:true}).selectOption('puppy-foundations');await page.getByLabel('Anything you’d like your trainer to know? (optional)',{exact:true}).fill('Jumps when visitors arrive.');
+  assert.ok((await page.locator('.first-visit-intro .price-total').innerText()).includes('$300/month'));
+  await page.screenshot({path:`test-results/first-visit-${engineName}-${width}.png`});await page.getByRole('button',{name:'Choose a first visit →',exact:true}).click();await page.getByRole('heading',{name:'Choose your first visit',exact:true}).waitFor();
+  assert.equal(await page.locator('.program-choices').isVisible(),false);
+  await page.getByRole('link',{name:'Sign in or create an account to choose your trainer',exact:true}).click();await page.getByLabel('Name or email',{exact:true}).fill('Fixture Client');await page.getByLabel('Password',{exact:true}).fill('isolated-fixture-password');await page.locator('form').getByRole('button',{name:'Sign in',exact:true}).click();
+  await page.getByRole('heading',{name:'Choose your first visit',exact:true}).waitFor();await page.getByLabel('Choose my trainer',{exact:true}).selectOption('111111111111111111111111');
+  assert.equal(await page.getByLabel('Dogs’ names',{exact:true}).inputValue(),'Biscuit');assert.equal(await page.getByLabel('Anything the team should know?',{exact:true}).inputValue(),'Jumps when visitors arrive.');assert.equal(await page.getByLabel('Training focus',{exact:true}).inputValue(),'puppy-foundations');
+  assert.equal(await page.getByText('IMPORTANT APPOINTMENT NOTICE',{exact:true}).count(),1);
+  await page.getByRole('button',{name:'Plan multiple visits instead',exact:true}).click();await page.getByRole('heading',{name:'Build your schedule',exact:true}).waitFor();assert.equal(await page.locator('.program-choices').isVisible(),true);
+  assert.deepEqual(writes,['/api/auth/login']);assert.deepEqual(errors,[]);console.log(`PASS ${engineName}/${width}: short first step, accurate multi-dog price, sign-in resume, preserved notes, full scheduler and quiet banner`);
+ }catch(error){await page.screenshot({path:`test-results/clarity-failure-${engineName}-${width}.png`,fullPage:true});await writeFile(`test-results/clarity-failure-${engineName}-${width}.json`,JSON.stringify({error:error.message,errors,text:await page.locator('body').innerText()},null,2));throw error;}finally{await context.close();}
+ }}finally{await browser.close();}}}finally{server.close();}
