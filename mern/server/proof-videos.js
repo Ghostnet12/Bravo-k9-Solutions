@@ -182,6 +182,6 @@ router.use((error, req, res, _next) => {
   const transport = requestError(error);
   if (transport) return res.status(transport.status).json({ error: transport.message });
   const status = error instanceof z.ZodError ? 400 : error.code === 11000 ? 409 : Number(error.status) || 500;
-  res.status(status).json({ error: error instanceof z.ZodError ? (req.path === '/settings' ? 'Choose a whole number from 2 to 60 seconds.' : 'Check the video size, title and description, then try again.') : status === 409 ? (req.path === '/settings' ? 'Carousel timing changed. Reload the page before saving.' : 'This video changed. Close and reopen the editor before saving.') : status >= 500 ? req.method === 'GET' ? 'Videos are temporarily unavailable. Please try again.' : 'Unable to confirm this update. Refresh to check before retrying.' : error.message });
+  res.status(status).json({ error: error instanceof z.ZodError ? (req.path === '/settings' ? 'Choose a whole number from 5 to 60 seconds.' : 'Check the video size, title and description, then try again.') : status === 409 ? (req.path === '/settings' ? 'Carousel timing changed. Reload the page before saving.' : 'This video changed. Close and reopen the editor before saving.') : status >= 500 ? req.method === 'GET' ? 'Videos are temporarily unavailable. Please try again.' : 'Unable to confirm this update. Refresh to check before retrying.' : error.message });
 });
 export default router;
