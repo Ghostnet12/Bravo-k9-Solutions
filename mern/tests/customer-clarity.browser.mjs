@@ -14,7 +14,7 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){const br
  const consoleErrors=[];page.on('console',message=>{if(message.type()==='error')consoleErrors.push(message.text());});
  await page.route('**/api/**',async route=>{const path=new URL(route.request().url()).pathname;let json={services:[],images:{},entries:{},team:[],schedules:[],reviews:[],count:0,clips:[],bookings:[],messages:[],notifications:[],alerts:[],revision:0};
   if(path==='/api/config')json={connected:true,paymentsReady:false,services:SERVICES.map(item=>item.id==='training'?{...item,enabled:!trainingDisabled}:item),schedule:{enabled:true,weekdays:[1,2,3,4,5],hours:['09:00','10:00']}};
-  if(path==='/api/auth/me')json={user:signedIn?{id:'fixture',name:'Fixture Client',role:'member',phone:'6055550100',address:'Fixture address'}:null,services:[],membership:{active:false}};
+  if(path==='/api/auth/me')json={user:signedIn?{id:'fixture',name:'Fixture Client',role:'member',phone:'6055550100',address:'Fixture address'}:null,services:[],subscriptions:[],membership:{active:false}};
   if(path==='/api/auth/login'){signedIn=true;json={user:{id:'fixture',name:'Fixture Client',role:'member'}};}
   if(path==='/api/trainers')json={trainers:[{id:'111111111111111111111111',name:'Fixture Trainer',spotsRemaining:4,limit:5}]};
   if(path==='/api/site-banner/weather')json={weather:{temperature:63,description:'Cloudy',observedAt:new Date().toISOString()}};

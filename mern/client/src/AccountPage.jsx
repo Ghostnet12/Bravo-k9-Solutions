@@ -30,7 +30,7 @@ export default function AccountPage() {
     const ticket = ++loadSequence.current;
     const [records, membership, feedback] = await Promise.all([api('/bookings'), api('/auth/me'), api('/reviews/mine')]);
     if (ticket !== loadSequence.current) return;
-    setBookings(records.bookings.map(booking => booking.status === 'waitlisted' ? { ...booking, stripeSessionId: booking.stripeSessionId || 'trainer-waitlist' } : booking)); setSubscriptions(membership.subscriptions); setMembershipAccess(membership.membership || { active: false, manual: false, onlineAccess: false }); setReview(feedback.review ? { rating: feedback.review.rating, body: feedback.review.body } : { rating: 5, body: '' });
+    setBookings(records.bookings.map(booking => booking.status === 'waitlisted' ? { ...booking, stripeSessionId: booking.stripeSessionId || 'trainer-waitlist' } : booking)); setSubscriptions(membership.subscriptions || []); setMembershipAccess(membership.membership || { active: false, manual: false, onlineAccess: false }); setReview(feedback.review ? { rating: feedback.review.rating, body: feedback.review.body } : { rating: 5, body: '' });
   }, [user]);
   useEffect(() => { if (user && !user.mustChangePassword) { setLoading(true); load().catch(e => setError(e.message)).finally(() => setLoading(false)); setProfile({ name: user.name, dogName: user.dogName || '', phone: user.phone || '', address: user.address || '', title: user.title || '', bio: user.bio || '', showPhone: !!user.showPhone }); } }, [user, load]);
   useEffect(() => {
