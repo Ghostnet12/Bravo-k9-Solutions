@@ -25,7 +25,7 @@ function AlertEditor({ saved, publish, close }) {
       <div className="banner-editor-heading"><h2 id="banner-editor-title">Edit banner alerts</h2><button type="button" onClick={close} disabled={busy} aria-label="Close alert editor">×</button></div>
       <p>Publish short updates, weather-related closures, or appointment notices. These messages are public.</p>
       <fieldset disabled={busy}>
-        {draft.map((value, index) => <div className="banner-alert-field" key={index}><label>Alert {index + 1}<textarea required maxLength={280} rows={3} value={value} onChange={event => setDraft(items => items.map((item, i) => i === index ? event.target.value : item))}/></label><button type="button" onClick={() => setDraft(items => items.filter((_, i) => i !== index))}>Remove alert {index + 1}</button></div>)}
+        {draft.map((value, index) => <div className="banner-alert-field" key={index}><label htmlFor={`banner-alert-${index}`}>Alert {index + 1}</label><textarea id={`banner-alert-${index}`} required maxLength={280} rows={3} value={value} onChange={event => { const text = event.target.value; setDraft(items => items.map((item, i) => i === index ? text : item)); }}/><button type="button" onClick={() => setDraft(items => items.filter((_, i) => i !== index))}>Remove alert {index + 1}</button></div>)}
         <button type="button" disabled={draft.length >= 30} onClick={() => setDraft(items => [...items, ''])}>+ Add alert</button>
       </fieldset>
       <p className="banner-editor-note">Location, local time, and NWS weather update automatically. Publish with no alerts to clear your notices.</p>
