@@ -17,7 +17,7 @@ export function themeCss(value = {}) {
   let css = `body{${styleString(value)}}`;
   if (value.background) css += '.bravo-home,.app-page{background:transparent}';
   if (value.font) css += `body :where(h1,h2,h3,h4,h5,h6,p,span,a,button,label,input,select,textarea,li,strong,em,small):not([data-site-custom-font]){font-family:${CONTENT_FONTS[value.font]} !important}`;
-  if (value.color) css += `body :where(h1,h2,h3,h4,h5,h6,p,span,a,label,li,strong,em,small){color:${value.color}}`;
+  if (value.color) css += `body :where(h1,h2,h3,h4,h5,h6,p,span,a,label,li,strong,em,small):not([data-site-custom-color]){color:${value.color} !important}`;
   return css;
 }
 

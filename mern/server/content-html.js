@@ -11,6 +11,7 @@ export function renderSiteContent(html, entries = {}) {
     if(value && Object.hasOwn(CONTENT_KEYS,key)){
       if(CONTENT_KEYS[key].link && value.link)setAttr(node,'href',value.link);
       if(value.font)setAttr(node,'data-site-custom-font',value.font);
+      if(value.color)setAttr(node,'data-site-custom-color',value.color);
       const style=styleString(value);
       if(style)setAttr(node,'style',`${attr(node,'style') || ''};${style}`);
       if(CONTENT_KEYS[key].text && typeof value.text==='string'){
