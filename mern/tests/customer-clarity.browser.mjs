@@ -10,8 +10,9 @@ const app=express();app.use(express.static(dist));app.get('/{*path}',(_req,res)=
 try {for(const [engineName,engine]of Object.entries({chromium,webkit})){const browser=await engine.launch();try{for(const width of [390,1440]){
  const context=await browser.newContext({viewport:{width,height:900},hasTouch:true}),page=await context.newPage(),errors=[];let signedIn=false;const writes=[];
  page.on('pageerror',e=>errors.push(e.message));
+ const consoleErrors=[];page.on('console',message=>{if(message.type()==='error')consoleErrors.push(message.text());});
  await page.route('**/api/**',async route=>{const path=new URL(route.request().url()).pathname;let json={services:[],images:{},entries:{},team:[],schedules:[],reviews:[],count:0,clips:[],bookings:[],messages:[],notifications:[],alerts:[],revision:0};
-  if(path==='/api/config')json={connected:true,paymentsReady:false,services:SERVICES};
+  if(path==='/api/config')json={connected:true,paymentsReady:false,services:SERVICES,schedule:{enabled:true,weekdays:[1,2,3,4,5],hours:['09:00','10:00']}};
   if(path==='/api/auth/me')json={user:signedIn?{id:'fixture',name:'Fixture Client',role:'member',phone:'6055550100',address:'Fixture address'}:null,services:[],membership:{active:false}};
   if(path==='/api/auth/login'){signedIn=true;json={user:{id:'fixture',name:'Fixture Client',role:'member'}};}
   if(path==='/api/trainers')json={trainers:[{id:'111111111111111111111111',name:'Fixture Trainer',spotsRemaining:4,limit:5}]};
@@ -35,5 +36,5 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){const br
   assert.equal(await page.getByText('IMPORTANT APPOINTMENT NOTICE',{exact:true}).count(),1);
   await page.getByRole('button',{name:'Plan multiple visits instead',exact:true}).click();await page.getByRole('heading',{name:'Build your schedule',exact:true}).waitFor();assert.equal(await page.locator('.program-choices').isVisible(),true);
   assert.deepEqual(writes,['/api/auth/login']);assert.deepEqual(errors,[]);console.log(`PASS ${engineName}/${width}: short first step, accurate multi-dog price, sign-in resume, preserved notes, full scheduler and quiet banner`);
- }catch(error){await page.screenshot({path:`test-results/clarity-failure-${engineName}-${width}.png`,fullPage:true});await writeFile(`test-results/clarity-failure-${engineName}-${width}.json`,JSON.stringify({error:error.message,errors,text:await page.locator('body').innerText()},null,2));throw error;}finally{await context.close();}
+ }catch(error){await page.screenshot({path:`test-results/clarity-failure-${engineName}-${width}.png`,fullPage:true});await writeFile(`test-results/clarity-failure-${engineName}-${width}.json`,JSON.stringify({error:error.message,errors,consoleErrors,text:await page.locator('body').innerText()},null,2));throw error;}finally{await context.close();}
  }}finally{await browser.close();}}}finally{server.close();}
