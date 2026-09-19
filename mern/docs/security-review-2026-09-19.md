@@ -83,11 +83,32 @@ this as a confirmed origin outage without DNS/provider evidence.
 4. Confirm production branch protection, required release checks, vulnerability
    alerts and notification recipients. This repository's default branch is
    `main`; scheduled GitHub workflows only run from the default branch. The
-   security workflow in this change runs on production pushes and pull requests;
-   periodic scanning needs a default-branch workflow/configuration as well.
+  security workflow in this change runs on production pushes and pull requests.
+  Companion maintenance PR #9 adds the weekly audit on `main`, explicitly
+  checking out `bravo-mern`, and weekly reviewed Dependabot updates targeting
+  the deployed branch. It does not enable automatic merging.
 5. Reassess privileged application MFA, idle session limits and reauthentication
    for sensitive administrator actions with a tested owner recovery flow. They
    are not claimed as implemented by this patch.
+
+## Release evidence and limitations
+
+The production build and 138 unit tests passed. The isolated production-stack
+security, client login, scheduling, membership, photo/video permissions, account
+removal and monitoring regressions passed in GitHub Actions. Chromium and WebKit
+checks passed for public HTML without JavaScript and mobile/desktop sign-in.
+
+The first local dependency audit returned zero known vulnerabilities. Subsequent
+local and hosted checks received npm's HTTP 503 maintenance response, including
+all three hosted retries. This is an unavailable fresh advisory check, not a
+successful audit or a discovered vulnerability. No dependency or lockfile changes
+are included in this release. The recurring check remains enabled and fails
+visibly on an unavailable registry; it does not silently treat outages as clean.
+
+The tracked-file secret-pattern check found only deliberately fake database
+credentials in two isolated tests. This limited scan is not a full-history secret
+audit. Provider security-alert and branch-protection settings could not be read
+through the available integration and are not represented as enabled.
 
 ## Sources consulted
 
