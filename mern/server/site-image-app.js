@@ -1,4 +1,4 @@
-import { publicPageHandler } from './public-page.js';
+import { publicPageHandler, publicPagePaths } from './public-page.js';
 import siteContentRouter, { loadSiteContent } from './site-content.js';
 import express from 'express';
 import { requestError } from './errors.js';
@@ -122,7 +122,7 @@ app.use('/api/site-images', router);
 app.use('/api/proof-videos', proofVideoRouter);
 app.use('/api/site-banner', siteBannerRouter);
 app.use('/api/site-content', siteContentRouter);
-app.get('/api/public-page', publicPageHandler);
+app.get(['/api/public-page', ...publicPagePaths], publicPageHandler);
 // Close the old upload/delete/publish routes too, not just the inline editor.
 // Staff keep scheduling and other operational tools, but cannot change media
 // indirectly through lesson saves or an already-open upload screen.
