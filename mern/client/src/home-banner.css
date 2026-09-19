@@ -1,0 +1,28 @@
+.home-status-banner{position:relative;display:flex;align-items:stretch;width:100%;min-height:64px;border:2px solid #101010;background:linear-gradient(90deg,#f58a24 0%,#ffd879 22%,#ffe8a4 50%,#ffd879 78%,#f58a24 100%);color:#101010;overflow:hidden;font-family:Montserrat,sans-serif}
+.banner-viewport{flex:1;min-width:0;overflow:hidden;align-content:center}
+.banner-track{display:flex;width:max-content;animation:bravo-banner-left var(--banner-duration,40s) linear infinite}
+.banner-group{display:flex;align-items:center;flex-shrink:0}
+.banner-item{display:flex;align-items:center;gap:14px;white-space:nowrap;padding:18px 18px;font-size:14px;font-weight:600;line-height:1.4}
+.banner-item strong{font-size:10px;letter-spacing:.12em;border:1px solid #101010;padding:5px 7px;border-radius:3px;font-weight:800}
+.banner-item i{font-style:normal;margin-left:22px;font-size:18px}
+.banner-controls{position:relative;display:flex;align-items:center;gap:6px;padding:7px 10px;background:#f59a35;border-left:1px solid #101010}
+.home-status-banner .banner-controls button{min-width:44px;min-height:44px;padding:8px;border:1px solid #101010;border-radius:5px;background:transparent;color:#101010;font:700 11px Montserrat,sans-serif;cursor:pointer}
+.home-status-banner button:focus-visible{outline:3px solid #101010;outline-offset:2px}
+.home-status-banner:hover .banner-track,.home-status-banner:focus-within .banner-track{animation-play-state:paused}
+.home-status-banner.is-paused .banner-track{animation:none;width:100%;transform:none}
+.home-status-banner.is-paused .banner-group{flex-wrap:wrap;flex:1}
+.home-status-banner.is-paused .banner-group[aria-hidden]{display:none}
+.home-status-banner.is-paused .banner-item{white-space:normal;overflow-wrap:anywhere;max-width:100%;padding:12px;flex-wrap:wrap;gap:8px}
+.banner-editor{width:min(620px,calc(100vw - 28px));max-height:85dvh;overflow:auto;border:2px solid #101010;border-radius:14px;padding:24px;background:#fff2d3;color:#101010;box-shadow:0 24px 90px #0009}
+.banner-editor::backdrop{background:#000b}
+.banner-editor h2{color:#101010;margin:0;font-size:28px}
+.banner-editor-heading,.banner-editor-actions{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.banner-editor p{color:#30271b;font-size:14px;line-height:1.6}
+.banner-editor fieldset{border:0;padding:0;min-width:0}
+.banner-editor button{min-height:44px;padding:10px 14px;background:#101010;color:#fff2d3;border:1px solid #101010;border-radius:5px;cursor:pointer;font-weight:700}
+.banner-editor button:disabled{opacity:.5;cursor:default}
+.banner-editor textarea{display:block;width:100%;box-sizing:border-box;background:#fff;color:#101010;border:1px solid #101010;border-radius:5px;padding:10px;font:inherit;resize:vertical;margin:8px 0}
+.banner-alert-field{margin:18px 0}.banner-alert-field label{color:#101010;font-weight:700}.banner-editor-note{margin:20px 0}.banner-editor-actions{margin-top:22px}
+@keyframes bravo-banner-left{to{transform:translateX(-50%)}}
+@media(prefers-reduced-motion:reduce){.home-status-banner .banner-track{animation:none;width:100%}.home-status-banner .banner-group{flex-wrap:wrap;flex:1}.home-status-banner .banner-group[aria-hidden]{display:none}.home-status-banner .banner-item{white-space:normal;overflow-wrap:anywhere;max-width:100%;flex-wrap:wrap}}
+@media(max-width:600px){.banner-item{font-size:12px;padding:15px 12px}.banner-controls{padding:5px;gap:4px}.banner-editor{padding:18px}.banner-editor h2{font-size:24px}}

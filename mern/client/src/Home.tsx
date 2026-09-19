@@ -11,6 +11,7 @@ import { HOME_HERO_SOURCE, HOME_HERO_ALT } from '../../shared/home-hero.js';
 import { framingStyle } from '../../shared/site-images.js';
 import { getSiteImages } from './site-image-state.js';
 import ProofVideoCarousel from './ProofVideoCarousel';
+import HomeBanner from './HomeBanner';
 
 const secondary = ['walking', 'aggression'];
 const serviceDetails: Record<string, { label: string; text: string; features: string[] }> = {
@@ -42,6 +43,7 @@ export default function Home() {
           <div className="hero-service-note"><span>PRIVATE SESSIONS</span><span>WE COME TO YOU</span><span>PROFESSIONAL TRAINERS</span></div>
         </div><div className="hero-field-note"><span>THE BRAVO STANDARD</span><p>Trust.<br/>Train.<br/><em>Deploy.</em></p></div></div>
       </section>
+      <HomeBanner/>
       <div className="home-service-strip"><div className="shell"><p><strong>A professional on your team.</strong><span>Private sessions. Clear communication. Practical structure.</span></p><a href="tel:+16058242767">Talk to Bravo <span>(605) 824-2767</span></a></div></div>
       <div className="shell site-media-tools-slot site-media-tools-slot--home" data-site-media-tools=""/>
       <section className="home-section shell home-proof" id="reviews" aria-labelledby="reviews-title">
