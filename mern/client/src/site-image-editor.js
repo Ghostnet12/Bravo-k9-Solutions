@@ -27,7 +27,7 @@ export function mountSiteImages({ canEdit = false } = {}) {
   let allowed = canEdit, disposed = false, images = getSiteImages(), ready = false, loading = null, frame = 0, gesture, suppressUntil = 0, editMode = false;
   let selected = null, pending = null, busy = false, preparing = false, generation = 0, previewCleanup = null, blobURL = null;
   const abort = new AbortController(), records = new Map();
-  let dialog, toolbar, fields;
+  let dialog, toolbar, fields, status, statusTimer;
   const on = (target, type, fn, options = {}) => target.addEventListener(type, fn, { ...options, signal: abort.signal });
   const sourceOf = element => element.getAttribute('src') || element.querySelector('source')?.getAttribute('src') || '';
   const framed = saved => saved?.framed ?? !!saved?.src;
@@ -93,7 +93,7 @@ export function mountSiteImages({ canEdit = false } = {}) {
     if (toolbar) {
       const slot = document.querySelector('[data-site-media-tools]');
       if (slot && toolbar.parentElement !== slot) slot.appendChild(toolbar);
-      toolbar.hidden = !allowed || !slot || !records.size;
+      toolbar.hidden = true;
       if (toolbar.hidden && editMode) {
         editMode = false; document.documentElement.classList.remove('site-photo-edit-mode');
         const toggle = toolbar.querySelector('button'); toggle.setAttribute('aria-pressed', 'false'); toggle.textContent = 'Edit photos & videos';
@@ -209,7 +209,9 @@ export function mountSiteImages({ canEdit = false } = {}) {
       const result = await api(`/site-images/${target.key}${undo ? '/undo' : ''}`, { method: undo ? 'POST' : !target.isVideo && replacement ? 'PUT' : 'PATCH', body });
       if (disposed) return;
       images[target.key] = result.image; setSiteImages(images); scan(); setBusy(false); close();
-      toolbar.querySelector('[role="status"]').textContent = videoUploaded ? 'Video replaced and saved as a lesson draft. Review captions/transcript in Lesson studio before publishing the lesson.' : undo ? 'Previous edit restored.' : 'Changes published for everyone.';
+      clearTimeout(statusTimer);
+      status.textContent = videoUploaded ? 'Video replaced and saved as a lesson draft. Review captions/transcript in Lesson studio before publishing the lesson.' : undo ? 'Previous edit restored.' : 'Changes published for everyone.';
+      statusTimer = setTimeout(() => { status.textContent = ''; }, 10000);
     } catch (error) {
       if (disposed) return;
       setBusy(false); showError(videoUploaded ? `Video uploaded as a draft, but framing was not saved. ${error.message}` : error.message);
@@ -221,13 +223,15 @@ export function mountSiteImages({ canEdit = false } = {}) {
     const target = event.target instanceof Element ? event.target : null;
     if (!target || target.closest('[data-site-image-editor],[data-site-image-ignore]')) return null;
     const direct = target.closest('img[data-site-image-key],video[data-site-image-key]'); if (direct && records.has(direct)) return direct;
-    if (target.closest('button,input,textarea,select,summary,a,[role="button"]')) return null;
+    if (target.closest('button,input,textarea,select,summary,a,[role="button"],[data-site-content-key]')) return null;
     return [...records.keys()].reverse().find(element => { const r = element.getBoundingClientRect(); return element.parentElement?.contains(target) && event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top && event.clientY <= r.bottom; }) || null;
   }
   if (allowed) {
+    on(window, 'bravo-edit-photo', event => { const key = event.detail?.key; if (!isEditableMediaKey(key)) return; const element = [...records.keys()].find(element => records.get(element).key === key); if (element) open(element); });
     toolbar = document.createElement('div'); toolbar.className = 'site-photo-tools'; toolbar.dataset.siteImageEditor = '';
     toolbar.hidden = true;
     toolbar.innerHTML = '<button type="button" class="site-photo-toggle" aria-pressed="false" aria-describedby="site-photo-help">Edit photos & videos</button><span id="site-photo-help" class="site-photo-hint">Turn on editing, then select a photo or video. Keyboard: focus the media and press F2.</span><span class="site-photo-status" role="status" aria-live="polite"></span>';
+    status = toolbar.querySelector('[role="status"]'); document.body.appendChild(status);
     dialog = document.createElement('dialog'); dialog.className = 'site-photo-dialog'; dialog.dataset.siteImageEditor = ''; dialog.setAttribute('aria-labelledby', 'site-photo-title');
     dialog.innerHTML = `<div class="site-photo-heading"><div><p>BRAVO · ADMINISTRATOR MEDIA EDITOR</p><h2 id="site-photo-title" data-field="title">Edit media</h2></div><button type="button" data-field="close" aria-label="Close media editor">×</button></div>
       <p class="site-photo-intro">Even a small slider adjustment can be published—no replacement file needed.</p>
@@ -264,7 +268,7 @@ export function mountSiteImages({ canEdit = false } = {}) {
   const interval = setInterval(() => { if (!document.hidden && !selected) refresh(); }, 60000);
   return () => {
     disposed = true; generation++; cancelGesture(); abort.abort(); observer.disconnect(); clearInterval(interval); cancelAnimationFrame(frame); clearPreview();
-    dialog?.remove(); toolbar?.remove(); document.documentElement.classList.remove('site-photo-edit-mode');
+    clearTimeout(statusTimer); status?.remove(); dialog?.remove(); toolbar?.remove(); document.documentElement.classList.remove('site-photo-edit-mode');
     window.dispatchEvent(new CustomEvent('bravo-media-edit-mode', { detail: { active: false } }));
     for (const [element, record] of records) { record.cleanup?.(); element.removeAttribute('data-site-image-editable'); element.removeAttribute('aria-keyshortcuts'); if (record.tabIndex == null) element.removeAttribute('tabindex'); else element.setAttribute('tabindex', record.tabIndex); }
   };

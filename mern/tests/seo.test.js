@@ -87,7 +87,7 @@ test('missing pages return a real 404 and document aliases preserve the query wh
 test('Vercel routes each real page explicitly and lets missing URLs use its 404 document', async () => {
   const config = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url)));
   for (const route of Object.keys(PAGE_METADATA).filter(route => route !== '/')) {
-    assert.ok(config.rewrites.some(rule => rule.source === route && rule.destination === `${route}.html`), route);
+    assert.ok(config.rewrites.some(rule => rule.source === route && rule.destination === (PAGE_METADATA[route].private ? `${route}.html` : `/api/public-page?path=${route}`)), route);
     assert.ok(config.redirects.some(rule => rule.source === `${route}.html` && rule.destination === route && rule.permanent), route);
   }
   assert.equal(config.trailingSlash, false);

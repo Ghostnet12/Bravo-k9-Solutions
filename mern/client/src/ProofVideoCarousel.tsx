@@ -1,3 +1,4 @@
+import { Editable } from './SiteContent';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useBravo } from './context';
 import { api } from './api';
@@ -44,10 +45,13 @@ export default function ProofVideoCarousel() {
   const { user } = useBravo(), canEdit = isImageEditor(user) && !user?.mustChangePassword;
   const [clips, setClips] = useState<ProofClip[]>([]), [cursor, setCursor] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false), [loading, setLoading] = useState(false), [error, setError] = useState(''), [status, setStatus] = useState('');
-  const [editing, setEditing] = useState<ProofClip | null>(null), [editMode, setEditMode] = useState(false);
+  const [editing, setEditing] = useState<ProofClip | null>(null), [editMode, setEditMode] = useState(false), [toolsOpen, setToolsOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null), mounted = useRef(true), inFlight = useRef(false);
-  const rail = useRef<HTMLDivElement>(null), manualUntil = useRef(0);
-  const [paused, setPaused] = useState(false), [hovered, setHovered] = useState(false), [focused, setFocused] = useState(false), [reduced, setReduced] = useState(false);
+  const rail = useRef<HTMLDivElement>(null), pointerHeld = useRef(false), keyboardFocus = useRef(false);
+  const [interaction, setInteraction] = useState(0);
+  const toolsDialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => { if (toolsOpen && canEdit) toolsDialog.current?.showModal(); }, [toolsOpen, canEdit]);
+  const [paused, setPaused] = useState(false), [reduced, setReduced] = useState(false);
   const [inView, setInView] = useState(false);
   const [carousel, setCarousel] = useState<CarouselSettings>({ intervalSeconds: 5, revision: 0 });
   const advance = useCallback((direction = 1) => {
@@ -68,13 +72,13 @@ export default function ProofVideoCarousel() {
     return () => { media.removeEventListener('change', changed); observer.disconnect(); };
   }, []);
   useEffect(() => {
-    if (paused || reduced || hovered || focused || !inView || editing || editMode || clips.length < 2) return;
+    if (paused || reduced || !inView || editing || toolsOpen || editMode || clips.length < 2) return;
     const timer = setInterval(() => {
-      if (document.hidden || Date.now() < manualUntil.current || gesture.current || [...(root.current?.querySelectorAll('video') || [])].some(video => !video.paused && !video.ended)) return;
+      if (document.hidden || pointerHeld.current || (keyboardFocus.current && root.current?.contains(document.activeElement)) || gesture.current || [...(root.current?.querySelectorAll('video') || [])].some(video => !video.paused && !video.ended)) return;
       advance();
     }, carousel.intervalSeconds * 1000);
     return () => clearInterval(timer);
-  }, [paused, reduced, hovered, focused, inView, editing, editMode, clips.length, advance, carousel.intervalSeconds]);
+  }, [paused, reduced, inView, editing, toolsOpen, editMode, interaction, clips.length, advance, carousel.intervalSeconds]);
   const gesture = useRef<{ x: number; y: number; pointer: number; timer: ReturnType<typeof setTimeout> } | null>(null), suppressUntil = useRef(0);
   const cancelHold = useCallback(() => { if (gesture.current) clearTimeout(gesture.current.timer); gesture.current = null; }, []);
   const load = useCallback(async (after: string | null = null) => {
@@ -96,21 +100,19 @@ export default function ProofVideoCarousel() {
     return () => { window.removeEventListener('bravo-media-edit-mode', mode); window.removeEventListener('scroll', cancelHold, true); window.removeEventListener('blur', cancelHold); };
   }, [cancelHold]);
   function open(clip: ProofClip) { if (canEdit) { cancelHold(); root.current?.querySelectorAll('video').forEach(video => video.pause()); setEditing(clip); } }
-  function beginHold(event: React.PointerEvent, clip: ProofClip) {
+  function beginHold(event: React.PointerEvent, clip: ProofClip | null) {
     cancelHold();
     if (!canEdit || event.button !== 0 || event.isPrimary === false || editing || (event.target as Element).closest('[data-proof-action]')) return;
     const video = (event.target as Element).closest('video');
     if (video && event.clientY > video.getBoundingClientRect().bottom - 48) return;
-    gesture.current = { x: event.clientX, y: event.clientY, pointer: event.pointerId, timer: setTimeout(() => { suppressUntil.current = Date.now() + 1000; open(clip); }, 600) };
+    gesture.current = { x: event.clientX, y: event.clientY, pointer: event.pointerId, timer: setTimeout(() => { suppressUntil.current = Date.now() + 1000; if (clip) open(clip); else { cancelHold(); setToolsOpen(true); } }, 600) };
   }
-  return <div ref={root} className="home-work-proof" aria-labelledby="work-proof-title" data-site-image-ignore="" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocusCapture={() => setFocused(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setFocused(false); }}>
-    <div className="home-work-proof-heading"><div><p className="eyebrow">WATCH THE WORK</p><h3 id="work-proof-title">Training you can actually see.</h3></div><p>Real Bravo training sessions and progress. Play a video here, or follow a card marked “Watch on Facebook.”</p></div>
-    {canEdit && <div className="proof-video-tools"><button type="button" className="button" disabled={!loaded} onClick={() => open({ id: crypto.randomUUID(), title: '', description: '', order: Date.now(), revision: 0, src: null })}>Add video <span aria-hidden="true">＋</span></button><p>Press and hold a card to change its video or description. You can also use Edit video or focus a card and press F2.</p></div>}
-    {canEdit && loaded && <CarouselTiming key={carousel.revision} saved={carousel} onSaved={value => { setCarousel(value); setStatus(`Carousel timing published: ${value.intervalSeconds} seconds.`); }}/> }
+  return <Editable as="div" contentKey="proof-section" ref={root} className="home-work-proof" aria-labelledby="work-proof-title" data-site-image-ignore="" onPointerDown={event => { if ((event.target as Element).closest("dialog")) return; keyboardFocus.current = false; pointerHeld.current = true; if (!(event.target as Element).closest("[data-proof-video],button,a,input")) beginHold(event, null); }} onPointerUp={() => { pointerHeld.current = false; cancelHold(); setInteraction(value => value + 1); }} onPointerCancel={() => { pointerHeld.current = false; cancelHold(); setInteraction(value => value + 1); }} onPointerLeave={() => { pointerHeld.current = false; cancelHold(); }} onPointerMove={event => { if (gesture.current && Math.hypot(event.clientX - gesture.current.x, event.clientY - gesture.current.y) > 12) cancelHold(); }} onWheel={() => setInteraction(value => value + 1)} onKeyDownCapture={() => { keyboardFocus.current = true; }}>
+    <div className="home-work-proof-heading"><div><p className="eyebrow">WATCH THE WORK</p><Editable as="h3" contentKey="proof-title" canEditText id="work-proof-title">Training you can actually see.</Editable></div><Editable as="p" contentKey="proof-intro" canEditText>Real Bravo training sessions and progress. Play a video here, or follow a card marked “Watch on Facebook.”</Editable></div>
     {(!loaded && loading) && <p role="status">Loading videos…</p>}
     {error && <p role="alert">{error} <button type="button" disabled={loading} onClick={() => load(loaded ? cursor : null)}>Retry loading videos</button></p>}
     {loaded && !clips.length && <p>No training videos published yet.</p>}
-    <div ref={rail} className="home-work-proof-grid proof-video-carousel" role="region" aria-roledescription="carousel" aria-label="Training video carousel" tabIndex={0} onScroll={cancelHold} onPointerDown={() => { manualUntil.current = Date.now() + 10000; }} onWheel={() => { manualUntil.current = Date.now() + 10000; }}>
+    <div ref={rail} className="home-work-proof-grid proof-video-carousel" role="region" aria-roledescription="carousel" aria-label="Training video carousel" tabIndex={0} onScroll={cancelHold}>
       {clips.map(clip => <article key={clip.id} data-proof-video={clip.id} data-facebook-reel={clip.facebookUrl ? clip.id : undefined} data-proof-editable={canEdit || undefined} tabIndex={canEdit ? 0 : undefined} aria-keyshortcuts={canEdit ? 'F2' : undefined}
         onPointerDownCapture={event => beginHold(event, clip)} onPointerUpCapture={cancelHold} onPointerCancelCapture={cancelHold}
         onPointerMoveCapture={event => { const hold = gesture.current; if (hold && (event.pointerId !== hold.pointer || Math.hypot(event.clientX - hold.x, event.clientY - hold.y) > 12)) cancelHold(); }}
@@ -118,11 +120,12 @@ export default function ProofVideoCarousel() {
         onClickCapture={event => { if (!canEdit || (event.target as Element).closest('[data-proof-action]')) return; if (Date.now() < suppressUntil.current || editMode) { event.preventDefault(); event.stopPropagation(); if (editMode) open(clip); } }}
         onKeyDown={event => { if (canEdit && event.key === 'F2') { event.preventDefault(); open(clip); } }}>
         <div className="home-work-proof-media">{clip.src ? <VideoPlayer key={clip.src} clip={clip} onPlay={playing => root.current?.querySelectorAll('video').forEach(video => { if (video !== playing) video.pause(); })}/> : <a className="home-work-proof-play" href={clip.facebookUrl!} aria-label={`Watch ${clip.title} on Facebook`}>{clip.poster ? <img src={clip.poster} width="475" height="844" loading="lazy" alt={clip.title}/> : <span className="proof-reel-placeholder" aria-hidden="true"><span>BRAVO K9</span><strong>Facebook Reel</strong></span>}<span className="home-work-proof-play-icon" aria-hidden="true">▶</span><span className="home-work-proof-destination" aria-hidden="true">Watch on Facebook →</span></a>}</div>
-        <div className="home-work-proof-copy"><h4>{clip.title}</h4><p id={`proof-description-${clip.id}`}>{clip.description}</p>{clip.facebookUrl && <a href={clip.facebookUrl} aria-label={`View original ${clip.title} video on Facebook`}>View original on Facebook <span aria-hidden="true">→</span></a>}{canEdit && <button type="button" className="proof-edit-button" data-proof-action="" onClick={() => open(clip)} aria-label={`Edit video: ${clip.title}`}>Edit video</button>}</div>
+        <div className="home-work-proof-copy"><h4>{clip.title}</h4><p id={`proof-description-${clip.id}`}>{clip.description}</p>{clip.facebookUrl && <a href={clip.facebookUrl} aria-label={`View original ${clip.title} video on Facebook`}>View original on Facebook <span aria-hidden="true">→</span></a>}</div>
       </article>)}
     </div>
-    {(clips.length > 1 || cursor) && <div className="proof-carousel-navigation"><p>{reduced ? 'Swipe or use the arrows to see more videos.' : `Advances every ${carousel.intervalSeconds} seconds. Pauses while you watch or interact.`}</p><div className="proof-carousel-buttons"><button type="button" aria-label="Previous video" onClick={() => advance(-1)}>←</button>{!reduced && <button type="button" aria-pressed={paused} onClick={() => setPaused(value => !value)}>{paused ? 'Resume videos' : 'Pause videos'}</button>}<button type="button" aria-label="Next video" onClick={() => advance(1)}>→</button>{cursor && <button type="button" disabled={loading} onClick={() => load(cursor)}>{loading ? 'Loading…' : 'Load more videos'}</button>}</div></div>}
+    {(clips.length > 1 || cursor) && <div className="proof-carousel-navigation"><p>{reduced ? 'Swipe or use the arrows to see more videos.' : `Advances every ${carousel.intervalSeconds} seconds. Resumes after touch or swipe; pauses while a video plays.`}</p><div className="proof-carousel-buttons"><button type="button" aria-label="Previous video" onClick={() => advance(-1)}>←</button>{!reduced && <button type="button" aria-pressed={paused} onClick={() => setPaused(value => !value)}>{paused ? 'Resume videos' : 'Pause videos'}</button>}<button type="button" aria-label="Next video" onClick={() => advance(1)}>→</button>{cursor && <button type="button" disabled={loading} onClick={() => load(cursor)}>{loading ? 'Loading…' : 'Load more videos'}</button>}</div></div>}
     <p className="proof-video-status" role="status" aria-live="polite">{status}</p>
+    {toolsOpen && canEdit && <dialog ref={toolsDialog} className="proof-section-editor banner-editor" data-site-image-ignore="" aria-label="Edit video section" onCancel={() => setToolsOpen(false)}><div className="banner-editor-heading"><h2>Edit video section</h2><button type="button" onClick={() => setToolsOpen(false)} aria-label="Close video section editor">×</button></div><button type="button" disabled={!loaded} onClick={() => { setToolsOpen(false); open({ id: crypto.randomUUID(), title: '', description: '', order: Date.now(), revision: 0, src: null }); }}>Add video</button><button type="button" onClick={() => { setToolsOpen(false); window.dispatchEvent(new CustomEvent('bravo-content-edit', { detail: { key: 'proof-section' } })); }}>Edit section text &amp; design</button><CarouselTiming key={carousel.revision} saved={carousel} onSaved={value => { setCarousel(value); setStatus(`Carousel timing published: ${value.intervalSeconds} seconds.`); }}/><div>{clips.map(clip => <p key={clip.id}><button type="button" onClick={() => { setToolsOpen(false); open(clip); }}>Edit video: {clip.title}</button></p>)}</div></dialog>}
     {editing && canEdit && <Suspense fallback={<p role="status">Opening video editor…</p>}><Editor key={editing.id} clip={editing} onClose={() => setEditing(null)} onSaved={clip => { setClips(old => [...old.filter(item => item.id !== clip.id), clip].sort(compareProofVideos)); setStatus('Video and description published.'); setEditing(null); }} onRemoved={id => { setClips(old => old.filter(clip => clip.id !== id)); setStatus('Video removed from the carousel.'); setEditing(null); }}/></Suspense>}
-  </div>;
+  </Editable>;
 }

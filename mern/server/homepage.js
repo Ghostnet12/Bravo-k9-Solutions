@@ -1,3 +1,4 @@
+import { renderSiteContent } from './content-html.js';
 import { readFile } from 'node:fs/promises';
 import { HOME_HERO_META, HOME_HERO_SOURCE, HOME_HERO_ALT, homeHeroSnapshot } from '../shared/home-hero.js';
 import { framingStyle } from '../shared/site-images.js';
@@ -27,17 +28,18 @@ export function renderHomepage(html, value) {
     .replace('</head>', `${preload}<meta name="${HOME_HERO_META}" content="${escapeAttribute(JSON.stringify(hero))}"/></head>`);
 }
 
-export function createHomepageHandler({ loadHero, loadTemplate = readTemplate }) {
+export function createHomepageHandler({ loadHero, loadTemplate = readTemplate, loadContent = async () => ({}) }) {
   return async (_req, res) => {
     // Resolve framing before sending HTML, not after the visitor sees a
     // differently framed placeholder. An outage still serves the static page.
-    const [html, hero] = await Promise.all([
+    const [html, hero, content] = await Promise.all([
       loadTemplate(),
       Promise.resolve().then(loadHero).catch(() => null),
+      Promise.resolve().then(loadContent).catch(() => ({})),
     ]);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'private, no-store');
     res.statusCode = 200;
-    res.end(renderHomepage(html, hero));
+    res.end(renderSiteContent(renderHomepage(html, hero), content));
   };
 }
