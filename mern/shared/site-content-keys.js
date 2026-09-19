@@ -1,6 +1,14 @@
 // Stable publishing keys. Keep existing keys when changing page layouts.
 export const CONTENT_KEYS = {
-  "proof-section":{"text":false},"proof-title":{"text":true},"proof-intro":{"text":true},
+  "proof-section": {
+    "text": false
+  },
+  "proof-title": {
+    "text": true
+  },
+  "proof-intro": {
+    "text": true
+  },
   "ui-page-live-title": {
     "text": false
   },
@@ -250,13 +258,13 @@ export const CONTENT_KEYS = {
     "text": false
   },
   "home-78": {
-    "text": false
+    "text": true
   },
   "home-79": {
     "text": false
   },
   "home-80": {
-    "text": false
+    "text": true
   },
   "home-81": {
     "text": false
@@ -2969,5 +2977,41 @@ export const CONTENT_KEYS = {
   "notfoundpage-14": {
     "text": true,
     "link": true
+  },
+  "home-secondary-walking-label": {
+    "text": true
+  },
+  "home-secondary-walking-text": {
+    "text": true
+  },
+  "home-secondary-aggression-label": {
+    "text": true
+  },
+  "home-secondary-aggression-text": {
+    "text": true
+  },
+  "home-specialty-0-title": {
+    "text": true
+  },
+  "home-specialty-0-copy": {
+    "text": true
+  },
+  "home-specialty-1-title": {
+    "text": true
+  },
+  "home-specialty-1-copy": {
+    "text": true
+  },
+  "home-specialty-2-title": {
+    "text": true
+  },
+  "home-specialty-2-copy": {
+    "text": true
+  },
+  "home-specialty-3-title": {
+    "text": true
+  },
+  "home-specialty-3-copy": {
+    "text": true
   }
 };

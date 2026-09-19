@@ -19,7 +19,7 @@ export function renderSiteContent(html, entries = {}) {
       }
     }
     if(node.tagName==='head'){
-      const snapshot={nodeName:'meta',tagName:'meta',namespaceURI:'http://www.w3.org/1999/xhtml',attrs:[{name:'name',value:'bravo-site-content'},{name:'content',value:JSON.stringify(entries)}],childNodes:[],parentNode:node};
+      const snapshot={nodeName:'meta',tagName:'meta',namespaceURI:'http://www.w3.org/1999/xhtml',attrs:[{name:'name',value:'bravo-site-content'},{name:'content',value:JSON.stringify(entries).replaceAll('<','\\u003c')}],childNodes:[],parentNode:node};
       const style={nodeName:'style',tagName:'style',namespaceURI:'http://www.w3.org/1999/xhtml',attrs:[{name:'id',value:'bravo-published-theme'}],childNodes:[],parentNode:node};
       style.childNodes.push({nodeName:'#text',value:themeCss(entries['site-theme']?.value),parentNode:style});
       node.childNodes.push(snapshot,style);
