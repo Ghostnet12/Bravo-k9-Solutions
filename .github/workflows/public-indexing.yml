@@ -1,0 +1,34 @@
+name: Public indexing and rendering
+on:
+  push:
+    branches: [bravo-mern, 'seo/**']
+    paths: ['mern/**', '.github/workflows/public-indexing.yml']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: mern
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: mern/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - run: npm install --no-save --package-lock=false playwright@1.55.1
+      - run: npx playwright install --with-deps chromium webkit
+      - run: node tests/public-content.browser.mjs
+      - run: node tests/seo.browser.mjs
+      - run: node tests/home-hero.browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: public-indexing-evidence
+          path: mern/test-results/

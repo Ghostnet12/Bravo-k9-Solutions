@@ -20,18 +20,36 @@ import './site-image-editor.css';
 import './accessibility-layout.css';
 import './reset-layout.css';
 import './usability-polish.css';
-const DogTrainingPage = lazy(() => import('./DogTrainingPage'));
-const BehaviorAssessmentPage = lazy(() => import('./BehaviorAssessmentPage'));
-const MediaRightsPage = lazy(() => import('./MediaRightsPage'));
+// Keep the server-rendered public page readable until its interactive module
+// is ready. A failed chunk must not replace useful HTML with a loading/error shell.
+const publicPageLoaders = {
+  '/dog-training': () => import('./DogTrainingPage'),
+  '/behavior-assessment': () => import('./BehaviorAssessmentPage'),
+  '/media-rights': () => import('./MediaRightsPage'),
+  '/learn': () => import('./LearnPage'),
+  '/contact': () => import('./ContactPage'),
+  '/dog-walking': () => import('./DogWalkingPage'),
+};
+let initialPublicPage = null;
+function publicPage(path) {
+  const Deferred = lazy(publicPageLoaders[path]);
+  return function PublicPage(props) {
+    const Component = initialPublicPage?.path === path ? initialPublicPage.Component : Deferred;
+    return <Component {...props}/>;
+  };
+}
+const DogTrainingPage = publicPage('/dog-training');
+const BehaviorAssessmentPage = publicPage('/behavior-assessment');
+const MediaRightsPage = publicPage('/media-rights');
 const SchedulePage = lazy(() => import('./SchedulePage'));
 const ResetPasswordPage = lazy(() => import('./ResetPasswordPage'));
 const BookingPage = lazy(() => import('./BookingPage'));
 const AccountPage = lazy(() => import('./AccountPage'));
-const LearnPage = lazy(() => import('./LearnPage'));
+const LearnPage = publicPage('/learn');
 const CommunityPage = lazy(() => import('./CommunityPage'));
-const ContactPage = lazy(() => import('./ContactPage'));
+const ContactPage = publicPage('/contact');
 const AdminPage = lazy(() => import('./AdminPage'));
-const DogWalkingPage = lazy(() => import('./DogWalkingPage'));
+const DogWalkingPage = publicPage('/dog-walking');
 function SiteImageTools() {
   const { user } = useBravo();
   useEffect(() => mountSiteImages({ canEdit: isImageEditor(user) }), [user?.id, user?.role]);
@@ -84,4 +102,11 @@ class ErrorBoundary extends React.Component {
 }
 function BookingRoute() { const location = useLocation(); return <BookingPage key={location.search}/>; }
 function App() { return <BrowserRouter><AppProvider><a className="skip-link" href="#main-content">Skip to main content</a><RouteBehavior/><SiteTelemetry/><ErrorBoundary><Suspense fallback={<Page title="Opening Bravo…"><p role="status">Loading your page.</p></Page>}><PasswordSetupGate><Routes><Route path="/schedule" element={<SchedulePage/>}/><Route path="/reset-password" element={<ResetPasswordPage/>}/><Route path="/" element={<Home/>}/><Route path="/dog-training" element={<DogTrainingPage/>}/><Route path="/behavior-assessment" element={<BehaviorAssessmentPage/>}/><Route path="/dog-walking" element={<DogWalkingPage/>}/><Route path="/portal" element={<BookingRoute/>}/><Route path="/account" element={<AccountPage/>}/><Route path="/learn" element={<LearnPage/>}/><Route path="/community" element={<CommunityPage/>}/><Route path="/contact" element={<ContactPage/>}/><Route path="/admin" element={<AdminPage/>}/><Route path="/accessibility" element={<AccessibilityPage/>}/><Route path="/media-rights" element={<MediaRightsPage/>}/><Route path="*" element={<NotFoundPage/>}/></Routes></PasswordSetupGate></Suspense></ErrorBoundary><Accessibility/><SiteImageTools/></AppProvider></BrowserRouter>; }
-createRoot(document.getElementById('root')).render(<React.StrictMode><App/></React.StrictMode>);
+const start = () => createRoot(document.getElementById('root')).render(<React.StrictMode><App/></React.StrictMode>);
+const initialPath = window.location.pathname;
+if (publicPageLoaders[initialPath]) {
+  publicPageLoaders[initialPath]().then(module => {
+    initialPublicPage = { path: initialPath, Component: module.default };
+    start();
+  }).catch(() => { reportBrowserError('page_crash'); });
+} else start();
