@@ -13,6 +13,7 @@ import { MediaUpload, MediaChunk, AuditEvent } from './models.js';
 import { identify, requireUser, requireOwner, sameOrigin, rateLimit } from './auth.js';
 import { CHUNK_SIZE, validMediaHeader, sendUploadedMedia } from './media.js';
 import { isEditableMediaKey, SITE_IMAGE_MAX_BYTES } from '../shared/site-images.js';
+import { HOME_HERO_KEY } from '../shared/home-hero.js';
 import { createHomepageHandler } from './homepage.js';
 import proofVideoRouter from './proof-videos.js';
 import siteBannerRouter from './site-banner.js';
@@ -32,7 +33,7 @@ function publicImage(image) {
 }
 export const homepageHandler = createHomepageHandler({ loadContent: loadSiteContent, loadHero: async () => {
   await connectDb();
-  const image = await SiteImage.findById('home-hero').select('_id current revision previous.uploadId').maxTimeMS(2000).lean();
+  const image = await SiteImage.findById(HOME_HERO_KEY).select('_id current revision previous.uploadId').maxTimeMS(2000).lean();
   return image ? publicImage(image) : null;
 } });
 function mediaError(error, _req, res, _next) {

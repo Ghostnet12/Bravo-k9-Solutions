@@ -3232,3 +3232,5 @@ Object.assign(CONTENT_KEYS, {
   'trainer-david-introduction': {text:true},
   'trainer-ashley-introduction': {text:true},
 });
+
+CONTENT_KEYS['training-booking-allowance'] = {text:true};

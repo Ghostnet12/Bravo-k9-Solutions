@@ -6,13 +6,13 @@ import { readFile, access } from 'node:fs/promises';
 import { HOME_HERO_SOURCE, homeHeroSnapshot, readHomeHero } from '../shared/home-hero.js';
 import { createHomepageHandler, renderHomepage } from '../server/homepage.js';
 
-const hero = { revision: 13, src: '/api/site-images/home-hero/image?v=13', alt: 'Bravo team', fit: 'contain', x: 13, y: 19.5, zoom: 1.36, framed: true, canUndo: true };
+const hero = { revision: 13, src: '/api/site-images/home-training-hero/image?v=13', alt: 'Bravo team', fit: 'contain', x: 13, y: 19.5, zoom: 1.36, framed: true, canUndo: true };
 const template = '<html><head><link rel="preload" as="image" href="/images/hero-bravo-launch.webp" fetchpriority="high"/><link rel="preload" as="font" href="/fonts/bebas-neue.ttf"/><script type="module" src="/assets/app.js"></script></head><body><div id="root"></div></body></html>';
 
 test('published hero is available in initial HTML and has the only image preload', () => {
   const html = renderHomepage(template, hero);
   assert.equal((html.match(/as="image"/g) || []).length, 1);
-  assert.match(html, /href="\/api\/site-images\/home-hero\/image\?v=13"/);
+  assert.match(html, /href="\/api\/site-images\/home-training-hero\/image\?v=13"/);
   assert.doesNotMatch(html, /hero-bravo-launch/);
   assert.match(html, /bravo-home-hero/);
   assert.match(html, /&quot;fit&quot;:&quot;contain&quot;/);
@@ -26,7 +26,7 @@ test('snapshot strips private data, rejects arbitrary sources and bounds framing
   assert.equal(value.src, null);
   assert.equal(value.x, 0); assert.equal(value.y, 100); assert.equal(value.zoom, 3);
   assert.doesNotMatch(JSON.stringify(value), /PRIVATE|evil/);
-  assert.equal(homeHeroSnapshot({ ...hero, src: '/api/site-images/home-hero/image?v=12' }).src, null);
+  assert.equal(homeHeroSnapshot({ ...hero, src: '/api/site-images/home-training-hero/image?v=12' }).src, null);
 });
 
 test('alt text cannot escape the inert metadata attribute or inject scripts', () => {
@@ -49,7 +49,7 @@ test('homepage serves complete public snapshot without authentication and does n
   assert.match(first.text, /image\?v=13/);
   assert.match(first.headers['cache-control'], /no-store/);
   assert.equal(first.headers['set-cookie'], undefined);
-  current = { ...hero, revision: 14, src: '/api/site-images/home-hero/image?v=14' };
+  current = { ...hero, revision: 14, src: '/api/site-images/home-training-hero/image?v=14' };
   const next = await request(app).get('/').expect(200);
   assert.match(next.text, /image\?v=14/);
   assert.doesNotMatch(next.text, /image\?v=13/);

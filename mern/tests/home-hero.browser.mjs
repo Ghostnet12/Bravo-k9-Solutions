@@ -7,12 +7,12 @@ import { fileURLToPath } from 'node:url';
 import { once } from 'node:events';
 import { createHomepageHandler } from '../server/homepage.js';
 const engines = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
-const hero = { revision: 13, src: '/api/site-images/home-hero/image?v=13', alt: 'Bravo team fixture', fit: 'contain', x: 13, y: 19.5, zoom: 1.36, framed: true, canUndo: true };
+const hero = { revision: 13, src: '/api/site-images/home-training-hero/image?v=13', alt: 'Bravo team fixture', fit: 'contain', x: 13, y: 19.5, zoom: 1.36, framed: true, canUndo: true };
 const dist = fileURLToPath(new URL('../client/dist/', import.meta.url));
 const html = await readFile(`${dist}/bravo-shell.html`, 'utf8');
 const app = express();
 app.get('/', createHomepageHandler({ loadTemplate: async () => html, loadHero: async () => hero }));
-app.get('/api/site-images/home-hero/image', (_req, res) => res.sendFile(`${dist}/images/hero-bravo-launch.webp`));
+app.get('/api/site-images/home-training-hero/image', (_req, res) => res.sendFile(`${dist}/images/bravo-client-training.jpeg`));
 app.get('/api/config', (_req, res) => res.json({ connected: true }));
 app.get('/api/team', (_req, res) => res.json({ team: [] }));
 app.get('/api/team/schedules', (_req, res) => res.json({ schedules: [], checkedAt: new Date().toISOString() }));
@@ -32,14 +32,14 @@ try {
         const context = await browser.newContext({ viewport: { width, height: 844 }, isMobile: width === 390, deviceScaleFactor: 1 });
         const page = await context.newPage(), errors = [], photoRequests = [];
         page.on('pageerror', error => errors.push(error.message));
-        page.on('request', request => { if (/hero-bravo-launch|site-images\/home-hero\/image/.test(request.url())) photoRequests.push(request.url()); });
+        page.on('request', request => { if (/hero-bravo-launch|site-images\/home-training-hero\/image/.test(request.url())) photoRequests.push(request.url()); });
         await page.route('**/api/auth/me', async route => {
           await new Promise(resolve => setTimeout(resolve, 900));
           await route.fulfill({ json: { user: owner ? { id: 'fixture-owner', role: 'owner', name: 'Fixture administrator' } : null, services: [] } });
         });
         await page.route('**/api/site-images', async route => {
           await new Promise(resolve => setTimeout(resolve, 1500));
-          await route.fulfill({ json: { images: { 'home-hero': hero } } });
+          await route.fulfill({ json: { images: { 'home-training-hero': hero } } });
         });
         await page.addInitScript(() => {
           window.heroFrames = [];
