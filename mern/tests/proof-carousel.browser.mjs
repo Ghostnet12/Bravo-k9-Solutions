@@ -14,11 +14,14 @@ try {
     try {
       for (const width of [390, 1440]) {
         const context = await browser.newContext({ viewport: { width, height: 900 } }), page = await context.newPage(), errors = [];
+        let role = null, carousel = { intervalSeconds: 5, revision: 0 };
         page.on('pageerror', e => errors.push(e.message));
         await page.route('**/api/**', async route => {
           const path = new URL(route.request().url()).pathname;
           let json = { user: null, services: [], team: [], images: {}, reviews: [], schedules: [], alerts: [], revision: 0 };
-          if (path === '/api/proof-videos') json = { clips: Array.from({ length: 4 }, (_, i) => ({ id: `fixture-${i}`, title: `Training ${i + 1}`, description: 'Real-world training fixture', order: i, revision: 0, src: i === 0 ? '/fixture-video.mp4' : null, facebookUrl: i === 0 ? null : 'https://www.facebook.com/reel/1850999522754029', poster: '/images/obedience-real-world.webp' })), nextCursor: null };
+          if (path === '/api/auth/me') json.user = role ? { id: 'fixture', name: 'Fixture', role } : null;
+          if (path === '/api/proof-videos/settings') { const body = route.request().postDataJSON(); assert.equal(body.expectedRevision, carousel.revision); carousel = { intervalSeconds: body.intervalSeconds, revision: carousel.revision + 1 }; json = { carousel }; }
+          if (path === '/api/proof-videos') json = { carousel, clips: Array.from({ length: 4 }, (_, i) => ({ id: `fixture-${i}`, title: `Training ${i + 1}`, description: 'Real-world training fixture', order: i, revision: 0, src: i === 0 ? '/fixture-video.mp4' : null, facebookUrl: i === 0 ? null : 'https://www.facebook.com/reel/1850999522754029', poster: '/images/obedience-real-world.webp' })), nextCursor: null };
           await route.fulfill({ json });
         });
         try {
@@ -45,6 +48,17 @@ try {
           assert.ok(Math.abs((await rail.evaluate(el => el.scrollLeft)) - reducedPosition) < 2);
           const reel = page.getByRole('link', { name: 'Watch Training 2 on Facebook', exact: true });
           assert.equal(await reel.getAttribute('href'), 'https://www.facebook.com/reel/1850999522754029'); assert.equal(await reel.getAttribute('target'), null);
+          role = 'owner'; await page.emulateMedia({ reducedMotion: 'no-preference' }); await page.reload();
+          await page.getByLabel('Time between videos (seconds)').fill('2');
+          await page.getByRole('button', { name: 'Publish carousel timing', exact: true }).click();
+          await page.getByText('Carousel timing published: 2 seconds.', { exact: true }).waitFor();
+          assert.equal(carousel.intervalSeconds, 2);
+          await page.reload(); await page.locator('[data-proof-video]').first().waitFor();
+          assert.equal(await page.getByLabel('Time between videos (seconds)').inputValue(), '2');
+          await rail.scrollIntoViewIfNeeded(); await page.mouse.move(0, 0);
+          const customStart = await rail.evaluate(el => el.scrollLeft); await page.waitForTimeout(2700);
+          assert.ok((await rail.evaluate(el => el.scrollLeft)) > customStart + 20, 'saved two-second timing changes movement');
+          for (const visitorRole of ['staff', 'member', null]) { role = visitorRole; await page.reload(); await page.waitForLoadState('networkidle'); assert.equal(await page.getByLabel('Time between videos (seconds)').count(), 0); }
           assert.deepEqual(errors, []); console.log(`PASS ${name} ${width}: five-second advance, pause, arrows, playing-video guard, reduced motion and same-tab Facebook link`);
         } catch (error) { await page.screenshot({ path: `test-results/proof-carousel-failure-${name}-${width}.png`, fullPage: true }); await writeFile(`test-results/proof-carousel-failure-${name}-${width}.json`, JSON.stringify({ error: error.message, errors })); throw error; }
         finally { await context.close(); }

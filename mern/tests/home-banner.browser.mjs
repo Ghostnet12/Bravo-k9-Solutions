@@ -30,7 +30,8 @@ try {
           await route.fulfill({ status, json });
         });
         try {
-          await page.goto(origin); await page.getByRole('button', { name: 'Edit banner', exact: true }).waitFor();
+          await page.goto(origin); await page.locator('[data-banner-editable]').waitFor();
+          assert.equal(await page.getByRole('button', { name: 'Edit banner', exact: true }).count(), 0);
           const banner = page.locator('.home-status-banner');
           assert.equal(await banner.evaluate(el => el.previousElementSibling.className), 'home-hero');
           assert.ok((await banner.innerText()).includes('63°F'));
@@ -39,7 +40,10 @@ try {
           await page.screenshot({ path: `test-results/banner-moving-${engineName}-${width}.png` });
           await page.getByRole('button', { name: 'Pause banner', exact: true }).click();
           assert.equal(await page.locator('.banner-track').evaluate(el => getComputedStyle(el).animationName), 'none');
-          await page.getByRole('button', { name: 'Edit banner', exact: true }).click();
+          await banner.scrollIntoViewIfNeeded();
+          const openByHold = async () => { const b = await banner.boundingBox(); await page.mouse.move(b.x + 40, b.y + 20); await page.mouse.down(); await page.waitForTimeout(750); await page.mouse.up(); };
+          await openByHold(); await page.getByRole('dialog').waitFor();
+          for (const label of ['Location label', 'Time label', 'Weather label', 'Alert label', 'Default message label']) await page.getByLabel(label, { exact: true }).fill('');
           await page.getByLabel('Location text', { exact: true }).fill('Aberdeen & Bath');
           await page.getByLabel('Custom time text (blank = automatic Central Time)', { exact: true }).fill('Training hours: call Bravo');
           await page.getByLabel('Custom weather text (blank = automatic Aberdeen weather)', { exact: true }).fill('Outdoor sessions available');
@@ -52,7 +56,9 @@ try {
           failSave = false; await page.getByRole('button', { name: 'Publish banner', exact: true }).click(); await page.getByRole('dialog').waitFor({ state: 'hidden' });
           assert.equal(saved.settings.fontSize, 15);
           assert.ok((await banner.innerText()).includes('New training notice')); assert.ok((await banner.innerText()).includes('Aberdeen & Bath')); assert.ok((await banner.innerText()).includes('Outdoor sessions available'));
-          await page.reload(); await page.getByRole('button', { name: 'Edit banner', exact: true }).waitFor();
+          assert.equal(await page.locator('.banner-item strong').count(), 0);
+          await page.reload(); await page.locator('[data-banner-editable]').waitFor();
+          await page.waitForLoadState('networkidle'); assert.equal(await page.locator('.banner-item strong').count(), 0);
           assert.ok((await banner.innerText()).includes('New training notice')); assert.ok((await banner.innerText()).includes('Aberdeen & Bath')); assert.ok((await banner.innerText()).includes('Outdoor sessions available'));
           // Hold without moving opens the same editor; normal scroll cancels it.
           await banner.scrollIntoViewIfNeeded(); const box = await banner.boundingBox();
@@ -65,6 +71,7 @@ try {
           assert.equal(await page.locator('.banner-track').evaluate(el => getComputedStyle(el).animationName), 'none');
           for (const visitorRole of ['staff', 'member', null]) {
             role = visitorRole; await page.reload(); await page.waitForLoadState('networkidle'); assert.equal(await page.getByRole('button', { name: 'Edit banner' }).count(), 0);
+            await banner.scrollIntoViewIfNeeded(); await openByHold(); assert.equal(await page.getByRole('dialog').count(), 0); assert.equal(await page.locator('[data-banner-editable]').count(), 0);
           }
           assert.deepEqual(errors, []); console.log(`PASS ${engineName} ${width}: placement, weather, movement, pause, long-press, editing, persistence, conflicts and restricted editor`);
         } catch (error) {
