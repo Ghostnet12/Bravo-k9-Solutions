@@ -1,3 +1,4 @@
+import { SiteContentProvider } from './SiteContent';
 import SiteTelemetry from './SiteTelemetry';
 import { reportBrowserError } from './telemetry';
 import { PAGE_METADATA, NOT_FOUND_METADATA, canonicalUrl, robotsContent, socialImage, socialImageAlt, structuredData } from '../../shared/page-metadata';
@@ -52,7 +53,7 @@ const AdminPage = lazy(() => import('./AdminPage'));
 const DogWalkingPage = publicPage('/dog-walking');
 function SiteImageTools() {
   const { user } = useBravo();
-  useEffect(() => mountSiteImages({ canEdit: isImageEditor(user) }), [user?.id, user?.role]);
+  useEffect(() => mountSiteImages({ canEdit: isImageEditor(user) && !user?.mustChangePassword }), [user?.id, user?.role]);
   return null;
 }
 function RouteBehavior() {
@@ -101,7 +102,7 @@ class ErrorBoundary extends React.Component {
   render() { return this.state.error ? <Page title="Let’s get you back on track."><p>The page couldn’t load. Your saved bookings are not affected.</p><a className="button" href="/">Reload Bravo</a></Page> : this.props.children; }
 }
 function BookingRoute() { const location = useLocation(); return <BookingPage key={location.search}/>; }
-function App() { return <BrowserRouter><AppProvider><a className="skip-link" href="#main-content">Skip to main content</a><RouteBehavior/><SiteTelemetry/><ErrorBoundary><Suspense fallback={<Page title="Opening Bravo…"><p role="status">Loading your page.</p></Page>}><PasswordSetupGate><Routes><Route path="/schedule" element={<SchedulePage/>}/><Route path="/reset-password" element={<ResetPasswordPage/>}/><Route path="/" element={<Home/>}/><Route path="/dog-training" element={<DogTrainingPage/>}/><Route path="/behavior-assessment" element={<BehaviorAssessmentPage/>}/><Route path="/dog-walking" element={<DogWalkingPage/>}/><Route path="/portal" element={<BookingRoute/>}/><Route path="/account" element={<AccountPage/>}/><Route path="/learn" element={<LearnPage/>}/><Route path="/community" element={<CommunityPage/>}/><Route path="/contact" element={<ContactPage/>}/><Route path="/admin" element={<AdminPage/>}/><Route path="/accessibility" element={<AccessibilityPage/>}/><Route path="/media-rights" element={<MediaRightsPage/>}/><Route path="*" element={<NotFoundPage/>}/></Routes></PasswordSetupGate></Suspense></ErrorBoundary><Accessibility/><SiteImageTools/></AppProvider></BrowserRouter>; }
+function App() { return <BrowserRouter><AppProvider><SiteContentProvider><a className="skip-link" href="#main-content">Skip to main content</a><RouteBehavior/><SiteTelemetry/><ErrorBoundary><Suspense fallback={<Page title="Opening Bravo…"><p role="status">Loading your page.</p></Page>}><PasswordSetupGate><Routes><Route path="/schedule" element={<SchedulePage/>}/><Route path="/reset-password" element={<ResetPasswordPage/>}/><Route path="/" element={<Home/>}/><Route path="/dog-training" element={<DogTrainingPage/>}/><Route path="/behavior-assessment" element={<BehaviorAssessmentPage/>}/><Route path="/dog-walking" element={<DogWalkingPage/>}/><Route path="/portal" element={<BookingRoute/>}/><Route path="/account" element={<AccountPage/>}/><Route path="/learn" element={<LearnPage/>}/><Route path="/community" element={<CommunityPage/>}/><Route path="/contact" element={<ContactPage/>}/><Route path="/admin" element={<AdminPage/>}/><Route path="/accessibility" element={<AccessibilityPage/>}/><Route path="/media-rights" element={<MediaRightsPage/>}/><Route path="*" element={<NotFoundPage/>}/></Routes></PasswordSetupGate></Suspense></ErrorBoundary><Accessibility/><SiteImageTools/></SiteContentProvider></AppProvider></BrowserRouter>; }
 const start = () => createRoot(document.getElementById('root')).render(<React.StrictMode><App/></React.StrictMode>);
 const initialPath = window.location.pathname;
 if (publicPageLoaders[initialPath]) {

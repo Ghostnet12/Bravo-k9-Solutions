@@ -1,3 +1,5 @@
+import { publicPageHandler } from './public-page.js';
+import siteContentRouter, { loadSiteContent } from './site-content.js';
 import express from 'express';
 import { requestError } from './errors.js';
 import helmet from 'helmet';
@@ -28,7 +30,7 @@ const imageInput = framingInput.extend({ filename: z.string().trim().min(1).max(
 function publicImage(image) {
   return { revision: image.revision, src: image.current?.uploadId ? `/api/site-images/${image._id}/image?v=${image.revision}` : null, alt: image.current?.alt || '', x: image.current?.x ?? 50, y: image.current?.y ?? 50, zoom: image.current?.zoom ?? 1, fit: image.current?.fit || 'cover', framed: image.current?.framed ?? !!image.current?.uploadId, canUndo: !!image.previous };
 }
-export const homepageHandler = createHomepageHandler({ loadHero: async () => {
+export const homepageHandler = createHomepageHandler({ loadContent: loadSiteContent, loadHero: async () => {
   await connectDb();
   const image = await SiteImage.findById('home-hero').select('_id current revision previous.uploadId').maxTimeMS(2000).lean();
   return image ? publicImage(image) : null;
@@ -119,6 +121,8 @@ app.get(['/', '/api/homepage'], helmet({ contentSecurityPolicy: { directives: { 
 app.use('/api/site-images', router);
 app.use('/api/proof-videos', proofVideoRouter);
 app.use('/api/site-banner', siteBannerRouter);
+app.use('/api/site-content', siteContentRouter);
+app.get('/api/public-page', publicPageHandler);
 // Close the old upload/delete/publish routes too, not just the inline editor.
 // Staff keep scheduling and other operational tools, but cannot change media
 // indirectly through lesson saves or an already-open upload screen.

@@ -1,7 +1,7 @@
 name: Homepage banner verification
 on:
   push:
-    branches: [bravo-mern, 'feature/home-status-banner-*', 'feature/banner-video-controls-*']
+    branches: [bravo-mern, 'feature/home-status-banner-*', 'feature/banner-video-controls-*', 'feature/site-hold-editor']
     paths: ['mern/**', '.github/workflows/home-banner.yml']
 permissions:
   contents: read
@@ -22,11 +22,12 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
-      - run: node --test tests/site-banner.integration.js tests/proof-videos.integration.js
+      - run: node --test tests/site-banner.integration.js tests/proof-videos.integration.js tests/site-content.integration.js
       - run: npm install --no-save --package-lock=false playwright@1.55.1
       - run: npx playwright install --with-deps chromium webkit
       - run: node tests/home-banner.browser.mjs
       - run: node tests/proof-carousel.browser.mjs
+      - run: node tests/site-content.browser.mjs
       - run: node tests/home-hero.browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()

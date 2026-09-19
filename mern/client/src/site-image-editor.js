@@ -93,7 +93,7 @@ export function mountSiteImages({ canEdit = false } = {}) {
     if (toolbar) {
       const slot = document.querySelector('[data-site-media-tools]');
       if (slot && toolbar.parentElement !== slot) slot.appendChild(toolbar);
-      toolbar.hidden = !allowed || !slot || !records.size;
+      toolbar.hidden = true;
       if (toolbar.hidden && editMode) {
         editMode = false; document.documentElement.classList.remove('site-photo-edit-mode');
         const toggle = toolbar.querySelector('button'); toggle.setAttribute('aria-pressed', 'false'); toggle.textContent = 'Edit photos & videos';

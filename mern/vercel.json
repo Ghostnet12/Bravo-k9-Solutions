@@ -93,11 +93,15 @@
   "functions": {
     "api/index.js": {
       "maxDuration": 60,
-      "includeFiles": "{client/dist/bravo-shell.html,client/public/fonts/montserrat-*.ttf}"
+      "includeFiles": "{client/dist/*.html,client/public/fonts/montserrat-*.ttf}"
     },
     "api/homepage.js": {
       "maxDuration": 60,
       "includeFiles": "client/dist/bravo-shell.html"
+    },
+    "api/public-page.js": {
+      "maxDuration": 60,
+      "includeFiles": "client/dist/*.html"
     }
   },
   "rewrites": [
@@ -111,15 +115,15 @@
     },
     {
       "source": "/dog-training",
-      "destination": "/dog-training.html"
+      "destination": "/api/public-page?path=/dog-training"
     },
     {
       "source": "/behavior-assessment",
-      "destination": "/behavior-assessment.html"
+      "destination": "/api/public-page?path=/behavior-assessment"
     },
     {
       "source": "/dog-walking",
-      "destination": "/dog-walking.html"
+      "destination": "/api/public-page?path=/dog-walking"
     },
     {
       "source": "/portal",
@@ -127,11 +131,11 @@
     },
     {
       "source": "/learn",
-      "destination": "/learn.html"
+      "destination": "/api/public-page?path=/learn"
     },
     {
       "source": "/contact",
-      "destination": "/contact.html"
+      "destination": "/api/public-page?path=/contact"
     },
     {
       "source": "/account",
@@ -155,11 +159,11 @@
     },
     {
       "source": "/accessibility",
-      "destination": "/accessibility.html"
+      "destination": "/api/public-page?path=/accessibility"
     },
     {
       "source": "/media-rights",
-      "destination": "/media-rights.html"
+      "destination": "/api/public-page?path=/media-rights"
     }
   ],
   "headers": [
