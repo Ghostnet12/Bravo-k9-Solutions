@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import request from 'supertest';
 import { randomBytes, createHash } from 'node:crypto';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
+import { DEFAULT_BANNER } from '../shared/site-banner.js';
 test('banner permissions, validation, durable updates and edit conflicts', { timeout: 180000 }, async () => {
   const replica = await MongoMemoryReplSet.create({ replSet: { count: 1 }, binary: { version: '7.0.14' } });
   process.env.NODE_ENV = 'test'; process.env.MONGODB_URI = replica.getUri(); process.env.MONGODB_DB = 'banner_test'; process.env.APP_ORIGIN = 'http://localhost:5173';
@@ -24,10 +25,14 @@ test('banner permissions, validation, durable updates and edit conflicts', { tim
     await put('owner', { ...update, alerts: ['x'.repeat(281)] }).expect(400);
     await put('owner', { ...update, alerts: [' '] }).expect(400);
     await put('owner', { ...update, alerts: Array(31).fill('notice') }).expect(400);
+    await put('owner', { ...update, settings: { ...DEFAULT_BANNER, edgeColor: 'url(https://bad.example)' } }).expect(400);
+    await put('owner', { ...update, settings: { ...DEFAULT_BANNER, speed: 0 } }).expect(400);
+    update.settings = { ...DEFAULT_BANNER, location: 'Aberdeen & Bath', weatherOverride: 'Outdoor sessions paused', timeOverride: 'Call for availability', centerColor: '#ffffaa', speed: 1.5 };
     const saved = await put('owner', update).expect(200); assert.equal(saved.body.revision, 1);
     const publicRead = await request(app).get('/api/site-banner').expect(200); assert.deepEqual(publicRead.body, saved.body);
     await put('owner', update).expect(409);
     const cleared = await put('owner', { expectedRevision: 1, alerts: [] }).expect(200); assert.deepEqual(cleared.body.alerts, []);
+    assert.deepEqual(cleared.body.settings, update.settings, 'Old clients preserve the published settings');
     assert.equal(await AuditEvent.countDocuments({ action: 'site-banner.published' }), 2);
     const blocked = await User.findOne({ role: 'owner' }); blocked.blocked = true; await blocked.save(); await put('owner', { expectedRevision: 2, alerts: ['blocked'] }).expect(401);
   } finally { await mongoose.disconnect(); await replica.stop(); }
