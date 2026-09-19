@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useBravo } from './context';
 import { api } from './api';
 import './home-banner.css';
+import { isImageEditor } from '../../shared/site-images.js';
 import { DEFAULT_BANNER } from '../../shared/site-banner.js';
 
 const localTime = date => new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }).format(date);
@@ -50,7 +51,7 @@ function AlertEditor({ saved, publish, close }) {
 }
 export default function HomeBanner() {
   const { user } = useBravo();
-  const canEdit = user?.role === 'owner';
+  const canEdit = isImageEditor(user) && !user?.mustChangePassword;
   const [now, setNow] = useState(() => new Date()), [weather, setWeather] = useState(null);
   const [saved, setSaved] = useState(null), [editError, setEditError] = useState(''), [editing, setEditing] = useState(false);
   const [paused, setPaused] = useState(false), [reduced, setReduced] = useState(false);
@@ -85,14 +86,14 @@ export default function HomeBanner() {
   ];
   const stopped = paused || reduced || editing;
   return <>
-    <section className={`home-status-banner ${stopped ? 'is-paused' : ''}`} aria-label="Location, weather, time and Bravo alerts" style={{ '--banner-text': settings.textColor, '--banner-border': settings.borderColor, '--banner-center': settings.centerColor, '--banner-edge': settings.edgeColor, '--banner-size': `${settings.fontSize}px`, '--banner-outline': `${settings.borderWidth}px` }}
+    <section className={`home-status-banner ${stopped ? 'is-paused' : ''}`} aria-label="Location, weather, time and Bravo alerts" data-banner-editable={canEdit || undefined} style={{ '--banner-text': settings.textColor, '--banner-border': settings.borderColor, '--banner-center': settings.centerColor, '--banner-edge': settings.edgeColor, '--banner-size': `${settings.fontSize}px`, '--banner-outline': `${settings.borderWidth}px` }}
       onPointerDown={event => { if (!canEdit || event.button !== 0 || event.target.closest('button, a')) return; origin.current = { x: event.clientX, y: event.clientY }; cancelHold(); hold.current = setTimeout(openEditor, 650); }}
       onPointerMove={event => { if (origin.current && Math.hypot(event.clientX - origin.current.x, event.clientY - origin.current.y) > 10) cancelHold(); }} onPointerUp={cancelHold} onPointerCancel={cancelHold} onPointerLeave={cancelHold}
       onContextMenu={event => { if (canEdit && !event.target.closest('button, a')) event.preventDefault(); }}>
       <div className="banner-viewport"><div className="banner-track" style={{ '--banner-duration': `${Math.max(35, items.reduce((sum, item) => sum + item.text.length + item.label.length, 0) * .18) / settings.speed}s` }}>
-        {[0, 1].map(copy => <div className="banner-group" key={copy} aria-hidden={copy === 1 ? true : undefined}>{items.map((item, index) => <span className="banner-item" key={index}><strong>{item.label}</strong><span>{item.text}</span><i aria-hidden="true">✦</i></span>)}</div>)}
+        {[0, 1].map(copy => <div className="banner-group" key={copy} aria-hidden={copy === 1 ? true : undefined}>{items.map((item, index) => <span className="banner-item" key={index}>{item.label.trim() && <strong>{item.label}</strong>}<span>{item.text}</span><i aria-hidden="true">✦</i></span>)}</div>)}
       </div></div>
-      <div className="banner-controls">{!reduced && <button type="button" aria-label={paused ? 'Resume banner' : 'Pause banner'} aria-pressed={paused} onClick={() => setPaused(value => !value)}>{paused ? '▶' : 'Ⅱ'}</button>}{canEdit && <button type="button" onClick={openEditor}>Edit banner</button>}</div>
+      <div className="banner-controls">{!reduced && <button type="button" aria-label={paused ? 'Resume banner' : 'Pause banner'} aria-pressed={paused} onClick={() => setPaused(value => !value)}>{paused ? '▶' : 'Ⅱ'}</button>}</div>
     </section>
     {editError && <p className="shell" role="alert">{editError}</p>}
     {editing && canEdit && saved && <AlertEditor saved={saved} publish={setSaved} close={() => setEditing(false)}/>}

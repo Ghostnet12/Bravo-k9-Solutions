@@ -5,7 +5,7 @@ import cookieParser from 'cookie-parser';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { connectDb, transaction } from './db.js';
-import { ProofVideo, MediaUpload, MediaChunk, AuditEvent } from './models.js';
+import { ProofVideo, ProofCarousel, MediaUpload, MediaChunk, AuditEvent } from './models.js';
 import { identify, requireUser, requireOwner, sameOrigin, rateLimit } from './auth.js';
 import { CHUNK_SIZE, MEDIA_LIMITS, validMediaHeader, mediaBytes, sendUploadedMedia } from './media.js';
 import { DEFAULT_PROOF_VIDEOS, PROOF_PAGE_SIZE, PROOF_VIDEO_TYPES, compareProofVideos, normalizeFacebookReelUrl } from '../shared/proof-videos.js';
@@ -30,12 +30,13 @@ const publicClip = row => {
     fit: row.fit || 'contain', src: row.uploadId ? `/api/proof-videos/${row._id}/video?v=${row.revision}` : null,
     poster: row.uploadId ? row.hasPoster ? `/api/proof-videos/${row._id}/poster?v=${row.revision}` : null : facebookUrl === original?.facebookUrl ? original.poster : null, facebookUrl };
 };
+const publicCarousel = row => ({ intervalSeconds: row?.intervalSeconds ?? 5, revision: row?.revision ?? 0 });
 const after = (clip, cursor) => !cursor || compareProofVideos(clip, cursor) > 0;
 const router = express.Router();
 router.use(helmet(), (_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
 // Unconfigured previews retain the existing public proof, just as the rest of
 // the homepage keeps its static content. Never mask a configured database error.
-router.get('/', (_req, res, next) => !process.env.MONGODB_URI ? res.json({ clips: DEFAULT_PROOF_VIDEOS, nextCursor: null }) : next());
+router.get('/', (_req, res, next) => !process.env.MONGODB_URI ? res.json({ clips: DEFAULT_PROOF_VIDEOS, nextCursor: null, carousel: publicCarousel(null) }) : next());
 router.use(async (_req, _res, next) => { await connectDb(); next(); });
 router.param('id', (_req, _res, next, id) => { idInput.parse(id); next(); });
 router.get('/', async (req, res) => {
@@ -56,7 +57,7 @@ router.get('/', async (req, res) => {
   const added = await ProofVideo.find(filter).sort({ order: 1, _id: 1 }).limit(PROOF_PAGE_SIZE + 1).lean();
   const clips = [...defaults, ...added.map(publicClip)].filter(clip => after(clip, cursor)).sort(compareProofVideos);
   const page = clips.slice(0, PROOF_PAGE_SIZE), last = page.at(-1);
-  res.json({ clips: page, nextCursor: clips.length > PROOF_PAGE_SIZE ? Buffer.from(JSON.stringify({ id: last.id, order: last.order })).toString('base64url') : null });
+  res.json({ carousel: publicCarousel(await ProofCarousel.findById('home').lean()), clips: page, nextCursor: clips.length > PROOF_PAGE_SIZE ? Buffer.from(JSON.stringify({ id: last.id, order: last.order })).toString('base64url') : null });
 });
 router.get('/:id/video', async (req, res) => {
   const clip = await ProofVideo.findOne({ _id: req.params.id, deleted: false }).lean();
@@ -73,6 +74,21 @@ router.get('/:id/poster', async (req, res) => {
 
 // Reuse the photo editor's real Owner/Administrator permission checks.
 router.use(sameOrigin, cookieParser(), identify, requireUser, requireOwner);
+router.put('/settings', rateLimit('proof-carousel-edit', 60, 3600000), express.json({ limit: '2kb' }), async (req, res) => {
+  const data = z.object({ expectedRevision: revision, intervalSeconds: z.number().int().min(2).max(60) }).strict().parse(req.body);
+  await ProofCarousel.init();
+  let saved;
+  await transaction(async session => {
+    const current = await ProofCarousel.findById('home').session(session);
+    if ((current?.revision || 0) !== data.expectedRevision) throw fail('Carousel timing changed. Reload the page before saving.', 409);
+    const record = current || new ProofCarousel({ _id: 'home' });
+    record.intervalSeconds = data.intervalSeconds; record.revision = data.expectedRevision + 1; record.updatedBy = req.user._id;
+    await record.save({ session });
+    await AuditEvent.create([{ actorId: req.user._id, action: 'proof-carousel.published', targetType: 'proof-carousel', targetId: 'home', details: { revision: record.revision, intervalSeconds: record.intervalSeconds } }], { session });
+    saved = publicCarousel(record);
+  });
+  res.json({ carousel: saved });
+});
 router.post('/:id/uploads', rateLimit('proof-upload-start', 120, 3600000), express.json({ limit: '8kb' }), async (req, res) => {
   const input = uploadInput.parse(req.body);
   if (input.chunks !== Math.ceil(input.size / CHUNK_SIZE)) throw fail('Invalid video size.');
@@ -161,6 +177,6 @@ router.use((error, req, res, _next) => {
   const transport = requestError(error);
   if (transport) return res.status(transport.status).json({ error: transport.message });
   const status = error instanceof z.ZodError ? 400 : error.code === 11000 ? 409 : Number(error.status) || 500;
-  res.status(status).json({ error: error instanceof z.ZodError ? 'Check the video size, title and description, then try again.' : status === 409 ? 'This video changed. Close and reopen the editor before saving.' : status >= 500 ? req.method === 'GET' ? 'Videos are temporarily unavailable. Please try again.' : 'Unable to confirm this update. Refresh to check before retrying.' : error.message });
+  res.status(status).json({ error: error instanceof z.ZodError ? (req.path === '/settings' ? 'Choose a whole number from 2 to 60 seconds.' : 'Check the video size, title and description, then try again.') : status === 409 ? (req.path === '/settings' ? 'Carousel timing changed. Reload the page before saving.' : 'This video changed. Close and reopen the editor before saving.') : status >= 500 ? req.method === 'GET' ? 'Videos are temporarily unavailable. Please try again.' : 'Unable to confirm this update. Refresh to check before retrying.' : error.message });
 });
 export default router;

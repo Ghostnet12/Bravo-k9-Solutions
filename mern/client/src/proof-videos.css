@@ -34,3 +34,5 @@
 .proof-reel-placeholder>strong{font-family:'Bebas Neue',sans-serif;font-size:36px;font-weight:400}
 @media(max-width:850px){.home-work-proof-grid.proof-video-carousel{grid-auto-columns:calc((100% - 16px)/2)}}
 @media(max-width:700px){.proof-video-tools{align-items:flex-start;flex-direction:column;gap:10px}.home-work-proof-grid.proof-video-carousel{grid-auto-columns:88%}}
+
+.proof-carousel-settings{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:16px 0}.proof-carousel-settings input{width:85px;min-height:44px;padding:8px;border:1px solid #ba9a64;background:#101010;color:#fff;font:inherit}.proof-carousel-settings button{min-height:44px;padding:10px 16px;border:1px solid #ba9a64;background:#101010;color:#fff;border-radius:6px;cursor:pointer}.proof-carousel-settings button:disabled{opacity:.5;cursor:default}.proof-carousel-settings p{width:100%}

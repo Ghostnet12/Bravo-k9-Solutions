@@ -33,6 +33,20 @@ test('homepage video publishing, isolation, and persistence', { timeout: 180000 
       for (const who of [null, 'staff', 'client']) for (const [method, path] of [['post', `/${clipId}/uploads`], ['put', `/${clipId}`], ['put', `/${clipId}/uploads/${randomUUID()}/chunks/0`], ['delete', `/${clipId}`]]) await call(who, method, path, edit).expect(who ? 403 : 401);
       await request(app).put(`/api/proof-videos/${clipId}`).set('Origin', 'https://unrelated.example').set('Cookie', cookies.owner).send(edit).expect(403);
     });
+    await t.test('carousel timing is owner/admin-only, validated, durable and revision protected', async () => {
+      assert.deepEqual(before.body.carousel, { intervalSeconds: 5, revision: 0 });
+      const settings = { expectedRevision: 0, intervalSeconds: 12 };
+      for (const who of [null, 'staff', 'client']) await call(who, 'put', '/settings', settings).expect(who ? 403 : 401);
+      await request(app).put('/api/proof-videos/settings').set('Origin', 'https://unrelated.example').set('Cookie', cookies.owner).send(settings).expect(403);
+      for (const intervalSeconds of [0, 1, 61, 2.5, '5']) await call('owner', 'put', '/settings', { ...settings, intervalSeconds }).expect(400);
+      await call('owner', 'put', '/settings', settings).expect(200);
+      assert.deepEqual((await request(app).get('/api/proof-videos')).body.carousel, { intervalSeconds: 12, revision: 1 });
+      await call('administrator', 'put', '/settings', settings).expect(409);
+      await call('administrator', 'put', '/settings', { expectedRevision: 1, intervalSeconds: 2 }).expect(200);
+      assert.deepEqual((await request(app).get('/api/proof-videos')).body.carousel, { intervalSeconds: 2, revision: 2 });
+      assert.equal(await AuditEvent.countDocuments({ action: 'proof-carousel.published' }), 2);
+      assert.equal(await ProofVideo.countDocuments(), 0, 'timing changes do not modify videos');
+    });
     const start = await call('owner', 'post', `/${clipId}/uploads`, meta).expect(201), uploadId = start.body.uploadId;
     const uploadChunk = index => call('owner', 'put', `/${clipId}/uploads/${uploadId}/chunks/${index}`, { data: data.subarray(index * CHUNK_SIZE, (index + 1) * CHUNK_SIZE).toString('base64') }).expect(200);
     await t.test('incomplete files stay private and cannot replace the current video', async () => {
