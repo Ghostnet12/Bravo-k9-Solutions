@@ -1,4 +1,5 @@
 import express from 'express';
+import { requestError } from './errors.js';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { randomUUID } from 'node:crypto';
@@ -157,6 +158,8 @@ router.delete('/:id', rateLimit('proof-video-edit', 240, 3600000), express.json(
 router.use((_req, res) => res.status(404).json({ error: 'Video endpoint not found.' }));
 router.use((error, req, res, _next) => {
   if (res.headersSent) return res.end();
+  const transport = requestError(error);
+  if (transport) return res.status(transport.status).json({ error: transport.message });
   const status = error instanceof z.ZodError ? 400 : error.code === 11000 ? 409 : Number(error.status) || 500;
   res.status(status).json({ error: error instanceof z.ZodError ? 'Check the video size, title and description, then try again.' : status === 409 ? 'This video changed. Close and reopen the editor before saving.' : status >= 500 ? req.method === 'GET' ? 'Videos are temporarily unavailable. Please try again.' : 'Unable to confirm this update. Refresh to check before retrying.' : error.message });
 });

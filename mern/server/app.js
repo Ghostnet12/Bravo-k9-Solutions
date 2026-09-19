@@ -36,6 +36,7 @@ app.set('trust proxy', process.env.VERCEL ? 1 : false);
 app.use(helmet({ contentSecurityPolicy: { directives: { defaultSrc: ["'self'"], scriptSrc: ["'self'"], styleSrc: ["'self'", "'unsafe-inline'"], imgSrc: ["'self'", 'data:'], mediaSrc: ["'self'"], connectSrc: ["'self'"], frameAncestors: ["'none'"], formAction: ["'self'"], upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null } } }));
 app.use('/api', (_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
 app.post('/api/stripe/webhook', express.raw({ type: 'application/json', limit: '1mb' }), stripeWebhook);
+app.use('/api', sameOrigin);
 app.use(express.json({ limit: '700kb' }), cookieParser());
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 app.get('/api/config', async (_req, res) => {
@@ -78,13 +79,13 @@ app.get('/api/lessons/:id/image', async (req, res) => {
   return sendUploadedMedia(lesson.imageUpload, req, res, 'image');
 });
 const accountInput = z.object({ email: z.string().trim().email().max(254).transform(s => s.toLowerCase()), password: z.string().min(12).max(128), name: z.string().trim().min(2).max(80) });
-app.post('/api/auth/register', rateLimit('register', 5, 3600000), async (req, res) => {
+app.post('/api/auth/register', rateLimit('register-ip', 5, 3600000, req => req.ip), async (req, res) => {
   const input = accountInput.parse(req.body);
   const user = await User.create({ email: input.email, name: input.name, passwordHash: await hashPassword(input.password) });
   await issueSession(req, res, user);
   res.status(201).json({ user: publicUser(user) });
 });
-app.post('/api/auth/login', rateLimit('login', 12, 900000), login);
+app.post('/api/auth/login', rateLimit('login-ip', 12, 900000, req => req.ip), login);
 app.post('/api/auth/password-setup', requireUser, rateLimit('password-setup', 5, 900000), completePasswordSetup);
 app.post('/api/auth/logout', async (req, res) => { await signOut(req, res); res.json({ ok: true }); });
 app.get('/api/auth/me', async (req, res) => res.json({ user: req.user ? publicUser(req.user) : null, ...(req.user && !req.user.mustChangePassword ? await getEntitlements(req.user._id) : { services: [], subscriptions: [] }) }));
@@ -311,10 +312,10 @@ app.patch('/api/admin/users/:id', requireUser, requireOwner, async (req, res) =>
   let updated;
   await transaction(async session => {
     // Compare the role so concurrent saves cannot silently overwrite a promotion.
-    updated = await User.findOneAndUpdate({ _id: target._id, removedAt: null, role: target.role, blocked: target.blocked, ...(changesRole && fields.role !== 'member' ? { mustChangePassword: { $ne: true } } : {}), ...(fields.email ? { email: null } : {}) }, { $set: fields }, { returnDocument: 'after', runValidators: true, session });
+    updated = await User.findOneAndUpdate({ _id: target._id, removedAt: null, role: target.role, blocked: target.blocked, ...(changesRole && fields.role !== 'member' ? { mustChangePassword: { $ne: true } } : {}), ...(fields.email ? { email: null } : {}) }, { $set: fields, ...(changesRole || fields.blocked ? { $inc: { credentialVersion: 1 } } : {}) }, { returnDocument: 'after', runValidators: true, session });
     if (!updated) throw Object.assign(new Error('This account changed. Refresh it before saving again.'), { status: 409 });
     if (changesRole) await AuditEvent.create([{ actorId: req.user._id, action: 'user.access.changed', targetType: 'user', targetId: String(target._id), details: { from: target.role, to: fields.role } }], { session });
-    if (fields.blocked) await Session.deleteMany({ userId: updated._id }, { session });
+    if (changesRole || fields.blocked) await Session.deleteMany({ userId: updated._id }, { session });
   });
   res.json({ user: publicUser(updated) });
 });

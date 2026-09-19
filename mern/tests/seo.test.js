@@ -49,6 +49,15 @@ test('sitemap contains exactly canonical public routes and robots advertises it'
   assert.match(robots.text, /Sitemap: https:\/\/bravounleashed.com\/sitemap.xml/);
   assert.match(robots.text, /Allow: \/api\/site-images\//);
   assert.doesNotMatch(robots.text, /Disallow: \/(account|schedule|admin)/);
+  // Match Google's longest-path rule so new public media is crawlable without
+  // accidentally allowing authenticated lesson files or video editing APIs.
+  const rules = [...robots.text.matchAll(/^(Allow|Disallow): (.+)$/gm)].map(([, action, pattern]) => ({
+    action, length: pattern.replaceAll('*', '').replaceAll('$', '').length,
+    regex: new RegExp('^' + pattern.split('*').map(part => part.replace(/[.+?^{}()|[\]\\]/g, '\\$&')).join('.*')),
+  }));
+  const allowed = path => rules.filter(rule => rule.regex.test(path)).sort((a, b) => b.length - a.length || (a.action === 'Allow' ? -1 : 1))[0]?.action !== 'Disallow';
+  for (const path of ['/api/proof-videos', '/api/proof-videos?after=cursor', '/api/proof-videos/client/video?v=1', '/api/proof-videos/client/poster?v=1', '/api/team/schedules']) assert.equal(allowed(path), true, path);
+  for (const path of ['/api/admin/users', '/api/bookings', '/api/lessons/private/video', '/api/proof-videos/client/uploads']) assert.equal(allowed(path), false, path);
 });
 
 test('all transactional routes load with noindex in the first response, including schedule and password reset', async () => {

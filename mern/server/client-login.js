@@ -2,10 +2,13 @@ import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import { User, Session, PasswordReset, AuditEvent } from './models.js';
 import { transaction } from './db.js';
-import { hashPassword, verifyPassword, issueSession, publicUser } from './auth.js';
+import { hashPassword, verifyPassword, issueSession, publicUser, rateLimit } from './auth.js';
 
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const unavailable = 'Sign-in is unavailable. Check your details or contact Bravo.';
+// Hash-backed shared buckets also bound attacks spread across source addresses.
+// Normalize exactly as the literal email/name lookup does. Never store plaintext identifiers.
+const limitIdentifier = rateLimit('login-identifier', 30, 900000, req => req.loginIdentifier);
 export async function temporaryCredential() {
   const temporaryPassword = `Bravo-${randomBytes(16).toString('hex')}!`;
   const temporaryPasswordExpiresAt = new Date(Date.now() + 7 * 86400000);
@@ -17,6 +20,8 @@ export async function login(req, res) {
   const input = z.object({ identifier: z.string().trim().min(1).max(254).optional(), email: z.string().trim().email().max(254).optional(), password: z.string().min(1).max(128) }).parse(req.body);
   const identifier = input.identifier || input.email;
   if (!identifier) throw fail(unavailable);
+  req.loginIdentifier = identifier.toLowerCase();
+  await limitIdentifier(req, res, () => {});
   let candidates;
   if (identifier.includes('@')) {
     const user = await User.findOne({ email: identifier.toLowerCase() }).select('+passwordHash +credentialVersion');
