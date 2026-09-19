@@ -1,0 +1,38 @@
+name: Bravo weekly dependency audit
+on:
+  schedule:
+    - cron: '43 13 * * 1'
+  workflow_dispatch:
+  push:
+    branches: [main, maintenance/security-monitoring-20260919]
+    paths: ['.github/workflows/bravo-security-audit.yml']
+permissions:
+  contents: read
+concurrency:
+  group: bravo-dependency-audit
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Scheduled workflows live on main; audit the actual website branch.
+          ref: bravo-mern
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: mern/package-lock.json
+      - name: Check installed production and development dependencies
+        working-directory: mern
+        shell: bash
+        run: |
+          npm ci --ignore-scripts
+          for attempt in 1 2 3; do
+            if npm audit --audit-level=moderate; then exit 0; fi
+            if [ "$attempt" -lt 3 ]; then sleep 15; fi
+          done
+          exit 1
