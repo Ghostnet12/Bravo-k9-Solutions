@@ -204,3 +204,5 @@ html.access-high-contrast :is(.home-training-offer,.home-training-offer aside,.h
 .guided-more-options summary{cursor:pointer;padding:14px 0;min-height:48px}
 .guided-signin .button{white-space:normal;text-align:center}
 @media(max-width:600px){.guided-booking-steps button{font-size:.8rem}.guided-step-actions .button{width:100%}.guided-booking-page .panel{padding:20px}.guided-booking-price{font-size:.95rem}}
+
+.guided-booking-header{scroll-margin-top:110px}
