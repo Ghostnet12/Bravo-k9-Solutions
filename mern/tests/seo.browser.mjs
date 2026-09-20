@@ -22,6 +22,13 @@ try {
         assert.equal(await raw.locator('h1').count(), 1, route);
         assert.ok((await raw.locator('main').innerText()).length > 300, `${route} has useful text without JavaScript`);
         assert.equal(await raw.locator('link[rel="canonical"]').getAttribute('href'), canonicalUrl(route));
+        if (route === '/') {
+          const review = raw.locator('.facebook-recommendations article').first();
+          await review.getByText('Read full review', { exact: true }).click();
+          assert.ok(await review.locator('.review-full blockquote').isVisible(), 'full review expands without JavaScript');
+          await review.getByText('Show less', { exact: true }).click();
+          assert.equal(await review.locator('.review-full blockquote').isVisible(), false);
+        }
       }
       await plain.close();
       for (const width of [390, 1440]) {
@@ -32,10 +39,35 @@ try {
           const path = new URL(route.request().url()).pathname;
           const fixtures = {
             '/api/config': { connected: true, services: SERVICES }, '/api/auth/me': { user: null, services: [] }, '/api/team': { team: [] },
+            '/api/proof-videos': { clips: [], nextCursor: null }, '/api/hero-videos': { clips: [], nextCursor: null },
             '/api/reviews': { reviews: [], average: 0, count: 0 }, '/api/site-images': { images: {} }, '/api/team/schedules': { schedules: [] }, '/api/lessons': { lessons: [] },
           };
           return route.fulfill({ json: fixtures[path] || {} });
         });
+        await page.goto(origin);
+        const cards = page.locator('.facebook-recommendations article');
+        assert.equal(await cards.count(), 3);
+        for (const card of await cards.all()) {
+          const original = await card.locator('.review-full blockquote').textContent();
+          assert.equal(await card.locator('.review-full blockquote').isVisible(), false);
+          await card.getByText('Read full review', { exact: true }).click();
+          assert.equal(await card.locator('.review-excerpt').isVisible(), false);
+          assert.equal((await card.locator('.review-full blockquote').innerText()).trim(), original.trim());
+          await card.getByText('Show less', { exact: true }).click();
+          assert.ok(await card.locator('.review-excerpt').isVisible());
+        }
+        if (width === 390) {
+          await page.goto(origin);
+          const facts = page.locator('.home-quick-facts');
+          await facts.waitFor();
+          assert.match(await facts.innerText(), /\$200/);
+          assert.match(await facts.innerText(), /Aberdeen/);
+          const cta = page.getByRole('link', { name: 'Start private training', exact: true });
+          const box = await cta.boundingBox();
+          assert.ok(box && box.y >= 0 && box.y + box.height <= 900, 'booking action fits in initial mobile viewport');
+          assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+          await page.screenshot({ path: `test-results/mobile-home-polish-${name}.png` });
+        }
         await page.goto(`${origin}/dog-training?utm_source=fixture`);
         await page.getByRole('heading', { level: 1, name: 'Dog training in Aberdeen, SD.' }).waitFor();
         await page.getByText('Do you come to my home?', { exact: true }).click();

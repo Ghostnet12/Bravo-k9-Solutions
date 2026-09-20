@@ -1,0 +1,27 @@
+.home-quick-facts{display:none}
+.home-proof-reviews .review-copy{flex:1;margin:.8rem 0 1rem;min-width:0}
+.home-proof-reviews .review-copy blockquote{margin:0}
+.home-proof-reviews .review-copy p{margin:0;color:#e4dfd4;font-size:.9375rem;line-height:1.75;overflow-wrap:anywhere}
+.review-full summary{width:fit-content;min-height:44px;display:flex;align-items:center;color:var(--gold-light,#dec48f);font-size:.85rem;cursor:pointer;text-decoration:underline;text-underline-offset:4px;list-style:none}
+.review-full summary::-webkit-details-marker{display:none}
+.review-full summary:focus-visible{outline:2px solid currentColor;outline-offset:3px;border-radius:2px}
+.review-read-less,.review-full[open] .review-read-more{display:none}
+.review-full[open] .review-read-less{display:inline}
+.review-copy:has(.review-full[open])>.review-excerpt{display:none}
+.review-full[open] blockquote{padding-top:.4rem}
+@media(max-width:900px){
+  .home-hero.home-hero-authentic .home-hero-inner{padding-top:24px;padding-bottom:20px}
+  .home-hero.home-hero-authentic h1{font-size:clamp(2.5rem,8.5vw,3.8rem);line-height:1.04;margin-bottom:1rem}
+  .home-hero.home-hero-authentic .home-intro{font-size:.9375rem;line-height:1.55;margin-bottom:1rem}
+  .home-hero.home-hero-authentic .eyebrow{font-size:.65rem;line-height:1.65;margin-bottom:.9rem}
+  .home-quick-facts{display:flex;flex-direction:column;gap:.35rem;padding:.9rem 0;margin:0 0 .9rem;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .home-quick-facts>strong{font-size:.9rem;color:var(--cream)}
+  .home-quick-price{font-size:1.65rem;font-weight:700;line-height:1.3;color:var(--gold-light,#dec48f)}
+  .home-quick-price>span{font-size:.85rem;font-weight:400;color:var(--cream)}
+  .home-quick-facts>small{font-size:.75rem;line-height:1.6;color:var(--muted)}
+  .home-hero.home-hero-authentic .home-hero-actions{display:flex;flex-direction:column;align-items:stretch;gap:.3rem;margin-top:0}
+  .home-hero.home-hero-authentic .home-hero-actions>.button{min-height:48px;justify-content:center}
+  .home-hero.home-hero-authentic .home-hero-actions>.button-ghost{min-height:44px;border:0;padding:.6rem;background:transparent;text-decoration:underline;text-underline-offset:4px}
+  .home-hero.home-hero-authentic .hero-service-note{display:none}
+  .home-hero.home-hero-authentic .home-hero-gallery{height:280px;margin-bottom:16px}
+}
