@@ -1,3 +1,4 @@
+import { readLessonLibrary } from './lesson-library.js';
 import { monitorRequests, ingestVisit, ingestError, monitoringSummary, pingDatabase } from './monitoring.js';
 import { isPrimaryOwner } from './auth.js';
 import { reserveVisits, releaseVisit } from './reservations.js';
@@ -143,6 +144,7 @@ app.post('/api/membership-terms/renew', ...session, requireUser, ...write, rateL
   if (term.source === 'grant') throw fail('This month was activated by Bravo. Contact the team to extend your Member access.');
   if (term.stripeId.startsWith('sub_') && !term.autoPayDisabled) throw fail('Bravo must switch this existing plan to manual renewal first. Contact the team before paying again.', 409);
   if (await Subscription.exists({ userId: req.user._id, renewalOf: term.stripeId, status: 'active' })) throw fail('This month has already been renewed. Refresh your account.', 409);
+  if (term.serviceIds.includes('online') && !(await readLessonLibrary()).open) throw fail('Online lesson enrollment is closed.', 409);
   const catalog = await effectiveServices();
   const ids = serviceSelection(term.serviceIds, catalog).filter(item => item.interval === 'month').map(item => item.id);
   if (!ids.length) throw fail('Contact Bravo to choose a current training plan.');

@@ -6,7 +6,7 @@ import mongoose from 'mongoose';
 import request from 'supertest';
 import app from '../server/app.js';
 import { digest } from '../server/auth.js';
-import { ALL_MODELS, MemberAccess, TrainerSchedule, ChatReset, User, Session, RateBucket, Settings, ServiceSetting, Subscription, CommunityGroup, GroupMessage, DirectMessage, Message, Lesson, MediaUpload, MediaChunk, Booking, Review, AuditEvent } from '../server/models.js';
+import { ALL_MODELS, MemberAccess, TrainerSchedule, ChatReset, User, Session, RateBucket, Settings, LessonLibrary, ServiceSetting, Subscription, CommunityGroup, GroupMessage, DirectMessage, Message, Lesson, MediaUpload, MediaChunk, Booking, Review, AuditEvent } from '../server/models.js';
 const origin = 'http://localhost:5173';
 const ids = { owner: '6aa290cbd066f8feb3c1964f', staff: '111111111111111111111111', member: '222222222222222222222222', other: '333333333333333333333333' };
 function query(value) {
@@ -43,6 +43,7 @@ test('owner/staff workspace contracts over HTTP with isolated model mocks', asyn
   t.mock.method(Settings, 'findOneAndUpdate', () => query({ enabled: true, weekdays: [1, 2, 3, 4, 5], hours: ['09:00'] }));
   t.mock.method(Settings, 'findById', () => query({ enabled: true, weekdays: [1, 2, 3, 4, 5], hours: ['09:00'] }));
   t.mock.method(ServiceSetting, 'find', () => query([]));
+  t.mock.method(LessonLibrary, 'findById', () => query({open:true,revision:0}));
   t.mock.method(Subscription, 'find', () => query([]));
   // No saved per-viewer cutoff in this isolated authorization fixture.
   t.mock.method(ChatReset, 'find', () => query([]));

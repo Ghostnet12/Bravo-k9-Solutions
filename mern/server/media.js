@@ -3,7 +3,7 @@ import { pipeline } from 'node:stream/promises';
 import { MediaUpload, MediaChunk } from './models.js';
 
 export const CHUNK_SIZE = 400 * 1024;
-export const MEDIA_LIMITS = { video: 80 * 1024 * 1024, image: 3 * 1024 * 1024, captions: 1024 * 1024 };
+export const MEDIA_LIMITS = { video: 80 * 1024 * 1024, image: 3 * 1024 * 1024, photo: 3 * 1024 * 1024, captions: 1024 * 1024 };
 export function mediaBytes(value) {
   if (Buffer.isBuffer(value)) return value;
   if (value?._bsontype === 'Binary') return Buffer.from(value.value());

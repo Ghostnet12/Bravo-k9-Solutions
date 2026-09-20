@@ -25,6 +25,7 @@ test('persistent accounts, conflict protection, ownership, staff tools, and bill
     await post(alice,'/api/community',{body:'Fake staff alert',kind:'alert'}).expect(403);
     await alice.get('/api/admin').expect(403);
   });
+  await (await import('../server/models.js')).LessonLibrary.create({ _id: 'library', open: true });
   await Settings.updateOne({_id:'schedule'},{$set:{enabled:true,weekdays:[1,2,3,4,5,6,7]}});
   const date = DateTime.now().setZone('America/Chicago').plus({days:2}).toISODate();
   const payload = () => ({requestKey:randomUUID(),serviceIds:['training'],visits:[{date,time:'09:00',service:'training'}],dogName:'Test Dog',phone:'6055550100',address:'123 Test Street',notes:''});
@@ -57,7 +58,7 @@ test('persistent accounts, conflict protection, ownership, staff tools, and bill
     const online=await post(bob,'/api/bookings',{...payload(),visits:[],serviceIds:['online']}).expect(201);
     const sub={id:'sub_test',customer:'cus_test_bob',status:'active',metadata:{app:'bravo-k9',userId:String(bobUser._id),serviceIds:'["online"]'},items:{data:[{current_period_end:Math.floor(Date.now()/1000)+86400}]}};
     const stripe={subscriptions:{retrieve:async()=>sub}};
-    const event={id:'evt_paid_test',type:'checkout.session.completed',created:1000,data:{object:{id:'cs_test',customer:'cus_test_bob',client_reference_id:online.body.booking._id,subscription:sub.id,payment_status:'paid',currency:'usd',amount_total:5000,metadata:{app:'bravo-k9',userId:String(bobUser._id),bookingId:online.body.booking._id}}}};
+    const event={id:'evt_paid_test',type:'checkout.session.completed',created:1000,data:{object:{id:'cs_test',customer:'cus_test_bob',client_reference_id:online.body.booking._id,subscription:sub.id,payment_status:'paid',currency:'usd',amount_total:7500,metadata:{app:'bravo-k9',userId:String(bobUser._id),bookingId:online.body.booking._id}}}};
     await processStripeEvent(event,stripe); await processStripeEvent(event,stripe);
     assert.equal(await StripeEvent.countDocuments({_id:event.id}),1); assert.equal((await Booking.findById(online.body.booking._id)).paymentStatus,'paid');
     const privateRead=await bob.get('/api/lessons/test-lesson/transcript').expect(200); assert.equal(privateRead.body.transcript,'Private transcript.');

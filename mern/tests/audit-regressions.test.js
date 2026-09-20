@@ -238,3 +238,19 @@ test('sticky controls leave focus clearance and form boundaries meet contrast ta
   assert.match(css, /border-color:#8b7b63/);
   assert.match(css, /\.bravo-footer a\{min-height:44px\}/);
 });
+
+test('closing checkout links bounds concurrency, request timeouts and retry work', async t => {
+  const { expireLessonCheckouts } = await import('../server/lesson-library.js');
+  const pending = new Map(Array.from({length:7}, (_,i)=>[String(i),{_id:String(i),stripeSessionId:String(i)}]));
+  let active=0, peak=0, limit;
+  t.mock.method(Booking,'find',()=>({select(){return this;},limit(n){limit=n;return this;},lean:async()=>[...pending.values()].slice(0,limit)}));
+  t.mock.method(Booking,'countDocuments',async()=>pending.size);
+  t.mock.method(Booking,'updateOne',async filter=>pending.delete(filter._id));
+  const stripe={checkout:{sessions:{retrieve:async(id,_params,options)=>{
+    assert.equal(options.timeout,3000);assert.equal(options.maxNetworkRetries,0);active++;peak=Math.max(peak,active);
+    await new Promise(resolve=>setImmediate(resolve));active--;
+    if(id==='0')throw new Error('Temporary Stripe outage');return{id,status:'open'};
+  },expire:async(_id,_params,options)=>{assert.equal(options.timeout,3000);assert.equal(options.maxNetworkRetries,0);}}}};
+  assert.equal(await expireLessonCheckouts(stripe),3);assert.equal(limit,5);assert.equal(peak,5);
+  assert.ok(pending.has('0'),'failed expiration remains available to retry');
+});

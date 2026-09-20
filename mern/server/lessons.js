@@ -1,3 +1,4 @@
+import { requireOpenLibrary } from './lesson-library.js';
 import path from 'node:path';
 import { access } from 'node:fs/promises';
 import { Lesson } from './models.js';
@@ -18,11 +19,13 @@ export function privatePath(filename) {
 // manualMember is supplied only by the server after a database lookup; request
 // bodies, query strings and public job titles never grant access.
 export async function protectedLesson(req, res, type, { manualMember = false } = {}) {
+  await requireOpenLibrary(req.user);
   const { services } = await getEntitlements(req.user._id);
   if (!['staff', 'owner'].includes(req.user.role) && !services.includes('online') && manualMember !== true) return res.status(403).json({ error: 'Active Member access or an online membership is required.' });
-  const lesson = await Lesson.findOne({ _id: req.params.id, ...(['staff', 'owner'].includes(req.user.role) ? {} : { published: true }) }).select('+videoFile +captionFile +transcript');
+  const lesson = await Lesson.findOne({ _id: req.params.id, ...(req.user.role === 'owner' ? {} : { published: true }) }).select('+videoFile +captionFile +transcript');
   if (!lesson) return res.status(404).json({ error: 'This lesson is not available yet.' });
   if (type === 'transcript') return res.json({ transcript: lesson.transcript });
+  if (type === 'photo') return lesson.photoUpload ? sendUploadedMedia(lesson.photoUpload, req, res, 'photo') : res.status(404).end();
   const uploadId = type === 'video' ? lesson.videoUpload : lesson.captionUpload;
   if (uploadId) return sendUploadedMedia(uploadId, req, res, type === 'video' ? 'video' : 'captions');
   const file = privatePath(type === 'video' ? lesson.videoFile : lesson.captionFile);

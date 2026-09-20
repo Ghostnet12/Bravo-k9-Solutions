@@ -1,3 +1,4 @@
+import { readLessonLibrary } from './lesson-library.js';
 import Stripe from 'stripe';
 import { Booking, User, Subscription, StripeEvent, BillingLock, Lesson, Settings } from './models.js';
 import { connectDb, transaction } from './db.js';
@@ -26,6 +27,11 @@ export function validatedCheckoutPricing(booking) {
     const recorded = pricing.lines.filter(line => line.id === 'training' || line.id === 'training-additional-dogs').reduce((total, line) => total + line.unitCents * line.quantity, 0);
     if (recorded !== expected) throw Object.assign(new Error('Training pricing changed after this request was saved. Cancel it and create a new request before checkout.'), { status: 409 });
   }
+  if (booking.serviceIds.includes('online')) {
+    const expected = booking.serviceIds.includes('training') ? 5000 : 7500;
+    const online = pricing.lines.filter(line => line.id === 'online');
+    if (online.length !== 1 || online[0].quantity !== 1 || online[0].unitCents !== expected) throw Object.assign(new Error('Lesson pricing changed after this request was saved. Cancel it and create a new request before checkout.'), { status: 409 });
+  }
   return pricing;
 }
 export async function checkout(booking, user, stripe) {
@@ -35,7 +41,9 @@ export async function checkout(booking, user, stripe) {
   const origin = process.env.APP_ORIGIN;
   if (!origin) throw Object.assign(new Error('Checkout is not configured yet.'), { status: 503 });
   const selected = serviceSelection(booking.serviceIds);
+  if (selected.some(s => s.includes.includes('online')) && !(await readLessonLibrary()).open) throw Object.assign(new Error('Online lesson enrollment is closed.'), { status: 409 });
   if (selected.some(s => s.includes.includes('online')) && !(await Lesson.exists({ published: true }))) throw Object.assign(new Error('Online enrollment opens once the lesson library is ready. Please contact Bravo for updates.'), { status: 409 });
+  const pricing = validatedCheckoutPricing(booking);
   const subscriptions = await Subscription.find({ userId: user._id, status: { $in: ['active', 'trialing'] }, validUntil: { $gt: new Date() } }).lean();
   const recurring = selected.filter(s => s.interval === 'month').flatMap(s => s.includes);
   if (!booking.renewalOf && subscriptions.some(sub => serviceSelection(sub.serviceIds, ALL_SERVICES).some(s => s.includes.some(i => recurring.includes(i))))) throw Object.assign(new Error('An existing membership overlaps this purchase. Use Renew membership from your account to purchase the next month.'), { status: 409 });
@@ -77,7 +85,6 @@ export async function checkout(booking, user, stripe) {
       customerId = customer.id;
       await User.updateOne({ _id: user._id }, { $set: { stripeCustomerId: customerId } });
     }
-    const pricing = validatedCheckoutPricing(booking);
     const metadata = { app: 'bravo-k9', billing: 'manual-month-v1', userId: String(user._id), bookingId, dogCount: String(booking.dogCount || 1), serviceIds: JSON.stringify(booking.serviceIds.filter(id => selected.find(s => s.id === id).interval === 'month')) };
     const params = {
       mode: 'payment', customer: customerId,
@@ -100,6 +107,7 @@ export async function checkout(booking, user, stripe) {
     requestSent = true;
     const session = await stripe.checkout.sessions.create(attempt.checkoutParams, { idempotencyKey: `bravo-checkout-${bookingId}` });
     await Booking.updateOne({ _id: booking._id }, { $set: { stripeSessionId: session.id, checkoutUrl: session.url, checkoutExpiresAt: new Date(session.expires_at * 1000), checkoutStarting: false } });
+    if (selected.some(s => s.includes.includes('online')) && !(await readLessonLibrary()).open) { await stripe.checkout.sessions.expire(session.id); throw Object.assign(new Error('Online lesson enrollment closed while checkout was opening. No new payment can be started.'), { status: 409 }); }
     return { url: session.url };
   } catch (error) {
     // A timeout can mean Stripe created the session but its response was lost.

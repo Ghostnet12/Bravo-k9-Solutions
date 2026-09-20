@@ -15,7 +15,7 @@ test('Member activation for existing customers (isolated MongoDB)', { timeout: 1
     const { connectDb } = await import('../server/db.js');
     const { getEntitlements, bookingCoveredByEntitlements } = await import('../server/bookings.js');
     const { User, Session, Lesson, Subscription, Booking, MediaUpload, MediaChunk, AuditEvent } = await import('../server/models.js');
-    await connectDb(); await MemberAccess.init();
+    await connectDb(); await (await import('../server/models.js')).LessonLibrary.create({ _id: 'library', open: true }); await MemberAccess.init();
     const users = {}, cookies = {};
     for (const [name, role] of Object.entries({ owner: 'owner', administrator: 'owner', staff: 'staff', client: 'member', paid: 'member', blocked: 'member', race: 'member' })) {
       users[name] = await User.create({ ...(name === 'owner' ? { _id: process.env.OWNER_USER_ID } : {}), email: `${name}@example.test`, name, role, blocked: name === 'blocked', passwordHash: 'fixture-only-not-used-to-sign-in' });

@@ -103,7 +103,7 @@ app.post('/api/admin/memberships/:id/training-setup', ...session, requireUser, r
 });
 // Extend the existing protected player without exposing a public video endpoint.
 // Manual access never grants staff privileges or access to draft lessons.
-for (const type of ['video', 'captions', 'transcript']) app.get(`/api/lessons/:id/${type}`, ...session, requireUser, async (req, res) => {
+for (const type of ['video', 'captions', 'transcript', 'photo']) app.get(`/api/lessons/:id/${type}`, ...session, requireUser, async (req, res) => {
   if (!/^[a-z0-9-]{1,80}$/.test(req.params.id)) return res.status(404).json({ error: 'Lesson not found.' });
   const grant = req.user.role === 'member' ? await MemberAccess.findById(req.user._id).lean() : null;
   return protectedLesson(req, res, type, { manualMember: grantActive(grant) });

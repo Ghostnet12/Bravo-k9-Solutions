@@ -15,7 +15,7 @@ test('owner monitoring and server-authoritative booking funnel', { timeout: 1800
     const { connectDb } = await import('../server/db.js');
     const { User, Booking, Session, FunnelVisit, SiteError } = await import('../server/models.js');
     const { digest } = await import('../server/auth.js');
-    await connectDb();
+    await connectDb(); await (await import('../server/models.js')).LessonLibrary.create({ _id: 'library', open: true });
     const people = {}, cookies = {};
     for (const [key, role] of [['owner', 'owner'], ['admin', 'owner'], ['staff', 'staff'], ['client', 'member']]) {
       people[key] = await User.create({ name: key, role, passwordHash: 'fixture-only' });

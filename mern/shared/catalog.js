@@ -1,7 +1,7 @@
 export const SERVICES = [
   { id: 'training', name: 'Professional training', cents: 20000, interval: 'month', includes: ['training'], description: 'Private mobile training, Monday–Friday, one hour per day. Customize your schedule in your profile. $200/month for one dog; $100/month for each additional dog.' },
   { id: 'walking', name: 'Dog Walking', cents: 2500, interval: 'walk', durationMinutes: 30, includes: ['walking'], description: 'A focused 30-minute walk, priced per dog.' },
-  { id: 'online', name: 'Online training', cents: 5000, interval: 'month', includes: ['online'], description: 'Member lessons, captions, and written transcripts.' },
+  { id: 'online', name: 'Online training', cents: 7500, bundleCents: 25000, interval: 'month', includes: ['online'], description: 'Member lessons, captions, and written transcripts.' },
   { id: 'aggression', name: 'Aggressive-dog intake', cents: 40000, interval: 'once', includes: ['aggression'], description: 'Initial assessment with two trainers.' },
 ];
 export const TRAINING_ADDITIONAL_DOG_CENTS = 10000;
@@ -39,7 +39,7 @@ export function quote(ids, visits = [], details = {}, catalog = SERVICES) {
   const walkingVisits = visits.filter(visit => visit.service === 'walking').length;
   const lines = items.flatMap(item => {
     const base = {
-      id: item.id, name: item.name, interval: item.interval, unitCents: item.cents,
+      id: item.id, name: item.id === 'online' && ids.includes('training') ? 'Lessons · training bundle rate' : item.name, interval: item.interval, unitCents: item.id === 'online' && ids.includes('training') ? Math.max(0, (item.bundleCents ?? 25000) - items.find(service => service.id === 'training').cents) : item.cents,
       quantity: item.interval === 'walk' ? walkingVisits * dogCount : 1,
       ...(['training', 'walking'].includes(item.id) ? { dogCount } : {}),
       ...(item.durationMinutes ? { durationMinutes: item.durationMinutes } : {}),

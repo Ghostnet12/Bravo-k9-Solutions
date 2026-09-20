@@ -16,7 +16,7 @@ test('Bravo pricing stays exact and recurring charges are separated', () => {
   assert.equal(threeDogTraining.monthlyCents, 40000);
   assert.equal(threeDogTraining.lines[1].quantity, 2);
   const q = quote(['aggression', 'online']);
-  assert.equal(q.monthlyCents, 5000); assert.equal(q.oneTimeCents, 40000);
+  assert.equal(q.monthlyCents, 7500); assert.equal(q.oneTimeCents, 40000);
   const walking = quote(['walking'], [{ date: '2026-10-10', time: '09:00', service: 'walking' }, { date: '2026-10-11', time: '10:00', service: 'walking' }], { dogCount: 3 });
   assert.equal(walking.oneTimeCents, 15000); assert.equal(walking.lines[0].quantity, 6); assert.equal(walking.lines[0].durationMinutes, 30);
 });
@@ -84,4 +84,9 @@ test('live Stripe keys require an explicit launch switch', () => {
   process.env.STRIPE_TEST_CHECKOUT_ENABLED='true';
   assert.ok(stripeClient());
   for(const [key,value] of Object.entries({STRIPE_SECRET_KEY:old.key,STRIPE_WEBHOOK_SECRET:old.secret,STRIPE_LIVE_ENABLED:old.enabled,VERCEL_ENV:old.vercel,STRIPE_TEST_CHECKOUT_ENABLED:old.testEnabled})) value === undefined ? delete process.env[key] : process.env[key]=value;
+});
+
+test('lesson checkout rejects stale standalone prices and preserves the exact bundle discount', () => {
+  assert.throws(() => validatedCheckoutPricing({ serviceIds: ['online'], quote: { currency: 'usd', lines: [{ id: 'online', unitCents: 5000, quantity: 1 }] } }), /Lesson pricing changed/);
+  for (const ids of [['online'], ['training','online']]) assert.doesNotThrow(() => validatedCheckoutPricing({ serviceIds: ids, dogCount: 2, quote: quote(ids, [], { dogCount: 2 }) }));
 });

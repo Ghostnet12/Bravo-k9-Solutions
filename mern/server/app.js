@@ -15,12 +15,14 @@ import { access } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { connectDb, transaction } from './db.js';
-import { User, Session, PasswordReset, Booking, Slot, Subscription, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Lesson, BillingLock, MediaUpload, MediaChunk } from './models.js';
+import { User, Session, PasswordReset, Booking, Slot, Subscription, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Lesson, LessonSection, BillingLock, MediaUpload, MediaChunk } from './models.js';
 import { hashPassword, verifyPassword, issueSession, identify, requireUser, requireStaff, requireOwner, signOut, publicUser, publicRole, isPrimaryOwner, sameOrigin, rateLimit } from './auth.js';
 import { createBooking, getAvailability, getEntitlements, cancelBooking, trainerCapacity, assignTrainer, TRAINER_DOG_LIMIT } from './bookings.js';
 import { stripeClient, stripeMode, stripeWebhook, checkout, refundBooking } from './payments.js';
 import { sendUploadedMedia, CHUNK_SIZE, MEDIA_LIMITS, mediaBytes, validMediaHeader } from './media.js';
-import { LESSON_PREVIEWS, privatePath, protectedLesson } from './lessons.js';
+import { readLessonLibrary, requireOpenLibrary, lessonLibraryRoutes } from './lesson-library.js';
+import { LESSON_INSTRUCTORS } from '../shared/lesson-library.js';
+import { privatePath, protectedLesson } from './lessons.js';
 import { DEFAULT_SCHEDULE, HOURS, autoSchedule, validateVisits, availability, dateTime } from './scheduling.js';
 import { PAGE_METADATA } from '../shared/page-metadata.js';
 import { SERVICES, ALL_SERVICES, quote, rescheduledQuote } from '../shared/catalog.js';
@@ -51,17 +53,11 @@ app.get('/api/config', async (_req, res) => {
   }
   const paymentsReady = connected && !!stripeClient();
   const paymentsMode = paymentsReady ? stripeMode() : 'paused';
-  const services = connected ? await effectiveServices({ includeDisabled: true }) : SERVICES.map(service => ({ ...service, enabled: true }));
-  res.json({ monitoringEnabled: monitoringEnabled(), connected, connectionIssue, paymentsReady, paymentsPaused: !paymentsReady, paymentsMode, workspaceVersion: 'owner-staff-3', schedule, timezone: 'America/Chicago', services });
+  const services = connected ? await effectiveServices({ includeDisabled: true }) : SERVICES.map(service => ({ ...service, enabled: service.id !== 'online' }));
+  const { pendingCheckouts, ...publicLessonLibrary } = connected ? await readLessonLibrary() : { open: false };
+  res.json({ monitoringEnabled: monitoringEnabled(), connected, connectionIssue, paymentsReady, paymentsPaused: !paymentsReady, paymentsMode, workspaceVersion: 'owner-staff-3', lessonLibrary: publicLessonLibrary, schedule, timezone: 'America/Chicago', services });
 });
-app.get('/api/lessons', async (_req, res) => {
-  if (!process.env.MONGODB_URI) return res.json({ lessons: LESSON_PREVIEWS });
-  await connectDb();
-  const stored = await Lesson.find({ published: true }).select('title category instructor image published').lean();
-  const merged = new Map(LESSON_PREVIEWS.map(l => [l._id, l]));
-  for (const lesson of stored) merged.set(lesson._id, lesson);
-  res.json({ lessons: [...merged.values()] });
-});
+app.get('/api/lessons', (_req,res,next) => !process.env.MONGODB_URI ? res.status(404).json({error:'This page is not available.'}) : next());
 app.get('/api/team', async (_req, res) => {
   if (!process.env.MONGODB_URI) return res.json({ team: [] });
   await connectDb();
@@ -70,11 +66,20 @@ app.get('/api/team', async (_req, res) => {
 });
 app.use('/api', sameOrigin, async (_req, _res, next) => { await connectDb(); next(); }, identify);
 app.use('/api', rateLimit('api', 240, 60000));
+lessonLibraryRoutes(app);
+app.get('/api/lessons', async (req, res) => {
+  await requireOpenLibrary(req.user);
+  const editor = req.user?.role === 'owner';
+  const lessons = await Lesson.find(editor ? {} : { published: true }).select('title category instructor image published description sectionId order format photoAlt').sort({ order: 1, title: 1 }).lean();
+  const sections = await LessonSection.find(editor ? {} : { _id: { $in: lessons.map(lesson => lesson.sectionId).filter(Boolean) } }).sort({ order: 1, title: 1 }).lean();
+  res.json({ lessons, sections });
+});
 app.get('/api/team/schedules', publicTrainerSchedules);
 app.get('/api/admin/trainer-schedules/:id', requireUser, requireStaff, readTrainerSchedule);
 app.put('/api/admin/trainer-schedules/:id', requireUser, requireStaff, saveTrainerSchedule);
 app.get('/api/lessons/:id/image', async (req, res) => {
-  const lesson = await Lesson.findOne({ _id: req.params.id, ...(['staff', 'owner'].includes(req.user?.role) ? {} : { published: true }) }).lean();
+  await requireOpenLibrary(req.user);
+  const lesson = await Lesson.findOne({ _id: req.params.id, ...(req.user?.role === 'owner' ? {} : { published: true }) }).lean();
   if (!lesson?.imageUpload) return res.status(404).end();
   return sendUploadedMedia(lesson.imageUpload, req, res, 'image');
 });
@@ -265,7 +270,7 @@ app.post('/api/groups/:id/messages', requireUser, rateLimit('group-chat', 20, 60
 app.delete('/api/groups/:id/messages/:messageId', requireUser, requireOwner, async (req, res) => {
   await GroupMessage.updateOne({ _id: req.params.messageId, groupId: req.params.id }, { $set: { deleted: true } }); res.json({ ok: true });
 });
-for (const type of ['video', 'captions', 'transcript']) app.get(`/api/lessons/:id/${type}`, requireUser, (req, res) => protectedLesson(req, res, type));
+for (const type of ['video', 'captions', 'transcript', 'photo']) app.get(`/api/lessons/:id/${type}`, requireUser, (req, res) => protectedLesson(req, res, type));
 app.get('/api/admin', requireUser, requireStaff, async (req, res) => {
   const [settings, bookings, blocks, inbox] = await Promise.all([Settings.findById('schedule'), Booking.find().sort({ createdAt: -1 }).limit(200).populate({ path: 'userId', model: User, select: 'name email' }), Slot.find({ bookingId: { $exists: false } }).sort({ _id: 1 }).limit(200), DirectMessage.aggregate([{ $match: { deleted: false, ...await chatFilter(req.user, 'inbox') } }, { $sort: { createdAt: -1 } }, { $group: { _id: '$memberId', lastMessage: { $first: '$body' }, updatedAt: { $first: '$createdAt' } } }, { $limit: 100 }])]);
   const names = await User.find({ _id: { $in: inbox.map(thread => thread._id) } }).select('name').lean(); const nameMap = new Map(names.map(person => [String(person._id), person.name]));
@@ -331,6 +336,7 @@ app.get('/api/admin/services', requireUser, requireOwner, async (_req, res) => r
 app.patch('/api/admin/services/:id', requireUser, requireOwner, rateLimit('admin-service-edit', 20, 3600000), async (req, res) => {
   const service = SERVICES.find(item => item.id === req.params.id); if (!service) return res.status(404).json({ error: 'Service not found.' });
   const fields = z.object({ cents: z.number().int().min(0).max(1000000), enabled: z.boolean() }).parse(req.body);
+  if (service.id === 'online') throw new Error('Manage online lessons from Lesson studio. Lessons are $75/month; the training bundle is $250/month.');
   if (service.id === 'training' && fields.cents !== 20000) throw new Error('The primary training price is fixed at $200/month by the current business directive.');
   const setting = await ServiceSetting.findOneAndUpdate({ _id: service.id }, { $set: { ...fields, updatedBy: req.user._id } }, { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true });
   await AuditEvent.create({ actorId: req.user._id, action: 'service.updated', targetType: 'service', targetId: service.id, details: fields });
@@ -379,16 +385,16 @@ app.patch('/api/admin/bookings/:id', requireUser, requireStaff, async (req, res)
   }
   res.json({ ok: true });
 });
-app.get('/api/admin/lessons', requireUser, requireStaff, async (_req, res) => {
+app.get('/api/admin/lessons', requireUser, requireOwner, async (_req, res) => {
   const stored = await Lesson.find().select('+videoFile +captionFile +transcript').lean();
-  const lessons = new Map(LESSON_PREVIEWS.map(l => [l._id, { ...l, videoFile: '', captionFile: '', transcript: '' }]));
+  const lessons = new Map();
   for (const lesson of stored) lessons.set(lesson._id, lesson);
-  const uploads = await MediaUpload.find({ completed: true, _id: { $in: stored.flatMap(lesson => [lesson.videoUpload, lesson.captionUpload, lesson.imageUpload].filter(Boolean)) } }).select('lessonId kind filename size').lean();
+  const uploads = await MediaUpload.find({ completed: true, _id: { $in: stored.flatMap(lesson => [lesson.videoUpload, lesson.captionUpload, lesson.imageUpload, lesson.photoUpload].filter(Boolean)) } }).select('lessonId kind filename size').lean();
   const media = uploads.reduce((map, upload) => { (map[upload.lessonId] ||= {})[upload.kind] = { filename: upload.filename, size: upload.size }; return map; }, {});
   res.json({ lessons: [...lessons.values()].map(lesson => ({ ...lesson, media: media[lesson._id] || {} })) });
 });
 app.post('/api/admin/media/start', requireUser, requireStaff, async (req, res) => {
-  const data = z.object({ lessonId: z.string().regex(/^[a-z0-9-]{1,80}$/), kind: z.enum(['video', 'captions', 'image']), filename: z.string().trim().min(1).max(160), contentType: z.string().max(100), size: z.number().int().positive().max(80 * 1024 * 1024), chunks: z.number().int().positive().max(220) }).parse(req.body);
+  const data = z.object({ lessonId: z.string().regex(/^[a-z0-9-]{1,80}$/), kind: z.enum(['video', 'captions', 'image', 'photo']), filename: z.string().trim().min(1).max(160), contentType: z.string().max(100), size: z.number().int().positive().max(80 * 1024 * 1024), chunks: z.number().int().positive().max(220) }).parse(req.body);
   const allowed = data.kind === 'video' ? ['video/mp4', 'video/webm'] : data.kind === 'captions' ? ['text/vtt', 'text/plain'] : ['image/jpeg', 'image/png', 'image/webp'];
   if (!allowed.includes(data.contentType)) throw new Error(`Choose a supported ${data.kind} file.`);
   if (data.size > MEDIA_LIMITS[data.kind] || data.chunks !== Math.ceil(data.size / CHUNK_SIZE)) throw new Error('File exceeds the upload limit or has an invalid size.');
@@ -420,7 +426,7 @@ app.post('/api/admin/media/:id/complete', requireUser, requireStaff, async (req,
     if (chunks.length !== upload.chunks || chunks.some((chunk, index) => chunk.index !== index || chunk.size !== Math.min(CHUNK_SIZE, upload.size - index * CHUNK_SIZE))) throw new Error('Upload is incomplete. Retry the file.');
     const first = await MediaChunk.findOne({ uploadId: upload._id, index: 0 }).select('data').session(session).lean();
     if (!first || !validMediaHeader(upload.contentType, mediaBytes(first.data))) throw new Error('Unsupported media contents.');
-    const field = upload.kind === 'video' ? 'videoUpload' : upload.kind === 'captions' ? 'captionUpload' : 'imageUpload';
+    const field = upload.kind === 'video' ? 'videoUpload' : upload.kind === 'captions' ? 'captionUpload' : upload.kind === 'photo' ? 'photoUpload' : 'imageUpload';
     const lesson = await Lesson.findById(upload.lessonId).session(session);
     if (!lesson) throw new Error('Lesson not found.');
     const oldId = lesson[field]; lesson[field] = upload._id;
@@ -434,26 +440,30 @@ app.post('/api/admin/media/:id/complete', requireUser, requireStaff, async (req,
   res.json({ ok: true, filename });
 });
 app.delete('/api/admin/lessons/:id/media/:kind', requireUser, requireStaff, async (req, res) => {
-  const kind = z.enum(['video', 'captions', 'image']).parse(req.params.kind), field = kind === 'video' ? 'videoUpload' : kind === 'captions' ? 'captionUpload' : 'imageUpload';
+  const kind = z.enum(['video', 'captions', 'image', 'photo']).parse(req.params.kind), field = kind === 'video' ? 'videoUpload' : kind === 'captions' ? 'captionUpload' : kind === 'photo' ? 'photoUpload' : 'imageUpload';
   await transaction(async session => {
     const lesson = await Lesson.findById(req.params.id).session(session); if (!lesson) throw new Error('Lesson not found.'); const uploadId = lesson[field];
     lesson[field] = undefined; if (kind === 'image') lesson.image = '/images/training-education.webp';
-    else { lesson.published = false; lesson[kind === 'video' ? 'videoFile' : 'captionFile'] = ''; }
+    else { lesson.published = false; if (kind !== 'photo') lesson[kind === 'video' ? 'videoFile' : 'captionFile'] = ''; }
     await lesson.save({ session });
     if (uploadId) { await MediaUpload.deleteOne({ _id: uploadId }, { session }); await MediaChunk.deleteMany({ uploadId }, { session }); }
   });
   res.json({ ok: true });
 });
 app.put('/api/admin/lessons/:id', requireUser, requireStaff, async (req, res) => {
-  const data = z.object({ title: z.string().trim().min(1).max(120), category: z.string().trim().min(1).max(40), instructor: z.string().trim().min(1).max(80), image: z.string().regex(/^\/(images\/[a-z0-9-]+\.webp|api\/lessons\/[a-z0-9-]+\/image)$/), videoFile: z.string().max(160).optional().default(''), captionFile: z.string().max(160).optional().default(''), transcript: z.string().max(20000), published: z.boolean() }).parse(req.body);
+  const data = z.object({ description: z.string().trim().max(2000).default(''), sectionId: z.string().max(80).default(''), order: z.number().int().min(0).max(9999).default(0), format: z.enum(['video', 'photo', 'text']).default('video'), photoAlt: z.string().trim().max(300).default(''), title: z.string().trim().min(1).max(120), category: z.string().trim().min(1).max(40), instructor: z.string().trim().min(1).max(80), image: z.string().regex(/^\/(images\/[a-z0-9-]+\.webp|api\/lessons\/[a-z0-9-]+\/image)$/), videoFile: z.string().max(160).optional().default(''), captionFile: z.string().max(160).optional().default(''), transcript: z.string().max(20000), published: z.boolean() }).parse(req.body);
   if (!/^[a-z0-9-]{1,80}$/.test(req.params.id)) throw new Error('Use a simple lesson slug.');
+  if (data.sectionId && !await LessonSection.exists({ _id: data.sectionId })) throw new Error('Choose an existing section.');
+  const previousLesson = await Lesson.findById(req.params.id).select('instructor');
+  if (!LESSON_INSTRUCTORS.includes(data.instructor) && data.instructor !== previousLesson?.instructor) throw new Error('Choose David, Ashley, or both trainers.');
   await transaction(async session => {
   if (data.published) {
     if (!data.transcript.trim()) throw new Error('Add a transcript before publishing.');
     const current = await Lesson.findById(req.params.id).select('+videoFile +captionFile').session(session);
+    if (data.format === 'photo' && (!current?.photoUpload || !data.photoAlt.trim())) throw new Error('Upload a lesson photo and add its description before publishing.');
     const storedUploads = current?.videoUpload && current?.captionUpload;
-    if (!storedUploads && (!/\.(mp4|webm)$/.test(data.videoFile) || !/\.vtt$/.test(data.captionFile))) throw new Error('Upload a video and English VTT captions before publishing.');
-    if (!storedUploads) { try { await access(privatePath(data.videoFile)); await access(privatePath(data.captionFile)); } catch { throw new Error('Upload a video and English captions before publishing.'); } }
+    if (data.format === 'video' && !storedUploads && (!/\.(mp4|webm)$/.test(data.videoFile) || !/\.vtt$/.test(data.captionFile))) throw new Error('Upload a video and English VTT captions before publishing.');
+    if (data.format === 'video' && !storedUploads) { try { await access(privatePath(data.videoFile)); await access(privatePath(data.captionFile)); } catch { throw new Error('Upload a video and English captions before publishing.'); } }
   }
   await Lesson.updateOne({ _id: req.params.id }, { $set: data }, { upsert: true, session });
   });
