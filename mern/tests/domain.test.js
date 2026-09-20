@@ -85,3 +85,8 @@ test('live Stripe keys require an explicit launch switch', () => {
   assert.ok(stripeClient());
   for(const [key,value] of Object.entries({STRIPE_SECRET_KEY:old.key,STRIPE_WEBHOOK_SECRET:old.secret,STRIPE_LIVE_ENABLED:old.enabled,VERCEL_ENV:old.vercel,STRIPE_TEST_CHECKOUT_ENABLED:old.testEnabled})) value === undefined ? delete process.env[key] : process.env[key]=value;
 });
+
+test('lesson checkout rejects stale standalone prices and preserves the exact bundle discount', () => {
+  assert.throws(() => validatedCheckoutPricing({ serviceIds: ['online'], quote: { currency: 'usd', lines: [{ id: 'online', unitCents: 5000, quantity: 1 }] } }), /Lesson pricing changed/);
+  for (const ids of [['online'], ['training','online']]) assert.doesNotThrow(() => validatedCheckoutPricing({ serviceIds: ids, dogCount: 2, quote: quote(ids, [], { dogCount: 2 }) }));
+});

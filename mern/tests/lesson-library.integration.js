@@ -16,6 +16,7 @@ test('lesson studio, closed-library boundaries and paid access', {timeout:180000
   const {quote}=await import('../shared/catalog.js');
   const {checkout,processStripeEvent}=await import('../server/payments.js');
   const {getEntitlements}=await import('../server/bookings.js');
+  const {expireLessonCheckouts}=await import('../server/lesson-library.js');
   await connectDb();const users={},cookies={};
   for(const [name,role]of Object.entries({owner:'owner',admin:'owner',staff:'staff',client:'member',paid:'member'})){users[name]=await User.create({name,role,passwordHash:'fixture-only',stripeCustomerId:name==='paid'?'cus_fixture_paid':undefined});const token=randomBytes(32).toString('hex');await Session.create({tokenHash:digest(token),userId:users[name]._id,expiresAt:new Date(Date.now()+3600000)});cookies[name]=`bravo_session=${token}`;}
   const call=(who,method,path,body)=>{let r=request(app)[method](path).set('Origin',process.env.APP_ORIGIN);if(who)r=r.set('Cookie',cookies[who]);return body===undefined?r:r.send(body);};
@@ -23,7 +24,9 @@ test('lesson studio, closed-library boundaries and paid access', {timeout:180000
   let section;
   const base={title:'Read your dog',description:'Learn the signals.',category:'Behavior',instructor:'David and Ashley',image:'/images/training-education.webp',transcript:'Watch the posture and give your dog space.',format:'text',published:false};
   await t.test('default closed: no public catalog, paid media or purchase; owner and administrator can prepare',async()=>{
-   const config=(await call(null,'get','/api/config').expect(200)).body;assert.equal(config.lessonLibrary.open,false);assert.equal(config.services.find(s=>s.id==='online').cents,7500);assert.equal(config.services.find(s=>s.id==='online').enabled,false);
+   const oldCheckout=await Booking.create({userId:users.client._id,serviceIds:['online'],paymentStatus:'unpaid',stripeSessionId:'cs_before_deployment',checkoutExpiresAt:new Date(Date.now()+1800000)});
+   const config=(await call(null,'get','/api/config').expect(200)).body;assert.equal(config.lessonLibrary.open,false);assert.equal(config.lessonLibrary.pendingCheckouts,1,'initial closed mode reconciles pre-deployment checkout links');assert.ok((await LessonLibrary.findById('library')).cleanupAfter);
+   let expired=false;await expireLessonCheckouts({checkout:{sessions:{retrieve:async()=>({id:'cs_before_deployment',status:'open'}),expire:async()=>{expired=true;}}}});assert.equal(expired,true);await Booking.deleteOne({_id:oldCheckout._id});assert.equal(config.services.find(s=>s.id==='online').cents,7500);assert.equal(config.services.find(s=>s.id==='online').enabled,false);
    for(const who of [null,'client','paid','staff'])await call(who,'get','/api/lessons').expect(404);
    for(const who of ['owner','admin'])await call(who,'get','/api/admin/lessons').expect(200);
    for(const who of ['client','staff'])await call(who,'get','/api/admin/lessons').expect(403);
@@ -33,6 +36,7 @@ test('lesson studio, closed-library boundaries and paid access', {timeout:180000
    await call('client','post','/api/bookings',{requestKey:randomUUID(),serviceIds:['online'],visits:[],dogName:'Dog',phone:'6055550100',address:''}).expect(400);
   });
   await t.test('sections, descriptions and instructor choices save privately',async()=>{
+   await call('admin','post','/api/admin/lesson-sections',{title:'Private future section',description:'Unreleased curriculum',order:9}).expect(201);
    section=(await call('admin','post','/api/admin/lesson-sections',{title:'Foundations',description:'Start here',order:1}).expect(201)).body.section;
    await call('owner','put','/api/admin/lessons/body-language',{...base,sectionId:section._id}).expect(200);
    await call('staff','put','/api/admin/lessons/body-language',base).expect(403);
@@ -67,7 +71,7 @@ test('lesson studio, closed-library boundaries and paid access', {timeout:180000
    const opened=await setOpen(true);assert.equal(opened.status,200);
    await call('owner','put','/api/admin/lesson-library',{open:false,expectedRevision:0}).expect(409);
    await call('owner','put','/api/admin/lessons/draft-only',base).expect(200);
-   const catalog=(await call(null,'get','/api/lessons').expect(200)).body;assert.equal(catalog.lessons.length,3);assert.equal(catalog.sections[0].title,'Everyday foundations');assert.ok(catalog.lessons.every(l=>!l.transcript&&!l.videoUpload&&!l.photoUpload));
+   const catalog=(await call(null,'get','/api/lessons').expect(200)).body;assert.equal(catalog.lessons.length,3);assert.equal(catalog.sections[0].title,'Everyday foundations');assert.equal(catalog.sections.length,1,'unpublished sections stay private');assert.ok(catalog.lessons.every(l=>!l.transcript&&!l.videoUpload&&!l.photoUpload));
    await call('client','get','/api/lessons/body-language/transcript').expect(403);
    await call('client','get','/api/lessons/photo-demo/photo').expect(403);
    const booking=(await call('paid','post','/api/bookings',{requestKey:randomUUID(),serviceIds:['online'],visits:[],dogName:'Dog',phone:'6055550100',address:''}).expect(201)).body.booking;assert.equal(booking.quote.dueNowCents,7500);

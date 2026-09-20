@@ -70,7 +70,7 @@ app.get('/api/lessons', async (req, res) => {
   await requireOpenLibrary(req.user);
   const editor = req.user?.role === 'owner';
   const lessons = await Lesson.find(editor ? {} : { published: true }).select('title category instructor image published description sectionId order format photoAlt').sort({ order: 1, title: 1 }).lean();
-  const sections = await LessonSection.find().sort({ order: 1, title: 1 }).lean();
+  const sections = await LessonSection.find(editor ? {} : { _id: { $in: lessons.map(lesson => lesson.sectionId).filter(Boolean) } }).sort({ order: 1, title: 1 }).lean();
   res.json({ lessons, sections });
 });
 app.get('/api/team/schedules', publicTrainerSchedules);

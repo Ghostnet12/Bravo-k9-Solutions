@@ -75,7 +75,7 @@ export const Lesson = model('BravoLesson', new Schema({
   videoUpload: String, captionUpload: String, imageUpload: String,
   published: { type: Boolean, default: false },
 }));
-export const LessonLibrary = model('BravoLessonLibrary', new Schema({ _id: String, open: { type: Boolean, default: false }, revision: { type: Number, default: 0 }, updatedBy: id }, { timestamps: true }));
+export const LessonLibrary = model('BravoLessonLibrary', new Schema({ _id: String, open: { type: Boolean, default: false }, revision: { type: Number, default: 0 }, updatedBy: id, cleanupAfter: Date, pendingCheckouts: { type: Number, default: 0 } }, { timestamps: true }));
 export const LessonSection = model('BravoLessonSection', new Schema({ _id: String, title: String, description: String, order: { type: Number, default: 0 } }, { timestamps: true }));
 export const MediaUpload = model('BravoMediaUpload', new Schema({ _id: String, lessonId: String, kind: { type: String, enum: ['video', 'captions', 'image', 'photo'] }, filename: String, contentType: String, size: Number, chunks: Number, uploadedBy: id, completed: { type: Boolean, default: false }, expiresAt: { type: Date, expires: 0 } }, { timestamps: true }));
 const mediaChunkSchema = new Schema({ uploadId: { type: String, index: true }, index: Number, size: Number, data: Buffer, expiresAt: { type: Date, expires: 0 } }, { timestamps: true });
