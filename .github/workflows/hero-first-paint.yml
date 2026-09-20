@@ -5,6 +5,9 @@ on:
     paths: ['mern/**', '.github/workflows/hero-first-paint.yml']
 permissions:
   contents: read
+concurrency:
+  group: hero-first-paint-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   browser:
     runs-on: ubuntu-latest
