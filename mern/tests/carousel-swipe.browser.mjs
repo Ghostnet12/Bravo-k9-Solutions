@@ -50,7 +50,12 @@ try {
       const initial = await activeIndex();
       await page.waitForTimeout(2300);
       assert.equal(await activeIndex(), initial, 'holding the hero pauses automatic cycling');
-      await move(x - 130); await up();
+      const beforeDrag = await page.locator('.hero-photo-track').evaluate(node => new DOMMatrix(getComputedStyle(node).transform).m41);
+      await move(x - 130);
+      const duringDrag = await page.locator('.hero-photo-track').evaluate(node => new DOMMatrix(getComputedStyle(node).transform).m41);
+      assert.ok(duringDrag < beforeDrag - 20, 'hero follows the finger before release');
+      assert.equal(await activeIndex(), initial, 'drag previews the next item before committing');
+      await up();
       const next = (initial + 1) % 3;
       await page.waitForFunction(expected => [...document.querySelectorAll('.hero-photo-slide')].findIndex(slide => slide.getAttribute('aria-hidden') === 'false') === expected, next);
       assert.equal(await page.getByRole('button', { name: 'Pause trainer photos', exact: true }).count(), 1, 'swipe does not trigger tap-to-pause');
@@ -77,7 +82,12 @@ try {
         await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
       } else { await page.mouse.move(rb.x + rb.width / 2, rb.y + 100); await page.mouse.wheel(250, 0); }
       await page.waitForFunction(() => document.querySelector('.proof-video-carousel').scrollLeft > 30);
-      await page.waitForTimeout(700);
+      await page.waitForFunction(() => {
+        const node = document.querySelector('.proof-video-carousel');
+        const max = node.scrollWidth - node.clientWidth;
+        const cards = [...node.querySelectorAll('article')];
+        return node.scrollLeft > 30 && Math.min(...cards.map(card => Math.abs(node.scrollLeft - Math.min(max, card.offsetLeft - cards[0].offsetLeft)))) < 5;
+      }, null, { timeout: 5000 });
       const settled = await rail.evaluate(node => {
         const max = node.scrollWidth - node.clientWidth;
         const cards = [...node.querySelectorAll('article')];
