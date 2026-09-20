@@ -162,17 +162,17 @@ export default function HeroPhotoCarousel({ children }) {
         event.preventDefault(); suppressUntil.current = Date.now() + 1000;
         const width = event.currentTarget.clientWidth;
         const atEdge = (index === 0 && dx > 0) || (index === keys.length - 1 && dx < 0);
-        setDragOffset(Math.max(-width * .9, Math.min(width * .9, atEdge ? dx * .2 : dx)));
+        setDragOffset(Math.max(-width * .9, Math.min(width * .9, atEdge ? 0 : dx)));
       }
     }}
     onPointerUp={event => {
       const gesture = swipe.current;
-      swipe.current = null; cancelHold(); setTouching(false); setInteraction(value => value + 1);
+      swipe.current = null; setDragOffset(0); cancelHold(); setTouching(false); setInteraction(value => value + 1);
       if (gesture?.id === event.pointerId && gesture.horizontal) {
         suppressUntil.current = Date.now() + 1000;
-        if (Math.abs(event.clientX - gesture.x) >= 40) {
-          advance(event.clientX < gesture.x ? 1 : -1).finally(() => { if (!swipe.current) setDragOffset(0); });
-        } else setDragOffset(0);
+        const direction = event.clientX < gesture.x ? 1 : -1;
+        // Like a native rail, manual swipes stop at the ends; automatic cycling wraps.
+        if (Math.abs(event.clientX - gesture.x) >= 40 && index + direction >= 0 && index + direction < keys.length) advance(direction);
       }
     }}
     onPointerCancel={() => { setDragOffset(0); swipe.current = null; cancelHold(); setTouching(false); setInteraction(value => value + 1); }}

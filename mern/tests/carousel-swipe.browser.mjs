@@ -82,7 +82,12 @@ try {
         await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
       } else { await page.mouse.move(rb.x + rb.width / 2, rb.y + 100); await page.mouse.wheel(250, 0); }
       await page.waitForFunction(() => document.querySelector('.proof-video-carousel').scrollLeft > 30);
-      await page.waitForTimeout(700);
+      await page.waitForFunction(() => {
+        const node = document.querySelector('.proof-video-carousel');
+        const max = node.scrollWidth - node.clientWidth;
+        const cards = [...node.querySelectorAll('article')];
+        return node.scrollLeft > 30 && Math.min(...cards.map(card => Math.abs(node.scrollLeft - Math.min(max, card.offsetLeft - cards[0].offsetLeft)))) < 5;
+      }, null, { timeout: 5000 });
       const settled = await rail.evaluate(node => {
         const max = node.scrollWidth - node.clientWidth;
         const cards = [...node.querySelectorAll('article')];
