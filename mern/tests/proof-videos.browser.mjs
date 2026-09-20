@@ -123,6 +123,7 @@ try {
         await edit.getByRole('button', { name: 'Publish changes', exact: true }).click();
         await edit.waitFor({ state: 'hidden', timeout: 30000 });
         assert.equal(await MediaUpload.countDocuments({ completed: true }), 1);
+        await saved.locator('video[src$="?v=3"]').waitFor({ timeout: 8000 });
         await saved.getByRole('button', { name: `Play ${title} video`, exact: true }).click();
         await page.waitForFunction(title => { const v = [...document.querySelectorAll('video')].find(v => v.getAttribute('aria-label') === title); return v && v.currentTime > 0.3 && !v.paused; }, title);
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${engineName}-${width}: horizontal page overflow`);
