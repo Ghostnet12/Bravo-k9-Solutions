@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { bookingTrainerIds } from '../shared/trainers.js';
 import { z } from 'zod';
 import { DateTime } from 'luxon';
-import { Booking, User, Settings, TrainerSchedule, Slot, Subscription, Notification, AuditEvent } from './models.js';
+import { Booking, User, Settings, TrainerSchedule, Subscription, Notification, AuditEvent } from './models.js';
 import { transaction } from './db.js';
 import { dateTime, HOURS, availability } from './scheduling.js';
 import { personalHours } from '../shared/trainer-schedule.js';
