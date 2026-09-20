@@ -11,7 +11,7 @@ import { DateTime } from 'luxon';
 import { z } from 'zod';
 import memberApp, { MemberAccess } from './member-app.js';
 import { connectDb, transaction } from './db.js';
-import { User, Booking, Subscription, MembershipCredit, DirectMessage, Notification, NotificationRead, RateBucket, Settings } from './models.js';
+import { User, Booking, Subscription, MembershipCredit, DirectMessage, Notification, NotificationRead, AuditEvent, RateBucket, Settings } from './models.js';
 import { isPrimaryOwner, requireUser, requireOwner, requireStaff, sameOrigin, rateLimit } from './auth.js';
 import { quote, serviceSelection, ALL_SERVICES } from '../shared/catalog.js';
 import { effectiveServices } from './services.js';
