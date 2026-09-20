@@ -43,3 +43,7 @@
 }
 
 #work-proof-title,#facebook-recommendations-title{scroll-margin-top:110px}
+
+/* Keep footer navigation readable when visitors enlarge their text. */
+.footer-main>*,.footer-main nav{min-width:0;overflow-wrap:anywhere}
+@media(max-width:700px){.footer-main{grid-template-columns:repeat(auto-fit,minmax(min(100%,10rem),1fr))}}
