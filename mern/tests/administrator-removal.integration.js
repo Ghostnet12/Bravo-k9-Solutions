@@ -11,13 +11,15 @@ test('only the primary Owner deletes administrators; reminders stay authenticate
   process.env.NODE_ENV = 'test'; process.env.MONGODB_URI = replica.getUri(); process.env.MONGODB_DB = 'administrator_removal'; process.env.APP_ORIGIN = 'http://localhost:5173'; delete process.env.STRIPE_SECRET_KEY; delete process.env.CRON_SECRET;
   const { default: app } = await import('../server/client-services-app.js');
   const { connectDb } = await import('../server/db.js');
-  const { User, Session, PasswordReset, Booking, Slot, Subscription, Settings, TrainerSchedule, AuditEvent, Notification } = await import('../server/models.js');
-  const { digest } = await import('../server/auth.js');
-  const people = {}, cookies = {}, confirmation = { confirmRemoval: true };
+  const { User, Session, PasswordReset, Booking, Slot, Subscription, Settings, TrainerSchedule, AuditEvent, Notification, RateBucket } = await import('../server/models.js');
+  const { digest, hashPassword } = await import('../server/auth.js');
+  const ownerPassword = 'Fixture-owner-password-2026!';
+  const ownerHash = await hashPassword(ownerPassword);
+  const people = {}, cookies = {}, confirmation = { confirmRemoval: true, currentPassword: ownerPassword };
   try {
     await connectDb();
     for (const [key, role] of Object.entries({ owner: 'owner', admin: 'owner', secondAdmin: 'owner', staff: 'staff', client: 'member', automatic: 'owner' })) {
-      people[key] = await User.create({ name: key, email: `${key}@example.test`, role, passwordHash: 'isolated-fixture-only' });
+      people[key] = await User.create({ name: key, email: `${key}@example.test`, role, passwordHash: ownerHash });
       const token = randomBytes(32).toString('hex'); await Session.create({ userId: people[key]._id, tokenHash: digest(token), expiresAt: new Date(Date.now() + 3600000) }); cookies[key] = `bravo_session=${token}`;
     }
     process.env.OWNER_USER_ID = String(people.owner._id);
@@ -40,6 +42,16 @@ test('only the primary Owner deletes administrators; reminders stay authenticate
       await call('owner', 'delete', path('admin'), { confirmRemoval: false }).expect(400);
       for (const target of ['owner', 'staff', 'client']) await call('owner', 'delete', path(target), confirmation).expect(403);
       assert.equal(await AuditEvent.countDocuments({ action: 'administrator.removed' }), 0); assert.equal((await User.findById(people.admin._id)).blocked, false);
+    });
+    await t.test('missing, wrong and malformed password confirmations cannot remove an administrator', async () => {
+      await call('owner', 'delete', path('admin'), { confirmRemoval: true }).expect(400);
+      await call('owner', 'delete', path('admin'), { ...confirmation, currentPassword: 'wrong-password' }).expect(403);
+      await call('owner', 'delete', path('admin'), { ...confirmation, currentPassword: { $ne: null } }).expect(400);
+      assert.equal((await User.findById(people.admin._id)).blocked, false);
+      assert.equal(await AuditEvent.countDocuments({ action: 'administrator.removed' }), 0);
+      const event = await AuditEvent.findOne({ action: 'security.reauthentication-denied' }).lean();
+      assert.ok(event); assert.ok(!JSON.stringify(event).includes('wrong-password'));
+      await RateBucket.deleteMany({});
     });
     await t.test('automatic billing prevents profile deletion until renewal is resolved', async () => {
       await Subscription.create({ userId: people.automatic._id, stripeId: 'sub_fixture', status: 'active', autoPayDisabled: false });
@@ -75,6 +87,21 @@ test('only the primary Owner deletes administrators; reminders stay authenticate
       const repeated = await request(app).get('/api/cron/memberships').set('Authorization', `Bearer ${secret}`).expect(200); assert.equal(repeated.body.created, 0); assert.equal(await Notification.countDocuments(), 2);
       const configured = await call('owner', 'get', '/api/admin/membership-status').expect(200); assert.equal(configured.body.remindersConfigured, true); assert.ok(configured.body.lastReminderRunAt); assert.equal(JSON.stringify(configured.body).includes(secret), false);
       await call('staff', 'get', '/api/admin/membership-status').expect(403);
+    });
+    await t.test('repeated password guesses are rate limited without deleting the target', async () => {
+      await RateBucket.deleteMany({});
+      for (let attempt = 0; attempt < 10; attempt++) await call('owner', 'delete', path('secondAdmin'), { ...confirmation, currentPassword: 'wrong-password' }).expect(403);
+      const limited = await call('owner', 'delete', path('secondAdmin'), confirmation).expect(429);
+      assert.ok(limited.headers['retry-after']);
+      assert.equal((await User.findById(people.secondAdmin._id)).blocked, false);
+    });
+    await t.test('credential changes invalidate a previously verified destructive action', async () => {
+      const { confirmOwnerPassword, lockOwnerReauthentication } = await import('../server/reauthentication.js');
+      const { transaction } = await import('../server/db.js');
+      const proof = await confirmOwnerPassword({ _id: people.owner._id, credentialVersion: 0 }, ownerPassword);
+      await User.updateOne({ _id: people.owner._id }, { $inc: { credentialVersion: 1 } });
+      await assert.rejects(transaction(session => lockOwnerReauthentication(proof, session)), { status: 409 });
+      assert.equal((await User.findById(people.secondAdmin._id)).blocked, false);
     });
   } finally { await mongoose.disconnect(); await replica.stop(); delete process.env.CRON_SECRET; }
 });
