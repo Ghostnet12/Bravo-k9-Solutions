@@ -27,7 +27,7 @@ jobs:
       - run: node tests/public-content.browser.mjs
       - run: node tests/seo.browser.mjs
       - run: node tests/home-hero.browser.mjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: public-indexing-evidence
