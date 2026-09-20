@@ -54,7 +54,8 @@ app.get('/api/config', async (_req, res) => {
   const paymentsReady = connected && !!stripeClient();
   const paymentsMode = paymentsReady ? stripeMode() : 'paused';
   const services = connected ? await effectiveServices({ includeDisabled: true }) : SERVICES.map(service => ({ ...service, enabled: service.id !== 'online' }));
-  res.json({ monitoringEnabled: monitoringEnabled(), connected, connectionIssue, paymentsReady, paymentsPaused: !paymentsReady, paymentsMode, workspaceVersion: 'owner-staff-3', lessonLibrary: connected ? await readLessonLibrary() : { open: false }, schedule, timezone: 'America/Chicago', services });
+  const { pendingCheckouts, ...publicLessonLibrary } = connected ? await readLessonLibrary() : { open: false };
+  res.json({ monitoringEnabled: monitoringEnabled(), connected, connectionIssue, paymentsReady, paymentsPaused: !paymentsReady, paymentsMode, workspaceVersion: 'owner-staff-3', lessonLibrary: publicLessonLibrary, schedule, timezone: 'America/Chicago', services });
 });
 app.get('/api/lessons', (_req,res,next) => !process.env.MONGODB_URI ? res.status(404).json({error:'This page is not available.'}) : next());
 app.get('/api/team', async (_req, res) => {
