@@ -18,6 +18,7 @@ export default function HeroVideo({ clip, active, paused, onEnded }) {
   if (clip.facebookUrl) return <a className="hero-reel" href={clip.facebookUrl} aria-label={`Watch ${clip.title} on Facebook`}><span>▶</span><strong>{clip.title}</strong><span>Watch on Facebook</span></a>;
   return <div className="hero-video" data-site-image-ignore="">
     <video ref={video} src={clip.src} poster={clip.poster || undefined} muted playsInline preload={active ? 'metadata' : 'none'} aria-label={clip.title} style={{objectFit:clip.fit || 'contain'}} onEnded={onEnded} onError={()=>setFailed(true)}/>
+    <div className="hero-video-swipe-surface" aria-hidden="true"/>
     {blocked && active && !failed && <button type="button" className="hero-video-play" onClick={()=>video.current?.play().then(()=>setBlocked(false)).catch(()=>setFailed(true))}>Play video</button>}
     {failed && <p className="hero-video-message">This video couldn’t play. Please try another clip.</p>}
     <span className="sr-only">{clip.description}</span>
