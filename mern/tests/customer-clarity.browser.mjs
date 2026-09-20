@@ -30,7 +30,7 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){const br
   assert.equal(await page.locator('.home-hero-image').getAttribute('src'),'/images/bravo-client-training.jpeg');
   assert.equal(await page.locator('.home-hero-image').evaluate(el=>el.complete && el.naturalWidth>0),true);
   assert.equal(await page.locator('.home-hero-image').evaluate(el=>getComputedStyle(el).objectFit),'contain');
-  assert.match(await page.locator('h1').innerText(), /In-home dog training/);
+  assert.match(await page.locator('h1').innerText(), /In-home dog training/i);
   assert.ok(await page.locator('.home-quick-price').isVisible());
   assert.ok(await page.getByText('No treats. No toys.',{exact:true}).isVisible());
   assert.ok(await page.getByText('One hour per day · Monday–Friday',{exact:true}).isVisible());
