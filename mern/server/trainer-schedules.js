@@ -33,7 +33,7 @@ export async function saveTrainerSchedule(req, res) {
   const today = DateTime.now().setZone(ZONE).toISODate(), last = dateTime(today).plus({ days: 92 }).toISODate();
   if (new Set(data.overrides.map(day => day.date)).size !== data.overrides.length) throw fail('Use one exception per date.', 400);
   for (const day of data.overrides) {
-    const parsed = dateTime(day.date);
+    dateTime(day.date); // Preserve date validation even though the result is unused.
     if (day.date < today || day.date > last) throw fail('Choose dates within the next 92 days.', 400);
   }
   data.weekdays = [...new Set(data.weekdays)].sort(); data.hours = [...new Set(data.hours)].sort();

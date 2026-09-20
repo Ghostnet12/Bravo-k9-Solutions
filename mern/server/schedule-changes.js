@@ -4,7 +4,7 @@ import { trainerSelectionInput, resolveTrainerIds } from './trainer-selection.js
 import { assignedTrainerIds, bookingTrainerIds } from '../shared/trainers.js';
 import { z } from 'zod';
 import { DateTime } from 'luxon';
-import { Booking, Settings, Slot, Subscription, User, Notification, DirectMessage, AuditEvent } from './models.js';
+import { Booking, Settings, Subscription, Notification, DirectMessage, AuditEvent } from './models.js';
 import { transaction } from './db.js';
 import { availability, dateTime, HOURS } from './scheduling.js';
 import { checkTrainerVisits } from './trainer-schedules.js';
