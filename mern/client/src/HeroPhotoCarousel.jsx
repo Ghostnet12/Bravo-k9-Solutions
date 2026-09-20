@@ -39,9 +39,11 @@ export default function HeroPhotoCarousel({ children }) {
           // Safari can defer lazy images inside a translated, clipped track.
           // Start the request explicitly and retain the current slide until decoded.
           image.loading = 'eager';
+          const prepared = new Image();
+          prepared.src = image.currentSrc || image.src;
           let timeout;
           try {
-            await Promise.race([image.decode(), new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error('Photo timed out')), 15000); })]);
+            await Promise.race([prepared.decode(), new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error('Photo timed out')), 15000); })]);
           } catch { continue; } finally { clearTimeout(timeout); }
           if (!image.naturalWidth) continue;
         }

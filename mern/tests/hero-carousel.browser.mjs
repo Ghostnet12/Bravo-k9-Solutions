@@ -73,6 +73,6 @@ try { for (const [name, engine] of Object.entries({ chromium, webkit })) {
   await page.waitForFunction(()=>{const slide=document.querySelector('.hero-photo-slide[aria-hidden="false"]'),img=slide?.querySelector('img');return img?.getAttribute('src')==='/slow-hero.jpg'&&img.complete&&img.naturalWidth>0;},null,{timeout:15000});
   await page.emulateMedia({reducedMotion:'reduce'});
   assert.deepEqual(errors,[]);await page.screenshot({path:`test-results/hero-carousel-${name}-${width}.png`});console.log(`PASS ${name}/${width}: left rotation, touch resume, owner hold, upload, timing, editor and reduced motion`);await page.close();
-  } catch(error) { await page.screenshot({path:`test-results/hero-failed-${name}-${width}.png`}); await writeFile(`test-results/hero-failed-${name}-${width}.txt`,`${error.stack}\n${await page.locator('body').innerText()}\n${JSON.stringify(errors)}`); throw error; }
+  } catch(error) { console.log('Hero failure state',await page.locator('.hero-photo-slide').evaluateAll(slides=>slides.map(slide=>{const image=slide.querySelector('img');return {active:slide.getAttribute('aria-hidden'),src:image?.src,complete:image?.complete,width:image?.naturalWidth,loading:image?.loading};}))); await page.screenshot({path:`test-results/hero-failed-${name}-${width}.png`}); await writeFile(`test-results/hero-failed-${name}-${width}.txt`,`${error.stack}\n${await page.locator('body').innerText()}\n${JSON.stringify(errors)}`); throw error; }
  }} finally {await browser.close();}
 }} finally {await new Promise(resolve=>server.close(resolve));}
