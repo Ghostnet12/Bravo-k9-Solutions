@@ -14,6 +14,20 @@ Tests cover RFC 6238 vectors, encryption binding, malformed requests, authorizat
 
 # Remaining infrastructure changes
 
+## Current-tier decision — 2026-09-20
+
+The owner has deferred tier upgrades and new recurring costs. Keep the existing Atlas Free and Vercel plans; the paid options below are reference only, not approved changes.
+
+Atlas Free supports manual logical backups with `mongodump` and restores with `mongorestore`, even though managed Atlas snapshots are unavailable. A paid upgrade is not the only backup route. Before exporting production data, configure an owner-controlled encrypted backup destination and a restricted backup account for `bravo_k9`. Neither that destination nor an independent MFA-key escrow is configured by this release. Do not place customer exports in source control, CI artifacts, or general application logs.
+
+Use MongoDB Database Tools with credentials supplied through a restricted configuration file, export only `bravo_k9`, encrypt the output, and retain dated copies with checksums. Logical dumps during concurrent writes are not guaranteed to be a transaction-consistent snapshot; coordinate a write-free maintenance window for a consistent recovery point. Validate a restore in an isolated local MongoDB instance compatible with production. Disable email, Stripe, webhooks and scheduled jobs there; invalidate restored sessions and recovery tokens before any recovered service is exposed. Record counts/indexes and exercise memberships, schedules and MFA recovery using isolated fixtures. Preserve the original encrypted copy and separately escrow the MFA encryption key. No production backup or restore drill has been completed yet.
+
+Reference: https://www.mongodb.com/docs/atlas/backup-restore-cluster/
+
+The production smoke check now verifies database readiness, no-store API responses, and unauthenticated rejection of MFA settings in addition to headers. Its success is a live-domain observation, not proof that a particular deployment commit has finished rolling out. Existing CI checks remain required; application dependency installation no longer retains checkout credentials.
+
+## Infrastructure inventory and deferred paid options
+
 Read-only Atlas inspection on 2026-09-20 found a Free cluster, a Bravo database-scoped read/write account and a project network rule allowing all IPv4 addresses. Other application and administrative accounts exist in the same project. Do not change their permissions or remove shared network rules without inventorying the dependent applications.
 
 A concrete low-cost backup option is upgrading the existing cluster to Flex, keeping its existing provider and region. Published pricing is usage-based, approximately $8–$30/month. Atlas automatically takes daily Flex snapshots; retention is limited and this is not point-in-time recovery. Obtain spending approval and verify current compatibility and the exact provider quote before upgrading. Wait for a successful snapshot, then restore to a separate restricted target and follow the isolated recovery exercise in owner-reauthentication.md. Neither the upgrade nor a production restore has been performed by this code release.
