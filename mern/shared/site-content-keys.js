@@ -3240,6 +3240,10 @@ for (let i=1;i<=4;i++) CONTENT_KEYS[`training-question-${i}`]={text:true};
 Object.assign(CONTENT_KEYS, {
   'trainer-david-introduction': {text:true},
   'trainer-ashley-introduction': {text:true},
+  'trainer-david-focus': {text:true},
+  'trainer-david-focus-label': {text:true},
+  'trainer-ashley-focus': {text:true},
+  'trainer-ashley-focus-label': {text:true},
 });
 
 CONTENT_KEYS['training-booking-allowance'] = {text:true};
