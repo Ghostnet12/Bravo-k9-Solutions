@@ -38,8 +38,20 @@ try {
         const page = await context.newPage(), errors = [];
         page.on('pageerror', error => errors.push(error.message));
         await page.addInitScript(() => { window.proofClicks = []; document.addEventListener('click', event => { window.proofClicks.push({ tag: event.target.tagName, label: event.target.getAttribute('aria-label'), text: event.target.textContent?.slice(0, 80) }); window.proofClicks = window.proofClicks.slice(-6); }, true); });
-        const response = await page.goto(origin); const add = page.getByRole('button', { name: /Add video/ }); await add.waitFor();
+        const response = await page.goto(origin);
         await page.waitForFunction(() => document.querySelectorAll('[data-proof-video]').length === 3);
+        let toolPointer = 20;
+        const openAddVideo = async () => {
+          const sectionHeading = page.locator('.home-work-proof-heading');
+          await sectionHeading.scrollIntoViewIfNeeded();
+          const pointerId = toolPointer++;
+          await sectionHeading.dispatchEvent('pointerdown', { button: 0, isPrimary: true, pointerId, pointerType: 'touch', clientX: 80, clientY: 80 });
+          const tools = page.getByRole('dialog', { name: 'Edit video section' });
+          await tools.waitFor({ timeout: 8000 });
+          await sectionHeading.dispatchEvent('pointerup', { pointerId, pointerType: 'touch' });
+          await tools.getByRole('button', { name: 'Add video', exact: true }).click();
+          await tools.waitFor({ state: 'hidden' });
+        };
 
         // Press and hold on the existing Facebook thumbnail must open the editor,
         // suppress the following tap, and leave the Facebook destination unopened.
@@ -62,7 +74,7 @@ try {
         await page.waitForTimeout(700); assert.equal(await page.locator('dialog[open]').count(), 0);
         await originalImage.dispatchEvent('pointerup', { pointerId: 2 });
 
-        await add.click();
+        await openAddVideo();
         const create = page.getByRole('dialog', { name: 'Add a video' });
         const picker = create.getByLabel('Choose video from your photo library');
         assert.equal(await picker.getAttribute('accept'), 'video/*'); assert.equal(await picker.getAttribute('capture'), null);
@@ -110,7 +122,7 @@ try {
 
         // A URL-only card is saved without uploading a file. It navigates in the
         // same tab, and browser Back returns to the real, persisted Bravo page.
-        await add.click();
+        await openAddVideo();
         await create.getByRole('radio', { name: 'Facebook Reel URL', exact: true }).check();
         const linkedTitle = `Facebook progress ${engineName} ${width}`;
         await create.getByLabel('Video title', { exact: true }).fill(linkedTitle);
