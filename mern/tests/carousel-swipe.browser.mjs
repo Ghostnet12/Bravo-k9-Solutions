@@ -20,7 +20,7 @@ try {
         const fixtures = {
           '/api/config': { connected: true, services: SERVICES }, '/api/auth/me': { user: null, services: [] },
           '/api/hero-carousel': { carousel: { ...DEFAULT_HERO_CAROUSEL, intervalSeconds: 2 } },
-          '/api/hero-videos': { clips: [], nextCursor: null }, '/api/site-images': { images: {} },
+          '/api/hero-videos': { clips: [], nextCursor: null }, '/api/site-images': { images: { 'team-ashley-northrop': { src: '/images/ashley-leverock.webp', alt: 'Ashley, Bravo trainer' } } },
           '/api/proof-videos': { clips: [1, 2, 3, 4].map(id => ({ id: String(id), title: `Training ${id}`, description: 'Swipe test clip', order: id, revision: 0, src: null, facebookUrl: 'https://www.facebook.com/reel/123456789', poster: '/images/david-northrop.webp' })), nextCursor: null, carousel: { intervalSeconds: 2, revision: 0 } },
           '/api/team': { team: [] }, '/api/reviews': { reviews: [], average: 0, count: 0 }, '/api/team/schedules': { schedules: [] },
         };
