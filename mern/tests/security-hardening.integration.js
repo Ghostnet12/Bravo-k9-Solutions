@@ -33,6 +33,17 @@ test('security boundaries through the production application stack', { timeout: 
       cookies[key] = await sessionFor(users[key]);
     }
     process.env.OWNER_USER_ID = String(users.owner._id);
+    await t.test('successful sign-ins keep only the five newest active sessions', async () => {
+      const oldCookie = cookies.other;
+      for (let i = 0; i < 6; i++) {
+        const result = await call(null, 'post', '/api/auth/login', { identifier: 'other@example.test', password }).expect(200);
+        cookies.other = result.headers['set-cookie'];
+      }
+      assert.equal((await request(app).get('/api/auth/me').set('Cookie', oldCookie).expect(200)).body.user, null);
+      assert.ok((await call('other', 'get', '/api/auth/me').expect(200)).body.user);
+      assert.equal(await Session.countDocuments({ userId: users.other._id, expiresAt: { $gt: new Date() } }), 5);
+      await RateBucket.deleteMany({});
+    });
     await t.test('changing cookies cannot reset the IP login allowance', async () => {
       for (let i = 0; i < 12; i++) await call(i % 2 ? 'member' : 'other', 'post', '/api/auth/login', { identifier: 'unknown@example.test', password }).expect(401);
       const denied = await call(null, 'post', '/api/auth/login', { identifier: 'other@example.test', password }).expect(429);
@@ -85,6 +96,44 @@ test('security boundaries through the production application stack', { timeout: 
         assert.doesNotMatch(malformed.text, /SECRET_FIXTURE|SyntaxError|stack|password/);
         await request(app)[method](path).set('Cookie', cookies.owner).set('Origin', 'https://unrelated.example').send({}).expect(403);
       }
+    });
+    await t.test('privileged sessions expire on the server while members keep their normal lifetime', async () => {
+      for (const [role, name] of [['owner', 'owner'], ['staff', 'staff'], ['member', 'other']]) {
+        cookies.expiry = await sessionFor(await User.findById(users[name]._id).select('+credentialVersion'));
+        const hash = digest(cookies.expiry.split('=')[1]);
+        await Session.updateOne({ tokenHash: hash }, { $set: { issuedAt: new Date(Date.now() - 3600000), lastSeenAt: new Date(Date.now() - 31 * 60000) } });
+        const response = await call('expiry', 'get', '/api/auth/me').expect(200);
+        assert.equal(!!response.body.user, role === 'member');
+      }
+      cookies.expiry = await sessionFor(users.owner);
+      const hash = digest(cookies.expiry.split('=')[1]);
+      await Session.updateOne({ tokenHash: hash }, { $set: { issuedAt: new Date(Date.now() - 9 * 3600000), lastSeenAt: new Date() } });
+      await call('expiry', 'get', '/api/admin').expect(401);
+      cookies.expiry = await sessionFor(users.owner);
+      await call('expiry', 'get', '/api/admin').expect(200);
+      const active = await Session.findOne({ tokenHash: digest(cookies.expiry.split('=')[1]) });
+      assert.ok(active.lastSeenAt > new Date(Date.now() - 10000));
+      await call('expiry', 'post', '/api/auth/logout', {}).expect(200);
+      await call('expiry', 'get', '/api/admin').expect(401);
+    });
+    await t.test('recovery links cannot survive permission changes or block/unblock cycles', async () => {
+      for (const changes of [[{ role: 'staff' }, { role: 'member' }], [{ blocked: true }, { blocked: false }]]) {
+        const recovery = await call('owner', 'post', `/api/admin/recovery/${users.other._id}`, { currentPassword: password }).expect(200);
+        const token = new URL(recovery.body.url).hash.slice(1);
+        for (const change of changes) await call('owner', 'patch', `/api/admin/users/${users.other._id}`, change).expect(200);
+        await call(null, 'post', '/api/auth/recover', { token, password: 'Replacement-fixture-password-123!' }).expect(403);
+        await RateBucket.deleteMany({});
+      }
+      const recovery = await call('owner', 'post', `/api/admin/recovery/${users.other._id}`, { currentPassword: password }).expect(200);
+      const body = { token: new URL(recovery.body.url).hash.slice(1), password: 'Replacement-fixture-password-123!' };
+      await call(null, 'post', '/api/auth/recover', body).expect(200);
+      await call(null, 'post', '/api/auth/recover', body).expect(400);
+    });
+    await t.test('malformed cookies cannot crash sign-in or logout', async () => {
+      cookies.invalid = 'bravo_session=j%3A%7B%22unexpected%22%3Atrue%7D';
+      assert.equal((await call('invalid', 'get', '/api/auth/me').expect(200)).body.user, null);
+      await call('invalid', 'post', '/api/auth/logout', {}).expect(200);
+      await call('invalid', 'post', '/api/auth/login', { identifier: 'owner@example.test', password }).expect(200);
     });
     await t.test('unsigned payment callbacks cannot grant access', async () => {
       process.env.STRIPE_SECRET_KEY = 'sk_test_fixture_not_a_real_key';

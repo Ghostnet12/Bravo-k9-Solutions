@@ -1,6 +1,7 @@
 import { randomBytes, scrypt as scryptCallback, timingSafeEqual, createHash } from 'node:crypto';
 import { promisify } from 'node:util';
 import { Session, User, RateBucket } from './models.js';
+import { sessionLifetime, privilegedSessionExpired } from './session-policy.js';
 const scrypt = promisify(scryptCallback);
 export const digest = value => createHash('sha256').update(value).digest('hex');
 export async function hashPassword(password) {
@@ -14,27 +15,45 @@ export async function verifyPassword(password, stored = '00000000000000000000000
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 const cookieName = () => process.env.NODE_ENV === 'production' ? '__Host-bravo_session' : 'bravo_session';
+function sessionToken(req) {
+  const token = req.cookies?.[cookieName()];
+  return typeof token === 'string' && /^[a-f0-9]{64}$/.test(token) ? token : null;
+}
 const cookieOptions = () => ({ httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', path: '/' });
 export async function issueSession(req, res, user) {
-  if (req.cookies[cookieName()]) await Session.deleteOne({ tokenHash: digest(req.cookies[cookieName()]) });
+  const previous = sessionToken(req);
+  if (previous) await Session.deleteOne({ tokenHash: digest(previous) });
   const token = randomBytes(32).toString('hex');
-  const maxAge = user.mustChangePassword ? 30 * 60000 : 1000 * 60 * 60 * 24 * 7;
-  await Session.create({ tokenHash: digest(token), userId: user._id, credentialVersion: user.credentialVersion || 0, expiresAt: new Date(Date.now() + maxAge) });
+  const maxAge = sessionLifetime(user);
+  const now = new Date();
+  await Session.create({ tokenHash: digest(token), userId: user._id, credentialVersion: user.credentialVersion || 0, issuedAt: now, lastSeenAt: now, expiresAt: new Date(now.getTime() + maxAge) });
+  // ObjectId creation order also covers legacy sessions without issuedAt.
+  // Expiry order is unsuitable because privileged and member lifetimes differ.
+  const staleSessions = await Session.find({ userId: user._id, expiresAt: { $gt: new Date() } })
+    .sort({ _id: -1 }).skip(5).select('_id').lean();
+  if (staleSessions.length) await Session.deleteMany({ _id: { $in: staleSessions.map(session => session._id) } });
   res.cookie(cookieName(), token, { ...cookieOptions(), maxAge });
 }
 export async function signOut(req, res) {
-  if (req.cookies[cookieName()]) await Session.deleteOne({ tokenHash: digest(req.cookies[cookieName()]) });
+  const previous = sessionToken(req);
+  if (previous) await Session.deleteOne({ tokenHash: digest(previous) });
   res.clearCookie(cookieName(), cookieOptions());
 }
 export async function identify(req, res, next) {
-  const token = req.cookies[cookieName()];
+  const token = sessionToken(req);
   if (token) {
     const session = await Session.findOne({ tokenHash: digest(token), expiresAt: { $gt: new Date() } });
     if (session) {
       req.user = await User.findById(session.userId).select('+credentialVersion');
-      if (req.user && ((session.credentialVersion || 0) !== (req.user.credentialVersion || 0) ||
+      if (req.user && (privilegedSessionExpired(session, req.user) || (session.credentialVersion || 0) !== (req.user.credentialVersion || 0) ||
         (req.user.mustChangePassword && !(req.user.temporaryPasswordExpiresAt > new Date())))) {
         await Session.deleteOne({ tokenHash: session.tokenHash }); req.user = null;
+      }
+      if (req.user && ['staff', 'owner'].includes(req.user.role)) {
+        // Conditional updates cannot recreate a session revoked by another request.
+        // $max prevents concurrent requests from moving activity backwards.
+        const active = await Session.updateOne({ _id: session._id }, { $max: { lastSeenAt: new Date() } });
+        if (!active.matchedCount) req.user = null;
       }
       // Bootstrap only the existing owner record, never a freely entered email.
       if (req.user && isPrimaryOwner(req.user) && req.user.role !== 'owner' && !req.user.blocked) {
