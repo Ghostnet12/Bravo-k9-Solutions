@@ -42,13 +42,13 @@ try {
         await page.waitForFunction(() => document.querySelectorAll('[data-proof-video]').length === 3);
         let toolPointer = 20;
         const openAddVideo = async () => {
-          const sectionHeading = page.locator('.home-work-proof-heading');
-          await sectionHeading.scrollIntoViewIfNeeded();
+          const section = page.locator('.home-work-proof');
+          await section.scrollIntoViewIfNeeded();
           const pointerId = toolPointer++;
-          await sectionHeading.dispatchEvent('pointerdown', { button: 0, isPrimary: true, pointerId, pointerType: 'touch', clientX: 80, clientY: 80 });
+          await section.dispatchEvent('pointerdown', { button: 0, isPrimary: true, pointerId, pointerType: 'touch', clientX: 80, clientY: 80 });
           const tools = page.getByRole('dialog', { name: 'Edit video section' });
           await tools.waitFor({ timeout: 8000 });
-          await sectionHeading.dispatchEvent('pointerup', { pointerId, pointerType: 'touch' });
+          await section.dispatchEvent('pointerup', { pointerId, pointerType: 'touch' });
           await tools.getByRole('button', { name: 'Add video', exact: true }).click();
           await tools.waitFor({ state: 'hidden' });
         };
