@@ -32,7 +32,7 @@ function Editor({ staffId }) {
     if (mode === 'working' && !draft.hours.length) { setError('Select at least one session start time before adding working days.'); return; }
     const map = new Map(draft.overrides.map(day => [day.date, day]));
     for (let date = from; date <= to;) {
-      const value = new Date(`${date}T12:00:00Z`), weekday = value.getUTCDay();
+      const value = new Date(`${date}T12:00:00Z`);
       map.set(date, { date, hours: mode === 'off' ? [] : [...draft.hours] });
       value.setUTCDate(value.getUTCDate() + 1); date = value.toISOString().slice(0, 10);
     }

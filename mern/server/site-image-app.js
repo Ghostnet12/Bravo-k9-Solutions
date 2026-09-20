@@ -1,5 +1,6 @@
 import { publicPageHandler, publicPagePaths } from './public-page.js';
-import siteContentRouter, { loadSiteContent } from './site-content.js';
+import siteContentRouter from './site-content.js';
+import { loadSiteContent } from './site-content-store.js';
 import express from 'express';
 import { requestError } from './errors.js';
 import { securityHeaders } from './http-security.js';

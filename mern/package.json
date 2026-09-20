@@ -13,7 +13,7 @@
     "test": "node --test tests/*.test.js",
     "test:database": "node --test tests/database.integration.js",
     "staff": "node --env-file-if-exists=.env scripts/staff.js",
-    "lint": "eslint server shared api --max-warnings=0"
+    "lint": "eslint server shared api client/src --max-warnings=0"
   },
   "dependencies": {
     "@vercel/functions": "^3.9.7",

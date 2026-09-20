@@ -43,11 +43,14 @@ try {
         const page = await context.newPage(); const errors = [];
         page.on('pageerror', error => errors.push(error.message));
         await page.goto(origin, { waitUntil: 'networkidle' });
-        await page.getByRole('heading', { name: 'Real clients. Real progress.' }).waitFor();
+        await page.getByRole('heading', { name: /See the work\.\s*Meet your team\./ }).waitFor();
         const proofTop = await page.locator('#reviews').evaluate(element => element.offsetTop);
         const trainingTop = await page.locator('#training').evaluate(element => element.offsetTop);
         assert.ok(proofTop < trainingTop, `${engineName}-${width}: proof must precede training`);
-        assert.equal(await page.locator('.home-proof-reviews article').count(), 3);
+        const accountReviews = page.locator('.home-proof-reviews article').filter({ hasText: 'Verified Bravo account' });
+        assert.equal(await accountReviews.count(), reviews.length);
+        for (const review of reviews) await accountReviews.getByText(review.authorName, { exact: true }).waitFor();
+        assert.equal(await page.locator('.facebook-recommendations article').count(), 3);
         assert.equal(await page.locator('.home-work-proof-grid article').count(), 3);
         // Exercise the mobile/desktop outbound action without relying on Facebook
         // availability in CI. Real video playback is checked separately on live pages.
@@ -77,6 +80,11 @@ try {
         await page.screenshot({ path: `test-results/home-conversion-${engineName}-${width}.png`, fullPage: true });
         if (width === 390) {
           await page.goto(`${origin}/portal?program=training`, { waitUntil: 'networkidle' });
+          // Training opens the guided first-visit introduction. The fixed bar
+          // belongs to the full scheduler, reached through its visible control.
+          await page.getByRole('heading', { name: 'Let’s start with your dog.' }).waitFor();
+          await page.getByText('Need a different starting point?', { exact: true }).click();
+          await page.getByRole('button', { name: 'Open the full scheduler', exact: true }).click();
           const booking = await page.locator('.mobile-booking-bar').boundingBox();
           const access = await page.locator('.accessibility-tools').boundingBox();
           assert.ok(booking && access && access.y + access.height <= booking.y, `${engineName}: accessibility control overlaps booking bar`);

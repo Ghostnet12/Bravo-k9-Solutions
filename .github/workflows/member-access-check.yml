@@ -13,8 +13,8 @@ jobs:
       run:
         working-directory: mern
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: npm
@@ -29,7 +29,7 @@ jobs:
       - name: Member activation, revocation and billing separation
         run: node --test tests/member-access.integration.js
       - name: Save exact build for browser verification
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: member-footer-build
           path: mern/client/dist

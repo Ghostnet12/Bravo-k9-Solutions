@@ -38,8 +38,32 @@ try {
         const page = await context.newPage(), errors = [];
         page.on('pageerror', error => errors.push(error.message));
         await page.addInitScript(() => { window.proofClicks = []; document.addEventListener('click', event => { window.proofClicks.push({ tag: event.target.tagName, label: event.target.getAttribute('aria-label'), text: event.target.textContent?.slice(0, 80) }); window.proofClicks = window.proofClicks.slice(-6); }, true); });
-        const response = await page.goto(origin); const add = page.getByRole('button', { name: /Add video/ }); await add.waitFor();
+        const response = await page.goto(origin);
         await page.waitForFunction(() => document.querySelectorAll('[data-proof-video]').length === 3);
+        let toolPointer = 20;
+        const openAddVideo = async () => {
+          const section = page.locator('.home-work-proof');
+          await section.scrollIntoViewIfNeeded();
+          const pointerId = toolPointer++;
+          await section.dispatchEvent('pointerdown', { button: 0, isPrimary: true, pointerId, pointerType: 'touch', clientX: 80, clientY: 80 });
+          const tools = page.getByRole('dialog', { name: 'Edit video section' });
+          await tools.waitFor({ timeout: 8000 });
+          await section.dispatchEvent('pointerup', { pointerId, pointerType: 'touch' });
+          await tools.getByRole('button', { name: 'Add video', exact: true }).click();
+          await tools.waitFor({ state: 'hidden' });
+        };
+        const openVideoEditor = async card => {
+          await card.scrollIntoViewIfNeeded();
+          // Scrolling and CSS snap can emit one final scroll event, which
+          // intentionally cancels a hold. Start the gesture after it settles.
+          await page.waitForTimeout(350);
+          const pointerId = toolPointer++;
+          await card.dispatchEvent('pointerdown', { button: 0, isPrimary: true, pointerId, pointerType: 'touch', clientX: 120, clientY: 220 });
+          const editor = page.getByRole('dialog', { name: 'Edit this video' });
+          await editor.waitFor({ timeout: 8000 });
+          await card.dispatchEvent('pointerup', { pointerId, pointerType: 'touch' });
+          return editor;
+        };
 
         // Press and hold on the existing Facebook thumbnail must open the editor,
         // suppress the following tap, and leave the Facebook destination unopened.
@@ -62,7 +86,7 @@ try {
         await page.waitForTimeout(700); assert.equal(await page.locator('dialog[open]').count(), 0);
         await originalImage.dispatchEvent('pointerup', { pointerId: 2 });
 
-        await add.click();
+        await openAddVideo();
         const create = page.getByRole('dialog', { name: 'Add a video' });
         const picker = create.getByLabel('Choose video from your photo library');
         assert.equal(await picker.getAttribute('accept'), 'video/*'); assert.equal(await picker.getAttribute('capture'), null);
@@ -84,8 +108,7 @@ try {
         await page.waitForFunction(title => { const v = [...document.querySelectorAll('video')].find(v => v.getAttribute('aria-label') === title); return v && !v.paused && v.currentTime > 0.3 && v.readyState >= 2; }, title);
         console.log(`${engineName}-${width}: uploaded video is actually playing`);
         const uploadedBefore = await MediaUpload.countDocuments({ completed: true });
-        await saved.getByRole('button', { name: `Edit video: ${title}`, exact: true }).click();
-        const edit = page.getByRole('dialog', { name: 'Edit this video' });
+        const edit = await openVideoEditor(saved);
         try { await edit.waitFor({ timeout: 8000 }); }
         catch (error) { console.log('Reopen failure', { engineName, width, errors, state: await page.evaluate(() => ({ clicks: window.proofClicks, dialogs: [...document.querySelectorAll('dialog')].map(d => ({ open: d.open, title: d.querySelector('h2')?.textContent, text: d.textContent?.slice(0, 300) })) })) }); await page.screenshot({ path: `test-results/reopen-failure-${engineName}-${width}.png`, fullPage: true }); throw error; }
         await edit.getByLabel('Description', { exact: true }).fill('Description changed without re-uploading.');
@@ -95,22 +118,24 @@ try {
         await page.reload(); await saved.getByText('Description changed without re-uploading.', { exact: true }).waitFor();
 
         // The same card can receive a replacement file, with its description kept.
-        await saved.getByRole('button', { name: `Edit video: ${title}`, exact: true }).click();
+        await openVideoEditor(saved);
         await edit.getByLabel('Choose video from your photo library').setInputFiles(mediaPath);
         await edit.getByRole('button', { name: 'Publish changes', exact: true }).click();
         await edit.waitFor({ state: 'hidden', timeout: 30000 });
         assert.equal(await MediaUpload.countDocuments({ completed: true }), 1);
+        await saved.locator('video[src$="?v=3"]').waitFor({ timeout: 8000 });
         await saved.getByRole('button', { name: `Play ${title} video`, exact: true }).click();
         await page.waitForFunction(title => { const v = [...document.querySelectorAll('video')].find(v => v.getAttribute('aria-label') === title); return v && v.currentTime > 0.3 && !v.paused; }, title);
+        console.log(`${engineName}-${width}: replacement revision is actually playing without reloading`);
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${engineName}-${width}: horizontal page overflow`);
         await saved.screenshot({ path: `test-results/proof-video-${engineName}-${width}.png` });
-        await saved.getByRole('button', { name: `Edit video: ${title}`, exact: true }).click();
+        await openVideoEditor(saved);
         await edit.screenshot({ path: `test-results/proof-editor-${engineName}-${width}.png` });
         await edit.getByRole('button', { name: 'Cancel', exact: true }).click();
 
         // A URL-only card is saved without uploading a file. It navigates in the
         // same tab, and browser Back returns to the real, persisted Bravo page.
-        await add.click();
+        await openAddVideo();
         await create.getByRole('radio', { name: 'Facebook Reel URL', exact: true }).check();
         const linkedTitle = `Facebook progress ${engineName} ${width}`;
         await create.getByLabel('Video title', { exact: true }).fill(linkedTitle);

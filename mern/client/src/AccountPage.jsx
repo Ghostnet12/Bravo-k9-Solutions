@@ -22,7 +22,7 @@ export default function AccountPage() {
   const [mfaRequired, setMfaRequired] = useState(false);
   const [mode, setMode] = useState('login'), [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false);
   useEffect(() => { setMfaRequired(false); }, [mode]);
-  const [bookings, setBookings] = useState([]), [subscriptions, setSubscriptions] = useState([]), [loading, setLoading] = useState(false), [verificationDelayed, setVerificationDelayed] = useState(false);
+  const [bookings, setBookings] = useState([]), [loading, setLoading] = useState(false), [verificationDelayed, setVerificationDelayed] = useState(false);
   const [membershipAccess, setMembershipAccess] = useState({ active: false, manual: false, onlineAccess: false });
   const nextVisit = bookings.filter(b => ['requested', 'confirmed'].includes(b.status) && ['paid', 'covered'].includes(b.paymentStatus)).flatMap(b => (b.visits || []).map(v => ({ ...v, dogName: b.dogName, status: b.status }))).filter(v => DateTime.fromISO(`${v.date}T${v.time}`, { zone: 'America/Chicago' }) > DateTime.now()).sort((a,b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`))[0];
   const returnedStatus = bookings.find(booking => booking._id === returningBooking)?.paymentStatus;
@@ -34,7 +34,7 @@ export default function AccountPage() {
     const ticket = ++loadSequence.current;
     const [records, membership, feedback] = await Promise.all([api('/bookings'), api('/auth/me'), api('/reviews/mine')]);
     if (ticket !== loadSequence.current) return;
-    setBookings(records.bookings.map(booking => booking.status === 'waitlisted' ? { ...booking, stripeSessionId: booking.stripeSessionId || 'trainer-waitlist' } : booking)); setSubscriptions(membership.subscriptions || []); setMembershipAccess(membership.membership || { active: false, manual: false, onlineAccess: false }); setReview(feedback.review ? { rating: feedback.review.rating, body: feedback.review.body } : { rating: 5, body: '' });
+    setBookings(records.bookings.map(booking => booking.status === 'waitlisted' ? { ...booking, stripeSessionId: booking.stripeSessionId || 'trainer-waitlist' } : booking)); setMembershipAccess(membership.membership || { active: false, manual: false, onlineAccess: false }); setReview(feedback.review ? { rating: feedback.review.rating, body: feedback.review.body } : { rating: 5, body: '' });
   }, [user]);
   useEffect(() => { if (user && !user.mustChangePassword) { setLoading(true); load().catch(e => setError(e.message)).finally(() => setLoading(false)); setProfile({ name: user.name, dogName: user.dogName || '', phone: user.phone || '', address: user.address || '', title: user.title || '', bio: user.bio || '', showPhone: !!user.showPhone }); } }, [user, load]);
   useEffect(() => {
