@@ -1,5 +1,7 @@
 // Stable publishing keys. Keep existing keys when changing page layouts.
 export const CONTENT_KEYS = {
+  "footer-facebook-link": { "text": false, "link": true },
+  "footer-facebook-label": { "text": true },
   "proof-section": {
     "text": false
   },
