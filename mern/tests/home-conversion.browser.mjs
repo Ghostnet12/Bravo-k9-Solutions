@@ -80,6 +80,11 @@ try {
         await page.screenshot({ path: `test-results/home-conversion-${engineName}-${width}.png`, fullPage: true });
         if (width === 390) {
           await page.goto(`${origin}/portal?program=training`, { waitUntil: 'networkidle' });
+          // Training opens the guided first-visit introduction. The fixed bar
+          // belongs to the full scheduler, reached through its visible control.
+          await page.getByRole('heading', { name: 'Let’s start with your dog.' }).waitFor();
+          await page.getByText('Need a different starting point?', { exact: true }).click();
+          await page.getByRole('button', { name: 'Open the full scheduler', exact: true }).click();
           const booking = await page.locator('.mobile-booking-bar').boundingBox();
           const access = await page.locator('.accessibility-tools').boundingBox();
           assert.ok(booking && access && access.y + access.height <= booking.y, `${engineName}: accessibility control overlaps booking bar`);
