@@ -1,6 +1,6 @@
 import express from 'express';
 import { requestError } from './errors.js';
-import helmet from 'helmet';
+import { securityHeaders } from './http-security.js';
 import cookieParser from 'cookie-parser';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
@@ -34,7 +34,7 @@ const publicClip = row => {
 const publicCarousel = row => ({ intervalSeconds: Math.max(2, row?.intervalSeconds ?? 8), revision: row?.revision ?? 0 });
 const after = (clip, cursor) => !cursor || compareProofVideos(clip, cursor) > 0;
 const router = express.Router();
-router.use(helmet(), (_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
+router.use(securityHeaders(), (_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
 // Unconfigured previews retain the existing public proof, just as the rest of
 // the homepage keeps its static content. Never mask a configured database error.
 router.get('/', (_req, res, next) => !process.env.MONGODB_URI ? res.json({ clips: defaults, nextCursor: null, carousel: publicCarousel(null) }) : next());

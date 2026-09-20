@@ -7,7 +7,7 @@ import { createAssistedClient } from './onboarding.js';
 import { login, completePasswordSetup, replaceTemporaryPassword } from './client-login.js';
 import { removeClient } from './client-removal.js';
 import { removeAdministrator, requirePrimaryOwner } from './administrator-removal.js';
-import helmet from 'helmet';
+import { securityHeaders } from './http-security.js';
 import cookieParser from 'cookie-parser';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -35,7 +35,7 @@ const app = express();
 app.disable('x-powered-by');
 // Vercel supplies a trusted proxy hop. Self-hosting defaults to no trusted proxy.
 app.set('trust proxy', process.env.VERCEL ? 1 : false);
-app.use(helmet({ contentSecurityPolicy: { directives: { defaultSrc: ["'self'"], scriptSrc: ["'self'"], styleSrc: ["'self'", "'unsafe-inline'"], imgSrc: ["'self'", 'data:'], mediaSrc: ["'self'"], connectSrc: ["'self'"], frameAncestors: ["'none'"], formAction: ["'self'"], upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null } } }));
+app.use(securityHeaders());
 app.use('/api', (_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
 app.post('/api/stripe/webhook', express.raw({ type: 'application/json', limit: '1mb' }), stripeWebhook);
 app.use('/api', sameOrigin);

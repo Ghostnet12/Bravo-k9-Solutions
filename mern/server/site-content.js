@@ -1,5 +1,5 @@
 import express from 'express';
-import helmet from 'helmet';
+import { securityHeaders } from './http-security.js';
 import cookieParser from 'cookie-parser';
 import mongoose from 'mongoose';
 import { z } from 'zod';
@@ -25,7 +25,7 @@ export async function loadSiteContent() {
   return Object.fromEntries(rows.map(row => [row._id, publicRow(row)]));
 }
 const router = express.Router();
-router.use(helmet(), (_req, res, next) => { res.set('Cache-Control','no-store'); next(); });
+router.use(securityHeaders(), (_req, res, next) => { res.set('Cache-Control','no-store'); next(); });
 router.get('/', async (_req,res) => res.json({ entries: process.env.MONGODB_URI ? await loadSiteContent() : {} }));
 router.use(sameOrigin, cookieParser(), async (_req,_res,next) => { await connectDb(); next(); }, identify, requireUser, requireOwner, rateLimit('site-content-write',120,3600000), express.json({ limit:'32kb' }));
 router.put('/:key', async (req,res) => {

@@ -1,6 +1,6 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
-import helmet from 'helmet';
+import { securityHeaders } from './http-security.js';
 import { z } from 'zod';
 import { connectDb, transaction } from './db.js';
 import { HeroCarousel, AuditEvent } from './models.js';
@@ -8,7 +8,7 @@ import { identify, requireUser, requireOwner, sameOrigin, rateLimit } from './au
 import { DEFAULT_HERO_CAROUSEL, isHeroMediaKey } from '../shared/hero-carousel.js';
 const router = express.Router();
 const visible = row => row ? { revision: row.revision, intervalSeconds: row.intervalSeconds, photos: row.photos } : DEFAULT_HERO_CAROUSEL;
-router.use(helmet(), (_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
+router.use(securityHeaders(), (_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
 router.get('/', async (_req, res) => {
   if (!process.env.MONGODB_URI) return res.json({ carousel: DEFAULT_HERO_CAROUSEL });
   await connectDb(); res.json({ carousel: visible(await HeroCarousel.findById('home').lean()) });

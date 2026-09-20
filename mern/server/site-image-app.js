@@ -2,7 +2,7 @@ import { publicPageHandler, publicPagePaths } from './public-page.js';
 import siteContentRouter, { loadSiteContent } from './site-content.js';
 import express from 'express';
 import { requestError } from './errors.js';
-import helmet from 'helmet';
+import { securityHeaders } from './http-security.js';
 import cookieParser from 'cookie-parser';
 import mongoose from 'mongoose';
 import { randomUUID } from 'node:crypto';
@@ -48,7 +48,7 @@ function mediaError(error, _req, res, _next) {
 }
 const connect = async (_req, _res, next) => { await connectDb(); next(); };
 const router = express.Router();
-router.use(helmet(), (_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
+router.use(securityHeaders(), (_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
 router.param('key', (_req, _res, next, key) => { if (!isEditableMediaKey(key)) throw fail('Only website photos and videos can be edited.', 400); next(); });
 router.get('/', connect, async (_req, res) => {
   const images = await SiteImage.find().select('_id current revision previous.uploadId').limit(1000).lean();
@@ -119,7 +119,7 @@ router.use((_req, res) => res.status(404).json({ error: 'Media endpoint not foun
 router.use(mediaError);
 const app = express();
 app.disable('x-powered-by'); app.set('trust proxy', process.env.VERCEL ? 1 : false);
-app.get(['/', '/api/homepage'], helmet({ contentSecurityPolicy: { directives: { mediaSrc: ["'self'", 'blob:'], upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null } } }), homepageHandler);
+app.get(['/', '/api/homepage'], securityHeaders(), homepageHandler);
 app.use('/api/site-images', router);
 app.use('/api/proof-videos', proofVideoRouter);
 app.use('/api/hero-videos', createProofVideoRouter({ VideoModel: HeroVideo, defaults: [], apiPath: '/api/hero-videos', mediaScope: 'hero', withSettings: false }));
