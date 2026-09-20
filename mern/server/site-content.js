@@ -1,7 +1,6 @@
 import express from 'express';
 import { securityHeaders } from './http-security.js';
 import cookieParser from 'cookie-parser';
-import mongoose from 'mongoose';
 import { z } from 'zod';
 import { connectDb, transaction } from './db.js';
 import { AuditEvent } from './models.js';
@@ -9,6 +8,8 @@ import { identify, requireUser, requireOwner, sameOrigin, rateLimit } from './au
 import { requestError } from './errors.js';
 import { safeContentLink } from '../shared/site-content.js';
 import { CONTENT_KEYS } from '../shared/site-content-keys.js';
+import { SiteContent, loadSiteContent, publicSiteContentRow } from './site-content-store.js';
+export { SiteContent, loadSiteContent } from './site-content-store.js';
 const color = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 export const contentInput = z.object({
   text: z.string().max(8000).optional(), link:z.string().max(1000).refine(safeContentLink).optional(), font: z.enum(['montserrat', 'bebas', 'system', 'georgia']).optional(),
@@ -17,13 +18,6 @@ export const contentInput = z.object({
   angle: z.number().int().min(0).max(360).optional(), textAlign: z.enum(['left','center','right']).optional(),
   paddingY: z.number().int().min(0).max(160).optional(), opacity: z.number().min(.1).max(1).optional(),
 }).strict();
-export const SiteContent = mongoose.models.BravoSiteContent || mongoose.model('BravoSiteContent', new mongoose.Schema({ _id: String, value: mongoose.Schema.Types.Mixed, previous: mongoose.Schema.Types.Mixed, revision: { type: Number, default: 0 }, updatedBy: mongoose.Schema.Types.ObjectId }, { timestamps: true }));
-const publicRow = row => ({ value: row.value || {}, revision: row.revision || 0, canUndo: row.previous != null });
-export async function loadSiteContent() {
-  await connectDb();
-  const rows = await SiteContent.find({ _id: { $in: Object.keys(CONTENT_KEYS) } }).maxTimeMS(2000).lean();
-  return Object.fromEntries(rows.map(row => [row._id, publicRow(row)]));
-}
 const router = express.Router();
 router.use(securityHeaders(), (_req, res, next) => { res.set('Cache-Control','no-store'); next(); });
 router.get('/', async (_req,res) => res.json({ entries: process.env.MONGODB_URI ? await loadSiteContent() : {} }));
@@ -44,7 +38,7 @@ router.put('/:key', async (req,res) => {
     row.previous = row.value || {}; row.value = next; row.revision = input.expectedRevision + 1; row.updatedBy = req.user._id;
     await row.save({ session });
     await AuditEvent.create([{ actorId:req.user._id, action:'site-content.published', targetType:'site-content', targetId:key, details:{revision:row.revision} }],{session});
-    saved = publicRow(row);
+    saved = publicSiteContentRow(row);
   });
   res.json({entry:saved});
 });
