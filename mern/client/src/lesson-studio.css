@@ -1,0 +1,16 @@
+.lesson-library-controls{margin:1.5rem 0;padding:1.2rem;border:1px solid var(--line);border-radius:12px;background:#161a15}
+.library-switch{font-weight:700;font-size:1.1rem;min-height:48px}
+.library-switch input{accent-color:#ba9a64;width:24px;height:24px}
+.lesson-section-list{list-style:none;padding:0}
+.lesson-section-list li{display:flex;align-items:center;flex-wrap:wrap;gap:.75rem;padding:1rem 0;border-bottom:1px solid var(--line)}
+.lesson-section-list li>span{flex:1 1 220px;min-width:0;overflow-wrap:anywhere}
+.lesson-section-list small{display:block;color:var(--muted);line-height:1.6}
+.lesson-offers{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:1rem;margin:1.5rem 0}
+.lesson-offers article{padding:1.5rem;border:1px solid var(--gold);border-radius:12px;background:#1a1e18;min-width:0}
+.lesson-offers .price{font-size:1.8rem;color:var(--gold-light)}
+.lesson-section{margin:2.5rem 0;scroll-margin-top:100px}
+.lesson-section>p,.lesson-description{line-height:1.7;color:var(--muted);white-space:pre-line;overflow-wrap:anywhere}
+.lesson-player>img{max-height:70vh;object-fit:contain;width:100%}
+.lesson-studio .editor-fields{min-width:0}
+.lesson-studio .record-actions{flex-wrap:wrap}
+.lesson-studio input,.lesson-studio select,.lesson-studio textarea{max-width:100%}

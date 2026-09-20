@@ -1,3 +1,4 @@
+import { readLessonLibrary } from './lesson-library.js';
 import Stripe from 'stripe';
 import { Booking, User, Subscription, StripeEvent, BillingLock, Lesson, Settings } from './models.js';
 import { connectDb, transaction } from './db.js';
@@ -35,6 +36,7 @@ export async function checkout(booking, user, stripe) {
   const origin = process.env.APP_ORIGIN;
   if (!origin) throw Object.assign(new Error('Checkout is not configured yet.'), { status: 503 });
   const selected = serviceSelection(booking.serviceIds);
+  if (selected.some(s => s.includes.includes('online')) && !(await readLessonLibrary()).open) throw Object.assign(new Error('Online lesson enrollment is closed.'), { status: 409 });
   if (selected.some(s => s.includes.includes('online')) && !(await Lesson.exists({ published: true }))) throw Object.assign(new Error('Online enrollment opens once the lesson library is ready. Please contact Bravo for updates.'), { status: 409 });
   const subscriptions = await Subscription.find({ userId: user._id, status: { $in: ['active', 'trialing'] }, validUntil: { $gt: new Date() } }).lean();
   const recurring = selected.filter(s => s.interval === 'month').flatMap(s => s.includes);
@@ -100,6 +102,7 @@ export async function checkout(booking, user, stripe) {
     requestSent = true;
     const session = await stripe.checkout.sessions.create(attempt.checkoutParams, { idempotencyKey: `bravo-checkout-${bookingId}` });
     await Booking.updateOne({ _id: booking._id }, { $set: { stripeSessionId: session.id, checkoutUrl: session.url, checkoutExpiresAt: new Date(session.expires_at * 1000), checkoutStarting: false } });
+    if (selected.some(s => s.includes.includes('online')) && !(await readLessonLibrary()).open) { await stripe.checkout.sessions.expire(session.id); throw Object.assign(new Error('Online lesson enrollment closed while checkout was opening. No new payment can be started.'), { status: 409 }); }
     return { url: session.url };
   } catch (error) {
     // A timeout can mean Stripe created the session but its response was lost.

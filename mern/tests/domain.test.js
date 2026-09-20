@@ -16,7 +16,7 @@ test('Bravo pricing stays exact and recurring charges are separated', () => {
   assert.equal(threeDogTraining.monthlyCents, 40000);
   assert.equal(threeDogTraining.lines[1].quantity, 2);
   const q = quote(['aggression', 'online']);
-  assert.equal(q.monthlyCents, 5000); assert.equal(q.oneTimeCents, 40000);
+  assert.equal(q.monthlyCents, 7500); assert.equal(q.oneTimeCents, 40000);
   const walking = quote(['walking'], [{ date: '2026-10-10', time: '09:00', service: 'walking' }, { date: '2026-10-11', time: '10:00', service: 'walking' }], { dogCount: 3 });
   assert.equal(walking.oneTimeCents, 15000); assert.equal(walking.lines[0].quantity, 6); assert.equal(walking.lines[0].durationMinutes, 30);
 });

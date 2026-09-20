@@ -6,7 +6,7 @@ test('public routes remain useful without a database', async () => {
   delete process.env.MONGODB_URI;
   const health = await request(app).get('/api/health').expect(200); assert.equal(health.body.ok,true);
   const config = await request(app).get('/api/config').expect(200); assert.equal(config.body.connected,false); assert.equal(config.body.paymentsReady,false);
-  const lessons = await request(app).get('/api/lessons').expect(200); assert.equal(lessons.body.lessons.length,6); assert.ok(lessons.body.lessons.every(l => !l.published && !l.videoFile));
+  await request(app).get('/api/lessons').expect(404); assert.equal(config.body.lessonLibrary.open,false); assert.equal(config.body.services.find(s=>s.id==='online').enabled,false);
 });
 test('cross-origin writes and missing database fail closed', async () => {
   await request(app).post('/api/auth/register').set('Origin','https://evil.example').send({}).expect(403);

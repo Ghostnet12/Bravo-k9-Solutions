@@ -14,7 +14,7 @@ test('media editor persistence and server authorization (isolated MongoDB)', { t
     const { default: app, SiteImage } = await import('../server/site-image-app.js');
     const { connectDb } = await import('../server/db.js');
     const { User, Session, MediaUpload, MediaChunk, Lesson, AuditEvent } = await import('../server/models.js');
-    await connectDb(); await SiteImage.init();
+    await connectDb(); await (await import('../server/models.js')).LessonLibrary.create({ _id: 'library', open: true }); await SiteImage.init();
     const users = {}, cookies = {};
     for (const [name, role] of Object.entries({ owner: 'owner', administrator: 'owner', staff: 'staff', client: 'member' })) {
       const user = await User.create({ ...(name === 'owner' ? { _id: process.env.OWNER_USER_ID } : {}), email: `${name}@example.test`, name, role, passwordHash: 'test-only-not-a-login-hash' });

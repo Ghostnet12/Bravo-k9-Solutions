@@ -68,12 +68,16 @@ export const StripeEvent = model('BravoStripeEvent', new Schema({ _id: String, t
 export const BillingLock = model('BravoBillingLock', new Schema({ _id: String, bookingId: String, expiresAt: { type: Date, expires: 0 } }));
 export const Lesson = model('BravoLesson', new Schema({
   _id: String, title: String, category: String, instructor: String, image: String,
+  description: { type: String, default: '' }, sectionId: { type: String, default: '' }, order: { type: Number, default: 0 },
+  format: { type: String, enum: ['video', 'photo', 'text'], default: 'video' }, photoAlt: { type: String, default: '' }, photoUpload: String,
   // Private filenames only; never public playback URLs.
   videoFile: { type: String, select: false }, captionFile: { type: String, select: false }, transcript: { type: String, select: false },
   videoUpload: String, captionUpload: String, imageUpload: String,
   published: { type: Boolean, default: false },
 }));
-export const MediaUpload = model('BravoMediaUpload', new Schema({ _id: String, lessonId: String, kind: { type: String, enum: ['video', 'captions', 'image'] }, filename: String, contentType: String, size: Number, chunks: Number, uploadedBy: id, completed: { type: Boolean, default: false }, expiresAt: { type: Date, expires: 0 } }, { timestamps: true }));
+export const LessonLibrary = model('BravoLessonLibrary', new Schema({ _id: String, open: { type: Boolean, default: false }, revision: { type: Number, default: 0 }, updatedBy: id }, { timestamps: true }));
+export const LessonSection = model('BravoLessonSection', new Schema({ _id: String, title: String, description: String, order: { type: Number, default: 0 } }, { timestamps: true }));
+export const MediaUpload = model('BravoMediaUpload', new Schema({ _id: String, lessonId: String, kind: { type: String, enum: ['video', 'captions', 'image', 'photo'] }, filename: String, contentType: String, size: Number, chunks: Number, uploadedBy: id, completed: { type: Boolean, default: false }, expiresAt: { type: Date, expires: 0 } }, { timestamps: true }));
 const mediaChunkSchema = new Schema({ uploadId: { type: String, index: true }, index: Number, size: Number, data: Buffer, expiresAt: { type: Date, expires: 0 } }, { timestamps: true });
 mediaChunkSchema.index({ uploadId: 1, index: 1 }, { unique: true });
 export const MediaChunk = model('BravoMediaChunk', mediaChunkSchema);
@@ -90,4 +94,4 @@ export const FunnelVisit = model('BravoFunnelVisit', new Schema({ _id: String, c
 export const SiteError = model('BravoSiteError', new Schema({ _id: String, source: String, area: String, kind: String, status: Number, count: Number, firstSeen: Date, lastSeen: { type: Date, index: true }, requestId: String, expiresAt: { type: Date, expires: 0 } }, { bufferCommands: false }));
 export const ProofCarousel = model('BravoProofCarousel', new Schema({ _id: String, intervalSeconds: { type: Number, default: 8 }, revision: { type: Number, default: 0 }, updatedBy: id }, { timestamps: true }));
 export const HeroCarousel = model('BravoHeroCarousel', new Schema({ _id: String, photos: [String], intervalSeconds: { type: Number, default: 5 }, revision: { type: Number, default: 0 }, updatedBy: id }, { timestamps: true }));
-export const ALL_MODELS = [HeroVideo, HeroCarousel, ProofCarousel, ProofVideo, FunnelVisit, SiteError, MembershipCredit, MemberAccess, Notification, NotificationRead, PasswordReset, TrainerSchedule, ChatReset, User, Session, RateBucket, Booking, Slot, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Subscription, StripeEvent, Lesson, BillingLock, MediaUpload, MediaChunk];
+export const ALL_MODELS = [HeroVideo, HeroCarousel, ProofCarousel, ProofVideo, FunnelVisit, SiteError, MembershipCredit, MemberAccess, Notification, NotificationRead, PasswordReset, TrainerSchedule, ChatReset, User, Session, RateBucket, Booking, Slot, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Subscription, StripeEvent, Lesson, LessonLibrary, LessonSection, BillingLock, MediaUpload, MediaChunk];

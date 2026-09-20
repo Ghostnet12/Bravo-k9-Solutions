@@ -131,7 +131,7 @@
     },
     {
       "source": "/learn",
-      "destination": "/api/public-page?path=/learn"
+      "destination": "/learn.html"
     },
     {
       "source": "/contact",
