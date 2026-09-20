@@ -206,3 +206,5 @@ html.access-high-contrast :is(.home-training-offer,.home-training-offer aside,.h
 @media(max-width:600px){.guided-booking-steps button{font-size:.8rem}.guided-step-actions .button{width:100%}.guided-booking-page .panel{padding:20px}.guided-booking-price{font-size:.95rem}}
 
 .guided-booking-header{scroll-margin-top:110px}
+
+.facebook-recommendations{margin:2rem 0}.facebook-recommendations>h3{margin:0 0 .5rem;font-size:1.5rem;color:var(--cream)}.facebook-recommendations-intro{color:var(--muted);margin:0 0 1.25rem}.facebook-recommendations blockquote{margin:.85rem 0 1.25rem;flex:1}.facebook-recommendations blockquote p{margin:0;color:#e4dfd4;font-size:.9375rem;line-height:1.8}.facebook-recommendations .panel>small{color:var(--gold-light);font-size:.75rem}.facebook-recommendations-link{display:inline-flex;align-items:center;gap:.5rem;min-height:44px}.facebook-recommendations-link:focus-visible{outline:2px solid var(--gold-light);outline-offset:4px}
