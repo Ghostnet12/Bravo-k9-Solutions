@@ -1,6 +1,5 @@
 // Build-time rendering of the actual public components. No credentials, API
 // calls, member content or browser automation are used to produce this HTML.
-import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { StaticRouter } from 'react-router-dom';
 import { AppProvider } from './context';
