@@ -1,5 +1,12 @@
 // Stable publishing keys. Keep existing keys when changing page layouts.
 export const CONTENT_KEYS = {
+  "approach-rewards-title": { "text": true },
+  "approach-rewards-copy": { "text": true },
+  "approach-private-title": { "text": true },
+  "approach-private-copy": { "text": true },
+  "approach-mobile-title": { "text": true },
+  "approach-mobile-copy": { "text": true },
+
   "footer-facebook-link": { "text": false, "link": true },
   "footer-facebook-label": { "text": true },
   "proof-section": {

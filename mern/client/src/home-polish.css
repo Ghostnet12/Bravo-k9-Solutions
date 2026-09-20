@@ -1,4 +1,20 @@
-.home-quick-facts{display:none}
+.home-quick-facts{display:flex;flex-direction:column;gap:.45rem;margin:1.25rem 0;color:var(--cream)}
+.home-quick-facts>strong{font-size:.9375rem;line-height:1.6;font-weight:500}
+.home-quick-price{font-size:2rem;font-weight:700;line-height:1.3;color:var(--gold-light,#dec48f)}
+.home-quick-price>span{font-size:1rem;font-weight:400;color:var(--cream)}
+.home-quick-facts>small{font-size:.875rem;line-height:1.6;color:var(--muted)}
+.home-hero.home-hero-authentic h1{font-size:clamp(3rem,5.8vw,5.8rem);line-height:1.05}
+.home-hero.home-hero-authentic .home-intro{font-size:1rem;line-height:1.65;margin-top:1.2rem}
+.home-hero.home-hero-authentic .hero-service-note{display:none}
+.training-approach{display:grid;gap:1rem;margin:1.5rem 0}
+.training-approach h3{font:600 1rem/1.4 Montserrat,sans-serif;margin:0 0 .35rem;color:var(--gold-light,#dec48f)}
+.training-approach p{font-size:1rem;line-height:1.7;margin:0}
+.trainer-focus{font-size:.9375rem;line-height:1.65}
+.trainer-client-quote{margin:1.5rem 0;padding-left:1rem;border-left:2px solid var(--gold)}
+.trainer-client-quote p{font-size:1rem;line-height:1.7}
+.trainer-client-quote cite{font-size:.875rem;line-height:1.6;font-style:normal;color:var(--muted)}
+.trainer-proof-links{display:flex;flex-wrap:wrap;gap:.5rem 1.2rem}
+.trainer-proof-links a{display:inline-flex;align-items:center;min-height:44px;font-size:.875rem;color:var(--gold-light,#dec48f);text-decoration:underline;text-underline-offset:4px}
 .home-proof-reviews .review-copy{flex:1;margin:.8rem 0 1rem;min-width:0}
 .home-proof-reviews .review-copy blockquote{margin:0}
 .home-proof-reviews .review-copy p{margin:0;color:#e4dfd4;font-size:.9375rem;line-height:1.75;overflow-wrap:anywhere}
@@ -12,7 +28,7 @@
 @media(max-width:900px){
   .home-hero.home-hero-authentic .home-hero-inner{padding-top:24px;padding-bottom:20px}
   .home-hero.home-hero-authentic h1{font-size:clamp(2.5rem,8.5vw,3.8rem);line-height:1.04;margin-bottom:1rem}
-  .home-hero.home-hero-authentic .home-intro{font-size:.9375rem;line-height:1.55;margin-bottom:1rem}
+  .home-hero.home-hero-authentic .home-intro{font-size:1rem;line-height:1.55;margin-bottom:1rem}
   .home-hero.home-hero-authentic .eyebrow{font-size:.65rem;line-height:1.65;margin-bottom:.9rem}
   .home-quick-facts{display:flex;flex-direction:column;gap:.35rem;padding:.9rem 0;margin:0 0 .9rem;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
   .home-quick-facts>strong{font-size:.9rem;color:var(--cream)}
@@ -25,3 +41,5 @@
   .home-hero.home-hero-authentic .hero-service-note{display:none}
   .home-hero.home-hero-authentic .home-hero-gallery{height:280px;margin-bottom:16px}
 }
+
+#work-proof-title,#facebook-recommendations-title{scroll-margin-top:110px}
