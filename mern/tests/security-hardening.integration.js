@@ -33,6 +33,11 @@ test('security boundaries through the production application stack', { timeout: 
       cookies[key] = await sessionFor(users[key]);
     }
     process.env.OWNER_USER_ID = String(users.owner._id);
+    await t.test('successful sign-ins keep only the five newest active sessions', async () => {
+      for (let i = 0; i < 6; i++) await call(null, 'post', '/api/auth/login', { identifier: 'other@example.test', password }).expect(200);
+      assert.equal(await Session.countDocuments({ userId: users.other._id, expiresAt: { $gt: new Date() } }), 5);
+      await RateBucket.deleteMany({});
+    });
     await t.test('changing cookies cannot reset the IP login allowance', async () => {
       for (let i = 0; i < 12; i++) await call(i % 2 ? 'member' : 'other', 'post', '/api/auth/login', { identifier: 'unknown@example.test', password }).expect(401);
       const denied = await call(null, 'post', '/api/auth/login', { identifier: 'other@example.test', password }).expect(429);
