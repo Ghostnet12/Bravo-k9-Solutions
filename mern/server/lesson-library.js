@@ -18,7 +18,7 @@ export async function expireLessonCheckouts(stripeOverride) {
     if (checkout.status === 'open') await stripe.checkout.sessions.expire(checkout.id, {}, options);
     await Booking.updateOne({ _id: booking._id, stripeSessionId: booking.stripeSessionId }, { $set: { checkoutExpiresAt: new Date() } });
   }));
-  return Booking.countDocuments(filter);
+  return Booking.countDocuments({ ...filter, checkoutExpiresAt: { $gt: new Date() } });
 }
 async function reconcileClosedLibrary(force = false) {
   const now = new Date();
