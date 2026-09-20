@@ -301,7 +301,7 @@ app.post('/api/admin/users', requireUser, requireStaff, rateLimit('admin-client'
 app.post('/api/admin/clients/:id/temporary-password', requireUser, requireStaff, rateLimit('temporary-password', 20, 3600000), replaceTemporaryPassword);
 app.delete('/api/admin/clients/:id', requireUser, requireStaff, rateLimit('client-removal', 30, 3600000), removeClient);
 app.delete('/api/admin/administrators/:id', requireUser, requirePrimaryOwner, rateLimit('administrator-removal', 10, 3600000), removeAdministrator);
-app.patch('/api/admin/users/:id', requireUser, requireOwner, async (req, res) => {
+app.patch('/api/admin/users/:id', requireUser, requireOwner, rateLimit('admin-user-edit', 30, 3600000), async (req, res) => {
   const target = await User.findById(objectId.parse(req.params.id));
   if (!target || target.removedAt) return res.status(404).json({ error: 'Account not found.' });
   const { confirmOwnerAccess, ...fields } = z.object({ role: z.enum(['member', 'staff', 'owner']).optional(), confirmOwnerAccess: z.boolean().optional(), email: z.string().trim().email().max(254).transform(value => value.toLowerCase()).optional(), dogName: z.string().trim().max(80).optional(), address: z.string().trim().max(300).optional(), name: z.string().trim().min(2).max(80).optional(), phone: z.string().trim().max(30).optional(), title: z.string().trim().max(80).optional(), bio: z.string().trim().max(500).optional(), showPhone: z.boolean().optional(), blocked: z.boolean().optional(), mutedUntil: z.union([z.string().datetime(), z.null()]).optional() }).parse(req.body);
@@ -328,7 +328,7 @@ app.patch('/api/admin/users/:id', requireUser, requireOwner, async (req, res) =>
 });
 app.get('/api/admin/reviews', requireUser, requireOwner, async (_req, res) => res.json({ reviews: await Review.find().sort({ createdAt: -1 }).limit(200).lean() }));
 app.get('/api/admin/services', requireUser, requireOwner, async (_req, res) => res.json({ services: await effectiveServices({ includeDisabled: true }) }));
-app.patch('/api/admin/services/:id', requireUser, requireOwner, async (req, res) => {
+app.patch('/api/admin/services/:id', requireUser, requireOwner, rateLimit('admin-service-edit', 20, 3600000), async (req, res) => {
   const service = SERVICES.find(item => item.id === req.params.id); if (!service) return res.status(404).json({ error: 'Service not found.' });
   const fields = z.object({ cents: z.number().int().min(0).max(1000000), enabled: z.boolean() }).parse(req.body);
   if (service.id === 'training' && fields.cents !== 20000) throw new Error('The primary training price is fixed at $200/month by the current business directive.');
