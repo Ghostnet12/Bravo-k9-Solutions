@@ -1,11 +1,11 @@
 .lesson-library-controls{margin:1.5rem 0;padding:1.2rem;border:1px solid var(--line);border-radius:12px;background:#161a15}
 .library-switch{font-weight:700;font-size:1.1rem;min-height:48px}
-.library-switch input{appearance:none;position:relative;width:48px;height:28px;flex:none;padding:0;border:1px solid #9b9b90;border-radius:20px;background:#353a33;cursor:pointer}
-.library-switch input::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#f5f3ec}
-.library-switch input:checked{background:#ba9a64;border-color:#ba9a64}
-.library-switch input:checked::after{left:23px;background:#171b15}
-.library-switch input:focus-visible{outline:3px solid #e3c894;outline-offset:4px}
-.library-switch input:disabled{opacity:.6;cursor:wait}
+.app-page .library-switch input[type=checkbox]{appearance:none;position:relative;width:48px;height:28px;flex:none;padding:0;border:1px solid #9b9b90;border-radius:20px;background:#353a33;cursor:pointer}
+.app-page .library-switch input[type=checkbox]::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#f5f3ec}
+.app-page .library-switch input[type=checkbox]:checked{background:#ba9a64;border-color:#ba9a64}
+.app-page .library-switch input[type=checkbox]:checked::after{left:23px;background:#171b15}
+.app-page .library-switch input[type=checkbox]:focus-visible{outline:3px solid #e3c894;outline-offset:4px}
+.app-page .library-switch input[type=checkbox]:disabled{opacity:.6;cursor:wait}
 .lesson-section-list{list-style:none;padding:0}
 .lesson-section-list li{display:flex;align-items:center;flex-wrap:wrap;gap:.75rem;padding:1rem 0;border-bottom:1px solid var(--line)}
 .lesson-section-list li>span{flex:1 1 220px;min-width:0;overflow-wrap:anywhere}
@@ -19,3 +19,6 @@
 .lesson-studio .editor-fields{min-width:0}
 .lesson-studio .record-actions{flex-wrap:wrap}
 .lesson-studio input,.lesson-studio select,.lesson-studio textarea{max-width:100%}
+
+.lesson-studio input[type=file].sr-only{width:1px;height:1px;min-height:0;min-width:0;padding:0;border:0}
+.lesson-studio .media-upload-row label{position:relative}

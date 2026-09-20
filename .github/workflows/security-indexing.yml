@@ -34,10 +34,10 @@ jobs:
       - run: npx playwright install --with-deps chromium webkit
       - name: Public pages without JavaScript and client sign-in on mobile
         run: |
+          node tests/lesson-library.browser.mjs
           node tests/seo.browser.mjs
           node tests/carousel-swipe.browser.mjs
           node tests/customer-clarity.browser.mjs
-          node tests/lesson-library.browser.mjs
           node tests/client-login.browser.mjs
       - name: Known dependency vulnerabilities (retry registry maintenance)
         run: |
