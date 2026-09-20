@@ -36,6 +36,7 @@ jobs:
         run: |
           node tests/seo.browser.mjs
           node tests/carousel-swipe.browser.mjs
+          node tests/customer-clarity.browser.mjs
           node tests/client-login.browser.mjs
       - name: Known dependency vulnerabilities (retry registry maintenance)
         run: |

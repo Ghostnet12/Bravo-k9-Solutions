@@ -6,9 +6,10 @@ export function notifyTrainerScheduleChanged() {
   window.dispatchEvent(new Event('bravo:trainer-schedule'));
   try { localStorage.setItem('bravo-trainer-schedule-refresh', String(Date.now())); } catch { /* polling also refreshes other tabs */ }
 }
-export function useLiveTrainerSchedules() {
+export function useLiveTrainerSchedules(enabled = true) {
   const [state, setState] = useState({ schedules: {}, checkedAt: null, error: '', loading: true });
   useEffect(() => {
+    if (!enabled) return;
     let active = true, controller, sequence = 0, pending = false;
     const load = async (force = false) => {
       if (document.hidden || (pending && !force)) return;
@@ -27,7 +28,7 @@ export function useLiveTrainerSchedules() {
     document.addEventListener('visibilitychange', refresh); window.addEventListener('focus', refresh); window.addEventListener('pageshow', refresh);
     window.addEventListener('bravo:trainer-schedule', refresh); window.addEventListener('storage', storage);
     return () => { active = false; sequence++; controller?.abort(); clearInterval(timer); document.removeEventListener('visibilitychange', refresh); window.removeEventListener('focus', refresh); window.removeEventListener('pageshow', refresh); window.removeEventListener('bravo:trainer-schedule', refresh); window.removeEventListener('storage', storage); };
-  }, []);
+  }, [enabled]);
   return state;
 }
 const dateLabel = date => new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'America/Chicago' }).format(new Date(`${date}T12:00:00Z`));
