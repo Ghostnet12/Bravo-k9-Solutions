@@ -39,6 +39,7 @@ try {
           const path = new URL(route.request().url()).pathname;
           const fixtures = {
             '/api/config': { connected: true, services: SERVICES }, '/api/auth/me': { user: null, services: [] }, '/api/team': { team: [] },
+            '/api/proof-videos': { clips: [], nextCursor: null }, '/api/hero-videos': { clips: [], nextCursor: null },
             '/api/reviews': { reviews: [], average: 0, count: 0 }, '/api/site-images': { images: {} }, '/api/team/schedules': { schedules: [] }, '/api/lessons': { lessons: [] },
           };
           return route.fulfill({ json: fixtures[path] || {} });
