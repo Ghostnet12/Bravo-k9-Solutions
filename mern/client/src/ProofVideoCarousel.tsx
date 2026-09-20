@@ -98,8 +98,10 @@ export default function ProofVideoCarousel() {
   useEffect(() => {
     const mode = (event: Event) => setEditMode(!!(event as CustomEvent).detail?.active);
     window.addEventListener('bravo-media-edit-mode', mode);
-    window.addEventListener('scroll', cancelHold, true); window.addEventListener('blur', cancelHold);
-    return () => { window.removeEventListener('bravo-media-edit-mode', mode); window.removeEventListener('scroll', cancelHold, true); window.removeEventListener('blur', cancelHold); };
+    const release = () => { pointerHeld.current = false; cancelHold(); setInteraction(value => value + 1); };
+    window.addEventListener('scroll', cancelHold, true); window.addEventListener('blur', release);
+    document.addEventListener('visibilitychange', release);
+    return () => { window.removeEventListener('bravo-media-edit-mode', mode); window.removeEventListener('scroll', cancelHold, true); window.removeEventListener('blur', release); document.removeEventListener('visibilitychange', release); };
   }, [cancelHold]);
   function open(clip: ProofClip) { if (canEdit) { cancelHold(); root.current?.querySelectorAll('video').forEach(video => video.pause()); setEditing(clip); } }
   function beginHold(event: React.PointerEvent, clip: ProofClip | null) {
@@ -114,7 +116,19 @@ export default function ProofVideoCarousel() {
     {(!loaded && loading) && <p role="status">Loading videos…</p>}
     {error && <p role="alert">{error} <button type="button" disabled={loading} onClick={() => load(loaded ? cursor : null)}>Retry loading videos</button></p>}
     {loaded && !clips.length && <p>No training videos published yet.</p>}
-    <div ref={rail} className="home-work-proof-grid proof-video-carousel" role="region" aria-roledescription="carousel" aria-label="Training video carousel" tabIndex={0} onScroll={cancelHold}>
+    <div ref={rail} className="home-work-proof-grid proof-video-carousel" role="region" aria-roledescription="carousel" aria-label="Training video carousel" tabIndex={0} onScroll={() => {
+      cancelHold();
+      // Restart the full interval after every movement, including touch momentum
+      // and the browser's snap, so cycling continues from the settled card.
+      setInteraction(value => value + 1);
+      const node = rail.current;
+      if (!node) return;
+      const bounds = node.getBoundingClientRect();
+      node.querySelectorAll('video').forEach(video => {
+        const box = video.getBoundingClientRect();
+        if (box.right <= bounds.left + 8 || box.left >= bounds.right - 8) video.pause();
+      });
+    }}>
       {clips.map(clip => <article key={clip.id} data-proof-video={clip.id} data-facebook-reel={clip.facebookUrl ? clip.id : undefined} data-proof-editable={canEdit || undefined} tabIndex={canEdit ? 0 : undefined} aria-keyshortcuts={canEdit ? 'F2' : undefined}
         onPointerDownCapture={event => beginHold(event, clip)} onPointerUpCapture={cancelHold} onPointerCancelCapture={cancelHold}
         onPointerMoveCapture={event => { const hold = gesture.current; if (hold && (event.pointerId !== hold.pointer || Math.hypot(event.clientX - hold.x, event.clientY - hold.y) > 12)) cancelHold(); }}
