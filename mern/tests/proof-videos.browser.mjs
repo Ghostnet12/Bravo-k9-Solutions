@@ -52,6 +52,15 @@ try {
           await tools.getByRole('button', { name: 'Add video', exact: true }).click();
           await tools.waitFor({ state: 'hidden' });
         };
+        const openVideoEditor = async card => {
+          await card.scrollIntoViewIfNeeded();
+          const pointerId = toolPointer++;
+          await card.dispatchEvent('pointerdown', { button: 0, isPrimary: true, pointerId, pointerType: 'touch', clientX: 120, clientY: 220 });
+          const editor = page.getByRole('dialog', { name: 'Edit this video' });
+          await editor.waitFor({ timeout: 8000 });
+          await card.dispatchEvent('pointerup', { pointerId, pointerType: 'touch' });
+          return editor;
+        };
 
         // Press and hold on the existing Facebook thumbnail must open the editor,
         // suppress the following tap, and leave the Facebook destination unopened.
@@ -96,8 +105,7 @@ try {
         await page.waitForFunction(title => { const v = [...document.querySelectorAll('video')].find(v => v.getAttribute('aria-label') === title); return v && !v.paused && v.currentTime > 0.3 && v.readyState >= 2; }, title);
         console.log(`${engineName}-${width}: uploaded video is actually playing`);
         const uploadedBefore = await MediaUpload.countDocuments({ completed: true });
-        await saved.getByRole('button', { name: `Edit video: ${title}`, exact: true }).click();
-        const edit = page.getByRole('dialog', { name: 'Edit this video' });
+        const edit = await openVideoEditor(saved);
         try { await edit.waitFor({ timeout: 8000 }); }
         catch (error) { console.log('Reopen failure', { engineName, width, errors, state: await page.evaluate(() => ({ clicks: window.proofClicks, dialogs: [...document.querySelectorAll('dialog')].map(d => ({ open: d.open, title: d.querySelector('h2')?.textContent, text: d.textContent?.slice(0, 300) })) })) }); await page.screenshot({ path: `test-results/reopen-failure-${engineName}-${width}.png`, fullPage: true }); throw error; }
         await edit.getByLabel('Description', { exact: true }).fill('Description changed without re-uploading.');
@@ -107,7 +115,7 @@ try {
         await page.reload(); await saved.getByText('Description changed without re-uploading.', { exact: true }).waitFor();
 
         // The same card can receive a replacement file, with its description kept.
-        await saved.getByRole('button', { name: `Edit video: ${title}`, exact: true }).click();
+        await openVideoEditor(saved);
         await edit.getByLabel('Choose video from your photo library').setInputFiles(mediaPath);
         await edit.getByRole('button', { name: 'Publish changes', exact: true }).click();
         await edit.waitFor({ state: 'hidden', timeout: 30000 });
@@ -116,7 +124,7 @@ try {
         await page.waitForFunction(title => { const v = [...document.querySelectorAll('video')].find(v => v.getAttribute('aria-label') === title); return v && v.currentTime > 0.3 && !v.paused; }, title);
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${engineName}-${width}: horizontal page overflow`);
         await saved.screenshot({ path: `test-results/proof-video-${engineName}-${width}.png` });
-        await saved.getByRole('button', { name: `Edit video: ${title}`, exact: true }).click();
+        await openVideoEditor(saved);
         await edit.screenshot({ path: `test-results/proof-editor-${engineName}-${width}.png` });
         await edit.getByRole('button', { name: 'Cancel', exact: true }).click();
 
