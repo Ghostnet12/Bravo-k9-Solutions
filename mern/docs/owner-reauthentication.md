@@ -8,7 +8,7 @@ The browser clears the password field immediately after submission and when clos
 
 ## MFA rollout prerequisites
 
-MFA remains unimplemented. Before requiring it for owners and staff, build enrollment with current-password verification, first-code confirmation, encrypted TOTP secrets with a separately managed versioned encryption key, replay protection, rate limits, hashed single-use recovery codes, and an audited recovery flow. Verify enrollment and recovery in isolation before enforcing MFA for existing accounts. Never treat password reauthentication as a second factor.
+Authenticator MFA is now implemented; see `mfa-operations.md` for rollout and recovery. The following remains the rollout checklist. Before requiring it for owners and staff, build enrollment with current-password verification, first-code confirmation, encrypted TOTP secrets with a separately managed versioned encryption key, replay protection, rate limits, hashed single-use recovery codes, and an audited recovery flow. Verify enrollment and recovery in isolation before enforcing MFA for existing accounts. Never treat password reauthentication as a second factor.
 
 ## Isolated backup recovery exercise
 

@@ -1,3 +1,4 @@
+import { verifyLoginFactor } from './mfa-service.js';
 import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import { User, Session, PasswordReset, AuditEvent } from './models.js';
@@ -17,20 +18,20 @@ export async function temporaryCredential() {
 
 export async function login(req, res) {
   // Keep the old email contract for existing clients; the new form uses identifier.
-  const input = z.object({ identifier: z.string().trim().min(1).max(254).optional(), email: z.string().trim().email().max(254).optional(), password: z.string().min(1).max(128) }).parse(req.body);
+  const input = z.object({ identifier: z.string().trim().min(1).max(254).optional(), email: z.string().trim().email().max(254).optional(), password: z.string().min(1).max(128), code: z.string().trim().max(40).optional() }).parse(req.body);
   const identifier = input.identifier || input.email;
   if (!identifier) throw fail(unavailable);
   req.loginIdentifier = identifier.toLowerCase();
   await limitIdentifier(req, res, () => {});
   let candidates;
   if (identifier.includes('@')) {
-    const user = await User.findOne({ email: identifier.toLowerCase() }).select('+passwordHash +credentialVersion');
+    const user = await User.findOne({ email: identifier.toLowerCase() }).select('+passwordHash +credentialVersion +mfa');
     candidates = user ? [user] : [];
   } else {
     // Names are deliberately not unique. Match the full literal name and verify
     // the password, never select the first person with a matching name.
     const pattern = new RegExp(`^${identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
-    candidates = await User.find({ name: pattern, role: 'member', blocked: { $ne: true }, removedAt: null }).select('+passwordHash +credentialVersion').limit(11);
+    candidates = await User.find({ name: pattern, role: 'member', blocked: { $ne: true }, removedAt: null }).select('+passwordHash +credentialVersion +mfa').limit(11);
   }
   if (!candidates.length || candidates.length > 10) {
     await verifyPassword(input.password);
@@ -43,6 +44,8 @@ export async function login(req, res) {
   }
   if (matches.length !== 1) return res.status(401).json({ error: unavailable });
   const user = matches[0];
+  if (user.mfaEnabled && !input.code) return res.status(401).json({ error: 'Enter your authenticator code or a recovery code.', code: 'MFA_REQUIRED' });
+  await verifyLoginFactor(user, input.code);
   await issueSession(req, res, user);
   res.json({ user: publicUser(user) });
 }

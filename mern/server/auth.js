@@ -72,7 +72,7 @@ export async function identify(req, res, next) {
   }
   next();
 }
-export function publicUser(user) { return { id: String(user._id), email: user.email, name: user.name, role: user.role, mustChangePassword: !!user.mustChangePassword, isPrimaryOwner: isPrimaryOwner(user), publicRole: publicRole(user), hasBillingAccount: !!user.stripeCustomerId, dogName: user.dogName, phone: user.phone, address: user.address, title: user.title, bio: user.bio, showPhone: user.showPhone }; }
+export function publicUser(user) { return { id: String(user._id), email: user.email, name: user.name, role: user.role, mfaEnabled: !!user.mfaEnabled, mustChangePassword: !!user.mustChangePassword, isPrimaryOwner: isPrimaryOwner(user), publicRole: publicRole(user), hasBillingAccount: !!user.stripeCustomerId, dogName: user.dogName, phone: user.phone, address: user.address, title: user.title, bio: user.bio, showPhone: user.showPhone }; }
 export function sameOrigin(req, _res, next) {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
   const allowed = process.env.APP_ORIGIN || (process.env.NODE_ENV !== 'production' ? 'http://localhost:5173' : '');
