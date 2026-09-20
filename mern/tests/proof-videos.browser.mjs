@@ -126,6 +126,7 @@ try {
         await saved.locator('video[src$="?v=3"]').waitFor({ timeout: 8000 });
         await saved.getByRole('button', { name: `Play ${title} video`, exact: true }).click();
         await page.waitForFunction(title => { const v = [...document.querySelectorAll('video')].find(v => v.getAttribute('aria-label') === title); return v && v.currentTime > 0.3 && !v.paused; }, title);
+        console.log(`${engineName}-${width}: replacement revision is actually playing without reloading`);
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${engineName}-${width}: horizontal page overflow`);
         await saved.screenshot({ path: `test-results/proof-video-${engineName}-${width}.png` });
         await openVideoEditor(saved);
