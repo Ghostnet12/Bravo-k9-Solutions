@@ -63,7 +63,7 @@ export default function HeroPhotoCarousel({ children }) {
   useEffect(() => () => clearTimeout(settle.current), []);
   function onScroll() {
     cancelHold(); setScrolling(true); setInteraction(value => value + 1);
-    suppressUntil.current = Date.now() + 1000;
+    if (touching) suppressUntil.current = Date.now() + 1000;
     clearTimeout(settle.current);
     settle.current = setTimeout(() => {
       const node = viewport.current;

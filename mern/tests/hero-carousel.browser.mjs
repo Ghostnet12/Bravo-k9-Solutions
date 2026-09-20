@@ -31,16 +31,16 @@ try { for (const [name, engine] of Object.entries({ chromium, webkit })) {
    await route.fulfill({json});
   });
   try {
-  const gallery=page.getByRole('region',{name:'Trainer photos'}),track=page.locator('.hero-photo-track');
+  const gallery=page.getByRole('region',{name:'Trainer photos'}),track=page.locator('.hero-photo-window');
   await page.goto(origin); await gallery.scrollIntoViewIfNeeded(); await page.waitForTimeout(800);
   assert.equal(await page.getByRole('button',{name:'Add photos',exact:true}).count(),0);
-  const start=await track.evaluate(el=>getComputedStyle(el).transform);await page.waitForTimeout(2200);
-  assert.notEqual(await track.evaluate(el=>getComputedStyle(el).transform),start,'automatically moves left');
+  const start=await track.evaluate(el=>el.scrollLeft);await page.waitForTimeout(2200);
+  assert.notEqual(await track.evaluate(el=>el.scrollLeft),start,'automatically moves left');
   assert.equal(await page.locator('.hero-photo-controls').evaluate(el=>getComputedStyle(el).clipPath),'inset(50%)','controls hidden in normal view');
   assert.equal(await page.locator('.hero-photo-controls').innerText().then(text=>text.includes('/')),false,'no slide counter');
   await gallery.click({position:{x:100,y:70}});await page.waitForTimeout(650);
-  const paused=await track.evaluate(el=>getComputedStyle(el).transform);await page.waitForTimeout(2200);assert.equal(await track.evaluate(el=>getComputedStyle(el).transform),paused);
-  await gallery.click({position:{x:100,y:70}});await page.waitForTimeout(2200);assert.notEqual(await track.evaluate(el=>getComputedStyle(el).transform),paused,'touch resumes instead of permanently pausing');
+  const paused=await track.evaluate(el=>el.scrollLeft);await page.waitForTimeout(2200);assert.equal(await track.evaluate(el=>el.scrollLeft),paused);
+  await gallery.click({position:{x:100,y:70}});await page.waitForTimeout(2200);assert.notEqual(await track.evaluate(el=>el.scrollLeft),paused,'touch resumes instead of permanently pausing');
   role='owner';await page.reload();await gallery.scrollIntoViewIfNeeded();await page.waitForTimeout(700);
   const box=await gallery.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+40);await page.mouse.down();await page.waitForTimeout(750);await page.mouse.up();
   const editor=page.getByRole('dialog',{name:'Edit hero carousel'});await editor.waitFor();
@@ -61,7 +61,7 @@ try { for (const [name, engine] of Object.entries({ chromium, webkit })) {
   await page.waitForTimeout(3400);assert.ok(await activeVideo.evaluate(v=>v.currentTime>3 && !v.paused),'video plays beyond photo interval');
   await page.waitForFunction(()=>{const v=document.querySelector('.hero-video video');return v && v.paused;},null,{timeout:8000});
   assert.equal(await page.locator('.hero-photo-slide').first().getAttribute('aria-hidden'),'false','advance after video ends');
-  await page.emulateMedia({reducedMotion:'reduce'});await page.waitForTimeout(650);const reduced=await track.evaluate(el=>getComputedStyle(el).transform);await page.waitForTimeout(3200);assert.equal(await track.evaluate(el=>getComputedStyle(el).transform),reduced);
+  await page.emulateMedia({reducedMotion:'reduce'});await page.waitForTimeout(650);const reduced=await track.evaluate(el=>el.scrollLeft);await page.waitForTimeout(3200);assert.equal(await track.evaluate(el=>el.scrollLeft),reduced);
   // An unavailable slide and slow download must never replace a visible photo with blank space.
   const badKey='hero-photo-22222222-2222-4222-8222-222222222222', slowKey='hero-photo-33333333-3333-4333-8333-333333333333';
   settings={revision:9,intervalSeconds:2,photos:[badKey,slowKey]};images={[badKey]:{src:'/unavailable-hero.jpg',alt:'Unavailable fixture'},[slowKey]:{src:'/slow-hero.jpg',alt:'Slow fixture'}};
