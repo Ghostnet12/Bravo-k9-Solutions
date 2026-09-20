@@ -36,7 +36,8 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){const br
   assert.ok(await page.getByText('One hour per day · Monday–Friday',{exact:true}).isVisible());
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth + 1),'homepage fits viewport');
   await page.evaluate(()=>document.documentElement.style.fontSize='200%');
-  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth + 1),'homepage supports doubled text size without horizontal scrolling');
+  const enlargedFits=await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth + 1);
+  if(!enlargedFits) console.log('Enlarged overflow',await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,elements:[...document.querySelectorAll('body *')].filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.right>innerWidth+1&&getComputedStyle(el).position!=='absolute'}).map(el=>({tag:el.tagName,classes:el.className,text:el.textContent.slice(0,70),width:el.getBoundingClientRect().width,right:el.getBoundingClientRect().right})).slice(-35)})));
   await page.evaluate(()=>document.documentElement.style.fontSize='');
   await page.screenshot({path:`test-results/authentic-home-${engineName}-${width}.png`});
   assert.equal(await page.locator('[data-site-content-key="home-53"] .review-stars').count(),0);
@@ -86,6 +87,7 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){const br
   for(const role of ['staff','owner']){actor=role;await page.goto(origin+'/portal?program=training');await page.getByRole('heading',{name:'Build your schedule',exact:true}).waitFor();assert.equal(await page.locator('.first-visit-intro').count(),0,'staff and owners retain the full scheduler');}
   actor='member';
   trainingDisabled=true;await page.goto(origin+'/portal?program=training');await page.waitForLoadState('networkidle');assert.equal(await page.locator('.first-visit-intro').count(),0);await page.getByRole('button',{name:/^Dog Walking /}).click();assert.equal(await page.getByText('A selected service is temporarily unavailable. Choose an available program before saving.',{exact:true}).count(),0);
+  assert.ok(enlargedFits,'homepage supports doubled text size without horizontal scrolling');
   assert.deepEqual(writes,['/api/auth/login','/api/quote','/api/bookings']);if(errors.length)console.log('Render diagnostics',consoleErrors,await page.evaluate(()=>window.__renderErrors));assert.deepEqual(errors,[]);console.log(`PASS ${engineName}/${width}: guided first visit, sign-in resume, explicit time choice, review, save payload, full scheduler and quiet banner`);
  }catch(error){await page.screenshot({path:`test-results/clarity-failure-${engineName}-${width}.png`,fullPage:true});await writeFile(`test-results/clarity-failure-${engineName}-${width}.json`,JSON.stringify({error:error.message,errors,consoleErrors,text:await page.locator('body').innerText()},null,2));throw error;}finally{await context.close();}
  }}finally{await browser.close();}}}finally{server.close();}
