@@ -20,6 +20,11 @@ export async function issueSession(req, res, user) {
   const token = randomBytes(32).toString('hex');
   const maxAge = user.mustChangePassword ? 30 * 60000 : 1000 * 60 * 60 * 24 * 7;
   await Session.create({ tokenHash: digest(token), userId: user._id, credentialVersion: user.credentialVersion || 0, expiresAt: new Date(Date.now() + maxAge) });
+  // Bound stolen-session exposure without forcing normal users to sign out of every device.
+  // Keep only the five newest unexpired sessions for this account.
+  const staleSessions = await Session.find({ userId: user._id, expiresAt: { $gt: new Date() } })
+    .sort({ expiresAt: -1 }).skip(5).select('_id').lean();
+  if (staleSessions.length) await Session.deleteMany({ _id: { $in: staleSessions.map(session => session._id) } });
   res.cookie(cookieName(), token, { ...cookieOptions(), maxAge });
 }
 export async function signOut(req, res) {
