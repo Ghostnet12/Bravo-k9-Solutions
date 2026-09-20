@@ -22,6 +22,7 @@ export default function HeroPhotoCarousel({ children }) {
   const [open, setOpen] = useState(false), [seconds, setSeconds] = useState('5'), [busy, setBusy] = useState(false), [error, setError] = useState(''), [status, setStatus] = useState(''), [ready, setReady] = useState(false);
   const root = useRef(null), dialog = useRef(null), files = useRef(null), hold = useRef(null), held = useRef(false), editingPhoto = useRef(false), keyboardFocus = useRef(false), suppressUntil = useRef(0);
   const swipe = useRef(null);
+  const [dragOffset, setDragOffset] = useState(0);
   const [touching, setTouching] = useState(false), [interaction, setInteraction] = useState(0);
   const [videos, setVideos] = useState({}), [editingVideo, setEditingVideo] = useState(null);
   const keys = [HOME_HERO_KEY, ...settings.photos];
@@ -47,7 +48,7 @@ export default function HeroPhotoCarousel({ children }) {
           } catch { continue; } finally { clearTimeout(timeout); }
           if (!image.naturalWidth) continue;
         }
-        if (generation === slideGeneration.current && !document.hidden && !editingPhoto.current) setIndex(next);
+        if (generation === slideGeneration.current && !document.hidden && !editingPhoto.current) { setDragOffset(0); setIndex(next); }
         return;
       }
     } finally { if (pendingSlide.current === generation) pendingSlide.current = null; }
@@ -55,7 +56,7 @@ export default function HeroPhotoCarousel({ children }) {
   const photo = key => ({ ...(key === HOME_HERO_KEY ? { src: HOME_HERO_SOURCE, alt: HOME_HERO_ALT } : HERO_PHOTO_DEFAULTS[key] || { src: '/images/bravo-client-training.jpeg', alt: 'Training photo' }), ...(images[key]?.src ? { src: images[key].src, alt: images[key].alt } : {}) });
   function cancelHold() { if (hold.current) clearTimeout(hold.current.timer); hold.current = null; held.current = false; }
   useEffect(() => {
-    const release = () => { swipe.current = null; cancelHold(); setTouching(false); setInteraction(value => value + 1); };
+    const release = () => { swipe.current = null; setDragOffset(0); cancelHold(); setTouching(false); setInteraction(value => value + 1); };
     window.addEventListener('blur', release);
     document.addEventListener('visibilitychange', release);
     return () => { window.removeEventListener('blur', release); document.removeEventListener('visibilitychange', release); };
@@ -133,11 +134,17 @@ export default function HeroPhotoCarousel({ children }) {
     onKeyDown={event => { if (canEdit && event.target === event.currentTarget && event.key === 'Enter') { event.preventDefault(); showEditor(); } }}
     onPointerDownCapture={event => {
       keyboardFocus.current = false;
-      if (event.button !== 0 || event.isPrimary === false || event.target.closest('dialog,button,input') || editingPhoto.current) return;
+      if (event.button !== 0 || event.isPrimary === false || event.target.closest('dialog,input,button:not(.hero-video-play)') || editingPhoto.current) return;
       // Invalidate any in-flight automatic photo decode before the finger takes over.
       slideGeneration.current += 1; pendingSlide.current = null;
       swipe.current = { id: event.pointerId, x: event.clientX, y: event.clientY, horizontal: false };
-      setTouching(true); held.current = true;
+      setDragOffset(0); setTouching(true); held.current = true;
+      // Load neighbors before they slide into view under the finger.
+      const slides = root.current?.querySelectorAll('.hero-photo-slide');
+      for (const neighbor of [(index + 1) % keys.length, (index - 1 + keys.length) % keys.length]) {
+        const image = slides?.[neighbor]?.querySelector('img');
+        if (image) image.loading = 'eager';
+      }
       if (!canEdit) return;
       event.stopPropagation(); cancelHold(); held.current = true;
       hold.current = { x: event.clientX, y: event.clientY, timer: setTimeout(() => { swipe.current = null; setTouching(false); showEditor(); }, 650) };
@@ -151,20 +158,27 @@ export default function HeroPhotoCarousel({ children }) {
         gesture.horizontal = true;
         event.currentTarget.setPointerCapture(event.pointerId);
       }
-      if (gesture.horizontal) { event.preventDefault(); suppressUntil.current = Date.now() + 1000; }
+      if (gesture.horizontal) {
+        event.preventDefault(); suppressUntil.current = Date.now() + 1000;
+        const width = event.currentTarget.clientWidth;
+        const atEdge = (index === 0 && dx > 0) || (index === keys.length - 1 && dx < 0);
+        setDragOffset(Math.max(-width * .9, Math.min(width * .9, atEdge ? dx * .2 : dx)));
+      }
     }}
     onPointerUp={event => {
       const gesture = swipe.current;
       swipe.current = null; cancelHold(); setTouching(false); setInteraction(value => value + 1);
       if (gesture?.id === event.pointerId && gesture.horizontal) {
         suppressUntil.current = Date.now() + 1000;
-        if (Math.abs(event.clientX - gesture.x) >= 40) advance(event.clientX < gesture.x ? 1 : -1);
+        if (Math.abs(event.clientX - gesture.x) >= 40) {
+          advance(event.clientX < gesture.x ? 1 : -1).finally(() => { if (!swipe.current) setDragOffset(0); });
+        } else setDragOffset(0);
       }
     }}
-    onPointerCancel={() => { swipe.current = null; cancelHold(); setTouching(false); setInteraction(value => value + 1); }}
-    onLostPointerCapture={() => { swipe.current = null; cancelHold(); setTouching(false); }}
-    onPointerLeave={() => { if (!swipe.current?.horizontal) { swipe.current = null; cancelHold(); setTouching(false); } }} onContextMenu={event => { if (canEdit) event.preventDefault(); }}>
-    <div className="hero-photo-window"><div className="hero-photo-track" style={{ transform: `translateX(-${index * 100}%)`, transition: reduced || index === 0 ? 'none' : undefined }}>
+    onPointerCancel={() => { setDragOffset(0); swipe.current = null; cancelHold(); setTouching(false); setInteraction(value => value + 1); }}
+    onLostPointerCapture={() => { if (swipe.current) setDragOffset(0); swipe.current = null; cancelHold(); setTouching(false); }}
+    onPointerLeave={() => { if (!swipe.current?.horizontal) { setDragOffset(0); swipe.current = null; cancelHold(); setTouching(false); } }} onContextMenu={event => { if (canEdit) event.preventDefault(); }}>
+    <div className="hero-photo-window"><div className="hero-photo-track" style={{ transform: `translateX(calc(-${index * 100}% + ${dragOffset}px))`, transition: touching || reduced || index === 0 ? 'none' : undefined }}>
       <div className="hero-photo-slide" aria-hidden={index !== 0} inert={index !== 0}>{children}</div>
       {settings.photos.map((key, i) => { const item = photo(key); return <div key={key} className="hero-photo-slide" aria-hidden={index !== i + 1} inert={index !== i + 1}>{heroVideoId(key) ? <HeroVideo clip={videos[heroVideoId(key)]} active={index === i + 1 && inView && !open && !editingVideo} paused={paused || reduced || touching} onEnded={() => { if (!swipe.current) advance(); }}/> : <img className="hero-carousel-image" src={item.src} alt={item.alt} width="828" height="1121" loading={i + 1 === index || i + 1 === (index + 1) % keys.length ? "eager" : "lazy"} data-site-image-key={key} data-site-image-original={HERO_PHOTO_DEFAULTS[key]?.src || item.src} style={images[key]?.framed ? framingStyle(images[key]) : undefined}/>}</div>; })}
     </div></div>

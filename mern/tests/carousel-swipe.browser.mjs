@@ -50,7 +50,12 @@ try {
       const initial = await activeIndex();
       await page.waitForTimeout(2300);
       assert.equal(await activeIndex(), initial, 'holding the hero pauses automatic cycling');
-      await move(x - 130); await up();
+      const beforeDrag = await page.locator('.hero-photo-track').evaluate(node => new DOMMatrix(getComputedStyle(node).transform).m41);
+      await move(x - 130);
+      const duringDrag = await page.locator('.hero-photo-track').evaluate(node => new DOMMatrix(getComputedStyle(node).transform).m41);
+      assert.ok(duringDrag < beforeDrag - 20, 'hero follows the finger before release');
+      assert.equal(await activeIndex(), initial, 'drag previews the next item before committing');
+      await up();
       const next = (initial + 1) % 3;
       await page.waitForFunction(expected => [...document.querySelectorAll('.hero-photo-slide')].findIndex(slide => slide.getAttribute('aria-hidden') === 'false') === expected, next);
       assert.equal(await page.getByRole('button', { name: 'Pause trainer photos', exact: true }).count(), 1, 'swipe does not trigger tap-to-pause');
