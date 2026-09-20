@@ -14,7 +14,7 @@ try {
     try {
       for (const width of [390, 1440]) {
         const context = await browser.newContext({ viewport: { width, height: 900 } }), page = await context.newPage();
-        let saved = { revision: 0, alerts: ['Bravo fixture announcement'] }, role = 'owner', failSave = false;
+        let saved = { revision: 0, alerts: ['Bravo fixture announcement'] }, role = 'owner', failSave = false, weatherAvailable = true;
         const errors = []; page.on('pageerror', e => errors.push(e.message));
         await page.route('**/api/**', async route => {
           const path = new URL(route.request().url()).pathname;
@@ -26,7 +26,7 @@ try {
               else { const body = route.request().postDataJSON(); assert.equal(body.expectedRevision, saved.revision); saved = { alerts: body.alerts, settings: body.settings, revision: saved.revision + 1 }; json = saved; }
             } else json = saved;
           }
-          if (path === '/api/site-banner/weather') json = { weather: { temperature: 63, description: 'Cloudy', observedAt: new Date().toISOString() } };
+          if (path === '/api/site-banner/weather') json = { weather: weatherAvailable ? { temperature: 63, description: 'Cloudy', observedAt: new Date().toISOString() } : null };
           await route.fulfill({ status, json });
         });
         try {
@@ -35,6 +35,10 @@ try {
           const banner = page.locator('.home-status-banner');
           assert.equal(await banner.evaluate(el => el.previousElementSibling.classList.contains('home-hero')), true);
           assert.ok((await banner.innerText()).includes('63°F'));assert.match(await banner.innerText(),/[A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2}, \d{4} ·/);assert.ok((await banner.boundingBox()).height < 100, 'moving banner stays one compact strip');
+          weatherAvailable = false; await page.reload(); await page.waitForLoadState('networkidle');
+          assert.equal((await banner.innerText()).includes('Weather temporarily unavailable'), false, 'failed weather stays invisible to visitors');
+          assert.equal((await banner.innerText()).includes('63°F'), false, 'stale weather is removed instead of displayed');
+          weatherAvailable = true; await page.reload(); await page.waitForLoadState('networkidle');
           assert.equal(await page.locator('.banner-track').evaluate(el => getComputedStyle(el).animationName), 'bravo-banner-left');
           await banner.scrollIntoViewIfNeeded();
           await page.screenshot({ path: `test-results/banner-moving-${engineName}-${width}.png` });
