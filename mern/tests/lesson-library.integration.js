@@ -40,7 +40,7 @@ test('lesson studio, closed-library boundaries and paid access', {timeout:180000
    await call('owner','put','/api/admin/lessons/unknown-section',{...base,sectionId:'missing'}).expect(400);
    await call('owner','get','/api/lessons/body-language/transcript').expect(200);
    await call('paid','get','/api/lessons/body-language/transcript').expect(404);
-   await call('owner','delete',`/api/admin/lesson-sections/${section._id}`).expect(400);
+   await call('owner','delete',`/api/admin/lesson-sections/${section._id}`,{}).expect(400);
    await call('owner','put',`/api/admin/lesson-sections/${section._id}`,{title:'Everyday foundations',description:'Understand your dog',order:2}).expect(200);
    assert.equal((await LessonSection.findById(section._id)).title,'Everyday foundations');
    await call('owner','put','/api/admin/lessons/body-language',{...base,sectionId:section._id,published:true}).expect(200);
