@@ -1,7 +1,8 @@
 .home-hero-gallery{position:absolute;inset:0 0 0 auto;width:44%;height:100%;z-index:1;min-width:0}
-.hero-photo-window{height:100%;overflow:hidden}
-.hero-photo-track{display:flex;height:100%;transition:transform .55s ease}
-.hero-photo-slide{flex:0 0 100%;height:100%;min-width:0;position:relative;overflow:hidden}
+.hero-photo-window{height:100%;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scrollbar-width:none}
+.hero-photo-window::-webkit-scrollbar{display:none}
+.hero-photo-track{display:flex;height:100%}
+.hero-photo-slide{flex:0 0 100%;height:100%;min-width:0;scroll-snap-align:start;scroll-snap-stop:always;position:relative;overflow:hidden}
 .home-hero-authentic .home-hero-gallery .home-hero-image,.hero-carousel-image{position:relative;inset:auto;width:100%;height:100%;margin:0;object-fit:contain;object-position:center;display:block}
 .hero-photo-controls{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:4px;border-radius:8px;background:#101010e8;color:#f5f1e9;font:600 13px Montserrat,sans-serif}
 .hero-photo-controls button{min-width:44px;min-height:44px;background:transparent;border:1px solid #ba9a64;color:#f5f1e9;border-radius:5px;padding:6px;font-size:20px}
@@ -30,5 +31,9 @@
 .hero-photo-editor-row{grid-template-columns:64px minmax(0,1fr)}.carousel-editor-list button{min-width:0;overflow-wrap:anywhere}
 
 /* Horizontal gestures change slides; vertical gestures still scroll the page. */
-.hero-photo-window{touch-action:pan-y pinch-zoom}
+.hero-photo-window{touch-action:auto}
 .hero-photo-window img{-webkit-user-drag:none;user-select:none;-webkit-user-select:none}
+
+/* Route iPhone gestures to the scroll container instead of the native video surface. */
+.hero-video-swipe-surface{position:absolute;inset:0;z-index:1}
+.hero-video-play{z-index:2}
