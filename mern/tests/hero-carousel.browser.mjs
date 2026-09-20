@@ -62,7 +62,17 @@ try { for (const [name, engine] of Object.entries({ chromium, webkit })) {
   await page.waitForFunction(()=>{const v=document.querySelector('.hero-video video');return v && v.paused;},null,{timeout:8000});
   assert.equal(await page.locator('.hero-photo-slide').first().getAttribute('aria-hidden'),'false','advance after video ends');
   await page.emulateMedia({reducedMotion:'reduce'});await page.waitForTimeout(650);const reduced=await track.evaluate(el=>getComputedStyle(el).transform);await page.waitForTimeout(3200);assert.equal(await track.evaluate(el=>getComputedStyle(el).transform),reduced);
+  // An unavailable slide and slow download must never replace a visible photo with blank space.
+  const badKey='hero-photo-22222222-2222-4222-8222-222222222222', slowKey='hero-photo-33333333-3333-4333-8333-333333333333';
+  settings={revision:9,intervalSeconds:2,photos:[badKey,slowKey]};images={[badKey]:{src:'/unavailable-hero.jpg',alt:'Unavailable fixture'},[slowKey]:{src:'/slow-hero.jpg',alt:'Slow fixture'}};
+  await page.route('**/unavailable-hero.jpg',route=>route.fulfill({status:404,body:''}));
+  await page.route('**/slow-hero.jpg',async route=>{await new Promise(resolve=>setTimeout(resolve,8000));await route.fulfill({contentType:'image/jpeg',body:await readFile(`${dist}/images/bravo-client-training.jpeg`)});});
+  await page.emulateMedia({reducedMotion:'no-preference'});await page.reload();await gallery.scrollIntoViewIfNeeded();await page.waitForTimeout(4500);
+  assert.equal(await page.locator('.hero-photo-slide').first().getAttribute('aria-hidden'),'false','retain current photo while the next usable image downloads');
+  assert.equal(await page.locator('.hero-photo-slide').first().locator('img').evaluate(el=>el.complete&&el.naturalWidth>0),true);
+  await page.waitForFunction(()=>{const slide=document.querySelector('.hero-photo-slide[aria-hidden="false"]'),img=slide?.querySelector('img');return img?.getAttribute('src')==='/slow-hero.jpg'&&img.complete&&img.naturalWidth>0;},null,{timeout:15000});
+  await page.emulateMedia({reducedMotion:'reduce'});
   assert.deepEqual(errors,[]);await page.screenshot({path:`test-results/hero-carousel-${name}-${width}.png`});console.log(`PASS ${name}/${width}: left rotation, touch resume, owner hold, upload, timing, editor and reduced motion`);await page.close();
-  } catch(error) { await page.screenshot({path:`test-results/hero-failed-${name}-${width}.png`}); await writeFile(`test-results/hero-failed-${name}-${width}.txt`,`${error.stack}\n${await page.locator('body').innerText()}\n${JSON.stringify(errors)}`); throw error; }
+  } catch(error) { console.log('Hero failure state',await page.locator('.hero-photo-slide').evaluateAll(slides=>slides.map(slide=>{const image=slide.querySelector('img');return {active:slide.getAttribute('aria-hidden'),src:image?.src,complete:image?.complete,width:image?.naturalWidth,loading:image?.loading};}))); await page.screenshot({path:`test-results/hero-failed-${name}-${width}.png`}); await writeFile(`test-results/hero-failed-${name}-${width}.txt`,`${error.stack}\n${await page.locator('body').innerText()}\n${JSON.stringify(errors)}`); throw error; }
  }} finally {await browser.close();}
 }} finally {await new Promise(resolve=>server.close(resolve));}
