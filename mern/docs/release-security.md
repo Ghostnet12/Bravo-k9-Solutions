@@ -14,8 +14,8 @@
 ## Activation prerequisites — not proven by workflow files
 
 1. Verify `OWNER_USER_ID` in both Vercel preview and production against the existing founder account. Do not create a replacement account or infer identity from an email. Set this before deploying the fallback removal.
-2. Obtain passing hosted CI, including MongoDB/browser tests, on this PR. Local MongoDB currently exits with code 100 before tests start.
-3. Configure `bravo-mern` branch protection to require `Bravo release gate`, up-to-date checks, PR review and conversation resolution; prohibit force pushes/deletion and administrator bypass. Preserve existing stricter rules. Choose an available reviewer before enforcing review requirements.
+2. Obtain passing hosted CI, including MongoDB/browser tests, on this PR. Local MongoDB exits with code 100 before tests start; the initial hosted run passed database regressions.
+3. The active `Bravo production protection` ruleset already targets `bravo-mern`, requires a PR and an up-to-date `verify` check, prohibits force pushes/deletion, and has no bypass actors. The existing `verify` job name is preserved for compatibility. Add `Bravo release gate` to its required checks when this workflow is adopted; preserve existing rules. Choose an available reviewer before adding mandatory review requirements.
 4. Confirm Vercel's production branch is `bravo-mern`; restrict manual production deployment credentials and require the approved release path. Branch protection alone cannot prevent direct CLI production deployments.
 5. Validate a preview (including actual response headers, sign-in, memberships and checkout test mode), then release and verify the production health endpoint and critical flows.
 6. Dependabot configuration must also exist on the repository default branch for automatic discovery; the current default is `main`. Do not replace default-branch configuration without reviewing it.
@@ -27,5 +27,7 @@ Reference: https://docs.github.com/en/repositories/configuring-branches-and-merg
 Use route → validated input → authorization → service → database. Preserve middleware ordering and transaction boundaries. External adapters own provider-specific transport details. Keep membership, pricing and trainer rules in the existing shared/domain modules rather than copying them into new routes. Extract one bounded responsibility with behavior tests per change; do not introduce a repository abstraction merely to rename Mongoose calls.
 
 ## Remaining work
+
+Hosted secret scanning and CodeQL passed on the initial PR run. The Vercel connector does not expose environment settings, and the browser requires Vercel sign-in to verify OWNER_USER_ID.
 
 This change does not implement MFA/passkey enrollment and recovery, destructive-operation reauthentication, alert delivery, database credential/network changes, backup restoration drills, full frontend unused-export/dependency analysis, complete service-layer extraction, or general production environment validation. Those require further implementation and provider verification. Existing audit logs and session controls are preserved. No assertion of production security or deployment enforcement is made until the activation checks are complete.
