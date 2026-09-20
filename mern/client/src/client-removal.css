@@ -8,3 +8,12 @@
 .client-directory-row>div{min-width:0;overflow-wrap:anywhere}
 .client-directory-row h3{margin:0 0 .5rem}
 .client-directory-row p{margin:.5rem 0}
+.owner-confirm-dialog{width:min(32rem,calc(100vw - 2rem));max-height:calc(100dvh - 2rem);overflow:auto;box-sizing:border-box;padding:1.5rem;border:1px solid var(--gold);border-radius:12px;background:#101010;color:#fff}
+.owner-confirm-dialog::backdrop{background:rgb(0 0 0 / .75)}
+.owner-confirm-dialog h2{margin-top:0;font-size:1.5rem;overflow-wrap:anywhere}
+.owner-confirm-dialog p{line-height:1.6}
+.owner-confirm-dialog label{display:grid;gap:.5rem}
+.owner-confirm-dialog input{width:100%;min-width:0;box-sizing:border-box}
+.owner-confirm-help{font-size:.9rem;color:#ccc}
+.owner-confirm-actions{display:flex;flex-wrap:wrap;gap:.75rem;margin-top:1rem}
+.owner-confirm-actions button{min-height:44px}

@@ -1,7 +1,7 @@
 name: Security and indexing regression
 on:
   push:
-    branches: [bravo-mern, 'security/**']
+    branches: [bravo-mern]
   pull_request:
     branches: [bravo-mern]
   workflow_dispatch:
@@ -13,7 +13,7 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: mern
@@ -39,6 +39,7 @@ jobs:
           node tests/carousel-swipe.browser.mjs
           node tests/customer-clarity.browser.mjs
           node tests/client-login.browser.mjs
+          node tests/client-removal.browser.mjs
       - name: Known dependency vulnerabilities (retry registry maintenance)
         run: |
           for attempt in 1 2 3; do

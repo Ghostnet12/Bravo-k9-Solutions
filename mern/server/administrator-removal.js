@@ -1,3 +1,4 @@
+import { confirmOwnerPassword, lockOwnerReauthentication } from './reauthentication.js';
 import { z } from 'zod';
 import { User, Booking, Session, PasswordReset, Settings, Subscription, AuditEvent, TrainerSchedule } from './models.js';
 import { transaction } from './db.js';
@@ -12,10 +13,12 @@ export function requirePrimaryOwner(req, _res, next) {
 
 export async function removeAdministrator(req, res) {
   const administratorId = z.string().regex(/^[a-f\d]{24}$/i).parse(req.params.id).toLowerCase();
-  z.object({ confirmRemoval: z.literal(true) }).strict().parse(req.body);
+  const { currentPassword } = z.object({ confirmRemoval: z.literal(true), currentPassword: z.string().min(1).max(128) }).strict().parse(req.body);
+  const proof = await confirmOwnerPassword(req.user, currentPassword);
   let unassignedRequests = 0;
   await transaction(async session => {
     unassignedRequests = 0;
+    await lockOwnerReauthentication(proof, session);
     // Serialize removal with assignment, acceptance and reservation changes.
     await Settings.updateOne({ _id: 'schedule' }, { $inc: { revision: 1 } }, { session });
     const actor = await User.findById(req.user._id).session(session);

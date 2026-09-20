@@ -11,6 +11,7 @@ export const User = model('BravoUser', new Schema({
   passwordHash: { type: String, required: true, select: false }, role: { type: String, enum: ['member', 'staff', 'owner'], default: 'member' },
   mustChangePassword: { type: Boolean, default: false }, temporaryPasswordExpiresAt: Date,
   credentialVersion: { type: Number, default: 0, select: false },
+  lastReauthenticatedAt: { type: Date, select: false },
   phone: { type: String, default: '' }, dogName: { type: String, default: '' }, address: { type: String, default: '' },
   title: { type: String, default: '' }, bio: { type: String, default: '' }, showPhone: { type: Boolean, default: false },
   mutedUntil: Date, blocked: { type: Boolean, default: false },

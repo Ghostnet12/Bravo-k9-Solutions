@@ -21,7 +21,7 @@ try {
         const context = await browser.newContext({ viewport: { width, height: 844 }, isMobile: width < 700 }), page = await context.newPage();
         const role = access === 'admin' ? 'owner' : access;
         const user = { id: 'aaaaaaaaaaaaaaaaaaaaaaaa', _id: 'aaaaaaaaaaaaaaaaaaaaaaaa', name: 'Signed In Person', role, isPrimaryOwner: access === 'owner' };
-        let removed = false, adminRemoved = false, attempts = 0, accept = false; const errors = [];
+        let removed = false, adminRemoved = false, attempts = 0, adminAttempts = 0, accept = false; const errors = [];
         page.on('pageerror', e => errors.push(e.message));
         page.on('dialog', dialog => { if (dialog.message().startsWith('Delete administrator')) { assert.match(dialog.message(), /Fixture Administrator/); assert.match(dialog.message(), /Client appointments and history are kept/); } else { assert.match(dialog.message(), /Remove Current Client\?/); assert.match(dialog.message(), /cancels remaining visits/); } return accept ? dialog.accept() : dialog.dismiss(); });
         await page.route('**/api/**', async route => {
@@ -37,7 +37,12 @@ try {
           else if (path === '/api/admin/memberships') json = { memberships: {} };
           else if (path === '/api/admin/users') json = { users: [user, colleague, ...adminRemoved ? [] : [administrator], ...removed ? [] : [client]] };
           else if (path === '/api/admin/clients') json = { clients: removed ? [] : [client] };
-          else if (path === `/api/admin/administrators/${administrator._id}` && route.request().method() === 'DELETE') { assert.equal(access, 'owner'); assert.deepEqual(route.request().postDataJSON(), { confirmRemoval: true }); adminRemoved = true; json = { ok: true, message: 'Administrator profile deleted and access revoked.' }; }
+          else if (path === `/api/admin/administrators/${administrator._id}` && route.request().method() === 'DELETE') {
+            assert.equal(access, 'owner'); adminAttempts++;
+            const body = route.request().postDataJSON(); assert.equal(body.confirmRemoval, true);
+            if (body.currentPassword !== 'Fixture-owner-password-2026!') return route.fulfill({ status: 403, json: { error: 'Confirm your current owner password.' } });
+            adminRemoved = true; json = { ok: true, message: 'Administrator profile deleted and access revoked.' };
+          }
           else if (path === `/api/admin/clients/${client._id}` && route.request().method() === 'DELETE') {
             attempts++; assert.deepEqual(route.request().postDataJSON(), { confirmRemoval: true });
             if (attempts === 1) return route.fulfill({ status: 409, json: { error: 'This client changed. Refresh and try again.' } });
@@ -69,9 +74,21 @@ try {
             assert.equal(await page.getByRole('button', { name: 'Remove client Current Client', exact: true }).count(), 0);
             if (access === 'owner') {
               const trash = page.getByRole('button', { name: 'Delete administrator Fixture Administrator', exact: true });
-              accept = false; await trash.click(); assert.equal(adminRemoved, false);
+              await trash.click(); assert.equal(adminRemoved, false);
+              const confirmation = page.getByRole('dialog', { name: 'Confirm administrator deletion: Fixture Administrator', exact: true });
+              await confirmation.waitFor();
               assert.equal(await page.locator('.owner-person').filter({ has: trash }).getAttribute('open'), null);
-              accept = true; await trash.focus(); await page.keyboard.press('Enter'); await trash.waitFor({ state: 'detached' });
+              await confirmation.getByRole('button', { name: 'Cancel', exact: true }).click(); assert.equal(adminAttempts, 0);
+              await trash.focus(); await page.keyboard.press('Enter'); await confirmation.waitFor();
+              const password = confirmation.getByLabel('Your current owner password', { exact: true });
+              assert.equal(await password.getAttribute('type'), 'password');
+              await password.fill('incorrect-fixture-password');
+              await confirmation.getByRole('button', { name: 'Confirm administrator deletion', exact: true }).click();
+              await confirmation.getByRole('alert').waitFor(); assert.equal(adminRemoved, false); assert.equal(await password.inputValue(), '');
+              assert.ok(await confirmation.evaluate(el => el.getBoundingClientRect().width <= innerWidth));
+              await page.screenshot({ path: `test-results/owner-reauth-${engineName}-${width}.png`, fullPage: true });
+              await password.fill('Fixture-owner-password-2026!'); await password.press('Enter'); await trash.waitFor({ state: 'detached' });
+              assert.equal(adminAttempts, 2);
               assert.equal(adminRemoved, true); await page.getByText('Administrator profile deleted and access revoked.', { exact: true }).waitFor();
               await page.reload(); await page.getByRole('heading', { name: 'People & permissions.' }).waitFor();
               assert.equal(await page.getByRole('button', { name: 'Delete administrator Fixture Administrator', exact: true }).count(), 0);
