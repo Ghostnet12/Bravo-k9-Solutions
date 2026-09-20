@@ -53,6 +53,10 @@ try {
         await page.waitForLoadState('networkidle'); active = false; await page.reload(); await page.waitForLoadState('networkidle');
         await page.getByLabel('Name or email', { exact: true }).fill(user.email); await page.getByLabel('Password', { exact: true }).fill('Fixture-owner-password!'); await page.locator('form').getByRole('button', { name: 'Sign in', exact: true }).click();
         const factor = page.getByLabel('Authenticator or recovery code', { exact: true }); await factor.waitFor(); assert.equal(active, false);
+        await page.getByLabel('Name or email', { exact: true }).fill('other@example.test'); assert.equal(await factor.count(), 0);
+        await page.getByLabel('Name or email', { exact: true }).fill(user.email); await page.locator('form').getByRole('button', { name: 'Sign in', exact: true }).click(); await factor.waitFor();
+        await page.getByRole('button', { name: 'Create account', exact: true }).click(); await page.getByRole('button', { name: 'Sign in', exact: true }).click(); assert.equal(await factor.count(), 0);
+        await page.getByLabel('Name or email', { exact: true }).fill(user.email); await page.getByLabel('Password', { exact: true }).fill('Fixture-owner-password!'); await page.locator('form').getByRole('button', { name: 'Sign in', exact: true }).click(); await factor.waitFor();
         await factor.fill('000000'); await page.locator('form').getByRole('button', { name: 'Sign in', exact: true }).click(); await page.getByText('Enter a fresh authenticator code or an unused recovery code.', { exact: true }).waitFor(); assert.equal(active, false);
         await factor.fill(recovery); await page.locator('form').getByRole('button', { name: 'Sign in', exact: true }).click(); await page.getByRole('heading', { name: 'Welcome, Fixture.' }).waitFor();
         assert.equal(active, true); assert.deepEqual(errors, []); console.log(`PASS MFA ${engineName}/${width}: enrollment, failed code, recovery visibility and two-step sign-in`);
