@@ -54,7 +54,16 @@ try {
       const next = (initial + 1) % 3;
       await page.waitForFunction(expected => [...document.querySelectorAll('.hero-photo-slide')].findIndex(slide => slide.getAttribute('aria-hidden') === 'false') === expected, next);
       assert.equal(await page.getByRole('button', { name: 'Pause trainer photos', exact: true }).count(), 1, 'swipe does not trigger tap-to-pause');
-      await page.waitForFunction(expected => [...document.querySelectorAll('.hero-photo-slide')].findIndex(slide => slide.getAttribute('aria-hidden') === 'false') === expected, (next + 1) % 3, { timeout: 6000 });
+      try {
+        await page.waitForFunction(expected => [...document.querySelectorAll('.hero-photo-slide')].findIndex(slide => slide.getAttribute('aria-hidden') === 'false') === expected, (next + 1) % 3, { timeout: 6000 });
+      } catch (error) {
+        console.log('Hero resume diagnostic', await page.locator('.home-hero-gallery').evaluate(node => ({
+          rect: node.getBoundingClientRect().toJSON(), hidden: document.hidden,
+          pause: node.querySelector('.hero-photo-controls').innerText,
+          slides: [...node.querySelectorAll('.hero-photo-slide')].map(slide => ({ active: slide.getAttribute('aria-hidden'), image: slide.querySelector('img')?.naturalWidth })),
+        })));
+        throw error;
+      }
       await down(x - 130); const beforeRight = await activeIndex(); await move(x); await up();
       await page.waitForFunction(expected => [...document.querySelectorAll('.hero-photo-slide')].findIndex(slide => slide.getAttribute('aria-hidden') === 'false') === expected, (beforeRight + 2) % 3);
       // Native scrolling must settle on a card, then auto-advance from that card.
