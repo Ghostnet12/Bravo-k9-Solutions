@@ -1,0 +1,16 @@
+/* A stationary scenic layer. Content scrolls normally above it, including on iOS. */
+.bravo-home{position:relative;isolation:isolate;background:transparent}
+.home-prairie-backdrop{position:fixed;inset:0;z-index:-1;pointer-events:none;background:#10120f url('/images/bravo-prairie-background.webp') center bottom/cover no-repeat}
+.bravo-home .home-hero.home-hero-authentic{background:transparent}
+.bravo-home .home-hero-copy{text-shadow:0 2px 12px #0008}
+.bravo-home .home-hero-copy .button{text-shadow:none}
+.bravo-home .home-service-strip{background:rgba(15,18,14,.72)}
+.bravo-home .home-section{background:rgba(12,15,12,.68);box-shadow:24px 0 0 rgba(12,15,12,.68),-24px 0 0 rgba(12,15,12,.68)}
+.bravo-home .home-team-section,.bravo-home .home-close{background:rgba(12,15,12,.78)}
+.bravo-home .home-team-section .home-section{background:transparent;box-shadow:none}
+.bravo-home .home-more{background:rgba(12,15,12,.68)}
+.bravo-home .bravo-footer{background:rgba(10,12,10,.92)}
+/* Keep accessibility modes flat and leave the image unblurred in normal view. */
+html.access-high-contrast .home-prairie-backdrop{background:#000}
+@media(forced-colors:active){.home-prairie-backdrop{display:none}}
+@media(max-width:600px){.home-prairie-backdrop{background-position:60% bottom}.bravo-home .home-section{box-shadow:20px 0 0 rgba(12,15,12,.68),-20px 0 0 rgba(12,15,12,.68)}}

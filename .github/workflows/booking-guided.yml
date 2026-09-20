@@ -1,7 +1,7 @@
-name: Guided booking verification
+name: Customer experience verification
 on:
   push:
-    branches: ['feature/booking-*']
+    branches: ['feature/booking-*', 'feature/home-fixed-*']
     paths: ['mern/**', '.github/workflows/booking-guided.yml']
 permissions:
   contents: read
