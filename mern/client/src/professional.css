@@ -185,3 +185,22 @@ html.access-high-contrast :is(.home-training-offer,.home-training-offer aside,.h
  .home-hero-authentic .home-hero-copy{max-width:100%}
  .home-hero-authentic .home-hero-image{position:relative;inset:auto;order:1;width:100%;height:380px;margin:0 0 24px;object-fit:contain}
 }
+
+/* A focused first-visit flow; established members keep the full scheduler. */
+.guided-booking-page .booking-layout{display:block;max-width:780px;margin-inline:auto}
+.guided-booking-header,.guided-signin,.guided-more-options{max-width:780px;margin:24px auto}
+.guided-booking-price{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.guided-booking-price span{color:var(--gold)}
+.guided-booking-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:16px}
+.guided-booking-steps button{padding:14px 8px;min-height:48px;border:1px solid var(--gold);border-radius:8px;background:transparent;color:inherit;font:inherit;font-weight:600}
+.guided-booking-steps button[aria-current=step]{background:var(--gold);color:#111}
+.guided-booking-steps button:disabled{opacity:.45;cursor:not-allowed}
+.guided-booking-page .booking-fields{min-width:0}
+.guided-booking-page #choose-program>.guided-trainer-intro{display:block}
+.guided-booking-page .order-summary{position:static;margin-top:24px}
+.guided-booking-page h2{scroll-margin-top:110px}
+.guided-step-actions{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-top:24px}
+.guided-visit-summary{border:1px solid var(--gold);border-radius:12px;padding:20px;margin:20px 0}
+.guided-more-options summary{cursor:pointer;padding:14px 0;min-height:48px}
+.guided-signin .button{white-space:normal;text-align:center}
+@media(max-width:600px){.guided-booking-steps button{font-size:.8rem}.guided-step-actions .button{width:100%}.guided-booking-page .panel{padding:20px}.guided-booking-price{font-size:.95rem}}
