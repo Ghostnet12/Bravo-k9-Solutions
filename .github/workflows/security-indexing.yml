@@ -35,6 +35,7 @@ jobs:
       - name: Public pages without JavaScript and client sign-in on mobile
         run: |
           node tests/seo.browser.mjs
+          node tests/carousel-swipe.browser.mjs
           node tests/client-login.browser.mjs
       - name: Known dependency vulnerabilities (retry registry maintenance)
         run: |

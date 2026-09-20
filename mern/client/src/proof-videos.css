@@ -1,5 +1,5 @@
-.home-work-proof-grid.proof-video-carousel{display:grid;grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:44%;align-items:start;overflow-x:auto;padding:4px 4px 14px;scroll-snap-type:x proximity;overscroll-behavior-x:contain;scrollbar-color:#ba9a64 #171915}
-.proof-video-carousel>article{min-width:0;scroll-snap-align:start}
+.home-work-proof-grid.proof-video-carousel{display:grid;grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:44%;align-items:start;overflow-x:auto;padding:4px 4px 14px;scroll-snap-type:x mandatory;scroll-padding-inline:4px;overscroll-behavior-x:contain;scrollbar-color:#ba9a64 #171915}
+.proof-video-carousel>article{min-width:0;scroll-snap-align:start;scroll-snap-stop:always}
 .proof-video-carousel [data-proof-editable]{-webkit-touch-callout:none}
 .proof-video-carousel>article[data-proof-editable],.proof-video-carousel>article[data-proof-editable] :is(img,video,a,span){-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .proof-video-carousel:focus-visible,.proof-video-carousel>article:focus-visible{outline:2px solid #ba9a64;outline-offset:3px}

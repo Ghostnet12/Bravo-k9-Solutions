@@ -21,6 +21,8 @@ export default function HeroPhotoCarousel({ children }) {
   const [index, setIndex] = useState(0), [paused, setPaused] = useState(false), [reduced, setReduced] = useState(false), [inView, setInView] = useState(true);
   const [open, setOpen] = useState(false), [seconds, setSeconds] = useState('5'), [busy, setBusy] = useState(false), [error, setError] = useState(''), [status, setStatus] = useState(''), [ready, setReady] = useState(false);
   const root = useRef(null), dialog = useRef(null), files = useRef(null), hold = useRef(null), held = useRef(false), editingPhoto = useRef(false), keyboardFocus = useRef(false), suppressUntil = useRef(0);
+  const swipe = useRef(null);
+  const [touching, setTouching] = useState(false), [interaction, setInteraction] = useState(0);
   const [videos, setVideos] = useState({}), [editingVideo, setEditingVideo] = useState(null);
   const keys = [HOME_HERO_KEY, ...settings.photos];
   const pendingSlide = useRef(null), slideGeneration = useRef(0);
@@ -39,11 +41,9 @@ export default function HeroPhotoCarousel({ children }) {
           // Safari can defer lazy images inside a translated, clipped track.
           // Start the request explicitly and retain the current slide until decoded.
           image.loading = 'eager';
-          const prepared = new Image();
-          prepared.src = image.currentSrc || image.src;
           let timeout;
           try {
-            await Promise.race([prepared.decode(), new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error('Photo timed out')), 15000); })]);
+            await Promise.race([image.decode(), new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error('Photo timed out')), 15000); })]);
           } catch { continue; } finally { clearTimeout(timeout); }
           if (!image.naturalWidth) continue;
         }
@@ -54,6 +54,12 @@ export default function HeroPhotoCarousel({ children }) {
   }
   const photo = key => ({ ...(key === HOME_HERO_KEY ? { src: HOME_HERO_SOURCE, alt: HOME_HERO_ALT } : HERO_PHOTO_DEFAULTS[key] || { src: '/images/bravo-client-training.jpeg', alt: 'Training photo' }), ...(images[key]?.src ? { src: images[key].src, alt: images[key].alt } : {}) });
   function cancelHold() { if (hold.current) clearTimeout(hold.current.timer); hold.current = null; held.current = false; }
+  useEffect(() => {
+    const release = () => { swipe.current = null; cancelHold(); setTouching(false); setInteraction(value => value + 1); };
+    window.addEventListener('blur', release);
+    document.addEventListener('visibilitychange', release);
+    return () => { window.removeEventListener('blur', release); document.removeEventListener('visibilitychange', release); };
+  }, []);
   useEffect(() => {
     let live = true;
     Promise.all([api('/hero-carousel'), api('/site-images'), loadVideos()]).then(([data, media, videoData]) => {
@@ -71,12 +77,12 @@ export default function HeroPhotoCarousel({ children }) {
     return () => { live = false; cancelHold(); media.removeEventListener('change', changed); observer.disconnect(); visible.disconnect(); window.removeEventListener('bravo-media-edit-mode', mode); window.removeEventListener('blur', cancelHold); window.removeEventListener('scroll', cancelHold, true); };
   }, []);
   useEffect(() => {
-    if (paused || reduced || open || editingVideo || !inView || keys.length < 2) return;
+    if (paused || reduced || touching || open || editingVideo || !inView || keys.length < 2) return;
     const timer = setInterval(() => {
-      if (!document.hidden && !held.current && !editingPhoto.current && !(keyboardFocus.current && root.current?.contains(document.activeElement)) && !document.querySelector('[data-site-image-editor][open]') && ![...(root.current?.querySelectorAll('video') || [])].some(video => !video.paused && !video.ended)) advance();
+      if (!document.hidden && !swipe.current && !held.current && !editingPhoto.current && !(keyboardFocus.current && root.current?.contains(document.activeElement)) && !document.querySelector('[data-site-image-editor][open]') && ![...(root.current?.querySelectorAll('video') || [])].some(video => !video.paused && !video.ended)) advance();
     }, settings.intervalSeconds * 1000);
     return () => clearInterval(timer);
-  }, [paused, reduced, open, editingVideo, inView, index, keys.length, settings.intervalSeconds]);
+  }, [paused, reduced, touching, interaction, open, editingVideo, inView, index, keys.length, settings.intervalSeconds]);
   useEffect(() => { if (open && canEdit) dialog.current?.showModal(); }, [open, canEdit]);
   useEffect(() => { if (!canEdit) { setOpen(false); setEditingVideo(null); } }, [canEdit]);
   async function showEditor() {
@@ -125,12 +131,42 @@ export default function HeroPhotoCarousel({ children }) {
     onClick={event => { if (!event.target.closest('dialog,button,a,input') && Date.now() > suppressUntil.current) setPaused(value => !value); }}
     onKeyDownCapture={() => { keyboardFocus.current = true; }}
     onKeyDown={event => { if (canEdit && event.target === event.currentTarget && event.key === 'Enter') { event.preventDefault(); showEditor(); } }}
-    onPointerDownCapture={event => { keyboardFocus.current = false; if (event.target.closest('dialog,button,input')) return; held.current = true; if (!canEdit || event.button !== 0) return; event.stopPropagation(); cancelHold(); held.current = true; hold.current = { x: event.clientX, y: event.clientY, timer: setTimeout(showEditor, 650) }; }}
-    onPointerMove={event => { if (hold.current && Math.hypot(event.clientX - hold.current.x, event.clientY - hold.current.y) > 12) cancelHold(); }}
-    onPointerUp={cancelHold} onPointerCancel={cancelHold} onPointerLeave={cancelHold} onContextMenu={event => { if (canEdit) event.preventDefault(); }}>
+    onPointerDownCapture={event => {
+      keyboardFocus.current = false;
+      if (event.button !== 0 || event.isPrimary === false || event.target.closest('dialog,button,input') || editingPhoto.current) return;
+      // Invalidate any in-flight automatic photo decode before the finger takes over.
+      slideGeneration.current += 1; pendingSlide.current = null;
+      swipe.current = { id: event.pointerId, x: event.clientX, y: event.clientY, horizontal: false };
+      setTouching(true); held.current = true;
+      if (!canEdit) return;
+      event.stopPropagation(); cancelHold(); held.current = true;
+      hold.current = { x: event.clientX, y: event.clientY, timer: setTimeout(() => { swipe.current = null; setTouching(false); showEditor(); }, 650) };
+    }}
+    onPointerMove={event => {
+      const gesture = swipe.current;
+      if (!gesture || gesture.id !== event.pointerId) return;
+      const dx = event.clientX - gesture.x, dy = event.clientY - gesture.y;
+      if (Math.hypot(dx, dy) > 12) cancelHold();
+      if (!gesture.horizontal && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.25) {
+        gesture.horizontal = true;
+        event.currentTarget.setPointerCapture(event.pointerId);
+      }
+      if (gesture.horizontal) { event.preventDefault(); suppressUntil.current = Date.now() + 1000; }
+    }}
+    onPointerUp={event => {
+      const gesture = swipe.current;
+      swipe.current = null; cancelHold(); setTouching(false); setInteraction(value => value + 1);
+      if (gesture?.id === event.pointerId && gesture.horizontal) {
+        suppressUntil.current = Date.now() + 1000;
+        if (Math.abs(event.clientX - gesture.x) >= 40) advance(event.clientX < gesture.x ? 1 : -1);
+      }
+    }}
+    onPointerCancel={() => { swipe.current = null; cancelHold(); setTouching(false); setInteraction(value => value + 1); }}
+    onLostPointerCapture={() => { swipe.current = null; cancelHold(); setTouching(false); }}
+    onPointerLeave={() => { if (!swipe.current?.horizontal) { swipe.current = null; cancelHold(); setTouching(false); } }} onContextMenu={event => { if (canEdit) event.preventDefault(); }}>
     <div className="hero-photo-window"><div className="hero-photo-track" style={{ transform: `translateX(-${index * 100}%)`, transition: reduced || index === 0 ? 'none' : undefined }}>
       <div className="hero-photo-slide" aria-hidden={index !== 0} inert={index !== 0}>{children}</div>
-      {settings.photos.map((key, i) => { const item = photo(key); return <div key={key} className="hero-photo-slide" aria-hidden={index !== i + 1} inert={index !== i + 1}>{heroVideoId(key) ? <HeroVideo clip={videos[heroVideoId(key)]} active={index === i + 1 && inView && !open && !editingVideo} paused={paused || reduced} onEnded={() => advance()}/> : <img className="hero-carousel-image" src={item.src} alt={item.alt} width="828" height="1121" loading={i + 1 === index || i + 1 === (index + 1) % keys.length ? "eager" : "lazy"} data-site-image-key={key} data-site-image-original={HERO_PHOTO_DEFAULTS[key]?.src || item.src} style={images[key]?.framed ? framingStyle(images[key]) : undefined}/>}</div>; })}
+      {settings.photos.map((key, i) => { const item = photo(key); return <div key={key} className="hero-photo-slide" aria-hidden={index !== i + 1} inert={index !== i + 1}>{heroVideoId(key) ? <HeroVideo clip={videos[heroVideoId(key)]} active={index === i + 1 && inView && !open && !editingVideo} paused={paused || reduced || touching} onEnded={() => { if (!swipe.current) advance(); }}/> : <img className="hero-carousel-image" src={item.src} alt={item.alt} width="828" height="1121" loading={i + 1 === index || i + 1 === (index + 1) % keys.length ? "eager" : "lazy"} data-site-image-key={key} data-site-image-original={HERO_PHOTO_DEFAULTS[key]?.src || item.src} style={images[key]?.framed ? framingStyle(images[key]) : undefined}/>}</div>; })}
     </div></div>
     {keys.length > 1 && <div className="hero-photo-controls"><button type="button" aria-label="Previous trainer photo" onClick={() => advance(-1)}>←</button><button type="button" aria-label={paused ? 'Resume trainer photos' : 'Pause trainer photos'} onClick={() => setPaused(value => !value)}>{paused ? '▶' : 'Ⅱ'}</button><button type="button" aria-label="Next trainer photo" onClick={() => advance()}>→</button></div>}
     {open && canEdit && <dialog ref={dialog} className="banner-editor hero-photo-editor" data-site-image-ignore="" aria-label="Edit hero carousel" onCancel={() => setOpen(false)}>
