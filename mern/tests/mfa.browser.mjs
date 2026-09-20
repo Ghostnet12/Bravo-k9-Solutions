@@ -21,6 +21,7 @@ try {
         const path = new URL(route.request().url()).pathname; let status = 200, json = {};
         if (path === '/api/config') json = { connected: true, services: SERVICES, paymentsReady: false };
         else if (path === '/api/auth/me') json = { user: active ? { ...user, mfaEnabled: enabled } : null, services: [], subscriptions: [], membership: { active: false } };
+        else if (path === '/api/membership-terms') json = { terms: [] };
         else if (path === '/api/bookings') json = { bookings: [] };
         else if (path === '/api/notifications') json = { items: [] };
         else if (path === '/api/site-images') json = { images: {} };
