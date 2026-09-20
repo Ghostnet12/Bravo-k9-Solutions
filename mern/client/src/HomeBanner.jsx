@@ -80,12 +80,12 @@ export default function HomeBanner() {
   }
   const freshWeather = weather && now.getTime() - Date.parse(weather.observedAt) <= 7200000 ? weather : null;
   const settings = { ...DEFAULT_BANNER, ...saved?.settings };
+  const weatherText = settings.weatherOverride || (freshWeather ? `${freshWeather.temperature}°F · ${freshWeather.description} · observed ${localTime(new Date(freshWeather.observedAt))}` : '');
   const items = [
     ...(settings.showAlerts ? (saved?.alerts?.length ? saved.alerts.map(text => ({ label: settings.alertLabel, text })) : [{ label: settings.fallbackLabel, text: settings.fallback }]) : []),
     ...(settings.showLocation ? [{ label: settings.locationLabel, text: settings.location }] : []),
     ...(settings.showTime ? [{ label: settings.timeLabel, text: `${bannerDate(now)} · ${settings.timeOverride || localTime(now)}` }] : []),
-    ...(settings.showWeather ? [{ label: settings.weatherLabel, text: settings.weatherOverride || (freshWeather ? `${freshWeather.temperature}°F · ${freshWeather.description} · observed ${localTime(new Date(freshWeather.observedAt))}` : 'Weather temporarily unavailable') }] : []),
-
+    ...(settings.showWeather && weatherText ? [{ label: settings.weatherLabel, text: weatherText }] : []),
   ];
   const routine = settings.motion !== 'always' && !(settings.motion === 'alerts' && settings.showAlerts && saved?.alerts?.length);
   const stopped = (paused ?? routine) || reduced || editing;
