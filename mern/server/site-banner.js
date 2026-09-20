@@ -1,5 +1,5 @@
 import express from 'express';
-import helmet from 'helmet';
+import { securityHeaders } from './http-security.js';
 import cookieParser from 'cookie-parser';
 import mongoose from 'mongoose';
 import { z } from 'zod';
@@ -16,7 +16,7 @@ const input = z.object({ expectedRevision: z.number().int().min(0), alerts: z.ar
 const connect = async (_req, _res, next) => { await connectDb(); next(); };
 const publicBanner = value => ({ alerts: value?.alerts || [], revision: value?.revision || 0, settings: { ...DEFAULT_BANNER, ...value?.settings } });
 const router = express.Router();
-router.use(helmet(), (_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
+router.use(securityHeaders(), (_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
 router.get('/weather', async (_req, res) => res.json({ weather: await readWeather() }));
 router.get('/', connect, async (_req, res) => res.json(publicBanner(await SiteBanner.findById('home').lean())));
 router.put('/', sameOrigin, cookieParser(), connect, identify, requireUser, requireOwner, rateLimit('banner-write', 60, 3600000), express.json({ limit: '32kb' }), async (req, res) => {

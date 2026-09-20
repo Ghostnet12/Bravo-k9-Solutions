@@ -1,12 +1,11 @@
 import express from 'express';
 import { requestError } from './errors.js';
-import helmet from 'helmet';
-import cookieParser from 'cookie-parser';
+import { sessionMiddleware } from './session-middleware.js';
 import { z } from 'zod';
 import mediaApp from './site-image-app.js';
-import { connectDb, transaction } from './db.js';
+import { transaction } from './db.js';
 import { User, Subscription, AuditEvent, MemberAccess } from './models.js';
-import { identify, requireUser, requireOwner, sameOrigin, publicUser, rateLimit } from './auth.js';
+import { requireUser, requireOwner, sameOrigin, publicUser, rateLimit } from './auth.js';
 import { getEntitlements } from './bookings.js';
 import { protectedLesson } from './lessons.js';
 import { monthTerm, manualMonthTerm, grantActive, activeTermQuery } from '../shared/membership-terms.js';
@@ -25,7 +24,7 @@ export function membershipSummary(entitlements, grant) {
 }
 const app = express();
 app.disable('x-powered-by'); app.set('trust proxy', process.env.VERCEL ? 1 : false);
-const session = [helmet(), (_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); }, cookieParser(), async (_req, _res, next) => { await connectDb(); next(); }, identify, rateLimit('api', 240, 60000)];
+const session = sessionMiddleware();
 app.get('/api/auth/me', ...session, async (req, res) => {
   if (!req.user) return res.json({ user: null, services: [], subscriptions: [], serviceDogCounts: {}, membership: { active: false, manual: false, onlineAccess: false } });
   if (req.user.mustChangePassword) return res.json({ user: publicUser(req.user), services: [], subscriptions: [], serviceDogCounts: {}, membership: { active: false, manual: false, onlineAccess: false } });
