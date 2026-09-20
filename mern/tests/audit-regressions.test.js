@@ -201,9 +201,13 @@ test('personal-information fields expose recognized autofill purposes', async ()
 });
 
 test('ratings have one accessible name and decorative stars stay silent', async () => {
-  const source = await readFile(new URL('../client/src/Home.tsx', import.meta.url), 'utf8');
-  assert.match(source, /className="review-stars" role="img" aria-label=/);
+  const source = await readFile(new URL('../client/src/ReviewStars.jsx', import.meta.url), 'utf8');
+  assert.match(source, /className="review-stars review-stars--gold" role="img" aria-label=/);
   assert.match(source, /<span aria-hidden="true">/);
+  for (const filename of ['Home.tsx', 'FacebookRecommendations.jsx']) {
+    const page = await readFile(new URL(`../client/src/${filename}`, import.meta.url), 'utf8');
+    assert.match(page, /<ReviewStars rating=\{review.rating\}/);
+  }
 });
 
 test('accessibility statement names the current target, methods, and ongoing review', async () => {
