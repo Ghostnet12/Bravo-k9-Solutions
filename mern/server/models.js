@@ -22,7 +22,7 @@ export const MemberAccess = model('BravoMemberAccess', new Schema({
   updatedBy: id, startsAt: Date, endsAt: Date,
   trainingBookingId: id, trainingSubscriptionId: String, trainingDogCount: Number,
 }, { timestamps: true }));
-export const Session = model('BravoSession', new Schema({ tokenHash: { type: String, unique: true }, userId: { type: id, required: true }, credentialVersion: { type: Number, default: 0 }, expiresAt: { type: Date, expires: 0 } }));
+export const Session = model('BravoSession', new Schema({ tokenHash: { type: String, unique: true }, userId: { type: id, required: true }, credentialVersion: { type: Number, default: 0 }, issuedAt: Date, lastSeenAt: Date, expiresAt: { type: Date, expires: 0 } }));
 export const RateBucket = model('BravoRateBucket', new Schema({ _id: String, count: Number, expiresAt: { type: Date, expires: 0 } }));
 const visitSchema = new Schema({ date: String, time: String, service: String }, { _id: false });
 const bookingSchema = new Schema({
@@ -63,7 +63,7 @@ export const MembershipCredit = model('BravoMembershipCredit', new Schema({
 }, { timestamps: true }).index({ userId: 1, missedDate: 1 }, { unique: true, partialFilterExpression: { missedDate: { $type: 'string' } } }));
 export const Notification = model('BravoNotification', new Schema({ _id: String, userId: id, staff: Boolean, body: String, href: String, createdAt: { type: Date, default: Date.now } }));
 export const NotificationRead = model('BravoNotificationRead', new Schema({ _id: String, userId: id, notificationId: String, messageId: id }));
-export const PasswordReset = model('BravoPasswordReset', new Schema({ _id: String, userId: { type: id, unique: true }, expiresAt: { type: Date, expires: 0 } }));
+export const PasswordReset = model('BravoPasswordReset', new Schema({ _id: String, userId: { type: id, unique: true }, credentialVersion: Number, expiresAt: { type: Date, expires: 0 } }));
 export const StripeEvent = model('BravoStripeEvent', new Schema({ _id: String, type: String, processedAt: Date }));
 export const BillingLock = model('BravoBillingLock', new Schema({ _id: String, bookingId: String, expiresAt: { type: Date, expires: 0 } }));
 export const Lesson = model('BravoLesson', new Schema({

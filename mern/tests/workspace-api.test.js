@@ -11,7 +11,7 @@ const origin = 'http://localhost:5173';
 const ids = { owner: '6aa290cbd066f8feb3c1964f', staff: '111111111111111111111111', member: '222222222222222222222222', other: '333333333333333333333333' };
 function query(value) {
   const chain = { then: (resolve, reject) => Promise.resolve(value).then(resolve, reject) };
-  for (const key of ['select', 'lean', 'sort', 'limit', 'session', 'populate']) chain[key] = () => chain;
+  for (const key of ['select', 'lean', 'sort', 'limit', 'skip', 'session', 'populate']) chain[key] = () => chain;
   return chain;
 }
 test('owner/staff workspace contracts over HTTP with isolated model mocks', async t => {
@@ -33,7 +33,9 @@ test('owner/staff workspace contracts over HTTP with isolated model mocks', asyn
   const accessAudit = t.mock.method(AuditEvent, 'create', async events => events);
   t.mock.method(User, 'exists', filter => query(users[String(filter._id)] && !users[String(filter._id)].blocked ? { _id: filter._id } : null));
   t.mock.method(User, 'find', () => query(Object.values(users)));
-  t.mock.method(Session, 'findOne', filter => query(Object.entries(ids).find(([token]) => digest(token) === filter.tokenHash) ? { userId: ids[Object.entries(ids).find(([token]) => digest(token) === filter.tokenHash)[0]] } : null));
+  t.mock.method(Session, 'findOne', filter => query(Object.entries(ids).find(([token]) => digest(digest(token)) === filter.tokenHash) ? { _id: new mongoose.Types.ObjectId(), issuedAt: new Date(), lastSeenAt: new Date(), userId: ids[Object.entries(ids).find(([token]) => digest(digest(token)) === filter.tokenHash)[0]] } : null));
+  t.mock.method(Session, 'find', () => query([]));
+  t.mock.method(Session, 'updateOne', async () => ({ matchedCount: 1 }));
   t.mock.method(Session, 'deleteMany', async () => ({ deletedCount: 1 }));
   t.mock.method(RateBucket, 'findOneAndUpdate', async () => ({ count: 1 }));
   t.mock.method(Settings, 'updateOne', async () => ({}));
@@ -47,7 +49,7 @@ test('owner/staff workspace contracts over HTTP with isolated model mocks', asyn
   t.mock.method(TrainerSchedule, 'findById', () => query(null));
   const call = (role, method, path, body) => {
     const req = request(app)[method](path).set('Origin', origin);
-    if (role) req.set('Cookie', `bravo_session=${role}`);
+    if (role) req.set('Cookie', `bravo_session=${digest(role)}`);
     return body === undefined ? req : req.send(body);
   };
   await t.test('owner can promote/demote, staff and clients cannot grant access', async () => {
