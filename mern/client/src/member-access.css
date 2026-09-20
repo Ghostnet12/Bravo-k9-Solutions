@@ -10,3 +10,8 @@
 .bravo-footer .footer-credit{display:block;border-top:1px solid var(--line,rgba(215,201,174,.17));padding:1rem 0 1.75rem;text-align:center}
 .bravo-footer .footer-credit p{display:block;margin:0;width:100%;max-width:none;color:#b0afa7;font-family:Montserrat,Arial,sans-serif;font-size:.78rem;font-weight:400;line-height:1.8;letter-spacing:0;white-space:normal;overflow-wrap:break-word;text-align:center}
 @media(max-width:640px){.member-access-control{padding:1rem}.member-access-heading{align-items:flex-start}.bravo-footer .footer-baseline.footer-baseline--split{justify-content:center;gap:.6rem}.bravo-footer .footer-baseline.footer-baseline--split>span,.bravo-footer .footer-baseline.footer-baseline--split>span:last-child{text-align:center;width:100%}.bravo-footer .footer-credit{padding:1rem 0 calc(1.5rem + env(safe-area-inset-bottom,0px))}}
+
+.bravo-footer .footer-facebook{display:flex;align-items:center;gap:.65rem;width:fit-content;max-width:100%;min-height:44px;margin-top:.65rem;padding:.5rem 0;color:var(--gold-light,#e5d5b4);font-size:.875rem;line-height:1.5;text-decoration:none}
+.bravo-footer .footer-facebook svg{flex:none}
+.bravo-footer .footer-facebook:hover span{text-decoration:underline;text-underline-offset:4px}
+.bravo-footer .footer-facebook:focus-visible{outline:2px solid var(--gold-light,#e5d5b4);outline-offset:5px;border-radius:3px}
