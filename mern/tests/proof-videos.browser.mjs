@@ -54,6 +54,9 @@ try {
         };
         const openVideoEditor = async card => {
           await card.scrollIntoViewIfNeeded();
+          // Scrolling and CSS snap can emit one final scroll event, which
+          // intentionally cancels a hold. Start the gesture after it settles.
+          await page.waitForTimeout(350);
           const pointerId = toolPointer++;
           await card.dispatchEvent('pointerdown', { button: 0, isPrimary: true, pointerId, pointerType: 'touch', clientX: 120, clientY: 220 });
           const editor = page.getByRole('dialog', { name: 'Edit this video' });
