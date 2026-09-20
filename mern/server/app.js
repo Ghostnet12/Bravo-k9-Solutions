@@ -1,3 +1,4 @@
+import { mfaRoutes } from './mfa-routes.js';
 import { attributeBooking, monitoringEnabled } from './monitoring.js';
 import { reserveVisits, assertVisitsFree } from './reservations.js';
 import express from 'express';
@@ -67,6 +68,7 @@ app.get('/api/team', async (_req, res) => {
 app.use('/api', sameOrigin, async (_req, _res, next) => { await connectDb(); next(); }, identify);
 app.use('/api', rateLimit('api', 240, 60000));
 lessonLibraryRoutes(app);
+mfaRoutes(app);
 app.get('/api/lessons', async (req, res) => {
   await requireOpenLibrary(req.user);
   const editor = req.user?.role === 'owner';
@@ -102,11 +104,11 @@ app.patch('/api/auth/profile', requireUser, async (req, res) => {
 app.post('/api/auth/password', requireUser, rateLimit('password', 5, 900000), async (req, res) => {
   const fields = z.object({ currentPassword: z.string().max(128), password: z.string().min(12).max(128) }).parse(req.body);
   const current = await User.findById(req.user._id).select('+passwordHash +credentialVersion');
-  if (!current || !await verifyPassword(fields.currentPassword, current.passwordHash)) return res.status(400).json({ error: 'Current password is incorrect.' });
+  if (!current || (current.credentialVersion || 0) !== (req.user.credentialVersion || 0) || !await verifyPassword(fields.currentPassword, current.passwordHash)) return res.status(400).json({ error: 'Current password is incorrect.' });
   const passwordHash = await hashPassword(fields.password);
   let user;
   await transaction(async session => {
-    user = await User.findOneAndUpdate({ _id: current._id, passwordHash: current.passwordHash, blocked: false, mustChangePassword: { $ne: true } }, { $set: { passwordHash }, $inc: { credentialVersion: 1 } }, { returnDocument: 'after', session }).select('+credentialVersion');
+    user = await User.findOneAndUpdate({ _id: current._id, passwordHash: current.passwordHash, credentialVersion: current.credentialVersion || { $in: [0, null] }, blocked: false, mustChangePassword: { $ne: true } }, { $set: { passwordHash }, $inc: { credentialVersion: 1 } }, { returnDocument: 'after', session }).select('+credentialVersion');
     if (!user) throw Object.assign(new Error('Your sign-in changed. Sign in again before changing your password.'), { status: 409 });
     await Session.deleteMany({ userId: user._id }, { session });
     await PasswordReset.deleteMany({ userId: user._id }, { session });

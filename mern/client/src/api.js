@@ -6,7 +6,7 @@ export async function api(path, options = {}) {
     const res = await fetch(`/api${path}`, { credentials: 'same-origin', ...options, cache: 'no-store', signal: controller.signal, headers: { 'Content-Type': 'application/json', ...options.headers }, body: options.body === undefined ? undefined : JSON.stringify(options.body) });
     const data = await res.json().catch(() => null);
     if (!data) throw Object.assign(new Error('The service returned an unexpected response. Please try again or contact Bravo.'), { status: res.status });
-    if (!res.ok) throw Object.assign(new Error(data.error || 'Something went wrong.'), { status: res.status });
+    if (!res.ok) throw Object.assign(new Error(data.error || 'Something went wrong.'), { status: res.status, code: data.code });
     return data;
   } catch (error) {
     if (error.name === 'AbortError') reportBrowserError('request_timeout', `/api${path}`);

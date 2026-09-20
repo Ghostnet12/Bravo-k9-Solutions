@@ -29,7 +29,7 @@ jobs:
       - run: npm run build
       - run: npm test
       - name: Isolated authentication, authorization, media and client regressions
-        run: node --test --test-concurrency=1 tests/security-hardening.integration.js tests/client-login.integration.js tests/client-services.integration.js tests/member-access.integration.js tests/media-editor.integration.js tests/proof-videos.integration.js tests/administrator-removal.integration.js tests/client-removal.integration.js tests/site-operations.integration.js tests/lesson-library.integration.js
+        run: node --test --test-concurrency=1 tests/mfa.integration.js tests/security-hardening.integration.js tests/client-login.integration.js tests/client-services.integration.js tests/member-access.integration.js tests/media-editor.integration.js tests/proof-videos.integration.js tests/administrator-removal.integration.js tests/client-removal.integration.js tests/site-operations.integration.js tests/lesson-library.integration.js
       - run: npm install --no-save --package-lock=false playwright@1.55.1
       - run: npx playwright install --with-deps chromium webkit
       - name: Public pages without JavaScript and client sign-in on mobile
@@ -40,6 +40,7 @@ jobs:
           node tests/customer-clarity.browser.mjs
           node tests/client-login.browser.mjs
           node tests/client-removal.browser.mjs
+          node tests/mfa.browser.mjs
       - name: Known dependency vulnerabilities (retry registry maintenance)
         run: |
           for attempt in 1 2 3; do

@@ -1,0 +1,13 @@
+title = "Bravo secret scanning"
+[extend]
+useDefault = true
+
+# Public RFC 6238 Appendix B test vector, never used by production accounts.
+# Keep all other secrets in these files subject to the default rules.
+[[rules]]
+id = "generic-api-key"
+[[rules.allowlists]]
+description = "Published RFC 6238 SHA-1 vector in MFA test fixtures only"
+condition = "AND"
+paths = ['''^mern/tests/mfa\.(test\.js|browser\.mjs)$''']
+regexes = ['''^GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ$''']
