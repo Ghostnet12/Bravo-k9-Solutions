@@ -1,7 +1,7 @@
 import TrainingFacts from './TrainingFacts';
 import { Editable } from './SiteContent';
 import { Link } from 'react-router-dom';
-import { AppointmentNotice, Page } from './ui';
+import { Page } from './ui';
 
 export default function DogTrainingPage() {
   return <Page title="Dog training in Aberdeen, SD." eyebrow="PRIVATE TRAINING · WE COME TO YOU" intro="Build everyday skills at home and in the places your dog needs them. Bravo K9 Solutions brings private mobile training to you in Aberdeen, South Dakota.">
