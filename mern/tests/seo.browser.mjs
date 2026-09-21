@@ -46,7 +46,7 @@ try {
         });
         await page.goto(origin);
         const cards = page.locator('.facebook-recommendations article');
-        assert.equal(await cards.count(), 3);
+        assert.equal(await cards.count(), 5);
         for (const card of await cards.all()) {
           const original = await card.locator('.review-full blockquote').textContent();
           assert.equal(await card.locator('.review-full blockquote').isVisible(), false);

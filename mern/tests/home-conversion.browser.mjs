@@ -50,7 +50,12 @@ try {
         const accountReviews = page.locator('.home-proof-reviews article').filter({ hasText: 'Verified Bravo account' });
         assert.equal(await accountReviews.count(), reviews.length);
         for (const review of reviews) await accountReviews.getByText(review.authorName, { exact: true }).waitFor();
-        assert.equal(await page.locator('.facebook-recommendations article').count(), 3);
+        assert.equal(await page.locator('.facebook-recommendations article').count(), 5);
+        for (const author of ['Tamyra Borg', 'Waneta Malsom']) {
+          const card = page.locator('.facebook-recommendations article').filter({ hasText: author });
+          await card.getByText('Google review', { exact: true }).waitFor();
+          await card.getByText(author, { exact: true }).waitFor();
+        }
         assert.equal(await page.locator('.home-work-proof-grid article').count(), 3);
         // Exercise the mobile/desktop outbound action without relying on Facebook
         // availability in CI. Real video playback is checked separately on live pages.

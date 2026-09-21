@@ -41,7 +41,7 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){const br
   await page.evaluate(()=>document.documentElement.style.fontSize='');
   await page.screenshot({path:`test-results/authentic-home-${engineName}-${width}.png`});
   assert.equal(await page.locator('[data-site-content-key="home-53"] .review-stars').count(),0);
-  assert.equal(await page.locator('.facebook-recommendations .review-stars[aria-label="5 out of 5 stars"]').count(),3);assert.equal(await page.locator('.banner-track').evaluate(el=>getComputedStyle(el).animationName),'none');
+  assert.equal(await page.locator('.facebook-recommendations .review-stars[aria-label="5 out of 5 stars"]').count(),5);assert.equal(await page.locator('.banner-track').evaluate(el=>getComputedStyle(el).animationName),'none');
   await page.getByRole('link',{name:'Start private training',exact:true}).click();await page.getByRole('heading',{name:'Let’s start with your dog.',exact:true}).waitFor();
   assert.equal(await page.getByText('IMPORTANT APPOINTMENT NOTICE',{exact:true}).count(),0);assert.equal(await page.getByRole('heading',{name:'Build your schedule',exact:true}).count(),0);
   await page.getByLabel('Dog’s name',{exact:true}).fill('Biscuit');await page.getByLabel('Number of dogs',{exact:true}).fill('2');await page.getByLabel('What would you like help with?',{exact:true}).selectOption('puppy-foundations');await page.getByLabel('Anything you’d like your trainer to know? (optional)',{exact:true}).fill('Jumps when visitors arrive.');
