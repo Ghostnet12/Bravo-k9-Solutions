@@ -53,6 +53,10 @@ try {
           await tools.waitFor({ state: 'hidden' });
         };
         const openVideoEditor = async card => {
+          // Server-rendered cards can appear before the signed-in editing
+          // controls hydrate, especially after returning from an external page.
+          await card.and(page.locator('[data-proof-editable="true"]')).waitFor();
+          await page.waitForLoadState('networkidle');
           await card.scrollIntoViewIfNeeded();
           // Scrolling and CSS snap can emit one final scroll event, which
           // intentionally cancels a hold. Start the gesture after it settles.
@@ -162,10 +166,7 @@ try {
         await page.goBack();
         await page.waitForURL(`${origin}/`);
         await linkedWatch.waitFor();
-        await linked.scrollIntoViewIfNeeded(); await page.waitForTimeout(350);
-        await linked.locator('.proof-reel-placeholder').dispatchEvent('pointerdown', { button: 0, isPrimary: true, pointerId: 3, pointerType: 'touch', clientX: 150, clientY: 300 });
-        await edit.waitFor();
-        await linked.locator('.proof-reel-placeholder').dispatchEvent('pointerup', { pointerId: 3 });
+        await openVideoEditor(linked);
         assert.equal(await edit.getByRole('textbox', { name: 'Facebook Reel URL', exact: true }).inputValue(), reelUrl);
         await edit.getByLabel('Description', { exact: true }).fill('The Reel description can be edited later.');
         await edit.screenshot({ path: `test-results/reel-url-editor-${engineName}-${width}.png` });
