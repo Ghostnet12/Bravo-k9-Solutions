@@ -18,4 +18,6 @@ jobs:
           curl -L --fail --silent --show-error 'https://firestorage.ai/ja/f/w7L805XJL9WT' -o /tmp/share.html
           echo "CONTENT_TYPE=$(file -b --mime-type /tmp/share.html)"
           echo "SIZE=$(wc -c < /tmp/share.html)"
-          grep -Eo 'https?://[^"'"'"'<> ]+|/api/[A-Za-z0-9_?&=./:%-]+' /tmp/share.html | sed 's/&amp;/\&/g' | sort -u | head -n 120
+          echo '--- SHARE HTML ---'
+          cat /tmp/share.html
+          echo '--- END SHARE HTML ---'
