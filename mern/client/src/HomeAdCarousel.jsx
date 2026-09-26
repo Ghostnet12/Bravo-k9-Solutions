@@ -130,7 +130,7 @@ export default function HomeAdCarousel() {
   }
   if (!slides.length && !canEdit) return null;
   return <>
-    <section className="home-ad-carousel" aria-label="Bravo announcements and promotions" data-ad-editable={canEdit || undefined}
+    <section className="home-ad-carousel" aria-label="Bravo announcements and promotions" data-ad-transition="fade" data-ad-editable={canEdit || undefined}
       onPointerDown={event => { if (!canEdit || event.button !== 0 || event.isPrimary === false) return; origin.current = { x: event.clientX, y: event.clientY }; cancelHold(); hold.current = setTimeout(openEditor, 650); }}
       onPointerMove={event => { if (origin.current && Math.hypot(event.clientX - origin.current.x, event.clientY - origin.current.y) > 12) cancelHold(); }}
       onPointerUp={cancelHold} onPointerCancel={cancelHold} onPointerLeave={cancelHold}
