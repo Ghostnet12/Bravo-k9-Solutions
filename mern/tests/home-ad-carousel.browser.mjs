@@ -38,7 +38,7 @@ try{
    const carousel=page.locator('.home-ad-carousel');
    assert.equal(await carousel.evaluate(el=>el.previousElementSibling?.classList.contains('home-status-banner')),true);
    assert.equal(await carousel.getByRole('img',{name:'Workshop banner'}).count(),1);
-   await page.waitForFunction(()=>{const img=document.querySelector('.home-ad-slide img[alt="Workshop banner"]');return !!img&&img.complete&&img.naturalWidth>0;});
+   const workshopImage=page.locator('.home-ad-slide img[alt="Workshop banner"]');await workshopImage.waitFor();assert.equal(await workshopImage.getAttribute('src'),'/images/saturday-workshop-october-3.webp');
    await page.getByRole('button',{name:'Next advertisement'}).click();
    assert.match(await page.locator('.home-ad-track').getAttribute('style'),/-100%/);
 
