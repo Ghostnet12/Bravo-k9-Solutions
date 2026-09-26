@@ -139,9 +139,9 @@ export default function HomeAdCarousel() {
       onClickCapture={event => { if (Date.now() < suppressUntil.current) { event.preventDefault(); event.stopPropagation(); } }}>
       {slides.length ? <div className="home-ad-frame">
         <div className="home-ad-track" style={{ transform: `translateX(-${active * 100}%)`, transition: reduced ? 'none' : undefined }}>
-          {slides.map(ad => <article className="home-ad-slide" key={ad.id} aria-hidden={slides[active]?.id === ad.id ? undefined : true}>
-            {ad.link ? <a href={ad.link} aria-label={ad.title}><img src={ad.src} width="1320" height="510" loading={active === 0 ? 'eager' : 'lazy'} alt={ad.alt}/></a> : <img src={ad.src} width="1320" height="510" loading={active === 0 ? 'eager' : 'lazy'} alt={ad.alt}/>}
-          </article>)}
+          {slides.map((ad, index) => { const current = index === active; return <article className="home-ad-slide" key={ad.id} aria-hidden={current ? undefined : true}>
+            {ad.link ? <a href={ad.link} aria-label={ad.title} tabIndex={current ? undefined : -1}><img src={ad.src} width="1320" height="510" loading={index === 0 ? 'eager' : 'lazy'} draggable="false" alt={ad.alt}/></a> : <img src={ad.src} width="1320" height="510" loading={index === 0 ? 'eager' : 'lazy'} draggable="false" alt={ad.alt}/>}
+          </article>; })}
         </div>
         {slides.length > 1 && <div className="home-ad-controls">
           <button type="button" onClick={() => step(-1)} aria-label="Previous advertisement">‹</button>
