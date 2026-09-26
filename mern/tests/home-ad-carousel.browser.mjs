@@ -47,6 +47,7 @@ try{
    await page.evaluate(()=>document.activeElement?.blur());
    await page.waitForFunction(()=>document.querySelector('.home-ad-slide.is-active img')?.getAttribute('alt')==='Second promotion',null,{timeout:5000});
 
+   await carousel.scrollIntoViewIfNeeded();
    const box=await carousel.boundingBox();await page.mouse.move(box.x+80,box.y+80);await page.mouse.down();await page.waitForTimeout(750);await page.mouse.up();
    await page.getByRole('dialog',{name:/Manage homepage ads/i}).waitFor();
    assert.equal(await page.locator('.ad-editor-card').first().getByLabel('Ad name').inputValue(),'Saturday Dog Training Workshop');
@@ -66,7 +67,7 @@ try{
    await page.getByRole('button',{name:'Done',exact:true}).click();
    role='staff';await page.reload();await page.waitForLoadState('networkidle');
    assert.equal(await page.locator('[data-ad-editable]').count(),0);
-   const publicCarousel=page.locator('.home-ad-carousel'),b=await publicCarousel.boundingBox();await page.mouse.move(b.x+50,b.y+50);await page.mouse.down();await page.waitForTimeout(750);await page.mouse.up();
+   const publicCarousel=page.locator('.home-ad-carousel');await publicCarousel.scrollIntoViewIfNeeded();const b=await publicCarousel.boundingBox();await page.mouse.move(b.x+50,b.y+50);await page.mouse.down();await page.waitForTimeout(750);await page.mouse.up();
    assert.equal(await page.getByRole('dialog',{name:/Manage homepage ads/i}).count(),0);
    assert.deepEqual(errors,[]);
    await page.screenshot({path:`test-results/home-ad-carousel-${engineName}.png`});
