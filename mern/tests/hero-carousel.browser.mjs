@@ -67,7 +67,7 @@ try { for (const [name, engine] of Object.entries({ chromium, webkit })) {
   settings={revision:9,intervalSeconds:2,photos:[badKey,slowKey]};images={[badKey]:{src:'/unavailable-hero.jpg',alt:'Unavailable fixture'},[slowKey]:{src:'/slow-hero.jpg',alt:'Slow fixture'}};
   await page.route('**/unavailable-hero.jpg',route=>route.fulfill({status:404,body:''}));
   await page.route('**/slow-hero.jpg',async route=>{await new Promise(resolve=>setTimeout(resolve,8000));await route.fulfill({contentType:'image/jpeg',body:await readFile(`${dist}/images/bravo-client-training.jpeg`)});});
-  await page.emulateMedia({reducedMotion:'no-preference'});await page.reload();await page.waitForLoadState('networkidle');await page.getByRole('region',{name:'Trainer photos'}).waitFor();await page.getByRole('region',{name:'Trainer photos'}).scrollIntoViewIfNeeded();await page.waitForTimeout(4500);
+  await page.emulateMedia({reducedMotion:'no-preference'});await page.reload({waitUntil:'domcontentloaded'});await page.getByRole('region',{name:'Trainer photos'}).waitFor();await page.getByRole('region',{name:'Trainer photos'}).scrollIntoViewIfNeeded();await page.waitForTimeout(4500);
   assert.equal(await page.locator('.hero-photo-slide').first().getAttribute('aria-hidden'),'false','retain current photo while the next usable image downloads');
   assert.equal(await page.locator('.hero-photo-slide').first().locator('img').evaluate(el=>el.complete&&el.naturalWidth>0),true);
   await page.waitForFunction(()=>{const slide=document.querySelector('.hero-photo-slide[aria-hidden="false"]'),img=slide?.querySelector('img');return img?.getAttribute('src')==='/slow-hero.jpg'&&img.complete&&img.naturalWidth>0;},null,{timeout:15000});
