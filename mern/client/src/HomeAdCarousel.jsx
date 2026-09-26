@@ -71,17 +71,17 @@ function AdEditor({ collection, publish, close }) {
     await order(ids);
   }
   async function remove(id, name) {
-    if (!window.confirm(`Delete “${name}” from the homepage ad carousel?`)) return;
+    if (!window.confirm(`Delete “${name}” from the homepage ad rotation?`)) return;
     setBusy(true); setError('');
     try { publish(await api(`/site-ads/${id}`, { method: 'DELETE', body: { expectedRevision: collection.revision } })); }
     catch (e) { setError(e.message); }
     finally { setBusy(false); }
   }
   async function saveTiming() { await order(collection.ads.map(ad => ad.id), seconds); }
-  return <dialog ref={dialog} className="ad-editor-dialog" aria-labelledby="ad-editor-title" onCancel={e => { e.preventDefault(); if (!busy) close(); }}>
-    <div className="ad-editor-heading"><div><p>BRAVO · HOMEPAGE ADVERTISING</p><h2 id="ad-editor-title">Manage ad carousel</h2></div><button type="button" disabled={busy} onClick={close} aria-label="Close ad editor">×</button></div>
-    <p>These banners appear directly below the homepage status banner. Add, reorder, hide, replace or delete them here.</p>
-    <section className="ad-editor-settings" aria-label="Carousel settings">
+  return <dialog ref={dialog} className="ad-editor-dialog" data-site-image-ignore="" aria-labelledby="ad-editor-title" onCancel={e => { e.preventDefault(); if (!busy) close(); }}>
+    <div className="ad-editor-heading"><div><p>BRAVO · HOMEPAGE ADVERTISING</p><h2 id="ad-editor-title">Manage homepage ads</h2></div><button type="button" disabled={busy} onClick={close} aria-label="Close ad editor">×</button></div>
+    <p>These banners fade automatically below the homepage status banner. Add, reorder, hide, replace or delete them here.</p>
+    <section className="ad-editor-settings" aria-label="Ad rotation settings">
       <label>Seconds between ads<input type="range" min="3" max="20" step="1" value={seconds} onChange={e => setSeconds(Number(e.target.value))}/><output>{seconds}s</output></label>
       <button type="button" disabled={busy || seconds === collection.settings?.autoplaySeconds} onClick={saveTiming}>Save timing</button>
     </section>
@@ -104,7 +104,7 @@ function AdEditor({ collection, publish, close }) {
 export default function HomeAdCarousel() {
   const { user } = useBravo();
   const canEdit = isImageEditor(user) && !user?.mustChangePassword;
-  const [collection, setCollection] = useState(initialCollection), [active, setActive] = useState(0), [paused, setPaused] = useState(false), [editing, setEditing] = useState(false), [reduced, setReduced] = useState(false);
+  const [collection, setCollection] = useState(initialCollection), [active, setActive] = useState(0), [editing, setEditing] = useState(false), [reduced, setReduced] = useState(false), [focused, setFocused] = useState(false);
   const hold = useRef(null), origin = useRef(null), suppressUntil = useRef(0);
   const cancelHold = () => { clearTimeout(hold.current); hold.current = null; };
   useEffect(() => {
@@ -118,38 +118,33 @@ export default function HomeAdCarousel() {
   const slides = collection.ads.filter(ad => ad.enabled !== false && ad.src);
   useEffect(() => { if (active >= slides.length) setActive(0); }, [active, slides.length]);
   useEffect(() => {
-    if (slides.length < 2 || paused || reduced || editing) return;
+    if (slides.length < 2 || reduced || editing || focused) return;
     const timer = setInterval(() => setActive(index => (index + 1) % slides.length), Math.max(3, collection.settings?.autoplaySeconds || 7) * 1000);
     return () => clearInterval(timer);
-  }, [slides.length, paused, reduced, editing, collection.settings?.autoplaySeconds]);
-  function step(delta) { if (slides.length) setActive(index => (index + delta + slides.length) % slides.length); }
+  }, [slides.length, reduced, editing, focused, collection.settings?.autoplaySeconds]);
   async function openEditor() {
     if (!canEdit) return;
     cancelHold(); suppressUntil.current = Date.now() + 1200;
     try { setCollection(await api('/site-ads')); } catch { /* keep current snapshot */ }
-    setEditing(true); setPaused(true);
+    setEditing(true);
   }
   if (!slides.length && !canEdit) return null;
   return <>
-    <section className="home-ad-carousel" aria-label="Bravo announcements and promotions" data-ad-editable={canEdit || undefined}
-      onPointerDown={event => { if (!canEdit || event.button !== 0 || event.isPrimary === false || event.target.closest('.home-ad-controls')) return; origin.current = { x: event.clientX, y: event.clientY }; cancelHold(); hold.current = setTimeout(openEditor, 650); }}
+    <section className="home-ad-carousel" data-site-image-ignore="" aria-label="Bravo announcements and promotions" data-ad-editable={canEdit || undefined}
+      onPointerDown={event => { if (!canEdit || event.button !== 0 || event.isPrimary === false) return; origin.current = { x: event.clientX, y: event.clientY }; cancelHold(); hold.current = setTimeout(openEditor, 650); }}
       onPointerMove={event => { if (origin.current && Math.hypot(event.clientX - origin.current.x, event.clientY - origin.current.y) > 12) cancelHold(); }}
       onPointerUp={cancelHold} onPointerCancel={cancelHold} onPointerLeave={cancelHold}
       onContextMenu={event => { if (canEdit) event.preventDefault(); }}
+      onFocusCapture={() => setFocused(true)}
+      onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}
       onClickCapture={event => { if (Date.now() < suppressUntil.current) { event.preventDefault(); event.stopPropagation(); } }}>
       {slides.length ? <div className="home-ad-frame">
-        <div className="home-ad-track" style={{ transform: `translateX(-${active * 100}%)`, transition: reduced ? 'none' : undefined }}>
-          {slides.map((ad, index) => { const current = index === active; return <article className="home-ad-slide" key={ad.id} aria-hidden={current ? undefined : true}>
+        <div className="home-ad-track">
+          {slides.map((ad, index) => { const current = index === active; return <article className={`home-ad-slide${current ? ' is-active' : ''}`} key={ad.id} aria-hidden={current ? undefined : true}>
             <div className="home-ad-fallback" aria-hidden="true"><strong>BRAVO K9 SOLUTIONS</strong><b>SATURDAY</b><span>DOG TRAINING WORKSHOP</span><small>Hands-on training · Real-world skills · A safer community</small></div>
             {ad.link ? <a href={ad.link} aria-label={ad.title} tabIndex={current ? undefined : -1}><img src={ad.src} width="1320" height="510" loading={index === 0 ? 'eager' : 'lazy'} draggable="false" alt={ad.alt} onError={e => e.currentTarget.closest('.home-ad-slide')?.classList.add('is-image-missing')}/></a> : <img src={ad.src} width="1320" height="510" loading={index === 0 ? 'eager' : 'lazy'} draggable="false" alt={ad.alt} onError={e => e.currentTarget.closest('.home-ad-slide')?.classList.add('is-image-missing')}/>}
           </article>; })}
         </div>
-        {slides.length > 1 && <div className="home-ad-controls">
-          <button type="button" onClick={() => step(-1)} aria-label="Previous advertisement">‹</button>
-          <div className="home-ad-dots" role="group" aria-label="Choose advertisement">{slides.map((ad, index) => <button type="button" key={ad.id} aria-label={`Show advertisement ${index + 1}`} aria-pressed={index === active} onClick={() => setActive(index)}/>)}</div>
-          <button type="button" onClick={() => step(1)} aria-label="Next advertisement">›</button>
-          {!reduced && <button type="button" onClick={() => setPaused(value => !value)} aria-label={paused ? 'Resume advertisements' : 'Pause advertisements'} aria-pressed={paused}>{paused ? '▶' : 'Ⅱ'}</button>}
-        </div>}
         {canEdit && <span className="home-ad-admin-hint">Press and hold to manage ads</span>}
       </div> : <button type="button" className="home-ad-empty" onClick={openEditor}>Add homepage advertisement</button>}
     </section>
