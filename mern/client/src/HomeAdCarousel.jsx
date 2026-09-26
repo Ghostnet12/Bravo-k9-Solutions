@@ -104,7 +104,7 @@ function AdEditor({ collection, publish, close }) {
 export default function HomeAdCarousel() {
   const { user } = useBravo();
   const canEdit = isImageEditor(user) && !user?.mustChangePassword;
-  const [collection, setCollection] = useState(initialCollection), [active, setActive] = useState(0), [editing, setEditing] = useState(false), [reduced, setReduced] = useState(false);
+  const [collection, setCollection] = useState(initialCollection), [active, setActive] = useState(0), [editing, setEditing] = useState(false), [reduced, setReduced] = useState(false), [focused, setFocused] = useState(false);
   const hold = useRef(null), origin = useRef(null), suppressUntil = useRef(0);
   const cancelHold = () => { clearTimeout(hold.current); hold.current = null; };
   useEffect(() => {
@@ -118,10 +118,10 @@ export default function HomeAdCarousel() {
   const slides = collection.ads.filter(ad => ad.enabled !== false && ad.src);
   useEffect(() => { if (active >= slides.length) setActive(0); }, [active, slides.length]);
   useEffect(() => {
-    if (slides.length < 2 || reduced || editing) return;
+    if (slides.length < 2 || reduced || editing || focused) return;
     const timer = setInterval(() => setActive(index => (index + 1) % slides.length), Math.max(3, collection.settings?.autoplaySeconds || 7) * 1000);
     return () => clearInterval(timer);
-  }, [slides.length, reduced, editing, collection.settings?.autoplaySeconds]);
+  }, [slides.length, reduced, editing, focused, collection.settings?.autoplaySeconds]);
   async function openEditor() {
     if (!canEdit) return;
     cancelHold(); suppressUntil.current = Date.now() + 1200;
@@ -135,6 +135,8 @@ export default function HomeAdCarousel() {
       onPointerMove={event => { if (origin.current && Math.hypot(event.clientX - origin.current.x, event.clientY - origin.current.y) > 12) cancelHold(); }}
       onPointerUp={cancelHold} onPointerCancel={cancelHold} onPointerLeave={cancelHold}
       onContextMenu={event => { if (canEdit) event.preventDefault(); }}
+      onFocusCapture={() => setFocused(true)}
+      onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}
       onClickCapture={event => { if (Date.now() < suppressUntil.current) { event.preventDefault(); event.stopPropagation(); } }}>
       {slides.length ? <div className="home-ad-frame">
         <div className="home-ad-track">
