@@ -4,7 +4,7 @@ export const DEFAULT_HOME_ADS = Object.freeze([
     title: 'Saturday Dog Training Workshop',
     alt: 'Bravo K9 Solutions Saturday Dog Training Workshop at Wiley Park in Aberdeen, South Dakota, Saturday October 3 from 12:00 PM to 2:00 PM.',
     link: '/contact',
-    image: '/images/saturday-workshop-october-3.webp',
+    image: '/images/saturday-workshop-october-3.jpeg',
     enabled: true,
   }),
 ]);
