@@ -24,6 +24,7 @@ import { framingStyle } from '../../shared/site-images.js';
 import { getSiteImages } from './site-image-state.js';
 import ProofVideoCarousel from './ProofVideoCarousel';
 import HomeBanner from './HomeBanner';
+import HomeAdCarousel from './HomeAdCarousel';
 
 const secondary = ['walking', 'aggression'];
 const serviceDetails: Record<string, { label: string; text: string; features: string[] }> = {
@@ -64,6 +65,7 @@ export default function Home() {
         </Editable><Editable as="div" contentKey="home-20" className="hero-field-note"><Editable as="span" contentKey="home-21" canEditText>AT HOME. IN EVERYDAY LIFE.</Editable><Editable as="p" contentKey="home-22" canEditText>Calmer.<br/>Clearer.<br/><Editable as="em" contentKey="home-23" canEditText>Together.</Editable></Editable></Editable></Editable>
       </Editable>
       <HomeBanner/>
+      <HomeAdCarousel/>
       <Editable as="div" contentKey="home-24" className="home-service-strip"><Editable as="div" contentKey="home-25" className="shell"><Editable as="p" contentKey="home-26" canEditText><Editable as="strong" contentKey="home-27" canEditText>Not sure where to start?</Editable><Editable as="span" contentKey="home-28" canEditText>Tell us what life with your dog is like. We’ll help you choose.</Editable></Editable><Editable as="a" contentKey="home-29" canEditLink canEditText href="tel:+16058242767">Talk to Bravo <Editable as="span" contentKey="home-30" canEditText>(605) 824-2767</Editable></Editable></Editable></Editable>
       <Editable as="div" contentKey="home-31" className="shell site-media-tools-slot site-media-tools-slot--home" data-site-media-tools=""/>
       <Editable as="section" contentKey="home-32" className="home-section shell home-proof" id="reviews" aria-labelledby="reviews-title">
