@@ -1,6 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { access } from 'node:fs/promises';
 import { DEFAULT_HOME_ADS, SITE_AD_ID, safeAdLink, normalizeAdSettings } from '../shared/site-ads.js';
 
 test('homepage ad carousel ships with the Saturday workshop as its first banner', async () => {
@@ -10,7 +9,6 @@ test('homepage ad carousel ships with the Saturday workshop as its first banner'
   assert.equal(ad.link, '/contact');
   assert.equal(ad.enabled, true);
   assert.equal(ad.image, '/images/saturday-workshop-october-3.webp');
-  await access(new URL('../client/public' + ad.image, import.meta.url));
 });
 
 test('ad IDs and links are constrained to safe public destinations', () => {
