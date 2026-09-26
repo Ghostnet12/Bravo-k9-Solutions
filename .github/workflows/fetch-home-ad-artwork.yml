@@ -5,24 +5,79 @@ on:
 permissions:
   contents: write
 jobs:
-  inspect:
+  import:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: feature/home-ad-carousel-20260926
-      - name: Inspect firestorage download client
+      - name: Install browser
+        run: |
+          npm --prefix /tmp/bravo-ad init -y
+          npm --prefix /tmp/bravo-ad install playwright@1.55.0
+          cd /tmp/bravo-ad && npx playwright install --with-deps chromium
+      - name: Download uploaded workshop artwork
+        run: |
+          node --input-type=module <<'JS'
+          import { chromium } from '/tmp/bravo-ad/node_modules/playwright/index.mjs';
+          import fs from 'node:fs';
+          const output='mern/client/public/images/saturday-workshop-october-3.jpeg';
+          fs.mkdirSync('mern/client/public/images',{recursive:true});
+          const browser=await chromium.launch({headless:true});
+          const context=await browser.newContext({acceptDownloads:true});
+          const page=await context.newPage();
+          let saved=false;
+          page.on('response', async response => {
+            if(saved) return;
+            const type=(response.headers()['content-type']||'').toLowerCase();
+            const length=Number(response.headers()['content-length']||0);
+            if(type.startsWith('image/jpeg') && length>100000){
+              try { const bytes=await response.body(); if(bytes.length>100000){fs.writeFileSync(output,bytes);saved=true;} } catch {}
+            }
+          });
+          await page.goto('https://firestorage.ai/ja/f/w7L805XJL9WT',{waitUntil:'domcontentloaded',timeout:60000});
+          for(let round=0;round<5 && !saved;round++){
+            await page.waitForTimeout(4000);
+            const controls=page.locator('a,button').filter({hasText:/ダウンロード|download/i});
+            const count=await controls.count();
+            for(let i=count-1;i>=0 && !saved;i--){
+              const control=controls.nth(i);
+              if(!await control.isVisible().catch(()=>false)) continue;
+              const href=await control.getAttribute('href').catch(()=>null);
+              if(href){
+                try{
+                  const url=new URL(href,page.url()).href;
+                  const response=await context.request.get(url,{timeout:30000});
+                  const type=(response.headers()['content-type']||'').toLowerCase();
+                  const bytes=await response.body();
+                  if(type.startsWith('image/jpeg') && bytes.length>100000){fs.writeFileSync(output,bytes);saved=true;break;}
+                }catch{}
+              }
+              if(!saved){
+                try{
+                  const pending=page.waitForEvent('download',{timeout:8000});
+                  await control.click({timeout:8000});
+                  const download=await pending;
+                  await download.saveAs(output);
+                  if(fs.existsSync(output)&&fs.statSync(output).size>100000){saved=true;break;}
+                }catch{}
+              }
+            }
+          }
+          if(!saved || !fs.existsSync(output) || fs.statSync(output).size<100000){
+            console.log((await page.locator('body').innerText()).slice(0,5000));
+            throw new Error('Workshop artwork could not be downloaded from temporary transfer.');
+          }
+          console.log('Saved workshop artwork',fs.statSync(output).size);
+          await browser.close();
+          JS
+      - name: Commit artwork and remove temporary importer
         run: |
           set -euo pipefail
-          curl -L --fail --silent --show-error 'https://firestorage.ai/_next/static/chunks/app/%28files%29/ja/f/page-4d19ae0a4ce39d79.js' -o /tmp/page.js
-          echo "JS_SIZE=$(wc -c < /tmp/page.js)"
-          head -c 300 /tmp/page.js; echo
-          python3 - <<'PY'
-          import re
-          s=open('/tmp/page.js',encoding='utf-8').read()
-          for m in list(re.finditer(r'(?:fetch|download|api|share|publicId|shareId)',s,re.I))[:200]:
-              a=max(0,m.start()-180); b=min(len(s),m.end()+280)
-              print(s[a:b].replace('\n',' ')[:500])
-              print('---')
-          PY
+          rm .github/workflows/fetch-home-ad-artwork.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add mern/client/public/images/saturday-workshop-october-3.jpeg .github/workflows/fetch-home-ad-artwork.yml
+          git commit -m 'Add Saturday workshop homepage ad artwork'
+          git push origin HEAD:feature/home-ad-carousel-20260926
