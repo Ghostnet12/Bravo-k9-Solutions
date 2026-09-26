@@ -140,7 +140,8 @@ export default function HomeAdCarousel() {
       {slides.length ? <div className="home-ad-frame">
         <div className="home-ad-track" style={{ transform: `translateX(-${active * 100}%)`, transition: reduced ? 'none' : undefined }}>
           {slides.map((ad, index) => { const current = index === active; return <article className="home-ad-slide" key={ad.id} aria-hidden={current ? undefined : true}>
-            {ad.link ? <a href={ad.link} aria-label={ad.title} tabIndex={current ? undefined : -1}><img src={ad.src} width="1320" height="510" loading={index === 0 ? 'eager' : 'lazy'} draggable="false" alt={ad.alt}/></a> : <img src={ad.src} width="1320" height="510" loading={index === 0 ? 'eager' : 'lazy'} draggable="false" alt={ad.alt}/>}
+            <div className="home-ad-fallback" aria-hidden="true"><strong>BRAVO K9 SOLUTIONS</strong><b>SATURDAY</b><span>DOG TRAINING WORKSHOP</span><small>Hands-on training · Real-world skills · A safer community</small></div>
+            {ad.link ? <a href={ad.link} aria-label={ad.title} tabIndex={current ? undefined : -1}><img src={ad.src} width="1320" height="510" loading={index === 0 ? 'eager' : 'lazy'} draggable="false" alt={ad.alt} onError={e => e.currentTarget.closest('.home-ad-slide')?.classList.add('is-image-missing')}/></a> : <img src={ad.src} width="1320" height="510" loading={index === 0 ? 'eager' : 'lazy'} draggable="false" alt={ad.alt} onError={e => e.currentTarget.closest('.home-ad-slide')?.classList.add('is-image-missing')}/>}
           </article>; })}
         </div>
         {slides.length > 1 && <div className="home-ad-controls">
