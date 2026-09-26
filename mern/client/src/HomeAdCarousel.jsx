@@ -78,7 +78,7 @@ function AdEditor({ collection, publish, close }) {
     finally { setBusy(false); }
   }
   async function saveTiming() { await order(collection.ads.map(ad => ad.id), seconds); }
-  return <dialog ref={dialog} className="ad-editor-dialog" aria-labelledby="ad-editor-title" onCancel={e => { e.preventDefault(); if (!busy) close(); }}>
+  return <dialog ref={dialog} className="ad-editor-dialog" data-site-image-ignore="" aria-labelledby="ad-editor-title" onCancel={e => { e.preventDefault(); if (!busy) close(); }}>
     <div className="ad-editor-heading"><div><p>BRAVO · HOMEPAGE ADVERTISING</p><h2 id="ad-editor-title">Manage homepage ads</h2></div><button type="button" disabled={busy} onClick={close} aria-label="Close ad editor">×</button></div>
     <p>These banners fade automatically below the homepage status banner. Add, reorder, hide, replace or delete them here.</p>
     <section className="ad-editor-settings" aria-label="Ad rotation settings">
@@ -130,7 +130,7 @@ export default function HomeAdCarousel() {
   }
   if (!slides.length && !canEdit) return null;
   return <>
-    <section className="home-ad-carousel" aria-label="Bravo announcements and promotions" data-ad-transition="fade" data-ad-editable={canEdit || undefined}
+    <section className="home-ad-carousel" data-site-image-ignore="" aria-label="Bravo announcements and promotions" data-ad-editable={canEdit || undefined}
       onPointerDown={event => { if (!canEdit || event.button !== 0 || event.isPrimary === false) return; origin.current = { x: event.clientX, y: event.clientY }; cancelHold(); hold.current = setTimeout(openEditor, 650); }}
       onPointerMove={event => { if (origin.current && Math.hypot(event.clientX - origin.current.x, event.clientY - origin.current.y) > 12) cancelHold(); }}
       onPointerUp={cancelHold} onPointerCancel={cancelHold} onPointerLeave={cancelHold}
