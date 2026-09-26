@@ -1,0 +1,21 @@
+name: Fetch homepage ad artwork
+on:
+  push:
+    branches: [feature/home-ad-carousel-20260926]
+permissions:
+  contents: write
+jobs:
+  inspect:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/home-ad-carousel-20260926
+      - name: Inspect temporary source page
+        run: |
+          set -euo pipefail
+          curl -L --fail --silent --show-error 'https://firestorage.ai/ja/f/w7L805XJL9WT' -o /tmp/share.html
+          echo "CONTENT_TYPE=$(file -b --mime-type /tmp/share.html)"
+          echo "SIZE=$(wc -c < /tmp/share.html)"
+          grep -Eo 'https?://[^"'"'"'<> ]+|/api/[A-Za-z0-9_?&=./:%-]+' /tmp/share.html | sed 's/&amp;/\&/g' | sort -u | head -n 120
