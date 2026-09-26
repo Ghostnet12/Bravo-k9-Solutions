@@ -12,12 +12,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: feature/home-ad-carousel-20260926
-      - name: Inspect temporary source page
+      - name: Inspect firestorage download client
         run: |
           set -euo pipefail
-          curl -L --fail --silent --show-error 'https://firestorage.ai/ja/f/w7L805XJL9WT' -o /tmp/share.html
-          echo "CONTENT_TYPE=$(file -b --mime-type /tmp/share.html)"
-          echo "SIZE=$(wc -c < /tmp/share.html)"
-          echo '--- SHARE HTML ---'
-          cat /tmp/share.html
-          echo '--- END SHARE HTML ---'
+          curl -L --fail --silent --show-error 'https://firestorage.ai/_next/static/chunks/app/(files)/ja/f/page-4d19ae0a4ce39d79.js' -o /tmp/page.js
+          echo "JS_SIZE=$(wc -c < /tmp/page.js)"
+          python3 - <<'PY'
+          import re
+          s=open('/tmp/page.js',encoding='utf-8').read()
+          for m in list(re.finditer(r'(?:fetch|download|api|share|publicId|shareId)',s,re.I))[:200]:
+              a=max(0,m.start()-180); b=min(len(s),m.end()+280)
+              print(s[a:b].replace('\n',' ')[:500])
+              print('---')
+          PY
