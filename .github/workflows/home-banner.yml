@@ -1,7 +1,7 @@
 name: Homepage banner verification
 on:
   push:
-    branches: [bravo-mern, 'feature/home-status-banner-*', 'feature/banner-video-controls-*', 'feature/site-hold-editor', 'feature/customer-clarity', 'feature/first-visit-details']
+    branches: [bravo-mern, 'feature/home-status-banner-*', 'feature/home-ad-carousel-*', 'feature/banner-video-controls-*', 'feature/site-hold-editor', 'feature/customer-clarity', 'feature/first-visit-details']
     paths: ['mern/**', '.github/workflows/home-banner.yml']
 permissions:
   contents: read
@@ -22,7 +22,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
-      - run: node --test --test-concurrency=1 tests/site-banner.integration.js tests/proof-videos.integration.js tests/site-content.integration.js tests/customer-reviews.integration.js
+      - run: node --test --test-concurrency=1 tests/site-banner.integration.js tests/site-ads.integration.js tests/proof-videos.integration.js tests/site-content.integration.js tests/customer-reviews.integration.js
       - run: npm install --no-save --package-lock=false playwright@1.55.1
       - run: npx playwright install --with-deps chromium webkit
       - run: npx playwright install chrome
@@ -30,6 +30,7 @@ jobs:
       - run: node tests/hero-carousel.browser.mjs
       - run: node tests/customer-clarity.browser.mjs
       - run: node tests/home-banner.browser.mjs
+      - run: node tests/home-ad-carousel.browser.mjs
       - run: node tests/site-content.browser.mjs
       - run: node tests/proof-carousel.browser.mjs
       - run: node tests/home-hero.browser.mjs

@@ -41,7 +41,7 @@ try { for (const [name, engine] of Object.entries({ chromium, webkit })) {
   await gallery.click({position:{x:100,y:70}});await page.waitForTimeout(650);
   const paused=await track.evaluate(el=>el.scrollLeft);await page.waitForTimeout(2200);assert.equal(await track.evaluate(el=>el.scrollLeft),paused);
   await gallery.click({position:{x:100,y:70}});await page.waitForTimeout(2200);assert.notEqual(await track.evaluate(el=>el.scrollLeft),paused,'touch resumes instead of permanently pausing');
-  role='owner';await page.reload();await gallery.scrollIntoViewIfNeeded();await page.waitForTimeout(700);
+  role='owner';await page.reload();await page.waitForLoadState('networkidle');await page.getByRole('region',{name:'Trainer photos'}).waitFor();await page.getByRole('region',{name:'Trainer photos'}).scrollIntoViewIfNeeded();await page.waitForTimeout(700);
   const box=await gallery.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+40);await page.mouse.down();await page.waitForTimeout(750);await page.mouse.up();
   const editor=page.getByRole('dialog',{name:'Edit hero carousel'});await editor.waitFor();
   await page.getByLabel('Time between slides (seconds)').fill('3');await page.getByRole('button',{name:'Save carousel timing'}).click();await page.getByText('Hero carousel saved.',{exact:true}).waitFor();assert.equal(settings.intervalSeconds,3);
@@ -55,7 +55,7 @@ try { for (const [name, engine] of Object.entries({ chromium, webkit })) {
   await page.screenshot({path:`test-results/hero-editor-${name}-${width}.png`});
   await page.getByRole('button',{name:/Main training photo/}).click();await page.getByRole('dialog',{name:'Edit this photo'}).waitFor();
   await page.getByRole('button',{name:'Close media editor'}).click();
-  await page.reload();await gallery.scrollIntoViewIfNeeded();await page.waitForTimeout(700);assert.equal(await page.locator('.hero-photo-slide').count(),5);
+  await page.reload();await page.waitForLoadState('networkidle');await page.getByRole('region',{name:'Trainer photos'}).waitFor();await page.getByRole('region',{name:'Trainer photos'}).scrollIntoViewIfNeeded();await page.waitForTimeout(700);assert.equal(await page.locator('.hero-photo-slide').count(),5);
   const activeVideo=page.locator('.hero-video video');await page.waitForFunction(()=>{const v=document.querySelector('.hero-video video');return v && v.currentTime>0.2 && !v.paused;},null,{timeout:18000});
   assert.equal(await activeVideo.getAttribute('controls'),null);assert.equal(await activeVideo.evaluate(v=>v.muted),true);
   await page.waitForTimeout(3400);assert.ok(await activeVideo.evaluate(v=>v.currentTime>3 && !v.paused),'video plays beyond photo interval');
@@ -67,7 +67,7 @@ try { for (const [name, engine] of Object.entries({ chromium, webkit })) {
   settings={revision:9,intervalSeconds:2,photos:[badKey,slowKey]};images={[badKey]:{src:'/unavailable-hero.jpg',alt:'Unavailable fixture'},[slowKey]:{src:'/slow-hero.jpg',alt:'Slow fixture'}};
   await page.route('**/unavailable-hero.jpg',route=>route.fulfill({status:404,body:''}));
   await page.route('**/slow-hero.jpg',async route=>{await new Promise(resolve=>setTimeout(resolve,8000));await route.fulfill({contentType:'image/jpeg',body:await readFile(`${dist}/images/bravo-client-training.jpeg`)});});
-  await page.emulateMedia({reducedMotion:'no-preference'});await page.reload();await gallery.scrollIntoViewIfNeeded();await page.waitForTimeout(4500);
+  await page.emulateMedia({reducedMotion:'no-preference'});await page.reload({waitUntil:'domcontentloaded'});await page.getByRole('region',{name:'Trainer photos'}).waitFor();await page.getByRole('region',{name:'Trainer photos'}).scrollIntoViewIfNeeded();await page.waitForTimeout(4500);
   assert.equal(await page.locator('.hero-photo-slide').first().getAttribute('aria-hidden'),'false','retain current photo while the next usable image downloads');
   assert.equal(await page.locator('.hero-photo-slide').first().locator('img').evaluate(el=>el.complete&&el.naturalWidth>0),true);
   await page.waitForFunction(()=>{const slide=document.querySelector('.hero-photo-slide[aria-hidden="false"]'),img=slide?.querySelector('img');return img?.getAttribute('src')==='/slow-hero.jpg'&&img.complete&&img.naturalWidth>0;},null,{timeout:15000});

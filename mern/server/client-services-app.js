@@ -1,5 +1,6 @@
 import { issueRecovery, completeRecovery } from './account-recovery.js';
 import { readLessonLibrary } from './lesson-library.js';
+import siteAdsRouter from './site-ads.js';
 import { monitorRequests, ingestVisit, ingestError, monitoringSummary, pingDatabase } from './monitoring.js';
 import { reserveVisits, releaseVisit } from './reservations.js';
 import express from 'express';
@@ -43,6 +44,7 @@ app.get('/api/admin/site-health', ...session, requireUser, (req, _res, next) => 
   if (req.user.role !== 'owner' || !isPrimaryOwner(req.user)) throw fail('Only the Owner can view website monitoring.', 403);
   next();
 }, monitoringSummary);
+app.use('/api/site-ads', siteAdsRouter);
 app.get('/api/health/ready', async (_req, res) => {
   res.set('Cache-Control', 'no-store');
   try {
