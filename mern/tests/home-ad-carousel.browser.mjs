@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium, webkit } from 'playwright';
 
 const dist=fileURLToPath(new URL('../client/dist/',import.meta.url)), html=await readFile(`${dist}/bravo-shell.html`,'utf8');
-const fixture=fileURLToPath(new URL('../client/public/images/saturday-workshop-october-3.webp',import.meta.url));
+const fixture=fileURLToPath(new URL('../client/public/images/training-education.webp',import.meta.url));
 const app=express();app.use(express.static(dist));app.get('/{*path}',(_req,res)=>res.type('html').send(html));
 const server=app.listen(0,'127.0.0.1');await once(server,'listening');const origin=`http://127.0.0.1:${server.address().port}`;
 await mkdir('test-results',{recursive:true});
@@ -38,6 +38,7 @@ try{
    const carousel=page.locator('.home-ad-carousel');
    assert.equal(await carousel.evaluate(el=>el.previousElementSibling?.classList.contains('home-status-banner')),true);
    assert.equal(await carousel.getByRole('img',{name:'Workshop banner'}).count(),1);
+   await page.waitForFunction(()=>{const img=document.querySelector('.home-ad-slide img[alt="Workshop banner"]');return !!img&&img.complete&&img.naturalWidth>0;});
    await page.getByRole('button',{name:'Next advertisement'}).click();
    assert.match(await page.locator('.home-ad-track').getAttribute('style'),/-100%/);
 
