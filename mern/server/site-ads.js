@@ -21,7 +21,7 @@ export const SiteAdCollection = mongoose.models.BravoSiteAds || mongoose.model('
 
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const idInput = z.string().regex(SITE_AD_ID);
-const linkInput = z.string().trim().max(1000).refine(value => !value || safeAdLink(value) === value, 'Use a secure HTTPS or Bravo website link.');
+const linkInput = z.string().trim().max(1000).refine(value => !value || !!safeAdLink(value), 'Use a secure HTTPS or Bravo website link.');
 const imageInput = z.object({
   filename: z.string().trim().min(1).max(160),
   contentType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
@@ -117,7 +117,7 @@ router.post('/', async (req, res) => {
   const saved = await writeCollection(req, async ({ ads, current, session }) => {
     if (ads.length >= 20) throw fail('Keep the homepage carousel to 20 ads or fewer.');
     const uploadId = await storeImage(id, input.image, req.user._id, session);
-    return { ads: [...ads, { id, title: input.title, alt: input.alt, link: input.link, enabled: input.enabled, uploadId, imageRevision: 1 }], settings: current?.settings, action: 'site-ad.created', targetId: id };
+    return { ads: [...ads, { id, title: input.title, alt: input.alt, link: safeAdLink(input.link), enabled: input.enabled, uploadId, imageRevision: 1 }], settings: current?.settings, action: 'site-ad.created', targetId: id };
   });
   res.status(201).json(saved);
 });
@@ -135,7 +135,7 @@ router.put('/:id', async (req, res) => {
       await retireImage(id, previous.uploadId, session);
     }
     const next = [...ads];
-    next[index] = { ...previous, title: input.title, alt: input.alt, link: input.link, enabled: input.enabled, uploadId, imageRevision };
+    next[index] = { ...previous, title: input.title, alt: input.alt, link: safeAdLink(input.link), enabled: input.enabled, uploadId, imageRevision };
     return { ads: next, settings: current?.settings, action: 'site-ad.updated', targetId: id };
   });
   res.json(saved);
