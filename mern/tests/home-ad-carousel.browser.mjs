@@ -43,18 +43,19 @@ try{
 
    const box=await carousel.boundingBox();await page.mouse.move(box.x+80,box.y+80);await page.mouse.down();await page.waitForTimeout(750);await page.mouse.up();
    await page.getByRole('dialog',{name:/Manage ad carousel/i}).waitFor();
-   assert.equal(await page.getByText('Saturday Dog Training Workshop',{exact:true}).count()>0,true);
-   await page.getByRole('heading',{name:'Add advertisement'}).scrollIntoViewIfNeeded();
-   await page.getByLabel('Banner artwork').setInputFiles(fixture);
-   await page.getByLabel('Ad name').fill('New community workshop');
-   await page.getByLabel('Image description').fill('Bravo community workshop advertisement');
-   await page.getByRole('button',{name:'+ Add ad',exact:true}).click();
-   await page.getByText('New community workshop',{exact:true}).waitFor();
+   assert.equal(await page.locator('.ad-editor-card').first().getByLabel('Ad name').inputValue(),'Saturday Dog Training Workshop');
+   const addPanel=page.locator('.ad-editor-add');await addPanel.getByRole('heading',{name:'Add advertisement'}).scrollIntoViewIfNeeded();
+   await addPanel.getByLabel('Banner artwork').setInputFiles(fixture);
+   await addPanel.getByLabel('Ad name').fill('New community workshop');
+   await addPanel.getByLabel('Image description').fill('Bravo community workshop advertisement');
+   await addPanel.getByRole('button',{name:'+ Add ad',exact:true}).click();
+   await page.waitForFunction(()=>document.querySelectorAll('.ad-editor-card').length===3);
+   const addedCard=page.locator('.ad-editor-card').nth(2);
+   assert.equal(await addedCard.getByLabel('Ad name').inputValue(),'New community workshop');
 
    page.once('dialog',d=>d.accept());
-   const addedCard=page.locator('.ad-editor-card').filter({hasText:'New community workshop'});
    await addedCard.getByRole('button',{name:'Delete'}).click();
-   await page.waitForFunction(()=>!document.body.innerText.includes('New community workshop'));
+   await page.waitForFunction(()=>document.querySelectorAll('.ad-editor-card').length===2);
 
    await page.getByRole('button',{name:'Done',exact:true}).click();
    role='staff';await page.reload();await page.waitForLoadState('networkidle');
