@@ -42,6 +42,9 @@ try{
    await page.waitForFunction(()=>{const image=document.querySelector('.home-ad-slide img[alt="Workshop banner"]');return image?.complete&&image.naturalWidth>0;},null,{timeout:15000});
    assert.equal(await page.locator('.home-ad-controls').count(),0);
    assert.equal(await page.locator('.home-ad-slide.is-active img').getAttribute('alt'),'Workshop banner');
+   const activeLink=page.getByRole('link',{name:'Saturday Dog Training Workshop'});await activeLink.focus();await page.waitForTimeout(3400);
+   assert.equal(await page.locator('.home-ad-slide.is-active img').getAttribute('alt'),'Workshop banner');
+   await page.evaluate(()=>document.activeElement?.blur());
    await page.waitForFunction(()=>document.querySelector('.home-ad-slide.is-active img')?.getAttribute('alt')==='Second promotion',null,{timeout:5000});
 
    const box=await carousel.boundingBox();await page.mouse.move(box.x+80,box.y+80);await page.mouse.down();await page.waitForTimeout(750);await page.mouse.up();
