@@ -15,8 +15,9 @@ jobs:
       - name: Inspect firestorage download client
         run: |
           set -euo pipefail
-          curl -L --fail --silent --show-error 'https://firestorage.ai/_next/static/chunks/app/(files)/ja/f/page-4d19ae0a4ce39d79.js' -o /tmp/page.js
+          curl -L --fail --silent --show-error 'https://firestorage.ai/_next/static/chunks/app/%28files%29/ja/f/page-4d19ae0a4ce39d79.js' -o /tmp/page.js
           echo "JS_SIZE=$(wc -c < /tmp/page.js)"
+          head -c 300 /tmp/page.js; echo
           python3 - <<'PY'
           import re
           s=open('/tmp/page.js',encoding='utf-8').read()
