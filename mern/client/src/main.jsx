@@ -73,6 +73,11 @@ function RouteBehavior() {
       if (hash) { if (target?.tagName === 'DETAILS') target.open = true; target?.scrollIntoView({ behavior: 'instant' }); }
       else target?.focus({ preventScroll: true });
     }, 100);
+    // A person may open the menu or an editor before deferred route focus runs.
+    // Their next interaction takes priority over moving focus to the page.
+    const cancelRouteFocus = () => clearTimeout(timer);
+    document.addEventListener('pointerdown', cancelRouteFocus, { once: true, capture: true });
+    document.addEventListener('keydown', cancelRouteFocus, { once: true, capture: true });
     const metadata = PAGE_METADATA[pathname] || NOT_FOUND_METADATA;
     document.title = metadata.title;
     function meta(selector, attributes) {
@@ -96,7 +101,11 @@ function RouteBehavior() {
       if (!schema) { schema = document.createElement('script'); schema.type = 'application/ld+json'; schema.id = 'bravo-structured-data'; document.head.appendChild(schema); }
       schema.textContent = JSON.stringify(data);
     } else schema?.remove();
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('pointerdown', cancelRouteFocus, true);
+      document.removeEventListener('keydown', cancelRouteFocus, true);
+    };
   }, [pathname, hash]);
   return null;
 }
