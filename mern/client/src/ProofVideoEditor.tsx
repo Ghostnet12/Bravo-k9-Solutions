@@ -20,7 +20,7 @@ function thumbnail(video: HTMLVideoElement | null) {
     return data.length <= 256 * 1024 ? data : undefined;
   } catch { return undefined; }
 }
-export default function ProofVideoEditor({ clip, onClose, onSaved, onRemoved, apiBase = '/proof-videos' }: { apiBase?: '/proof-videos' | '/hero-videos' | '/hero-film'; clip: ProofClip; onClose: () => void; onSaved: (clip: ProofClip) => void; onRemoved?: (id: string) => void }) {
+export default function ProofVideoEditor({ clip, onClose, onSaved, onRemoved, apiBase = '/proof-videos' }: { apiBase?: '/proof-videos' | '/hero-videos' | '/hero-film' | '/program-videos'; clip: ProofClip; onClose: () => void; onSaved: (clip: ProofClip) => void; onRemoved?: (id: string) => void }) {
   const dialog = useRef<HTMLDialogElement>(null), preview = useRef<HTMLVideoElement>(null), mounted = useRef(true);
   const [title, setTitle] = useState(clip.title), [description, setDescription] = useState(clip.description), [fit, setFit] = useState(clip.fit || 'contain');
   const [selectedPoster, setSelectedPoster] = useState<string | undefined>();

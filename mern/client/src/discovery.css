@@ -25,3 +25,6 @@
 html.a11y-reduce-motion .goal-result{animation:none}
 
 .goal-early-review{max-width:800px;margin:28px 0 0;padding:8px 0 8px 24px;border-left:2px solid #ba9a64}.goal-early-review blockquote{margin:0;color:#ece4d7;font-size:clamp(1rem,1.6vw,1.25rem);line-height:1.7}.goal-early-review p,.goal-early-review a{font-size:.875rem;line-height:1.6;color:#d1b585}
+
+.program-media{min-width:0}.program-media-tools{display:flex;flex-wrap:wrap;gap:10px;padding:16px;margin-bottom:12px;border:1px solid #ba9a6466;border-radius:14px;background:#17140f}.program-media-tools label{width:100%;display:grid;gap:8px}.program-media-tools select{max-width:100%;min-height:44px}.program-media-tools button{min-height:44px;padding:10px 14px}.program-media-tools p{width:100%;margin:0}.program-media .goal-consult,.program-media .goal-proof{height:auto;min-height:320px}
+.program-media-tools :is(button,select),.section-edit-button{border:1px solid #ba9a64;border-radius:10px;background:#17140f;color:#f5dfb5;font:inherit;font-size:14px}.program-media-tools button:disabled{opacity:.55}.section-edit-button{min-height:44px;padding:10px 16px;margin:12px 0}.program-media-tools :is(button,select):focus-visible,.section-edit-button:focus-visible{outline:3px solid #e6c484;outline-offset:3px}

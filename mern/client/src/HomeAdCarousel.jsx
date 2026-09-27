@@ -148,6 +148,7 @@ export default function HomeAdCarousel() {
         {canEdit && <span className="home-ad-admin-hint">Press and hold to manage ads</span>}
       </div> : <button type="button" className="home-ad-empty" onClick={openEditor}>Add homepage advertisement</button>}
     </section>
+    {canEdit && <button type="button" className="section-edit-button" onClick={openEditor}>Manage advertisements</button>}
     {editing && canEdit && <AdEditor collection={collection} publish={setCollection} close={() => setEditing(false)}/>}
   </>;
 }

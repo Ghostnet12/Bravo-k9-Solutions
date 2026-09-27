@@ -6,6 +6,7 @@ import { api } from './api';
 import { SERVICES, money } from '../../shared/catalog';
 import { GOALS, proofMatches } from '../../shared/discovery';
 import { trackVisit } from './telemetry';
+import ProgramMedia from './ProgramMedia';
 import { Editable } from './SiteContent';
 
 export default function GoalFinder() {
@@ -14,17 +15,17 @@ export default function GoalFinder() {
   const goal = GOALS.find(item => item.id === selected);
   const service = (config?.services || SERVICES).find(item => item.id === goal.program);
   const clip = goal.proof && clips.find(item => proofMatches(item, goal.proof));
-  useEffect(() => { let current = true; api('/proof-videos').then(data => { if (current) setClips(data.clips || []); }).catch(() => {}); return () => { current = false; }; }, []);
+  useEffect(() => { let current = true; api('/proof-videos').then(data => { if (current) setClips(Array.isArray(data.clips) ? data.clips : []); }).catch(() => {}); return () => { current = false; }; }, []);
   return <section className="goal-finder cinema-shell" id="find-training" aria-labelledby="goal-title">
-    <p className="cinema-eyebrow">YOUR DOG. YOUR STARTING POINT.</p>
+    <Editable as="p" contentKey="goal-eyebrow" canEditText className="cinema-eyebrow">YOUR DOG. YOUR STARTING POINT.</Editable>
     <Editable as="h2" contentKey="discovery-goal-title" canEditText id="goal-title">What would you like help with?</Editable>
-    <div className="goal-choices" role="group" aria-label="Choose a training goal">{GOALS.map(item => <button type="button" key={item.id} aria-pressed={selected === item.id} onClick={() => { setSelected(item.id); trackVisit('goal_selected'); }}>{item.label}</button>)}</div>
+    <div className="goal-choices" role="group" aria-label="Choose a training goal">{GOALS.map(item => <button type="button" key={item.id} aria-pressed={selected === item.id} onClick={() => { setSelected(item.id); trackVisit('goal_selected'); }}><Editable as="span" contentKey={`goal-${item.id}-label`} canEditText>{item.label}</Editable></button>)}</div>
     <div className="goal-result" key={selected}>
-      <div aria-live="polite" aria-atomic="true"><h3>{goal.title}</h3><p>{goal.description}</p>{service && <p className="goal-price">{money(service.cents)} <span>{goal.program === 'aggression' ? 'initial intake · ongoing training separate' : '/month · one dog · manual renewal'}</span></p>}
-        <p className="helper">{goal.program === 'training' ? 'Private visits. Monday–Friday, up to one hour per day. We come to you in Aberdeen.' : 'Two trainers. Call before the visit to discuss handling or access concerns.'}</p>
-        <div className="goal-actions">{service?.enabled !== false && <Link className="button" to={`/portal?program=${goal.program}&focus=${goal.focus}`}>{goal.program === 'aggression' ? 'Request an assessment' : 'Plan my first visit'} →</Link>}<Link className="inline-link" to={goal.program === 'aggression' ? '/behavior-assessment' : '/dog-training'}>What’s included</Link></div>
-      </div>
-      {clip ? <figure className="goal-proof">{clip.src ? <video key={clip.src} src={clip.src} poster={clip.poster || undefined} controls playsInline preload="none" aria-label={clip.title}/> : <a href={clip.facebookUrl}><img src={clip.poster} width="640" height="420" loading="lazy" alt={clip.title}/><span>Watch on Facebook ↗</span></a>}<figcaption><strong>{clip.title}</strong><p>{clip.description}</p><Link to={`/#reviews`}>Explore more training videos →</Link></figcaption></figure> : <div className="goal-consult"><img src="/images/bravo-client-training.jpeg" width="828" height="1121" loading="lazy" alt="Bravo training in an everyday public setting"/><div><strong>Let’s talk about your dog.</strong><p>Not sure where to begin? We’ll help you choose.</p><a href="tel:+16058242767">Call (605) 824-2767</a></div></div>}
+      <Editable as="div" contentKey={`goal-${goal.id}-copy`} aria-live="polite" aria-atomic="true"><Editable as="h3" contentKey={`goal-${goal.id}-title`} canEditText>{goal.title}</Editable><Editable as="p" contentKey={`goal-${goal.id}-description`} canEditText>{goal.description}</Editable>{service && <p className="goal-price">{money(service.cents)} <span>{goal.program === 'aggression' ? 'initial intake · ongoing training separate' : '/month · one dog · manual renewal'}</span></p>}
+        <Editable as="p" contentKey={`goal-${goal.id}-details`} canEditText className="helper">{goal.program === 'training' ? 'Private visits. Monday–Friday, up to one hour per day. We come to you in Aberdeen.' : 'Two trainers. Call before the visit to discuss handling or access concerns.'}</Editable>
+        <div className="goal-actions">{service?.enabled !== false && <Editable as={Link} contentKey={`goal-${goal.id}-book`} canEditText canEditLink className="button" to={`/portal?program=${goal.program}&focus=${goal.focus}`}>{goal.program === 'aggression' ? 'Request an assessment' : 'Plan my first visit'} →</Editable>}<Editable as={Link} contentKey={`goal-${goal.id}-included`} canEditText canEditLink className="inline-link" to={goal.program === 'aggression' ? '/behavior-assessment' : '/dog-training'}>What’s included</Editable></div>
+      </Editable>
+      <ProgramMedia key={goal.id} goal={goal} automaticClip={clip}/>
     </div>
     <aside className="goal-early-review" aria-label="A Bravo client’s experience"><blockquote>“{recommendations[0].excerpt}”</blockquote><p>{recommendations[0].author} · {recommendations[0].source}</p><Link to="/#reviews">Read client experiences →</Link></aside>
   </section>;

@@ -54,6 +54,19 @@ test('media editor persistence and server authorization (isolated MongoDB)', { t
       await call('owner', 'patch', `/api/site-images/${key}`, { ...edit, expectedRevision: 1, y: 50.1, zoom: 1.5 }).expect(200);
       assert.equal((await SiteImage.findById(key)).current.uploadId, id); assert.equal(await MediaChunk.countDocuments(), count);
     });
+    await t.test('each program photo has independent owner/admin publication and public reload', async () => {
+      const png='iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aU1cAAAAASUVORK5CYII=';
+      for(const id of ['manners','walks','handling','specialist']) {
+        const key=`program-${id}`,body={...edit,filename:'program.png',contentType:'image/png',data:png,alt:id};
+        for(const who of [null,'staff','client']) await call(who,'put',`/api/site-images/${key}`,body).expect(who?403:401);
+        await call('owner','put',`/api/site-images/${key}`,body).expect(200);
+        await call('administrator','put',`/api/site-images/${key}`,{...body,expectedRevision:1,alt:`Updated ${id}`}).expect(200);
+        await call('owner','put',`/api/site-images/${key}`,body).expect(409);
+        const saved=(await request(app).get('/api/site-images').expect(200)).body.images[key];
+        assert.equal(saved.alt,`Updated ${id}`);assert.equal(saved.revision,2);
+        const publicImage=await request(app).get(saved.src).expect(200);assert.deepEqual(publicImage.body,Buffer.from(png,'base64'));
+      }
+    });
     await Lesson.create({ _id: 'sample', title: 'Sample', category: 'Test', instructor: 'Owner', image: '/images/training-education.webp', published: true });
     await t.test('video framing does not unpublish or expose a lesson', async () => {
       await call('owner', 'patch', '/api/site-images/video-lesson-sample', { ...edit, zoom: 1.5 }).expect(200);

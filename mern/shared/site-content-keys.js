@@ -3268,3 +3268,22 @@ Object.assign(CONTENT_KEYS, {
 });
 
 CONTENT_KEYS['training-booking-allowance'] = {text:true};
+
+for (const id of ['manners','walks','handling','specialist']) {
+  for (const part of ['label','title','description','details']) CONTENT_KEYS[`goal-${id}-${part}`] = {text:true};
+  for (const part of ['book','included']) CONTENT_KEYS[`goal-${id}-${part}`] = {text:true,link:true};
+  CONTENT_KEYS[`goal-${id}-media`] = {text:false,media:true};
+}
+for (const key of ['goal-eyebrow','goal-consult-title','goal-consult-copy','journey-title']) CONTENT_KEYS[key]={text:true};
+for (const program of ['training','walking','aggression']) for(let i=0;i<4;i++) for(const part of ['title','copy']) CONTENT_KEYS[`journey-${program}-${i}-${part}`]={text:true};
+
+for(const id of ['manners','walks','handling','specialist']) CONTENT_KEYS[`goal-${id}-copy`]={text:false};
+
+CONTENT_KEYS['course-public-1']={text:true};
+CONTENT_KEYS['course-public-2']={text:true};
+CONTENT_KEYS['course-public-3']={text:true};
+CONTENT_KEYS['course-public-4']={text:true};
+CONTENT_KEYS['course-public-5']={text:true};
+CONTENT_KEYS['course-public-6']={text:true};
+CONTENT_KEYS['course-public-7']={text:true};
+CONTENT_KEYS['course-public-8']={text:true};

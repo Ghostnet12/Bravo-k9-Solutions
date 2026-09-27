@@ -12,6 +12,7 @@ import { SiteContent, loadSiteContent, publicSiteContentRow } from './site-conte
 export { SiteContent, loadSiteContent } from './site-content-store.js';
 const color = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 export const contentInput = z.object({
+  mediaKind: z.enum(['automatic', 'photo', 'video']).optional(),
   text: z.string().max(8000).optional(), link:z.string().max(1000).refine(safeContentLink).optional(), font: z.enum(['montserrat', 'bebas', 'system', 'georgia']).optional(),
   fontSize: z.number().int().min(12).max(100).optional(), color: color.optional(),
   background: z.enum(['solid', 'gradient', 'transparent']).optional(), backgroundColor: color.optional(), gradientEnd: color.optional(),
@@ -28,6 +29,7 @@ router.put('/:key', async (req,res) => {
   const input = z.object({ expectedRevision:z.number().int().min(0), value:contentInput.optional(), undo:z.literal(true).optional() }).strict().refine(v => !!v.undo !== !!v.value).parse(req.body);
   if (input.value?.text !== undefined && !CONTENT_KEYS[key].text) return res.status(400).json({ error:'Live information must be changed in its management screen.' });
   if (input.value?.link !== undefined && !CONTENT_KEYS[key].link) return res.status(400).json({error:'Select a website link to change its address.'});
+  if (input.value?.mediaKind !== undefined && !CONTENT_KEYS[key].media) return res.status(400).json({error:'Select a program media setting.'});
   await SiteContent.init(); let saved;
   await transaction(async session => {
     const current = await SiteContent.findById(key).session(session);

@@ -6,6 +6,7 @@ import { isImageEditor } from '../../shared/site-images.js';
 import { CONTENT_FONTS, contentStyle, themeCss } from '../../shared/site-content.js';
 import './site-content.css';
 const Content = createContext({ entries:{} });
+export const useSiteContent = () => useContext(Content);
 const flatten = children => (Array.isArray(children) ? children : [children]).map(child => typeof child === 'string' || typeof child === 'number' ? child : child?.type === 'br' ? '\n' : child?.props ? flatten(child.props.children) : '').join('');
 export function Editable({ as:Tag='div', contentKey, canEditText=false, canEditLink=false, children, style, ...props }) {
   const { entries, preview } = useContext(Content);
@@ -84,7 +85,7 @@ export function SiteContentProvider({ children }) {
     const move=event=>{if(hold && Math.hypot(event.clientX-hold.x,event.clientY-hold.y)>12)cancel();};
     const click=event=>{if(Date.now()<suppressUntil && !event.target.closest?.('dialog')){event.preventDefault();event.stopPropagation();}};
     const context=event=>{if(event.target instanceof Element && !ignored(event.target) && event.target.closest('[data-site-content-key]'))event.preventDefault();};
-    const requested=event=>{const key=event.detail?.key;if(typeof key!=='string'||!/^[-a-z0-9]+$/.test(key))return;const target=key === 'page' ? document.querySelector('main') : document.querySelector(`[data-site-content-key="${key}"]`);if(target)open(target);};
+    const requested=event=>{const key=event.detail?.key;if(typeof key!=='string'||!/^[-a-z0-9]+$/.test(key))return;const target=key === 'page' ? document.getElementById('root') : document.querySelector(`[data-site-content-key="${key}"]`);if(target)open(target);};
     const keyboard=event=>{if(event.altKey && event.key.toLowerCase()==='e' && !document.querySelector('dialog[open]')){const target=document.activeElement?.closest('[data-site-content-key]') || document.querySelector('main');if(target){event.preventDefault();open(target);}}};
     window.addEventListener('keydown',keyboard);window.addEventListener('bravo-content-edit',requested);
     document.addEventListener('pointerdown',down,true);document.addEventListener('pointermove',move,true);document.addEventListener('click',click,true);document.addEventListener('contextmenu',context,true);
@@ -94,5 +95,5 @@ export function SiteContentProvider({ children }) {
     return()=>{disposed=true;cancel();window.removeEventListener('keydown',keyboard);window.removeEventListener('bravo-content-edit',requested);document.documentElement.classList.remove('site-content-owner');document.removeEventListener('pointerdown',down,true);document.removeEventListener('pointermove',move,true);document.removeEventListener('click',click,true);document.removeEventListener('contextmenu',context,true);for(const type of ['pointerup','pointercancel','scroll'])document.removeEventListener(type,cancel,true);window.removeEventListener('blur',cancel);};
   },[canEdit]);
   const theme=preview?.key==='site-theme'?preview.value:entries['site-theme']?.value;
-  return <Content.Provider value={{entries,preview}}><style>{themeCss(theme)}</style>{children}{canEdit && ['/', '/dog-training', '/dog-walking', '/behavior-assessment', '/contact', '/learn', '/workshops'].includes(pathname) && <button type="button" className="content-edit-launcher" onClick={() => window.dispatchEvent(new CustomEvent('bravo-content-edit', { detail: { key: 'page' } }))}>Edit page text &amp; design</button>}{canEdit && status && <p className="content-save-status" role="status">{status}</p>}{canEdit && error && <p role="alert">{error}</p>}{canEdit && selection && <ContentEditor options={selection} entries={entries} preview={setPreview} close={()=>{setSelection(null);setPreview(null);}} publish={(key,entry)=>{setEntries(old=>({...old,[key]:entry}));setStatus('Saved. Your website changes are published.');}}/>}</Content.Provider>;
+  return <Content.Provider value={{entries,preview,publishEntry:(key,entry)=>setEntries(old=>({...old,[key]:entry}))}}><style>{themeCss(theme)}</style>{children}{canEdit && <button type="button" className="content-edit-launcher" onClick={() => window.dispatchEvent(new CustomEvent('bravo-content-edit', { detail: { key: 'page' } }))}>Edit page text &amp; design</button>}{canEdit && status && <p className="content-save-status" role="status">{status}</p>}{canEdit && error && <p role="alert">{error}</p>}{canEdit && selection && <ContentEditor options={selection} entries={entries} preview={setPreview} close={()=>{setSelection(null);setPreview(null);}} publish={(key,entry)=>{setEntries(old=>({...old,[key]:entry}));setStatus('Saved. Your website changes are published.');}}/>}</Content.Provider>;
 }

@@ -20,7 +20,7 @@ try{for(const [name,engine]of Object.entries({chromium,webkit})){if(process.env.
   async function hold(locator){await locator.scrollIntoViewIfNeeded();const b=await locator.boundingBox();await page.mouse.move(b.x+Math.min(30,b.width/2),b.y+Math.min(12,b.height/2));await page.mouse.down();await page.waitForTimeout(750);await page.mouse.up();}
   try{
     await page.goto(origin);await page.waitForLoadState('networkidle');const intro=page.locator('.cinema-hero-intro'),key=await intro.getAttribute('data-site-content-key'),original=await intro.innerText();
-    assert.equal(await page.getByRole('button',{name:'Edit photos & videos',exact:true}).isVisible(),false);
+    assert.equal(await page.getByRole('button',{name:'Edit photos & videos',exact:true}).isVisible(),true);
     await hold(intro);const dialog=page.getByRole('dialog',{name:'Edit website section',exact:true});await dialog.waitFor();
     await dialog.getByLabel('Text',{exact:true}).fill('Training edited by the owner. <script>plain text</script>');
     await dialog.getByLabel('Font',{exact:true}).selectOption('georgia');
