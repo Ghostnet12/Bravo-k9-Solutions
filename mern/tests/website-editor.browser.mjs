@@ -75,7 +75,7 @@ try{for(const [engineName,engine] of Object.entries({chromium,webkit})){
    // Ordinary scrolling cancels a hold; the next tap must still navigate.
    await page.locator('#goal-tab-manners').scrollIntoViewIfNeeded();const box=await page.locator('#goal-tab-manners').boundingBox();await page.mouse.move(box.x+10,box.y+10);await page.mouse.down();await page.mouse.move(box.x+45,box.y+40);await page.waitForTimeout(750);await page.mouse.up();assert.equal(await page.locator('dialog[open]').count(),0);
    assert.equal(new URL(page.url()).pathname,'/','dragging an editable link must not navigate');
-   await page.locator('.goal-choice-link').first().click();await page.getByRole('heading',{name:'Let’s start with your dog.',exact:true}).waitFor();
+   await page.locator('.goal-choice-link').first().click();await page.waitForURL(url=>url.pathname==='/portal');await page.waitForLoadState('networkidle');
    role=null;await page.goto(origin);await page.waitForLoadState('networkidle');await page.locator('.goal-choice-link').first().click();await page.getByRole('heading',{name:'Let’s start with your dog.',exact:true}).waitFor();await page.getByLabel('Number of dogs',{exact:true}).fill('2');assert.match(await page.locator('.price-total').innerText(),/\$350/);assert.equal(new URL(page.url()).searchParams.get('focus'),'puppy-foundations');
    for(const outsider of [null,'member','staff']){role=outsider;await page.goto(origin);await page.waitForLoadState('networkidle');await hold(page.locator('#goal-price-manners'));assert.equal(await page.locator('dialog[open]').count(),0);assert.equal(await page.getByRole('button',{name:'Edit page text & design'}).count(),0);}
    role=null;failConfig=true;
