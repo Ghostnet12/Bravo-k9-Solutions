@@ -38,6 +38,14 @@ export const recommendations = [
     excerpt: "I wouldn't go anywhere else for training as long as I can work with David or Ashley",
     body: "David is very knowledgeable and my dogs love him. he helped train my service dog Scout and is currently working with my husband to train our other dog. I wouldn't go anywhere else for training as long as I can work with David or Ashley",
   },
+  {
+    // IMG_9257.jpeg supplied by Bravo’s owner; five star emojis are visible.
+    rating: 5,
+    source: 'Facebook comment',
+    author: 'Justine Harty West',
+    excerpt: 'They do an awesome job! We highly recommend what they did for our adoptive Star girl.',
+    body: "They do an awesome job! We highly recommend what they did for our adoptive Star girl. We love her. 🥰 Can't thank them enough! ⭐⭐⭐⭐⭐",
+  },
 ];
 
 export default function FacebookRecommendations() {
