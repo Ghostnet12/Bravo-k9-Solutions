@@ -6,6 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {chromium,webkit} from 'playwright';
 import {SERVICES} from '../shared/catalog.js';
 import {CONTENT_KEYS} from '../shared/site-content-keys.js';
+import {renderSiteContent} from '../server/content-html.js';
 const dist=fileURLToPath(new URL('../client/dist/',import.meta.url)),html=await readFile(`${dist}/bravo-shell.html`,'utf8');
 const app=express();app.use(express.static(dist));app.get('/{*path}',(_req,res)=>res.type('html').send(html));
 const server=app.listen(0,'127.0.0.1');await once(server,'listening');const origin=`http://127.0.0.1:${server.address().port}`;
@@ -15,14 +16,14 @@ try{for(const [engineName,engine] of Object.entries({chromium,webkit})){
  const browser=await engine.launch();try{for(const width of [390,1440]){
   const context=await browser.newContext({viewport:{width,height:900},hasTouch:true}),page=await context.newPage();
   const errors=[];page.on('pageerror',error=>errors.push(error.message));page.on('dialog',dialog=>dialog.accept());
-  let role='owner',entries={},catalog=SERVICES.map(row=>({...row,enabled:row.id!=='online',revision:0})),failPrice=false;
+  let role='owner',entries={},catalog=SERVICES.map(row=>({...row,enabled:row.id!=='online',revision:0})),failPrice=false,failConfig=false;
   const team=[{id:'111111111111111111111111',name:'David Northrop',title:'Owner & Lead Trainer',role:'owner',profileKey:'david',imageKey:'team-david-northrop',image:'/images/david-northrop.webp',revision:0,bio:'David fixture introduction.'},{id:'222222222222222222222222',name:'Ashley Leverock',title:'Trainer / Pit Bull Specialist',role:'staff',profileKey:'ashley',imageKey:'team-ashley-northrop',image:'/images/ashley-northrop.webp',revision:0,bio:'Ashley fixture introduction.'}];
   const workshop={title:'Workshop fixture',date:'2026-10-03',time:'10 am',location:'Aberdeen',duration:'One hour',cents:10000,description:'Workshop details fixture.',published:true,revision:0};
   await page.route('**/api/**',async route=>{
    const request=route.request(),path=new URL(request.url()).pathname;
    let json={services:[],team:[],reviews:[],images:{},clips:[],schedules:[],alerts:[],revision:0},status=200;
    if(path==='/api/auth/me')json={user:role?{id:team[0].id,name:'Fixture',role,isPrimaryOwner:width===390}:null,services:[]};
-   if(path==='/api/config')json={connected:true,paymentsReady:false,services:catalog,lessonLibrary:{open:false,lessonCents:7500,bundleCents:25000}};
+   if(path==='/api/config'){json={connected:true,paymentsReady:false,services:catalog,lessonLibrary:{open:false,lessonCents:7500,bundleCents:25000}};if(failConfig){status=503;json={error:'Temporary outage fixture'};}}
    if(path==='/api/team')json={team};
    if(path==='/api/admin/services')json={services:catalog};
    if(path.startsWith('/api/admin/services/')){
@@ -75,6 +76,9 @@ try{for(const [engineName,engine] of Object.entries({chromium,webkit})){
    await page.locator('#goal-tab-manners').scrollIntoViewIfNeeded();const box=await page.locator('#goal-tab-manners').boundingBox();await page.mouse.move(box.x+10,box.y+10);await page.mouse.down();await page.mouse.move(box.x+45,box.y+40);await page.waitForTimeout(750);await page.mouse.up();assert.equal(await page.locator('dialog[open]').count(),0);
    role=null;await page.reload();await page.waitForLoadState('networkidle');await page.locator('.goal-choice-link').first().click();await page.getByRole('heading',{name:'Let’s start with your dog.',exact:true}).waitFor();await page.getByLabel('Number of dogs',{exact:true}).fill('2');assert.match(await page.locator('.price-total').innerText(),/\$350/);assert.equal(new URL(page.url()).searchParams.get('focus'),'puppy-foundations');
    for(const outsider of [null,'member','staff']){role=outsider;await page.goto(origin);await page.waitForLoadState('networkidle');await hold(page.locator('#goal-price-manners'));assert.equal(await page.locator('dialog[open]').count(),0);assert.equal(await page.getByRole('button',{name:'Edit page text & design'}).count(),0);}
+   role=null;failConfig=true;
+   await page.route(`${origin}/?config-failure`,route=>route.fulfill({contentType:'text/html',body:renderSiteContent(html,{},undefined,catalog)}));
+   await page.goto(`${origin}/?config-failure`);await page.waitForLoadState('networkidle');assert.match(await page.locator('#goal-price-manners').innerText(),/\$225/,'failed API refresh retains server-published prices');
    assert.deepEqual(errors,[]);console.log(`PASS ${engineName}/${width}: all-part publication, price sync, trainer identity, backgrounds, media/workshop holds, scrolling, navigation and permissions`);
   }catch(error){await page.screenshot({path:`test-results/website-editor-failure-${engineName}-${width}.png`,fullPage:true});await writeFile(`test-results/website-editor-failure-${engineName}-${width}.json`,JSON.stringify({error:error.message,errors,text:await page.locator('body').innerText()},null,2));throw error;}finally{await context.close();}
  }}finally{await browser.close();}

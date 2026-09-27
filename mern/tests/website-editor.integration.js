@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import mongoose from 'mongoose';
 import request from 'supertest';
-import { randomBytes, createHash } from 'node:crypto';
+import { randomBytes, createHash, randomUUID } from 'node:crypto';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { quote } from '../shared/catalog.js';
 import { validatedCheckoutPricing } from '../server/payments.js';
@@ -12,8 +12,9 @@ test('owner toolkit persists real catalog prices and trainer profiles with permi
  const replica=await MongoMemoryReplSet.create({replSet:{count:1},binary:{version:'7.0.14'}});
  process.env.NODE_ENV='test';process.env.MONGODB_URI=replica.getUri();process.env.MONGODB_DB='website_editor_test';process.env.APP_ORIGIN='http://localhost:5173';
  try {
-  const {default:app}=await import('../server/site-image-app.js');
-  const {connectDb}=await import('../server/db.js');const {User,Session,AuditEvent}=await import('../server/models.js');
+  const {default:app}=await import('../server/client-services-app.js');
+  const {connectDb}=await import('../server/db.js');const {User,Session,AuditEvent,Booking,MediaUpload,MediaChunk}=await import('../server/models.js');
+  const {SiteImage}=await import('../server/site-image-store.js');
   const {SiteContent}=await import('../server/site-content-store.js');await connectDb();await SiteContent.init();
   const cookies={},users={};
   for(const role of ['owner','administrator','staff','member']){
@@ -55,6 +56,9 @@ test('owner toolkit persists real catalog prices and trainer profiles with permi
   assert.equal(after.imageKey,before.imageKey);assert.equal(after.image,before.image);assert.equal(after.id,before.id);
   await call('owner','patch',`/api/admin/team/${before.id}`,profile).expect(409);
   const canonical=await User.findById(before.id).lean();assert.equal(canonical.name,'Ashley Northrop');assert.equal(canonical.role,'owner');
+  await Booking.create({userId:users.member._id,staffId:before.id,staffIds:[before.id],serviceIds:['training'],visits:[{date:'2026-10-05',time:'09:00',service:'training'}],status:'confirmed',paymentStatus:'paid'});
+  const schedule=(await call('member','get','/api/client-schedule?month=2026-10').expect(200)).body;
+  assert.equal(schedule.visits[0].trainer,'Ashley Example');
   assert.equal(jointTrainerPair([users.owner,canonical]).length,2);
   assert.equal(trainerOptions([users.owner.toObject(),canonical]).find(row=>String(row._id)===before.id).name,'Ashley Example');
   assert.equal((await call(null,'get','/api/site-content')).body.entries[key].value.text,profile.bio);
@@ -64,6 +68,34 @@ test('owner toolkit persists real catalog prices and trainer profiles with permi
   await call('owner','post','/api/site-content/batch',{changes:[{key:'copy-home-10',expectedRevision:1,value:{text:'Must roll back'}},{key:'goal-manners-label',expectedRevision:0,value:{text:'Stale'}}]}).expect(409);
   const entries=(await call(null,'get','/api/site-content')).body.entries;assert.equal(entries['copy-home-10'].value.text,'New approach');assert.equal(entries['goal-manners-label'].value.text,'Daily skills');
   for(const value of [{background:'image',backgroundImage:'javascript:alert(1)'},{background:'image',backgroundImage:'https://unapproved.example/a.jpg'}])await call('owner','put','/api/site-content/copy-home-9',{expectedRevision:0,value}).expect(400);
+  const uploadBackground=async()=>{
+   const key=`background-${randomUUID()}`;
+   const input={expectedRevision:0,alt:'Background fixture',x:50,y:50,zoom:1,fit:'cover',filename:'fixture.png',contentType:'image/png',data:'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zl1sAAAAASUVORK5CYII='};
+   const result=(await call('owner','put',`/api/site-images/${key}`,input).expect(200)).body.image;
+   const row=await SiteImage.findById(key).lean();
+   assert.ok(row.expiresAt>Date.now());assert.ok((await MediaUpload.findById(row.current.uploadId)).expiresAt>Date.now());
+   assert.ok((await MediaChunk.findOne({uploadId:row.current.uploadId})).expiresAt>Date.now());
+   await call('owner','put',`/api/site-images/${key}`,{...input,expectedRevision:1}).expect(409);
+   return {key,url:result.src,uploadId:row.current.uploadId};
+  };
+  const first=await uploadBackground(),second=await uploadBackground(),abandoned=await uploadBackground();
+  const background=value=>({background:'image',backgroundImage:value});
+  await call('owner','put','/api/site-content/copy-home-9',{expectedRevision:0,value:background(first.url)}).expect(200);
+  for(const model of [SiteImage,MediaUpload,MediaChunk])assert.equal(await model.countDocuments(model===SiteImage?{_id:first.key,expiresAt:{$exists:true}}:model===MediaUpload?{_id:first.uploadId,expiresAt:{$exists:true}}:{uploadId:first.uploadId,expiresAt:{$exists:true}}),0);
+  await call('owner','put','/api/site-content/copy-home-9',{expectedRevision:1,value:background(second.url)}).expect(200);
+  assert.equal((await SiteImage.findById(first.key)).expiresAt,undefined,'previous background remains available for Undo');
+  await call('owner','put','/api/site-content/copy-home-9',{expectedRevision:2,undo:true}).expect(200);
+  await call('owner','put','/api/site-content/copy-home-10',{expectedRevision:1,value:background(first.url)}).expect(200);
+  await call('owner','put','/api/site-content/copy-home-9',{expectedRevision:3,value:{background:'solid'}}).expect(200);
+  await call('owner','put','/api/site-content/copy-home-9',{expectedRevision:4,value:{background:'transparent'}}).expect(200);
+  assert.equal((await SiteImage.findById(first.key)).expiresAt,undefined,'another section retains a shared background');
+  assert.ok((await SiteImage.findById(second.key)).expiresAt>Date.now(),'replaced backgrounds expire after leaving Undo');
+  assert.ok((await MediaUpload.findById(second.uploadId)).expiresAt>Date.now());assert.ok((await MediaChunk.findOne({uploadId:second.uploadId})).expiresAt>Date.now());
+  assert.ok((await SiteImage.findById(abandoned.key)).expiresAt>Date.now(),'cancelled drafts keep their cleanup deadline');
+  assert.equal(Object.keys((await call(null,'get','/api/site-images').expect(200)).body.images).some(key=>key.startsWith('background-')),false);
+  await SiteImage.updateOne({_id:abandoned.key},{$set:{expiresAt:new Date(0)}});
+  await call('owner','put','/api/site-content/copy-home-9',{expectedRevision:5,value:background(abandoned.url)}).expect(409);
+  await call('owner','put','/api/site-content/copy-home-9',{expectedRevision:5,value:background(`/api/site-images/background-${randomUUID()}/image?v=1`)}).expect(409);
   assert.ok(await AuditEvent.exists({action:'trainer.profile.published'}));assert.ok(await AuditEvent.exists({action:'service.updated'}));
   users.administrator.blocked=true;await users.administrator.save();await call('administrator','patch',`/api/admin/team/${before.id}`,{...profile,expectedRevision:1}).expect(401);
  } finally {await mongoose.disconnect();await replica.stop();}

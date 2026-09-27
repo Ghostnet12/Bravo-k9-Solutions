@@ -4,7 +4,7 @@ import { SERVICES, quote, rescheduledQuote, publicCatalogSnapshot } from '../sha
 import { validatedCheckoutPricing } from '../server/payments.js';
 import { renderSiteContent } from '../server/content-html.js';
 import { publicTrainerProfile } from '../shared/trainer-profile.js';
-import { trainerOptions } from '../shared/trainers.js';
+import { trainerOptions, scheduledTrainerLabel } from '../shared/trainers.js';
 import { contentStyle } from '../shared/site-content.js';
 import { contentInput } from '../server/site-content.js';
 
@@ -39,6 +39,8 @@ test('public trainer rename preserves portrait key, real staff IDs and the joint
  assert.equal(before.imageKey,after.imageKey);assert.equal(before.image,after.image);assert.equal(after.name,'Ashley Example');assert.equal(after.id,ashley.id);
  assert.equal(trainerOptions([publicTrainerProfile(david),after]).find(row=>row.joint).disabled,false);
  const choices=trainerOptions([david,ashley]);assert.equal(choices.find(row=>row.joint).disabled,false);assert.equal(choices.find(row=>row.id===ashley.id).name,'Ashley Example');
+ assert.equal(scheduledTrainerLabel({staffId:ashley}),'Ashley Example');
+ assert.equal(scheduledTrainerLabel({staffIds:[ashley],trainerAcceptanceRequired:true}),'Awaiting acceptance from Ashley Example');
 });
 test('background photos use public uploaded image paths and reject CSS or external URL injection',()=>{
  const path='/api/site-images/background-11111111-1111-1111-1111-111111111111/image?v=1';

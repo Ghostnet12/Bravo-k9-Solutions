@@ -6,7 +6,6 @@ import express from 'express';
 import { requestError } from './errors.js';
 import { securityHeaders } from './http-security.js';
 import cookieParser from 'cookie-parser';
-import mongoose from 'mongoose';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import legacyApp from './app.js';
@@ -24,12 +23,13 @@ import siteAdsRouter from './site-ads.js';
 import { DEFAULT_HERO_FILM } from '../shared/hero-film.js';
 import { heroRendition, heroPosterRendition } from './hero-rendition.js';
 import { effectiveServices } from './services.js';
+import { SiteImage } from './site-image-store.js';
+import { backgroundDraftExpiry } from './background-images.js';
+export { SiteImage } from './site-image-store.js';
 
 // Existing collection and image URLs remain compatible with saved portraits.
 // Video records store framing only; actual video bytes still use the protected
 // lesson upload/playback system, so no new public route can expose paid lessons.
-const snapshot = new mongoose.Schema({ uploadId: { type: String, default: null }, alt: { type: String, default: '' }, x: { type: Number, default: 50 }, y: { type: Number, default: 50 }, zoom: { type: Number, default: 1 }, fit: { type: String, default: 'cover' }, framed: Boolean }, { _id: false });
-export const SiteImage = mongoose.models.BravoSiteImage || mongoose.model('BravoSiteImage', new mongoose.Schema({ _id: String, current: snapshot, previous: snapshot, revision: { type: Number, default: 0 }, updatedBy: mongoose.Schema.Types.ObjectId }, { timestamps: true }));
 const emptySnapshot = () => ({ uploadId: null, alt: '', x: 50, y: 50, zoom: 1, fit: 'cover', framed: false });
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const revisionInput = z.object({ expectedRevision: z.number().int().min(0) });
@@ -63,13 +63,13 @@ const router = express.Router();
 router.use(securityHeaders(), (_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
 router.param('key', (_req, _res, next, key) => { if (!isEditableMediaKey(key)) throw fail('Only website photos and videos can be edited.', 400); next(); });
 router.get('/', connect, async (_req, res) => {
-  const images = await SiteImage.find().select('_id current revision previous.uploadId').limit(1000).lean();
+  const images = await SiteImage.find({ _id: { $not: /^background-/ } }).select('_id current revision previous.uploadId').limit(1000).lean();
   res.json({ images: Object.fromEntries(images.filter(image => isEditableMediaKey(image._id)).map(image => [image._id, publicImage(image)])) });
 });
 router.get('/:key/image', connect, async (req, res) => {
   if (req.params.key.startsWith('video-')) return res.status(404).end();
   const image = await SiteImage.findById(req.params.key).lean();
-  if (!image?.current?.uploadId) return res.status(404).end();
+  if (!image?.current?.uploadId || image.expiresAt <= new Date()) return res.status(404).end();
   return sendUploadedMedia(image.current.uploadId, req, res, 'image');
 });
 // Administrator accounts carry role=owner; ordinary staff are explicitly denied.
@@ -81,18 +81,21 @@ async function saveEdit(req, input, bytes = null) {
   let result;
   await transaction(async session => {
     const existing = await SiteImage.findById(key).session(session);
+    if (key.startsWith('background-') && (existing || !bytes)) throw fail('Choose a new background photo in the section editor.', 409);
+    const expiresAt = key.startsWith('background-') ? backgroundDraftExpiry() : undefined;
     if ((existing?.revision || 0) !== input.expectedRevision) throw fail('Another administrator changed this media.', 409);
     const previous = existing?.current?.toObject() || emptySnapshot();
     const retiredId = existing?.previous?.uploadId;
     if (bytes) {
       const chunks = Array.from({ length: Math.ceil(bytes.length / CHUNK_SIZE) }, (_, index) => {
         const data = bytes.subarray(index * CHUNK_SIZE, (index + 1) * CHUNK_SIZE);
-        return { uploadId: newUploadId, index, size: data.length, data };
+        return { uploadId: newUploadId, index, size: data.length, data, expiresAt };
       });
-      await MediaUpload.create([{ _id: newUploadId, lessonId: `site:${key}`, kind: 'image', filename: input.filename, contentType: input.contentType, size: bytes.length, chunks: chunks.length, uploadedBy: req.user._id, completed: true }], { session });
+      await MediaUpload.create([{ _id: newUploadId, lessonId: `site:${key}`, kind: 'image', filename: input.filename, contentType: input.contentType, size: bytes.length, chunks: chunks.length, uploadedBy: req.user._id, completed: true, expiresAt }], { session });
       await MediaChunk.insertMany(chunks, { session });
     }
     const image = existing || new SiteImage({ _id: key });
+    if (expiresAt) image.expiresAt = expiresAt;
     image.current = { uploadId: newUploadId || previous.uploadId, alt: input.alt, x: input.x, y: input.y, zoom: input.zoom, fit: input.fit, framed: true };
     image.previous = previous; image.revision = input.expectedRevision + 1; image.updatedBy = req.user._id;
     await image.save({ session });
@@ -114,6 +117,7 @@ router.put('/:key', async (req, res) => {
   res.json({ image: await saveEdit(req, input, bytes) });
 });
 router.post('/:key/undo', async (req, res) => {
+  if (req.params.key.startsWith('background-')) throw fail('Restore a background using the section editor.', 400);
   const { expectedRevision } = revisionInput.parse(req.body);
   let result;
   await transaction(async session => {

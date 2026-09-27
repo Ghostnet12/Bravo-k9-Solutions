@@ -63,7 +63,7 @@ export function AppProvider({ children }) {
     services: (old?.services || []).map(item => item.id === service.id ? service : item),
     ...(service.id === 'online' ? { lessonLibrary: { ...old?.lessonLibrary, lessonCents: service.cents, bundleCents: service.bundleCents } } : {}),
   })), []);
-  useEffect(() => { refreshConfig().catch(() => setConfig({ connected: false, paymentsReady: false })); refreshUser().catch(() => {}); }, [refreshUser, refreshConfig]);
+  useEffect(() => { refreshConfig().catch(() => setConfig(old => ({ ...old, connected: false, paymentsReady: false }))); refreshUser().catch(() => {}); }, [refreshUser, refreshConfig]);
   return <Context.Provider value={{ signOut, notifications, refreshNotifications, markNotificationsRead, config, user, services, membership, setUser, authReady, refreshUser, refreshConfig, updateService, bookingDraft, setBookingDraft }}>{children}</Context.Provider>;
 }
 export const useBravo = () => useContext(Context);

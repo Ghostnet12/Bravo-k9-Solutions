@@ -40,7 +40,7 @@ export function scheduledTrainerLabel(booking) {
   if (booking.trainerAcceptanceRequired) {
     const accepted = acceptedTrainerIds(booking);
     const pending = assigned.filter(person => !accepted.includes(identity(person)));
-    return `Awaiting acceptance from ${(pending.length ? pending : assigned).map(person => publicTrainerName(person.name)).join(' and ')}`;
+    return `Awaiting acceptance from ${(pending.length ? pending : assigned).map(person => person.publicName ?? publicTrainerName(person.name)).join(' and ')}`;
   }
-  return assigned.length > 1 ? JOINT_TRAINER_LABEL : publicTrainerName(assigned[0].name);
+  return assigned.length > 1 ? JOINT_TRAINER_LABEL : assigned[0].publicName ?? publicTrainerName(assigned[0].name);
 }

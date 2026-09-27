@@ -9,6 +9,8 @@ import { requestError } from './errors.js';
 import { safeContentLink } from '../shared/site-content.js';
 import { CONTENT_KEYS } from '../shared/site-content-keys.js';
 import { SiteContent, loadSiteContent, publicSiteContentRow } from './site-content-store.js';
+import { SiteImage } from './site-image-store.js';
+import { retainBackgroundImages } from './background-images.js';
 export { SiteContent, loadSiteContent } from './site-content-store.js';
 const color = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 export const contentInput = z.object({
@@ -34,19 +36,22 @@ function validateMutation(key, input) {
 }
 async function publishMutations(changes, actorId) {
   changes.forEach(({key,...input})=>validateMutation(key,input));
-  await SiteContent.init(); const entries={};
+  await SiteContent.init(); await SiteImage.init(); const entries={};
   await transaction(async session => {
+    const backgrounds=[];
     for(const {key,...input} of changes) {
       const current = await SiteContent.findById(key).session(session);
       if ((current?.revision || 0) !== input.expectedRevision) throw Object.assign(new Error('Someone else changed this item. Close and reopen the editor before publishing. Nothing in this draft was saved.'), { status:409 });
       if (input.undo && current?.previous == null) throw Object.assign(new Error('No previous edit is available.'), { status:400 });
       const row = current || new SiteContent({ _id:key });
       const next = input.undo ? row.previous : input.value;
+      backgrounds.push(row.value?.backgroundImage, row.previous?.backgroundImage, next?.backgroundImage);
       row.previous = row.value || {}; row.value = next; row.revision = input.expectedRevision + 1; row.updatedBy = actorId;
       await row.save({ session });
       await AuditEvent.create([{ actorId, action:'site-content.published', targetType:'site-content', targetId:key, details:{revision:row.revision} }],{session});
       entries[key] = publicSiteContentRow(row);
     }
+    await retainBackgroundImages(backgrounds, session);
   });
   return entries;
 }
