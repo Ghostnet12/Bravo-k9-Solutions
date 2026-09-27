@@ -3,55 +3,54 @@ import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { chromium, webkit } from 'playwright';
 const origin = 'https://bravounleashed.com';
-let ready = false;
-for (let attempt = 0; attempt < 18; attempt++) {
-  const response = await fetch(origin, { cache: 'no-store', signal: AbortSignal.timeout(15000) });
-  const html = await response.text();
-  if (response.ok && /name="bravo-home-hero" content="\{/.test(html)) { ready = true; break; }
-  await new Promise(resolve => setTimeout(resolve, 10000));
-}
-assert.ok(ready, 'Production root must serve published hero metadata, not the static shell');
+const response = await fetch(origin, { cache: 'no-store', signal: AbortSignal.timeout(15000) });
+assert.ok(response.ok, 'Production homepage responds successfully');
+const html = await response.text();
+assert.match(html, /name="bravo-hero-film" content="\{/, 'Production HTML includes the published video hero');
 await mkdir('test-results', { recursive: true });
 const results = [];
 for (const [name, engine, width] of [['webkit', webkit, 390], ['chromium', chromium, 390], ['chromium', chromium, 1440]]) {
   const browser = await engine.launch({ headless: true, ...(name === 'chromium' ? {channel:'chrome'} : {}) });
   try {
-    const context = await browser.newContext({ viewport: { width, height: 844 }, isMobile: width === 390, deviceScaleFactor: 1, extraHTTPHeaders:{DNT:"1"} });
+    const context = await browser.newContext({ viewport: { width, height: 844 }, isMobile: width === 390, deviceScaleFactor: 1, extraHTTPHeaders:{DNT:'1'} });
     const page = await context.newPage(), errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.addInitScript(() => {
       window.heroSamples = [];
       const sample = () => {
-        const image = document.querySelector('.home-hero-image'), hero = document.querySelector('.home-hero');
-        if (image && hero) {
-          const box = hero.getBoundingClientRect(), style = getComputedStyle(image);
-          window.heroSamples.push({ src: image.getAttribute('src'), height: box.height, top: box.top + scrollY, fit: style.objectFit, position: style.objectPosition, transform: style.transform, loaded: image.complete && image.naturalWidth > 0 });
+        const video = document.querySelector('video[data-hero-film]'), hero = document.querySelector('.cinema-hero');
+        if (video && hero) {
+          const box = hero.getBoundingClientRect();
+          window.heroSamples.push({ source: video.querySelector('source')?.getAttribute('src'), height: box.height, top: box.top + scrollY });
         }
         if (!window.stopHeroSamples) requestAnimationFrame(sample);
       };
       requestAnimationFrame(sample);
     });
-    await page.goto(origin, { waitUntil: 'domcontentloaded' });
-    await page.locator('.home-hero-image').waitFor({ state: 'visible' });
-    await page.waitForFunction(()=>{const video=document.querySelector('video[data-hero-film]');return video?.muted && video.playsInline && !video.paused && video.currentTime>0;},{},{timeout:45000});
-    await page.waitForTimeout(1000);
-    const state = await page.evaluate(() => {
-      window.stopHeroSamples = true;
-      return { hero: JSON.parse(document.querySelector('meta[name="bravo-home-hero"]').content), samples: window.heroSamples };
-    });
-    await page.screenshot({ path: `test-results/live-${name}-${width}.png` });
-    await writeFile(`test-results/live-${name}-${width}.json`, JSON.stringify({ ...state, errors }, null, 2));
-    const { samples, hero } = state;
-    assert.ok(samples.length > 5);
-    assert.deepEqual([...new Set(samples.map(row => row.src))], [hero.src]);
-    for (const key of ['fit', 'position', 'transform']) assert.equal(new Set(samples.map(row => row[key])).size, 1, `Live ${name} ${width}: late ${key} change`);
-    for (const key of ['height', 'top']) assert.ok(Math.max(...samples.map(row => row[key])) - Math.min(...samples.map(row => row[key])) < 1, `Live ${name} ${width}: ${key} shifted`);
-    assert.deepEqual(errors, []);
-    assert.equal(await page.locator('.home-hero-image').count(), 1);
-    await page.locator('.home-hero-image').scrollIntoViewIfNeeded();
-    await page.waitForFunction(() => { const image = document.querySelector('.home-hero-image'); return image?.complete && image.naturalWidth > 0; });
-    results.push({ browser: name, width, frames: samples.length, revision: hero.revision, first: samples[0], last: samples.at(-1) });
-    console.log(`PASS LIVE ${name} ${width}: revision ${hero.revision}, ${samples.length} stable frames, hero autoplay confirmed`);
+    try {
+      await page.goto(origin, { waitUntil: 'domcontentloaded' });
+      await page.waitForFunction(() => { const v = document.querySelector('video[data-hero-film]'); return v?.muted && v.playsInline && !v.paused && v.currentTime > 0; }, {}, { timeout: 45000 });
+      await page.waitForTimeout(1000);
+      const state = await page.evaluate(() => {
+        window.stopHeroSamples = true;
+        const v = document.querySelector('video[data-hero-film]');
+        return { hero: JSON.parse(document.querySelector('meta[name="bravo-hero-film"]').content), samples: window.heroSamples, playback: { src: v.currentSrc, muted: v.muted, inline: v.playsInline, paused: v.paused, time: v.currentTime } };
+      });
+      assert.equal(await page.locator('video[data-hero-film]').count(), 1);
+      assert.ok(state.samples.length > 5);
+      assert.deepEqual([...new Set(state.samples.map(row => row.source))], [state.hero.src]);
+      assert.equal(new URL(state.playback.src).pathname, new URL(state.hero.src, origin).pathname);
+      for (const key of ['height', 'top']) assert.ok(Math.max(...state.samples.map(row => row[key])) - Math.min(...state.samples.map(row => row[key])) < 1, `Live ${name} ${width}: ${key} shifted`);
+      assert.deepEqual(errors, []);
+      await page.screenshot({ path: `test-results/live-${name}-${width}.png` });
+      await writeFile(`test-results/live-${name}-${width}.json`, JSON.stringify({ ...state, errors }, null, 2));
+      results.push({ browser: name, width, revision: state.hero.revision, playback: state.playback });
+      console.log(`PASS LIVE ${name} ${width}: published hero revision ${state.hero.revision}, stable layout and muted inline autoplay`);
+    } catch (error) {
+      await page.screenshot({ path: `test-results/live-failure-${name}-${width}.png` });
+      await writeFile(`test-results/live-failure-${name}-${width}.json`, JSON.stringify({ error: error.message, errors }));
+      throw error;
+    }
   } finally { await browser.close(); }
 }
 await writeFile('test-results/live-results.json', JSON.stringify(results, null, 2));
