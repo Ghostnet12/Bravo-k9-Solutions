@@ -26,7 +26,12 @@ async function fixtures(page, actor = () => null) {
   });
 }
 async function fits(page, label) {
-  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${label}: no horizontal page overflow`);
+  const overflow = await page.evaluate(() => ({ viewport: innerWidth, width: document.documentElement.scrollWidth, elements: [...document.querySelectorAll('body *')].filter(el => { const box = el.getBoundingClientRect(); return box.width && box.right > innerWidth + 1 && getComputedStyle(el).position !== 'absolute'; }).map(el => ({ tag: el.tagName, class: el.className, text: el.textContent.slice(0, 80), right: el.getBoundingClientRect().right, width: el.getBoundingClientRect().width })).slice(-25) }));
+  if (overflow.width > overflow.viewport + 1) {
+    console.log(label, JSON.stringify(overflow));
+    await page.screenshot({ path: 'test-results/theme-overflow.png', fullPage: true });
+  }
+  assert.ok(overflow.width <= overflow.viewport + 1, `${label}: no horizontal page overflow`);
   const nav = await page.locator('.app-header').boundingBox();
   assert.ok(nav && nav.x >= 0 && nav.width <= (await page.viewportSize()).width, `${label}: navigation fits`);
 }

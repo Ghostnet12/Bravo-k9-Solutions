@@ -32,16 +32,16 @@ jobs:
           npm install --no-save --package-lock=false playwright@1.55.1
           npx playwright install --with-deps chromium webkit
           npx playwright install chrome
+      - name: Install media decoders
+        run: sudo apt-get install -y ffmpeg gstreamer1.0-libav
+      - name: Verify shared theme, navigation and autoplay recovery
+        run: node tests/bravo-theme.browser.mjs
       - name: Verify device uploads, hold-to-edit and real video playback
-        run: |
-          sudo apt-get install -y ffmpeg gstreamer1.0-libav
-          node tests/proof-videos.browser.mjs
+        run: node tests/proof-videos.browser.mjs
       - name: Cold load, delayed media, administrator tools, and return navigation
         run: node tests/home-hero.browser.mjs
       - name: Verify homepage conversion hierarchy and mobile fixed controls
         run: node tests/home-conversion.browser.mjs
-      - name: Verify shared theme, navigation and autoplay recovery
-        run: node tests/bravo-theme.browser.mjs
       - name: Verify the published homepage without signing in
         if: github.ref == 'refs/heads/bravo-mern'
         run: node tests/home-hero.live.mjs
