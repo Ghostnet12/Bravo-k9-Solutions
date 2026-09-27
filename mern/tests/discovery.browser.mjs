@@ -17,6 +17,15 @@ try {
     try { for (const width of [360,768,1440]) {
       const context=await browser.newContext({viewport:{width,height:900},reducedMotion:width === 360 ? 'reduce' : 'no-preference'}), page=await context.newPage(), errors=[];
       let discard=true, confirmations=0;
+      // Finish mocked API responses before tearing down the document. WebKit
+      // reports intercepted requests cancelled by navigation as access errors.
+      const pendingApi=new Set();let lastApi=0;
+      page.on('request',request=>{if(new URL(request.url()).pathname.startsWith('/api/')){pendingApi.add(request);lastApi=Date.now();}});
+      for(const name of ['requestfinished','requestfailed'])page.on(name,request=>{if(pendingApi.delete(request))lastApi=Date.now();});
+      async function settleApi(){const deadline=Date.now()+5000;while(pendingApi.size || Date.now()-lastApi<150){if(Date.now()>deadline)throw new Error('Mocked API requests did not settle');await new Promise(resolve=>setTimeout(resolve,25));}}
+      async function visit(url,options){await settleApi();return page.goto(url,{waitUntil:'domcontentloaded',...options});}
+      async function reload(){await settleApi();return page.reload({waitUntil:'domcontentloaded'});}
+
       let owner=false, event={...DEFAULT_WORKSHOP}, entries={}, signup=null, failSave=false;
       page.on('pageerror',error=>errors.push(error.message));
       page.on('dialog',dialog=>{confirmations++;return discard ? dialog.accept() : dialog.dismiss();});
@@ -47,7 +56,7 @@ try {
         for(const path of ['/','/dog-training','/behavior-assessment','/dog-walking','/workshops','/learn','/contact']){
           // Video range requests can stay active in WebKit; wait for the usable page instead.
           const configured=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/config' && response.ok());
-          await page.goto(origin+path,{waitUntil:'domcontentloaded'});await configured;
+          await visit(origin+path,{waitUntil:'domcontentloaded'});await configured;
           await page.locator('.accessibility-trigger').waitFor();
           if(path==='/')await page.locator('.goal-proof figcaption').waitFor();
           if(path==='/workshops')await page.getByRole('heading',{name:'Saturday dog-training workshop',exact:true}).waitFor();
@@ -55,17 +64,17 @@ try {
           assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${path} ${width} no overflow`);
           await page.screenshot({path:`test-results/discovery-${engineName}-${width}-${path.slice(1)||'home'}.png`,fullPage:true});
         }
-        await page.goto(origin);await page.getByRole('button',{name:'Walking & distractions',exact:true}).click();
+        await visit(origin);await page.getByRole('button',{name:'Walking & distractions',exact:true}).click();
         assert.match(await page.locator('.goal-result').innerText(),/Skills that travel/);
         await page.locator('.goal-result').getByRole('link',{name:'Plan my first visit'}).click();
         await page.getByRole('combobox',{name:'What would you like help with?',exact:true}).waitFor();
         assert.equal(await page.getByRole('combobox',{name:'What would you like help with?',exact:true}).inputValue(),'advanced-obedience');
         await page.getByLabel('Number of dogs',{exact:true}).fill('2');assert.match(await page.locator('.price-total').innerText(),/\$300/);
-        await page.goto(origin);await page.getByRole('button',{name:'Aggression & handling',exact:true}).click();assert.match(await page.locator('.goal-result').innerText(),/\$400/);assert.match(await page.locator('.goal-result').getByRole('link',{name:'Request an assessment'}).getAttribute('href'),/program=aggression/);
+        await visit(origin);await page.getByRole('button',{name:'Aggression & handling',exact:true}).click();assert.match(await page.locator('.goal-result').innerText(),/\$400/);assert.match(await page.locator('.goal-result').getByRole('link',{name:'Request an assessment'}).getAttribute('href'),/program=aggression/);
         const proof=page.locator('.home-work-proof');await proof.getByRole('button',{name:'Working dogs',exact:true}).click();assert.equal(await proof.locator('article[data-proof-video]').count(),1);await proof.getByRole('button',{name:'All training',exact:true}).click();assert.equal(await proof.locator('article[data-proof-video]').count(),3);
-        await page.goto(origin+'/learn');await page.getByLabel('Email address',{exact:true}).fill('visitor@example.test');await page.getByLabel('Email me once when Bravo online courses launch.').check();await page.getByRole('button',{name:'Request a launch update'}).click();await page.getByText('Your launch-update request is saved.',{exact:false}).waitFor();assert.equal(signup.consent,true);assert.equal(signup.email,'visitor@example.test');
-        owner=true;await page.goto(origin+'/workshops');await page.getByRole('button',{name:'Edit workshop details'}).click();await page.getByLabel('Time (Central)',{exact:true}).fill('10:00 a.m.');await page.getByLabel('Location',{exact:true}).fill('Fixture venue');await page.getByRole('button',{name:'Publish workshop'}).click();await page.getByText('Workshop details saved.',{exact:true}).waitFor();await page.reload();await page.getByText('10:00 a.m. · Central',{exact:true}).waitFor();
-        await page.goto(origin);await page.getByRole('button',{name:'Edit page text & design'}).click();const dialog=page.getByRole('dialog',{name:'Edit website section'});await dialog.getByLabel('Edit this part',{exact:true}).selectOption('discovery-goal-title');await dialog.getByLabel('Text',{exact:true}).fill('Find your next step.');failSave=true;await dialog.getByRole('button',{name:'Publish website changes'}).click();await dialog.getByText('Fixture connection interrupted').waitFor();assert.equal(await dialog.getByLabel('Text',{exact:true}).inputValue(),'Find your next step.');failSave=false;await dialog.getByRole('button',{name:'Publish website changes'}).click();await dialog.waitFor({state:'hidden'});await page.getByText('Saved. Your website changes are published.',{exact:true}).waitFor();await page.reload();await page.getByRole('heading',{name:'Find your next step.',exact:true}).waitFor();
+        await visit(origin+'/learn');await page.getByLabel('Email address',{exact:true}).fill('visitor@example.test');await page.getByLabel('Email me once when Bravo online courses launch.').check();await page.getByRole('button',{name:'Request a launch update'}).click();await page.getByText('Your launch-update request is saved.',{exact:false}).waitFor();assert.equal(signup.consent,true);assert.equal(signup.email,'visitor@example.test');
+        owner=true;await visit(origin+'/workshops');await page.getByRole('button',{name:'Edit workshop details'}).click();await page.getByLabel('Time (Central)',{exact:true}).fill('10:00 a.m.');await page.getByLabel('Location',{exact:true}).fill('Fixture venue');await page.getByRole('button',{name:'Publish workshop'}).click();await page.getByText('Workshop details saved.',{exact:true}).waitFor();await reload();await page.getByText('10:00 a.m. · Central',{exact:true}).waitFor();
+        await visit(origin);await page.getByRole('button',{name:'Edit page text & design'}).click();const dialog=page.getByRole('dialog',{name:'Edit website section'});await dialog.getByLabel('Edit this part',{exact:true}).selectOption('discovery-goal-title');await dialog.getByLabel('Text',{exact:true}).fill('Find your next step.');failSave=true;await dialog.getByRole('button',{name:'Publish website changes'}).click();await dialog.getByText('Fixture connection interrupted').waitFor();assert.equal(await dialog.getByLabel('Text',{exact:true}).inputValue(),'Find your next step.');failSave=false;await dialog.getByRole('button',{name:'Publish website changes'}).click();await dialog.waitFor({state:'hidden'});await page.getByText('Saved. Your website changes are published.',{exact:true}).waitFor();await reload();await page.getByRole('heading',{name:'Find your next step.',exact:true}).waitFor();
         // A draft on another section must survive cancel and publishing the current section.
         await page.getByRole('button',{name:'Edit page text & design'}).click();
         await dialog.getByLabel('Edit this part',{exact:true}).selectOption('discovery-goal-title');
@@ -81,8 +90,8 @@ try {
         await dialog.getByLabel('Edit this part',{exact:true}).selectOption('discovery-goal-title');
         assert.equal(await dialog.getByLabel('Text',{exact:true}).inputValue(),'A preserved draft.');
         await dialog.getByRole('button',{name:'Publish website changes'}).click();await dialog.waitFor({state:'hidden'});
-        discard=true;await page.reload();await page.getByRole('heading',{name:'A preserved draft.',exact:true}).waitFor();
-        await page.goto(origin+'/learn?preview=launch');await page.getByRole('heading',{name:'Bravo. Anywhere.',exact:true}).waitFor();await page.getByRole('button',{name:'Edit page text & design'}).click();await page.getByRole('dialog',{name:'Edit website section'}).getByLabel('Edit this part',{exact:true}).selectOption('discovery-course-copy');assert.match(await page.getByRole('dialog',{name:'Edit website section'}).getByLabel('Text',{exact:true}).inputValue(),/David and Ashley/);
+        discard=true;await reload();await page.getByRole('heading',{name:'A preserved draft.',exact:true}).waitFor();
+        await visit(origin+'/learn?preview=launch');await page.getByRole('heading',{name:'Bravo. Anywhere.',exact:true}).waitFor();await page.getByRole('button',{name:'Edit page text & design'}).click();await page.getByRole('dialog',{name:'Edit website section'}).getByLabel('Edit this part',{exact:true}).selectOption('discovery-course-copy');assert.match(await page.getByRole('dialog',{name:'Edit website section'}).getByLabel('Text',{exact:true}).inputValue(),/David and Ashley/);
         assert.deepEqual(errors,[]);console.log(`${engineName} ${width}: discovery, pricing, routing, filters, signup and editor recovery passed`);
       }finally{await context.close();}
     }}finally{await browser.close();}
