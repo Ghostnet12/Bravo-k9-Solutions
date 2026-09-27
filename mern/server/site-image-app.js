@@ -38,7 +38,7 @@ const imageInput = framingInput.extend({ filename: z.string().trim().min(1).max(
 function publicImage(image) {
   return { revision: image.revision, src: image.current?.uploadId ? `/api/site-images/${image._id}/image?v=${image.revision}` : null, alt: image.current?.alt || '', x: image.current?.x ?? 50, y: image.current?.y ?? 50, zoom: image.current?.zoom ?? 1, fit: image.current?.fit || 'cover', framed: image.current?.framed ?? !!image.current?.uploadId, canUndo: !!image.previous };
 }
-export const homepageHandler = createHomepageHandler({ loadCatalog: async () => { await connectDb(); return effectiveServices({includeDisabled:true}); }, loadWorkshop: loadPublicWorkshop, loadContent: loadSiteContent, loadFilm: async () => {
+export const homepageHandler = createHomepageHandler({ loadCatalog: async () => { await connectDb(); return effectiveServices({includeDisabled:true,readOnly:true}); }, loadWorkshop: loadPublicWorkshop, loadContent: loadSiteContent, loadFilm: async () => {
   await connectDb();
   const film = await HeroFilm.findOne({ _id: DEFAULT_HERO_FILM.id, deleted: false }).select('title description fit revision uploadId hasPoster').maxTimeMS(2000).lean();
   if (!film) return DEFAULT_HERO_FILM;
