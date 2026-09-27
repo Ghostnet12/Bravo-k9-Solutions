@@ -55,7 +55,6 @@ export default function Home() {
     <main id="main-content" tabIndex={-1}>
       <section className="home-hero cinema-hero" aria-labelledby="home-title">
         <div className="cinema-hero-media"><CinematicFilm/></div>
-        <div className="cinema-hero-shade" aria-hidden="true"/>
         <div className="cinema-hero-copy cinema-shell">
           <Editable as="p" contentKey="cinema-location" canEditText className="cinema-eyebrow">ABERDEEN, SOUTH DAKOTA</Editable>
           <Editable as="h1" contentKey="cinema-hero-title" canEditText id="home-title">Training built<br/>around the dog.</Editable>
