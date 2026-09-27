@@ -1,4 +1,4 @@
-import { createContext, lazy, Suspense, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, lazy, Suspense, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useBravo } from './context';
 import { api } from './api';
@@ -24,7 +24,7 @@ function ContentEditor({ options, entries, publish, close, preview, record, edit
   const otherDirty = Object.entries(drafts.current).some(([itemKey, value]) => itemKey !== key && changed(itemKey, value));
   const dirty = changed(key, draft) || otherDirty;
   const requestClose = () => { if (busy || (dirty && !window.confirm('Discard your unpublished changes?'))) return false; close(); return true; };
-  useEffect(() => { const warn = event => { if (dirty) { event.preventDefault(); event.returnValue = ''; } }; window.addEventListener('beforeunload', warn); return () => window.removeEventListener('beforeunload', warn); }, [dirty]);
+  useLayoutEffect(() => { const warn = event => { if (dirty) { event.preventDefault(); event.returnValue = ''; } }; window.addEventListener('beforeunload', warn); return () => window.removeEventListener('beforeunload', warn); }, [dirty]);
   const change=(name,value)=>setDraft(old=>({...old,[name]:value}));
   async function uploadBackground(file) {
     if(!file)return;setBusy(true);setError('');

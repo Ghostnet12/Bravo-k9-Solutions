@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { api } from './api';
 import { useBravo } from './context';
 import { trainerIntroductions } from '../../shared/trainer-profile';
@@ -31,7 +31,7 @@ export default function WebsiteRecordEditor({ record, close, published, design }
   if (draft && !initial.current) initial.current = JSON.stringify(draft);
   const dirty = !!draft && JSON.stringify(draft) !== initial.current;
   const requestClose = () => { if (!busy && (!dirty || window.confirm('Discard your unpublished changes?'))) close(); };
-  useEffect(() => { const warn = event => { if (dirty) { event.preventDefault(); event.returnValue = ''; } }; window.addEventListener('beforeunload', warn); return () => window.removeEventListener('beforeunload', warn); }, [dirty]);
+  useLayoutEffect(() => { const warn = event => { if (dirty) { event.preventDefault(); event.returnValue = ''; } }; window.addEventListener('beforeunload', warn); return () => window.removeEventListener('beforeunload', warn); }, [dirty]);
   const change = (key, value) => setDraft(old => ({ ...old, [key]: value }));
   async function save(event) {
     event.preventDefault(); setBusy(true); setError('');
