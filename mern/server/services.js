@@ -1,6 +1,7 @@
 import { ServiceSetting, LessonLibrary } from './models.js';
 import { readLessonLibrary } from './lesson-library.js';
 import { SERVICES } from '../shared/catalog.js';
+import { publishedServiceSetting } from './service-pricing.js';
 
 export async function effectiveServices({ includeDisabled = false, readOnly = false } = {}) {
   // HTML rendering must never wait for Stripe checkout cleanup. Normal API
@@ -11,7 +12,7 @@ export async function effectiveServices({ includeDisabled = false, readOnly = fa
   const stored = await query.lean();
   const overrides = new Map(stored.map(setting => [setting._id, setting]));
   return SERVICES.map(service => {
-    const setting = overrides.get(service.id);
+    const setting = publishedServiceSetting(service.id, overrides.get(service.id));
     return { ...service, name: setting?.name ?? service.name, description: setting?.description ?? service.description,
       cents: setting?.cents ?? service.cents, revision: setting?.revision || 0,
       ...(service.id === 'training' ? { additionalDogCents: setting?.additionalDogCents ?? service.additionalDogCents } : {}),
