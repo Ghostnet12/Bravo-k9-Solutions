@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { chromium, webkit } from 'playwright';
 import app from '../server/app.js';
 import { SERVICES } from '../shared/catalog.js';
@@ -15,7 +15,7 @@ try {
     if(process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(engineName)) continue;
     const browser=await engine.launch();
     try { for (const width of [360,768,1440]) {
-      const context=await browser.newContext({viewport:{width,height:900},reducedMotion:width === 360 ? 'reduce' : 'no-preference'}), page=await context.newPage(), errors=[];
+      const context=await browser.newContext({viewport:{width,height:900},reducedMotion:width === 360 ? 'reduce' : 'no-preference'}), page=await context.newPage(), errors=[], browserDiagnostics=[];
       let discard=true, confirmations=0;
       // Finish mocked API responses before tearing down the document. WebKit
       // reports intercepted requests cancelled by navigation as access errors.
@@ -27,7 +27,15 @@ try {
       async function reload(){await settleApi();return page.reload({waitUntil:'domcontentloaded'});}
 
       let owner=false, event={...DEFAULT_WORKSHOP}, entries={}, signup=null, failSave=false;
-      page.on('pageerror',error=>errors.push(error.message));
+      // WebKit also emits pageerror for handled fetch cancellations during
+      // navigation. Keep those diagnostics and assert the browser's actual
+      // uncaught exceptions and promise rejections, as the toolkit suite does.
+      page.on('pageerror',error=>browserDiagnostics.push({message:error.message,stack:error.stack,url:page.url()}));
+      await page.exposeFunction('reportDiscoveryError',message=>errors.push(message));
+      await page.addInitScript(()=>{
+        window.addEventListener('error',event=>{if(event instanceof ErrorEvent)void window.reportDiscoveryError(event.error?.stack||event.message).catch(()=>{});});
+        window.addEventListener('unhandledrejection',event=>{void window.reportDiscoveryError(event.reason?.stack||event.reason?.message||String(event.reason)).catch(()=>{});});
+      });
       page.on('dialog',dialog=>{confirmations++;return discard ? dialog.accept() : dialog.dismiss();});
       await context.route('**/api/**', async route => {
         const url=new URL(route.request().url()), path=url.pathname, method=route.request().method();
@@ -120,7 +128,7 @@ try {
         discard=true;await reload();await page.getByRole('heading',{name:'A preserved draft.',exact:true}).waitFor();
         await visit(origin+'/learn?preview=launch');await page.getByRole('heading',{name:'Bravo. Anywhere.',exact:true}).waitFor();await page.getByRole('button',{name:'Edit page text & design'}).click();await page.getByRole('dialog',{name:'Edit website section'}).getByLabel('Edit this part',{exact:true}).selectOption('discovery-course-copy');assert.match(await page.getByRole('dialog',{name:'Edit website section'}).getByLabel('Text',{exact:true}).inputValue(),/David and Ashley/);
         assert.deepEqual(errors,[]);console.log(`${engineName} ${width}: discovery, pricing, routing, filters, signup and editor recovery passed`);
-      }finally{await context.close();}
+      }finally{await writeFile(`test-results/discovery-diagnostics-${engineName}-${width}.json`,JSON.stringify({errors,browserDiagnostics},null,2));await context.close();}
     }}finally{await browser.close();}
   }
 }finally{await new Promise(resolve=>server.close(resolve));}
