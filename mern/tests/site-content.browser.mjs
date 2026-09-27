@@ -11,6 +11,7 @@ await mkdir('test-results',{recursive:true});
 try{for(const [name,engine]of Object.entries({chromium,webkit})){if(process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(name))continue;const browser=await engine.launch();try{for(const width of [390,1440]){
   const context=await browser.newContext({viewport:{width,height:900},hasTouch:true}),page=await context.newPage(),errors=[];let role='owner',entries={},failSave=false;
   page.on('pageerror',e=>errors.push(e.message));
+  let discards=0;page.on('dialog',dialog=>{assert.equal(dialog.type(),'confirm');discards++;return dialog.accept();});
   await page.route('**/api/**',async route=>{const path=new URL(route.request().url()).pathname;let status=200,json={services:[],team:[],reviews:[],images:{},clips:[],schedules:[],alerts:[],revision:0};
     if(path==='/api/auth/me')json={user:role?{id:'fixture',name:'Fixture',role}:null,services:[]};
     if(path==='/api/site-content')json={entries};
@@ -26,7 +27,7 @@ try{for(const [name,engine]of Object.entries({chromium,webkit})){if(process.env.
     await dialog.getByLabel('Background',{exact:true}).selectOption('gradient');
     await page.waitForFunction(()=>getComputedStyle(document.querySelector('.cinema-hero-intro')).backgroundImage.includes('linear-gradient'));
     assert.ok((await intro.innerText()).includes('Training edited'));assert.ok((await intro.evaluate(el=>getComputedStyle(el).backgroundImage)).includes('linear-gradient'));
-    await dialog.getByRole('button',{name:'Cancel',exact:true}).click();assert.equal(await intro.innerText(),original);
+    await dialog.getByRole('button',{name:'Cancel',exact:true}).click();await dialog.waitFor({state:'hidden'});assert.equal(discards,1);assert.equal(await intro.innerText(),original);
     await hold(intro);await dialog.waitFor();await dialog.getByLabel('Edit this part',{exact:true}).selectOption('site-theme');await dialog.getByLabel('Font',{exact:true}).selectOption('georgia');
     await dialog.getByLabel('Text color',{exact:true}).evaluate(el=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,'#abcdef');el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));});
     await page.waitForFunction(()=>getComputedStyle(document.querySelector('#home-title')).color==='rgb(171, 205, 239)');

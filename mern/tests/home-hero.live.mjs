@@ -14,9 +14,9 @@ assert.ok(ready, 'Production root must serve published hero metadata, not the st
 await mkdir('test-results', { recursive: true });
 const results = [];
 for (const [name, engine, width] of [['webkit', webkit, 390], ['chromium', chromium, 390], ['chromium', chromium, 1440]]) {
-  const browser = await engine.launch({ headless: true });
+  const browser = await engine.launch({ headless: true, ...(name === 'chromium' ? {channel:'chrome'} : {}) });
   try {
-    const context = await browser.newContext({ viewport: { width, height: 844 }, isMobile: width === 390, deviceScaleFactor: 1 });
+    const context = await browser.newContext({ viewport: { width, height: 844 }, isMobile: width === 390, deviceScaleFactor: 1, extraHTTPHeaders:{DNT:"1"} });
     const page = await context.newPage(), errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.addInitScript(() => {
@@ -33,7 +33,8 @@ for (const [name, engine, width] of [['webkit', webkit, 390], ['chromium', chrom
     });
     await page.goto(origin, { waitUntil: 'domcontentloaded' });
     await page.locator('.home-hero-image').waitFor({ state: 'visible' });
-    await page.waitForTimeout(5000);
+    await page.waitForFunction(()=>{const video=document.querySelector('video[data-hero-film]');return video?.muted && video.playsInline && !video.paused && video.currentTime>0;},{},{timeout:45000});
+    await page.waitForTimeout(1000);
     const state = await page.evaluate(() => {
       window.stopHeroSamples = true;
       return { hero: JSON.parse(document.querySelector('meta[name="bravo-home-hero"]').content), samples: window.heroSamples };
@@ -50,7 +51,7 @@ for (const [name, engine, width] of [['webkit', webkit, 390], ['chromium', chrom
     await page.locator('.home-hero-image').scrollIntoViewIfNeeded();
     await page.waitForFunction(() => { const image = document.querySelector('.home-hero-image'); return image?.complete && image.naturalWidth > 0; });
     results.push({ browser: name, width, frames: samples.length, revision: hero.revision, first: samples[0], last: samples.at(-1) });
-    console.log(`PASS LIVE ${name} ${width}: revision ${hero.revision}, ${samples.length} stable frames`);
+    console.log(`PASS LIVE ${name} ${width}: revision ${hero.revision}, ${samples.length} stable frames, hero autoplay confirmed`);
   } finally { await browser.close(); }
 }
 await writeFile('test-results/live-results.json', JSON.stringify(results, null, 2));

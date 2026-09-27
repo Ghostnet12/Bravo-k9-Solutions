@@ -74,7 +74,7 @@ test('backdated onboarding and actual two-trainer assignments persist atomically
     });
     await t.test('third option is based on two real active accounts, not a dummy staff user',async()=>{
       const r=await call('client','get','/api/trainers').expect(200);
-      assert.deepEqual(r.body.trainers.slice(0,3).map(p=>p.name),['David Northrop','Ashley Northrop','David and Ashley']);assert.deepEqual(r.body.trainers[2].staffIds,ids);
+      assert.deepEqual(r.body.trainers.slice(0,3).map(p=>p.name),['David Northrop','Ashley Leverock','David and Ashley']);assert.deepEqual(r.body.trainers[2].staffIds,ids);
       await User.updateOne({_id:people.ashley._id},{$set:{blocked:true}});
       const missing=await call('client','get','/api/trainers').expect(200);assert.equal(missing.body.trainers.find(p=>p.id===JOINT_TRAINER_ID).disabled,true);
       await call('david','get',`/api/availability?from=${date}&to=${date}&staffId=${JOINT_TRAINER_ID}`).expect(409);

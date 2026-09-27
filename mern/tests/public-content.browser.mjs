@@ -34,6 +34,7 @@ try {
           if (mode === 'slow') {
             const mounted = page.waitForRequest('**/api/auth/me');
             release(); await mounted;
+            await page.getByRole('alert').filter({hasText:'Training videos could not load. Please try again.'}).waitFor();
             await page.getByRole('link', { name: 'two-trainer behavior assessment' }).click();
             await page.getByRole('heading', { name: 'Dog behavior assessments in Aberdeen.', exact: true }).waitFor();
             assert.equal(await page.title(), 'Dog Behavior Assessment in Aberdeen, SD | Bravo K9 Solutions');

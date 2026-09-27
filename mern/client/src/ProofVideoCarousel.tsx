@@ -91,6 +91,7 @@ export default function ProofVideoCarousel({ initialTopic = 'all' }: { initialTo
     try {
       const data = await api(`/proof-videos${after ? `?after=${encodeURIComponent(after)}` : ''}`);
       if (!mounted.current) return;
+      if (!Array.isArray(data.clips)) throw new Error('Training videos could not load. Please try again.');
       setClips(old => [...new Map([...(after ? old : []), ...data.clips].map(clip => [clip.id, clip])).values()].sort(compareProofVideos));
       setCursor(data.nextCursor); if (!after && data.carousel) setCarousel(data.carousel); setLoaded(true);
     } catch (cause: any) { if (mounted.current) setError(cause.message); }
