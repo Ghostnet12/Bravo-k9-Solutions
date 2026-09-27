@@ -86,8 +86,11 @@ export default function CinematicFilm({ children }) {
     onPointerUp={cancelHold} onPointerCancel={cancelHold}
     onPointerLeave={event => {
       // WebKit emits layer-leave events when capture retargets the pointer.
-      // Movement, release and cancellation still stop an actual abandoned hold.
-      if (!event.currentTarget.hasPointerCapture(event.pointerId)) cancelHold();
+      // Capture can still be pending at that point. Only an actual exit from
+      // the hero cancels the hold; movement, release, scroll and blur also do.
+      const box = event.currentTarget.getBoundingClientRect();
+      const outside = event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom;
+      if (outside && !event.currentTarget.hasPointerCapture(event.pointerId)) cancelHold();
     }}
     onClickCapture={event => { if (!event.target.closest('dialog') && Date.now() < suppressUntil.current) { event.preventDefault(); event.stopPropagation(); } }}
     onContextMenu={event => { if (canEdit && isFilmTarget(event.target)) event.preventDefault(); }}>
