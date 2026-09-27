@@ -29,6 +29,18 @@ async function fits(page, label) {
   const overflow = await page.evaluate(() => ({ viewport: innerWidth, width: document.documentElement.scrollWidth, elements: [...document.querySelectorAll('body *')].filter(el => { const box = el.getBoundingClientRect(); return box.width && box.right > innerWidth + 1 && getComputedStyle(el).position !== 'absolute'; }).map(el => ({ tag: el.tagName, class: el.className, text: el.textContent.slice(0, 80), right: el.getBoundingClientRect().right, width: el.getBoundingClientRect().width })).slice(-25) }));
   if (overflow.width > overflow.viewport + 1) {
     console.log(label, JSON.stringify(overflow));
+    console.log('Overflow contributors', await page.evaluate(() => {
+      const width = document.documentElement.scrollWidth, findings = [];
+      for (const el of document.querySelectorAll('body *')) {
+        const prior = el.getAttribute('style'), css = getComputedStyle(el);
+        if (!el.getBoundingClientRect().width || ['SCRIPT','STYLE'].includes(el.tagName)) continue;
+        const info = { tag: el.tagName, class: el.className, text: el.textContent.slice(0, 80), position: css.position, scroll: el.scrollWidth, client: el.clientWidth };
+        el.style.setProperty('display', 'none', 'important');
+        if (document.documentElement.scrollWidth < width) findings.push(info);
+        if (prior === null) el.removeAttribute('style'); else el.setAttribute('style', prior);
+      }
+      return findings;
+    }));
     await page.screenshot({ path: 'test-results/theme-overflow.png', fullPage: true });
   }
   assert.ok(overflow.width <= overflow.viewport + 1, `${label}: no horizontal page overflow`);

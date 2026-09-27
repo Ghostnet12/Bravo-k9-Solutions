@@ -71,6 +71,13 @@ html { scrollbar-color: #6f6049 #101010; }
 .app-page :is(input,select,textarea) { background: #0c0c0c; color: var(--cream); border-color: #51483a; border-radius: 10px; accent-color: var(--gold); }
 .app-page :is(input,textarea)::placeholder { color: #aaa397; opacity: 1; }
 .app-page :is(input,select,textarea):focus { border-color: var(--gold-light); box-shadow: 0 0 0 3px #ba9a641f; }
+/* Avoid WebKit's intrinsic native-menu width for long option labels. */
+.app-page select:not([multiple]):not([size]) {
+  appearance: none; -webkit-appearance: none; min-inline-size: 0; max-inline-size: 100%;
+  padding-right: 2.5rem; text-overflow: ellipsis;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%23e1c99d' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 16px center;
+}
 .app-page label { color: #ddd7cd; }
 .app-page .program-choice { background: #101010; color: var(--cream); border-color: #51483a; border-radius: 14px; transition: background .2s,border-color .2s,transform .2s; }
 .app-page .program-choice strong { color: var(--cream); }
