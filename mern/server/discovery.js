@@ -3,12 +3,10 @@ import { z } from 'zod';
 import { requireUser, requireOwner, rateLimit } from './auth.js';
 import { transaction } from './db.js';
 import { AuditEvent } from './models.js';
-import { DEFAULT_WORKSHOP } from '../shared/workshops.js';
-const Workshop = mongoose.models.BravoWorkshop || mongoose.model('BravoWorkshop', new mongoose.Schema({ _id: String, details: mongoose.Schema.Types.Mixed, revision: { type: Number, default: 0 } }, { timestamps: true }));
+import { Workshop, publicEvent } from './workshop-store.js';
 const Interest = mongoose.models.BravoCourseInterest || mongoose.model('BravoCourseInterest', new mongoose.Schema({ email: { type: String, unique: true }, consent: String, createdAt: { type: Date, default: Date.now }, expiresAt: { type: Date, index: { expires: 0 } } }));
 export const workshopInput = z.object({ expectedRevision: z.number().int().min(0), title: z.string().trim().min(3).max(100), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => { const day = new Date(`${value}T12:00:00Z`); return Number.isFinite(day.getTime()) && day.toISOString().slice(0, 10) === value; }), time: z.string().max(50), location: z.string().max(200), duration: z.string().trim().min(1).max(50), cents: z.number().int().min(0).max(1000000), description: z.string().trim().min(5).max(1500), published: z.boolean() }).strict();
 const interestInput = z.object({ email: z.string().trim().email().max(254).transform(value => value.toLowerCase()), consent: z.literal(true), website: z.string().max(200).optional() }).strict();
-const publicEvent = record => record ? { ...record.details, revision: record.revision } : DEFAULT_WORKSHOP;
 export function discoveryRoutes(app) {
   app.get('/api/workshops', async (req, res) => {
     const event = publicEvent(await Workshop.findById('featured').lean());

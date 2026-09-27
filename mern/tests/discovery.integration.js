@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { randomBytes, randomUUID } from 'node:crypto';
 import mongoose from 'mongoose';
 import request from 'supertest';
+import express from 'express';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 
 test('discovery publishing, consent, privacy and performance reporting persist', { timeout: 180000 }, async t => {
@@ -22,6 +23,8 @@ test('discovery publishing, consent, privacy and performance reporting persist',
     const token = randomBytes(32).toString('hex'); await Session.create({ userId: user._id, tokenHash: digest(token), expiresAt: new Date(Date.now() + 3600000) }); cookies[role] = `bravo_session=${token}`;
   }
   const call = (who, method, path, body) => { let r = request(app)[method](path).set('Origin', process.env.APP_ORIGIN); if (who) r = r.set('Cookie', cookies[who]); return body === undefined ? r : r.send(body); };
+  const { publicPageHandler } = await import('../server/public-page.js');
+  const publicApp = express().get('/workshops', publicPageHandler);
   await t.test('workshop owner publishing with stale-write protection and private drafts', async () => {
     const first = (await call(null,'get','/api/workshops').expect(200)).body.event;
     assert.equal(first.cents,10000); assert.equal(first.time,'');
@@ -32,9 +35,13 @@ test('discovery publishing, consent, privacy and performance reporting persist',
     await call('owner','put','/api/workshops',{ ...update, date:'2026-02-31' }).expect(400);
     await call('owner','put','/api/workshops',update).expect(200);
     assert.equal((await call(null,'get','/api/workshops')).body.event.time,'10:00 a.m.');
+    const publishedHtml = (await request(publicApp).get('/workshops').expect(200)).text;
+    assert.match(publishedHtml,/Fixture training location/); assert.match(publishedHtml,/10:00 a.m./); assert.match(publishedHtml,/October 3, 2026/); assert.match(publishedHtml,/\$100/);
     await call('owner','put','/api/workshops',update).expect(409);
     await call('owner','put','/api/workshops',{ ...update, expectedRevision:1, published:false }).expect(200);
     assert.equal((await call(null,'get','/api/workshops')).body.event,null);
+    const privateHtml = (await request(publicApp).get('/workshops').expect(200)).text;
+    assert.doesNotMatch(privateHtml,/Fixture training location|10:00 a.m./); assert.match(privateHtml,/Ask about the next session/);
     assert.equal((await call('owner','get','/api/workshops')).body.event.revision,2);
   });
   await t.test('launch requests require consent, deduplicate and stay private', async () => {

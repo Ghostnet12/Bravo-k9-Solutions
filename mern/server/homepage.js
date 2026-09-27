@@ -40,19 +40,20 @@ export function renderHomepage(html, value, filmValue) {
     .replace('</head>', `${preload}<meta name="${HOME_HERO_META}" content="${escapeAttribute(JSON.stringify(hero))}"/><meta name="${HERO_FILM_META}" content="${escapeAttribute(JSON.stringify(film))}"/></head>`);
 }
 
-export function createHomepageHandler({ loadHero, loadTemplate = readTemplate, loadContent = async () => ({}), loadFilm = async () => null }) {
+export function createHomepageHandler({ loadHero, loadTemplate = readTemplate, loadContent = async () => ({}), loadFilm = async () => null, loadWorkshop = async () => undefined }) {
   return async (_req, res) => {
     // Resolve framing before sending HTML, not after the visitor sees a
     // differently framed placeholder. An outage still serves the static page.
-    const [html, hero, content, film] = await Promise.all([
+    const [html, hero, content, film, workshop] = await Promise.all([
       loadTemplate(),
       Promise.resolve().then(loadHero).catch(() => null),
       Promise.resolve().then(loadContent).catch(() => ({})),
       Promise.resolve().then(loadFilm).catch(() => null),
+      Promise.resolve().then(loadWorkshop).catch(() => null),
     ]);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'private, no-store');
     res.statusCode = 200;
-    res.end(renderSiteContent(renderHomepage(html, hero, film), content));
+    res.end(renderSiteContent(renderHomepage(html, hero, film), content, workshop));
   };
 }

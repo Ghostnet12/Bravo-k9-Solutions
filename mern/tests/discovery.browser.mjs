@@ -16,9 +16,10 @@ try {
     const browser=await engine.launch();
     try { for (const width of [360,768,1440]) {
       const context=await browser.newContext({viewport:{width,height:900},reducedMotion:width === 360 ? 'reduce' : 'no-preference'}), page=await context.newPage(), errors=[];
+      let discard=true, confirmations=0;
       let owner=false, event={...DEFAULT_WORKSHOP}, entries={}, signup=null, failSave=false;
       page.on('pageerror',error=>errors.push(error.message));
-      page.on('dialog',dialog=>dialog.accept());
+      page.on('dialog',dialog=>{confirmations++;return discard ? dialog.accept() : dialog.dismiss();});
       await context.route('**/api/**', async route => {
         const url=new URL(route.request().url()), path=url.pathname, method=route.request().method();
         let json={};
@@ -65,6 +66,22 @@ try {
         await page.goto(origin+'/learn');await page.getByLabel('Email address',{exact:true}).fill('visitor@example.test');await page.getByLabel('Email me once when Bravo online courses launch.').check();await page.getByRole('button',{name:'Request a launch update'}).click();await page.getByText('Your launch-update request is saved.',{exact:false}).waitFor();assert.equal(signup.consent,true);assert.equal(signup.email,'visitor@example.test');
         owner=true;await page.goto(origin+'/workshops');await page.getByRole('button',{name:'Edit workshop details'}).click();await page.getByLabel('Time (Central)',{exact:true}).fill('10:00 a.m.');await page.getByLabel('Location',{exact:true}).fill('Fixture venue');await page.getByRole('button',{name:'Publish workshop'}).click();await page.getByText('Workshop details saved.',{exact:true}).waitFor();await page.reload();await page.getByText('10:00 a.m. · Central',{exact:true}).waitFor();
         await page.goto(origin);await page.getByRole('button',{name:'Edit page text & design'}).click();const dialog=page.getByRole('dialog',{name:'Edit website section'});await dialog.getByLabel('Edit this part',{exact:true}).selectOption('discovery-goal-title');await dialog.getByLabel('Text',{exact:true}).fill('Find your next step.');failSave=true;await dialog.getByRole('button',{name:'Publish website changes'}).click();await dialog.getByText('Fixture connection interrupted').waitFor();assert.equal(await dialog.getByLabel('Text',{exact:true}).inputValue(),'Find your next step.');failSave=false;await dialog.getByRole('button',{name:'Publish website changes'}).click();await dialog.waitFor({state:'hidden'});await page.getByText('Saved. Your website changes are published.',{exact:true}).waitFor();await page.reload();await page.getByRole('heading',{name:'Find your next step.',exact:true}).waitFor();
+        // A draft on another section must survive cancel and publishing the current section.
+        await page.getByRole('button',{name:'Edit page text & design'}).click();
+        await dialog.getByLabel('Edit this part',{exact:true}).selectOption('discovery-goal-title');
+        await dialog.getByLabel('Text',{exact:true}).fill('A preserved draft.');
+        await dialog.getByLabel('Edit this part',{exact:true}).selectOption('site-theme');
+        const priorConfirmations=confirmations;discard=false;
+        await dialog.getByRole('button',{name:'Cancel',exact:true}).click();
+        assert.equal(confirmations,priorConfirmations+1);assert.equal(await dialog.isVisible(),true);
+        await dialog.getByLabel('Text color',{exact:true}).fill('#ba9a65');
+        await dialog.getByRole('button',{name:'Publish website changes'}).click();
+        await page.waitForFunction(()=>document.querySelector('dialog[open] button[type="submit"]')?.disabled);
+        assert.equal(await dialog.isVisible(),true);
+        await dialog.getByLabel('Edit this part',{exact:true}).selectOption('discovery-goal-title');
+        assert.equal(await dialog.getByLabel('Text',{exact:true}).inputValue(),'A preserved draft.');
+        await dialog.getByRole('button',{name:'Publish website changes'}).click();await dialog.waitFor({state:'hidden'});
+        discard=true;await page.reload();await page.getByRole('heading',{name:'A preserved draft.',exact:true}).waitFor();
         await page.goto(origin+'/learn?preview=launch');await page.getByRole('heading',{name:'Bravo. Anywhere.',exact:true}).waitFor();await page.getByRole('button',{name:'Edit page text & design'}).click();await page.getByRole('dialog',{name:'Edit website section'}).getByLabel('Edit this part',{exact:true}).selectOption('discovery-course-copy');assert.match(await page.getByRole('dialog',{name:'Edit website section'}).getByLabel('Text',{exact:true}).inputValue(),/David and Ashley/);
         assert.deepEqual(errors,[]);console.log(`${engineName} ${width}: discovery, pricing, routing, filters, signup and editor recovery passed`);
       }finally{await context.close();}

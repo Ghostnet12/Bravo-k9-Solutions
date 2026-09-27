@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { api } from './api';
 import { useBravo } from './context';
 import { Notice } from './ui';
-import { money } from '../../shared/catalog';
-import { workshopPast } from '../../shared/workshops';
+import { workshopMarkup } from '../../shared/workshops';
 
 function WorkshopEditor({ event, onSaved, onClose }) {
   const dialog = useRef(null), [draft, setDraft] = useState(event), [busy, setBusy] = useState(false), [error, setError] = useState('');
@@ -12,14 +10,15 @@ function WorkshopEditor({ event, onSaved, onClose }) {
   async function save(e) { e.preventDefault(); setBusy(true); setError(''); try { const { revision, ...details } = draft; const data = await api('/workshops', { method: 'PUT', body: { ...details, expectedRevision: revision } }); onSaved(data.event); } catch (cause) { setError(cause.message); } finally { setBusy(false); } }
   return <dialog ref={dialog} className="site-content-dialog" aria-label="Edit workshop" onCancel={e => { e.preventDefault(); if (!busy) onClose(); }}><form onSubmit={save}><h2>Workshop details</h2><p>Leave the time or location blank until confirmed. Details appear on Home and Workshops.</p><fieldset disabled={busy}>{[['title','Workshop title'],['date','Date'],['time','Time (Central)'],['location','Location'],['duration','Duration']].map(([key,label]) => <label key={key}>{label}<input required={['title','date','duration'].includes(key)} type={key === 'date' ? 'date' : 'text'} maxLength={key === 'location' ? 200 : key === 'title' ? 100 : 50} value={draft[key]} onChange={e => setDraft(old => ({ ...old, [key]: e.target.value }))}/></label>)}<label>Price per seat ($)<input type="number" required min="0" max="10000" step="0.01" value={draft.cents / 100} onChange={e => setDraft(old => ({ ...old, cents: Math.round(Number(e.target.value) * 100) }))}/></label><label>Agenda and suitability<textarea required maxLength={1500} value={draft.description} onChange={e => setDraft(old => ({ ...old, description: e.target.value }))}/></label><label className="check"><input type="checkbox" checked={draft.published} onChange={e => setDraft(old => ({ ...old, published: e.target.checked }))}/>Show this workshop publicly</label></fieldset>{error && <p role="alert">{error}</p>}<div className="goal-actions"><button type="submit" className="button" disabled={busy}>{busy ? 'Saving…' : 'Publish workshop'}</button><button type="button" disabled={busy} onClick={onClose}>Cancel</button></div></form></dialog>;
 }
+function initialWorkshop() { try { return typeof document === 'undefined' ? null : JSON.parse(document.querySelector('meta[name="bravo-workshop"]')?.content || 'null'); } catch { return null; } }
 export function WorkshopDetails({ compact = false }) {
   const { user } = useBravo();
-  const [event, setEvent] = useState(null), [loaded, setLoaded] = useState(false), [error, setError] = useState(''), [editing, setEditing] = useState(false), [status, setStatus] = useState('');
+  const [event, setEvent] = useState(initialWorkshop), [error, setError] = useState(''), [editing, setEditing] = useState(false), [status, setStatus] = useState('');
   const owner = user?.role === 'owner' && !user.mustChangePassword;
-  useEffect(() => { let active = true; api('/workshops').then(data => { if (active) { setEvent(data.event); setLoaded(true); } }).catch(() => { if (active) setError('Workshop details could not load. Call Bravo for the latest information.'); }); return () => { active = false; }; }, []);
-  const past = event && workshopPast(event);
+  useEffect(() => { let active = true; api('/workshops').then(data => { if (active) { setEvent(data.event); } }).catch(() => { if (active) setError('Workshop details could not load. Call Bravo for the latest information.'); }); return () => { active = false; }; }, []);
   return <section className="workshop-details" aria-label="Featured workshop">
-    {error && <Notice error>{error}</Notice>}{!loaded && !error && <p role="status">Loading workshop details…</p>}
-    {event ? <><p className="cinema-eyebrow">{!event.published ? 'PRIVATE DRAFT' : past ? 'PREVIOUS WORKSHOP' : 'NEXT WORKSHOP'}</p><h3>{event.title}</h3><dl className="workshop-facts"><div><dt>Date</dt><dd>{new Date(`${event.date}T12:00:00Z`).toLocaleDateString('en-US', { timeZone: 'America/Chicago', weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</dd></div><div><dt>Time</dt><dd>{event.time ? `${event.time} · Central` : 'To be confirmed'}</dd></div><div><dt>Location</dt><dd>{event.location || 'Contact Bravo for location'}</dd></div><div><dt>Duration</dt><dd>{event.duration}</dd></div><div><dt>Price</dt><dd>{money(event.cents)} per seat</dd></div></dl>{!compact && <p className="workshop-description">{event.description}</p>}<div className="goal-actions">{compact ? <Link className="button button-ghost" to="/workshops">Workshop details →</Link> : <a className="button" href="tel:+16058242767">{past ? 'Ask about the next workshop' : 'Call to reserve a seat'}</a>}{owner && !compact && <button type="button" className="button button-ghost" onClick={() => setEditing(true)}>Edit workshop details</button>}</div>{!compact && <p className="helper">{past ? 'This date has passed. Contact Bravo for upcoming dates.' : 'Bravo confirms your seat, time and location. This page does not take payment or confirm a reservation.'}</p>}</> : loaded && <p>New workshop dates are being prepared. <a href="tel:+16058242767">Call Bravo to ask about the next session.</a></p>}
+    {error && <Notice error>{error}</Notice>}
+    <div data-workshop-content={compact ? 'compact' : 'full'} dangerouslySetInnerHTML={{ __html: workshopMarkup(event, compact) }}/>
+    {owner && event && !compact && <button type="button" className="button button-ghost" onClick={() => setEditing(true)}>Edit workshop details</button>}
     <p role="status">{status}</p>{editing && owner && <WorkshopEditor event={event} onClose={() => setEditing(false)} onSaved={next => { setEvent(next); setEditing(false); setStatus('Workshop details saved.'); }}/>}</section>;
 }

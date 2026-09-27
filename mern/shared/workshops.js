@@ -5,3 +5,12 @@ export function workshopPast(event, now = new Date()) {
   const day = ['year', 'month', 'day'].map(type => parts.find(part => part.type === type).value).join('-');
   return Boolean(event.date && event.date < day);
 }
+
+const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+// Shared by the live component and the public HTML; every stored field is escaped.
+export function workshopMarkup(event, compact = false) {
+  if (!event) return '<p>Call Bravo for current workshop dates, pricing and location. <a href="tel:+16058242767">Ask about the next session.</a></p>';
+  const past = workshopPast(event);
+  const facts = [['Date',new Date(`${event.date}T12:00:00Z`).toLocaleDateString('en-US',{ timeZone:'America/Chicago',weekday:'long',month:'long',day:'numeric',year:'numeric' })],['Time',event.time ? `${event.time} · Central` : 'To be confirmed'],['Location',event.location || 'Contact Bravo for location'],['Duration',event.duration],['Price',`${new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2}).format(event.cents/100)} per seat`]];
+  return `<p class="cinema-eyebrow">${!event.published ? 'PRIVATE DRAFT' : past ? 'PREVIOUS WORKSHOP' : 'NEXT WORKSHOP'}</p><h3>${escapeHtml(event.title)}</h3><dl class="workshop-facts">${facts.map(([label,value])=>`<div><dt>${label}</dt><dd>${escapeHtml(value)}</dd></div>`).join('')}</dl>${compact ? '' : `<p class="workshop-description">${escapeHtml(event.description)}</p>`}<div class="goal-actions"><a class="button${compact ? ' button-ghost' : ''}" href="${compact ? '/workshops' : 'tel:+16058242767'}">${compact ? 'Workshop details →' : past ? 'Ask about the next workshop' : 'Call to reserve a seat'}</a></div>${compact ? '' : `<p class="helper">${past ? 'This date has passed. Contact Bravo for upcoming dates.' : 'Bravo confirms your seat, time and location. This page does not take payment or confirm a reservation.'}</p>`}`;
+}

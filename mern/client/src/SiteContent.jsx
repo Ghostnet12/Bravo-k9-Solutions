@@ -18,22 +18,24 @@ function ContentEditor({ options, entries, publish, close, preview }) {
   const [key,setKey]=useState(options[0].key), [draft,setDraft]=useState(entries[options[0].key]?.value || {}), [busy,setBusy]=useState(false), [error,setError]=useState('');
   const drafts=useRef({});
   const selected=options.find(item=>item.key===key), baseline=entries[key] || {revision:0,value:{}};
-  const dirty = JSON.stringify(draft) !== JSON.stringify(baseline.value);
-  const requestClose = () => { if (!busy && (!dirty || window.confirm('Discard your unpublished changes?'))) close(); };
+  const changed = (itemKey, value) => JSON.stringify(value) !== JSON.stringify(entries[itemKey]?.value || {});
+  const otherDirty = Object.entries(drafts.current).some(([itemKey, value]) => itemKey !== key && changed(itemKey, value));
+  const dirty = changed(key, draft) || otherDirty;
+  const requestClose = () => { if (busy || (dirty && !window.confirm('Discard your unpublished changes?'))) return false; close(); return true; };
   useEffect(() => { const warn = event => { if (dirty) { event.preventDefault(); event.returnValue = ''; } }; window.addEventListener('beforeunload', warn); return () => window.removeEventListener('beforeunload', warn); }, [dirty]);
   const change=(name,value)=>setDraft(old=>({...old,[name]:value}));
   useEffect(()=>{dialog.current.showModal();},[]);
   useEffect(()=>{preview({key,value:draft}); return ()=>preview(null);},[key,draft,preview]);
   async function save(undo=false) {
     setBusy(true);setError('');
-    try { const result=await api(`/site-content/${key}`,{method:'PUT',body:{expectedRevision:baseline.revision,...(undo?{undo:true}:{value:draft})}});publish(key,result.entry);close(); }
+    try { const result=await api(`/site-content/${key}`,{method:'PUT',body:{expectedRevision:baseline.revision,...(undo?{undo:true}:{value:draft})}});publish(key,result.entry);delete drafts.current[key];setDraft(result.entry?.value || {});if (!otherDirty) close(); }
     catch(e){setError(e.message);} finally{setBusy(false);}
   }
   return <dialog ref={dialog} className="site-content-dialog" data-site-image-ignore="" aria-label="Edit website section" onCancel={event=>{event.preventDefault();if(!busy)requestClose();}}>
     <form onSubmit={event=>{event.preventDefault();save();}}><div className="site-content-heading"><h2>Edit website</h2><button type="button" disabled={busy} onClick={requestClose} aria-label="Close website editor">×</button></div>
       <p>Changes preview on this page. Publish to make them visible to everyone.</p><p className="editor-save-state" role="status">{busy ? "Saving your changes…" : dirty ? "Unpublished changes" : "Matches the published version"}</p>
       <fieldset disabled={busy}><label>Edit this part<select aria-label="Edit this part" value={key} onChange={event=>{drafts.current[key] = draft;setKey(event.target.value);setDraft(drafts.current[event.target.value] || entries[event.target.value]?.value || {});setError('');}}>{options.map(item=><option key={item.key} value={item.key}>{item.title}</option>)}</select></label>
-      {selected.media?.map(item=><button type="button" key={item.key} onClick={()=>{close();window.dispatchEvent(new CustomEvent('bravo-edit-photo',{detail:{key:item.key}}));}}>Edit photo/video: {item.title}</button>)}
+      {selected.media?.map(item=><button type="button" key={item.key} onClick={()=>{if (!requestClose()) return;window.dispatchEvent(new CustomEvent('bravo-edit-photo',{detail:{key:item.key}}));}}>Edit photo/video: {item.title}</button>)}
       {selected.text && <label>Text<textarea aria-label="Text" rows={5} maxLength={8000} value={draft.text ?? selected.original} onChange={event=>change('text',event.target.value)}/></label>}
       {selected.link && <label>Link address<input type="text" maxLength={1000} value={draft.link ?? selected.link} onChange={event=>change('link',event.target.value)}/></label>}
       {!selected.text && key!=='site-theme' && <p>This area contains live information or other elements. Choose a text item to edit its words.</p>}
