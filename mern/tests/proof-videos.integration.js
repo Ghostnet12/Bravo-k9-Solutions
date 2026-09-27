@@ -82,6 +82,30 @@ test('homepage video publishing, isolation, and persistence', { timeout: 180000 
       assert.equal((await request(app).get('/api/hero-videos').expect(200)).body.clips.length, 0);
       assert.equal(await AuditEvent.countDocuments({ action: 'hero-film-video.published' }), 1);
     });
+    await t.test('program media is isolated, durable, and editable by owner and administrator only', async () => {
+      const program = (who, method, path, body={}) => {
+        const req=request(app)[method](`/api/program-videos${path}`).set('Origin',process.env.APP_ORIGIN);
+        if(who)req.set('Cookie',cookies[who]);return req.send(body);
+      };
+      for(const who of [null,'staff','client']) await program(who,'post','/manners/uploads',meta).expect(who?403:401);
+      await program('owner','post','/unknown/uploads',meta).expect(404);
+      const uploadId=(await program('owner','post','/manners/uploads',meta).expect(201)).body.uploadId;
+      for(let index=0;index<2;index++) await program('owner','put',`/manners/uploads/${uploadId}/chunks/${index}`,{data:data.subarray(index*CHUNK_SIZE,(index+1)*CHUNK_SIZE).toString('base64')}).expect(200);
+      await program('owner','put','/walks',{...edit,uploadId,mutationId:randomUUID()}).expect(400);
+      const clip=(await program('owner','put','/manners',{...edit,uploadId,mutationId:randomUUID()}).expect(200)).body.clip;
+      assert.match(clip.src,/program-videos\/manners\/video/);
+      await program('administrator','put','/manners',{...edit,expectedRevision:1,title:'Administrator edited program',mutationId:randomUUID()}).expect(200);
+      await program('owner','put','/manners',{...edit,mutationId:randomUUID()}).expect(409);
+      assert.equal((await program(null,'get','/').expect(200)).body.clips[0].title,'Administrator edited program');
+      await request(app).get(clip.src).set('Range','bytes=0-23').expect(206);
+      const settings=(who,key,body)=>{const req=request(app).put(`/api/site-content/${key}`).set('Origin',process.env.APP_ORIGIN);if(who)req.set('Cookie',cookies[who]);return req.send(body);};
+      for(const who of [null,'staff','client']) await settings(who,'goal-manners-media',{expectedRevision:0,value:{mediaKind:'photo'}}).expect(who?403:401);
+      await settings('owner','goal-manners-media',{expectedRevision:0,value:{mediaKind:'photo'}}).expect(200);
+      await settings('administrator','goal-manners-media',{expectedRevision:1,value:{mediaKind:'video'}}).expect(200);
+      await settings('owner','goal-manners-media',{expectedRevision:0,value:{mediaKind:'photo'}}).expect(409);
+      await settings('owner','site-theme',{expectedRevision:0,value:{mediaKind:'video'}}).expect(400);
+      assert.equal((await request(app).get('/api/site-content').expect(200)).body.entries['goal-manners-media'].value.mediaKind,'video');
+    });
     await t.test('hero photos are owner-only, validated, revision protected and durable', async () => {
       const initial = (await request(app).get('/api/hero-carousel').expect(200)).body.carousel;
       const save = (who, body) => { let req = request(app).put('/api/hero-carousel').set('Origin', process.env.APP_ORIGIN); if (who) req = req.set('Cookie', cookies[who]); return req.send(body); };

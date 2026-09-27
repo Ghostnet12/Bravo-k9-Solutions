@@ -99,6 +99,7 @@ export default function HomeBanner() {
       </div></div>
       <div className="banner-controls">{!reduced && <button type="button" aria-label={stopped ? 'Resume banner' : 'Pause banner'} aria-pressed={stopped} onClick={() => setPaused(!stopped)}>{stopped ? '▶' : 'Ⅱ'}</button>}</div>
     </section>
+    {canEdit && <button type="button" className="section-edit-button" onClick={openEditor}>Edit information banner</button>}
     {editError && <p className="shell" role="alert">{editError}</p>}
     {editing && canEdit && saved && <AlertEditor saved={saved} publish={setSaved} close={() => setEditing(false)}/>}
   </>;

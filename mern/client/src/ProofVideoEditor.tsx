@@ -20,7 +20,7 @@ function thumbnail(video: HTMLVideoElement | null) {
     return data.length <= 256 * 1024 ? data : undefined;
   } catch { return undefined; }
 }
-export default function ProofVideoEditor({ clip, onClose, onSaved, onRemoved, apiBase = '/proof-videos' }: { apiBase?: '/proof-videos' | '/hero-videos' | '/hero-film'; clip: ProofClip; onClose: () => void; onSaved: (clip: ProofClip) => void; onRemoved?: (id: string) => void }) {
+export default function ProofVideoEditor({ clip, onClose, onSaved, onRemoved, apiBase = '/proof-videos' }: { apiBase?: '/proof-videos' | '/hero-videos' | '/hero-film' | '/program-videos'; clip: ProofClip; onClose: () => void; onSaved: (clip: ProofClip) => void; onRemoved?: (id: string) => void }) {
   const dialog = useRef<HTMLDialogElement>(null), preview = useRef<HTMLVideoElement>(null), mounted = useRef(true);
   const [title, setTitle] = useState(clip.title), [description, setDescription] = useState(clip.description), [fit, setFit] = useState(clip.fit || 'contain');
   const [selectedPoster, setSelectedPoster] = useState<string | undefined>();
@@ -119,7 +119,7 @@ export default function ProofVideoEditor({ clip, onClose, onSaved, onRemoved, ap
       <p className="site-photo-note">{!isFacebook && 'Up to 80 MB per video. MP4 works best across devices; MOV and WebM can also be selected. '}Describe the starting challenge, what you practiced, and the progress this clip actually shows. Include a timeframe only when known. Changes go live when you publish.</p>
       <p className="proof-upload-progress" role="status" aria-live="polite">{progress || (!isFacebook && file && !ready && !previewError ? 'Preparing video preview…' : '')}</p>
       {(error || previewError) && <p className="site-photo-error" role="alert">{error || previewError}</p>}
-      <div className="site-photo-actions">{!isNew && !isHeroFilm && <button type="button" disabled={busy} onClick={remove}>Remove video</button>}<button type="button" disabled={busy} onClick={onClose}>Cancel</button><button type="submit" className="site-photo-publish" disabled={busy || !canPublish}>{busy ? 'Publishing…' : isNew ? 'Publish video' : 'Publish changes'}</button></div>
+      <div className="site-photo-actions">{!isNew && !isHeroFilm && apiBase !== '/program-videos' && <button type="button" disabled={busy} onClick={remove}>Remove video</button>}<button type="button" disabled={busy} onClick={onClose}>Cancel</button><button type="submit" className="site-photo-publish" disabled={busy || !canPublish}>{busy ? 'Publishing…' : isNew ? 'Publish video' : 'Publish changes'}</button></div>
     </form>
   </dialog>;
 }

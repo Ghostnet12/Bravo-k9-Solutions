@@ -16,6 +16,7 @@ const clientId = 'bbbbbbbbbbbbbbbbbbbbbbbb', staffId = 'aaaaaaaaaaaaaaaaaaaaaaaa
 await mkdir('test-results', { recursive: true });
 try {
   for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
+    if (process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(engineName)) continue;
     const browser = await engine.launch();
     try {
       for (const access of ['member', 'staff', 'administrator', 'owner']) {
@@ -105,6 +106,7 @@ try {
           assert.ok(workspace.y < explore.y); assert.equal(await nav.getByRole('button').last().innerText(), 'Sign out');
           await page.screenshot({ path: `test-results/polish-menu-${engineName}-${access}.png`, fullPage: false });
           await nav.getByRole('link', { name: 'Account', exact: true }).press('Escape');
+          await page.waitForTimeout(150); // Focus must remain on Menu after deferred route work finishes.
           assert.equal(await page.getByRole('button', { name: 'Menu', exact: true }).getAttribute('aria-expanded'), 'false');
           assert.equal(await page.evaluate(() => document.activeElement?.textContent), 'Menu');
           for (const width of [320, 1280, 1440, 1601, 1920]) {

@@ -12,6 +12,7 @@ const server=app.listen(0,'127.0.0.1');await once(server,'listening');const orig
 await mkdir('test-results',{recursive:true});
 try{
  for(const [engineName,engine] of Object.entries({chromium,webkit})){
+  if(process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(engineName))continue;
   const browser=await engine.launch();
   try{
    const context=await browser.newContext({viewport:{width:390,height:900}}),page=await context.newPage();
@@ -36,7 +37,9 @@ try{
    });
    await page.goto(origin);await page.locator('[data-ad-editable]').waitFor();
    const carousel=page.locator('.home-ad-carousel');
-   assert.equal(await carousel.evaluate(el=>el.previousElementSibling?.classList.contains('home-status-banner')),true);
+   assert.equal(await carousel.evaluate(el=>{let previous=el.previousElementSibling;while(previous?.classList.contains('section-edit-button'))previous=previous.previousElementSibling;return previous?.classList.contains('home-status-banner');}),true);
+   await page.getByRole('button',{name:'Edit information banner',exact:true}).waitFor();
+   await page.getByRole('button',{name:'Manage advertisements',exact:true}).waitFor();
    assert.equal(await carousel.getByRole('img',{name:'Workshop banner'}).count(),1);
    const workshopImage=page.locator('.home-ad-slide img[alt="Workshop banner"]');await workshopImage.waitFor();assert.equal(await workshopImage.getAttribute('src'),'/images/saturday-workshop-october-3.webp');
    await page.waitForFunction(()=>{const image=document.querySelector('.home-ad-slide img[alt="Workshop banner"]');return image?.complete&&image.naturalWidth>0;},null,{timeout:15000});

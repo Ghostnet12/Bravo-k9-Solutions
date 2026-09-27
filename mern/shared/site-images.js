@@ -14,7 +14,7 @@ const PHOTO_ASSETS = new Set([
   'david-northrop.webp', 'obedience-real-world.webp', 'service-dog-training.webp',
   'dog-sitting-care.webp', 'ashley-northrop.webp', 'ashley-leverock.webp', 'janet-hughes.webp',
 ]);
-const PHOTO_SLOTS = new Set(['home-hero', 'home-training-hero', 'home-method', 'home-learning', 'learning-banner']);
+const PHOTO_SLOTS = new Set(['home-hero', 'home-training-hero', 'home-method', 'home-learning', 'learning-banner', 'program-manners', 'program-walks', 'program-handling', 'program-specialist']);
 export function isEditableMediaKey(key) {
   return typeof key === 'string' && SITE_IMAGE_KEY.test(key) && (
     PHOTO_SLOTS.has(key) || /^hero-photo-[a-f0-9-]{36}$/.test(key) || PHOTO_ASSETS.has(key.replace(/^asset-/, '')) && key.startsWith('asset-') ||
