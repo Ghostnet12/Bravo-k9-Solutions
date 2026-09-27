@@ -47,6 +47,41 @@ test('homepage video publishing, isolation, and persistence', { timeout: 180000 
       assert.equal(await AuditEvent.countDocuments({ action: 'proof-carousel.published' }), 2);
       assert.equal(await ProofVideo.countDocuments(), 0, 'timing changes do not modify videos');
     });
+    await t.test('opening film has its own protected, durable upload slot', async () => {
+      const callFilm = (who, method, path, body = {}) => {
+        const req = request(app)[method](`/api/hero-film${path}`).set('Origin', process.env.APP_ORIGIN);
+        if (who) req.set('Cookie', cookies[who]);
+        return req.send(body);
+      };
+      const original = (await callFilm(null, 'get', '/').expect(200)).body.clips[0];
+      assert.equal(original.src, '/videos/bravo-real-world.mp4');
+      for (const who of [null, 'staff', 'client']) {
+        await callFilm(who, 'post', '/opening/uploads', meta).expect(who ? 403 : 401);
+        await callFilm(who, 'put', '/opening', edit).expect(who ? 403 : 401);
+      }
+      await request(app).put('/api/hero-film/opening').set('Origin', 'https://wrong.example').set('Cookie', cookies.owner).send(edit).expect(403);
+      await callFilm('owner', 'post', '/arbitrary/uploads', meta).expect(404);
+      await callFilm('owner', 'delete', '/opening', { expectedRevision: 0 }).expect(405);
+      await callFilm('owner', 'put', '/opening', { ...edit, facebookUrl: 'https://www.facebook.com/reel/123456789' }).expect(400);
+      // Description-only edits preserve the bundled video before any upload.
+      const described = await callFilm('owner', 'put', '/opening', edit).expect(200);
+      assert.equal(described.body.clip.src, original.src);
+      const uploadId = (await callFilm('administrator', 'post', '/opening/uploads', meta).expect(201)).body.uploadId;
+      const publish = { ...edit, expectedRevision: 1, mutationId: randomUUID(), uploadId };
+      await callFilm('administrator', 'put', '/opening', publish).expect(400);
+      for (let index = 0; index < 2; index++) await callFilm('administrator', 'put', `/opening/uploads/${uploadId}/chunks/${index}`, { data: data.subarray(index * CHUNK_SIZE, (index + 1) * CHUNK_SIZE).toString('base64') }).expect(200);
+      // A hero upload cannot be published through a lesson or another carousel.
+      await call('administrator', 'put', `/${clipId}`, { ...edit, mutationId: randomUUID(), uploadId }).expect(400);
+      const saved = (await callFilm('administrator', 'put', '/opening', publish).expect(200)).body.clip;
+      assert.equal(saved.revision, 2); assert.match(saved.src, /^\/api\/hero-film\/opening\/video\?v=2$/);
+      assert.deepEqual((await callFilm(null, 'get', '/').expect(200)).body.clips, [saved]);
+      const range = await request(app).get(saved.src).set('Range', 'bytes=0-23').expect(206);
+      assert.equal(range.headers['content-range'], `bytes 0-23/${data.length}`);
+      assert.deepEqual(range.body, data.subarray(0, 24));
+      await callFilm('owner', 'put', '/opening', { ...edit, expectedRevision: 1, mutationId: randomUUID() }).expect(409);
+      assert.equal((await request(app).get('/api/hero-videos').expect(200)).body.clips.length, 0);
+      assert.equal(await AuditEvent.countDocuments({ action: 'hero-film-video.published' }), 1);
+    });
     await t.test('hero photos are owner-only, validated, revision protected and durable', async () => {
       const initial = (await request(app).get('/api/hero-carousel').expect(200)).body.carousel;
       const save = (who, body) => { let req = request(app).put('/api/hero-carousel').set('Origin', process.env.APP_ORIGIN); if (who) req = req.set('Cookie', cookies[who]); return req.send(body); };

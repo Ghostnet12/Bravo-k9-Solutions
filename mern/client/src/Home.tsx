@@ -53,8 +53,7 @@ export default function Home() {
   return <div ref={root} className="bravo-home cinema-home">
     <Header/>
     <main id="main-content" tabIndex={-1}>
-      <section className="home-hero cinema-hero" aria-labelledby="home-title">
-        <div className="cinema-hero-media"><CinematicFilm/></div>
+      <CinematicFilm>
         <div className="cinema-hero-copy cinema-shell">
           <Editable as="p" contentKey="cinema-location" canEditText className="cinema-eyebrow">ABERDEEN, SOUTH DAKOTA</Editable>
           <Editable as="h1" contentKey="cinema-hero-title" canEditText id="home-title">Training built<br/>around the dog.</Editable>
@@ -62,7 +61,7 @@ export default function Home() {
           <div className="cinema-actions"><a className="cinema-button cinema-button-light" href="#training">Explore training</a><Link className="cinema-link" href="/portal?program=training">Book training <span aria-hidden="true">↗</span></Link></div>
         </div>
         <div className="cinema-hero-baseline cinema-shell"><span>REAL DOGS. REAL LIFE. BRAVO.</span><a href="#method" aria-label="Discover the Bravo approach">SCROLL TO DISCOVER <span aria-hidden="true">↓</span></a></div>
-      </section>
+      </CinematicFilm>
       <div className="home-service-strip cinema-service-strip"><span>Private dog training. We come to you.</span><a href="tel:+16058242767">Let’s talk <span>(605) 824-2767</span></a></div>
       <div className="cinema-shell site-media-tools-slot site-media-tools-slot--home" data-site-media-tools=""/>
 

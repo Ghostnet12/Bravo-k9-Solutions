@@ -2,12 +2,46 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
 import request from 'supertest';
+import { parse } from 'parse5';
 import { readFile, access } from 'node:fs/promises';
 import { homeHeroSnapshot, readHomeHero } from '../shared/home-hero.js';
 import { createHomepageHandler, renderHomepage } from '../server/homepage.js';
+import { DEFAULT_HERO_FILM, heroFilmSnapshot, readHeroFilm } from '../shared/hero-film.js';
 
 const hero = { revision: 13, src: '/api/site-images/home-training-hero/image?v=13', alt: 'Bravo team', fit: 'contain', x: 13, y: 19.5, zoom: 1.36, framed: true, canUndo: true };
 const template = '<html><head><link rel="preload" as="image" href="/images/hero-bravo-launch.webp" fetchpriority="high"/><link rel="preload" as="font" href="/fonts/bebas-neue.ttf"/><script type="module" src="/assets/app.js"></script></head><body><div id="root"></div></body></html>';
+
+test('published opening film is the first source and poster in the real homepage HTML', async () => {
+  const film = { ...DEFAULT_HERO_FILM, revision: 7, src: '/api/hero-film/opening/video?v=7', poster: '/api/hero-film/opening/poster?v=7', description: 'Published <film> & dog', fit: 'contain' };
+  const realTemplate = await readFile(new URL('../client/dist/bravo-shell.html', import.meta.url), 'utf8');
+  const app = express().get('/', createHomepageHandler({ loadHero: async () => null, loadFilm: async () => film, loadTemplate: async () => realTemplate }));
+  const response = await request(app).get('/').expect(200);
+  const nodes = [];
+  function walk(node) { nodes.push(node); for (const child of node.childNodes || []) walk(child); }
+  walk(parse(response.text));
+  const player = nodes.find(node => node.tagName === 'video' && node.attrs.some(attr => attr.name === 'data-hero-film'));
+  const attr = (node, name) => node.attrs.find(item => item.name === name)?.value;
+  assert.equal(attr(player, 'poster'), film.poster);
+  assert.equal(attr(player, 'aria-label'), film.description);
+  assert.equal(attr(player, 'style'), 'object-fit:contain');
+  assert.equal(attr(player.childNodes.find(node => node.tagName === 'source'), 'src'), film.src);
+  assert.doesNotMatch(response.text, /bravo-real-world\.(mp4|webm)|bravo-film-poster\.webp/);
+  assert.match(response.text, /bravo-hero-film/);
+  assert.deepEqual(readHeroFilm({ querySelector: () => ({ content: JSON.stringify(film) }) }), film);
+  const noPoster = renderHomepage(realTemplate, null, { ...film, poster: null });
+  assert.doesNotMatch(noPoster, /<link[^>]*as="image"/);
+  assert.doesNotMatch(noPoster.match(/<video[^>]*data-hero-film=""[^>]*>/)[0], /poster=/);
+});
+
+test('opening film bootstrap excludes private records and untrusted URLs', () => {
+  const film = { ...DEFAULT_HERO_FILM, revision: 5, src: '/api/hero-film/opening/video?v=5', poster: 'https://evil.example/poster', uploadId: 'PRIVATE_UPLOAD', updatedBy: 'PRIVATE_OWNER' };
+  const snapshot = heroFilmSnapshot(film);
+  assert.equal(snapshot.poster, null);
+  assert.doesNotMatch(JSON.stringify(snapshot), /PRIVATE|evil/);
+  assert.deepEqual(heroFilmSnapshot({ ...film, src: '/api/lessons/private/video' }), DEFAULT_HERO_FILM);
+  assert.deepEqual(heroFilmSnapshot({ ...film, src: '/api/hero-film/opening/video?v=4' }), DEFAULT_HERO_FILM);
+  assert.deepEqual(readHeroFilm({ querySelector: () => ({ content: 'bad JSON' }) }), DEFAULT_HERO_FILM);
+});
 
 test('film poster has the only image preload while the saved gallery snapshot remains available', () => {
   const html = renderHomepage(template, hero);

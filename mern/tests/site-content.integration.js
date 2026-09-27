@@ -4,7 +4,6 @@ import mongoose from 'mongoose';
 import request from 'supertest';
 import { randomBytes, createHash } from 'node:crypto';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
-import { CONTENT_KEYS } from '../shared/site-content-keys.js';
 import { renderSiteContent } from '../server/content-html.js';
 test('website edits persist, reject untrusted inputs, preserve live data and support undo', {timeout:180000},async()=>{
   const replica=await MongoMemoryReplSet.create({replSet:{count:1},binary:{version:'7.0.14'}});
@@ -12,7 +11,7 @@ test('website edits persist, reject untrusted inputs, preserve live data and sup
   try{
     const {default:app}=await import('../server/site-image-app.js');const {connectDb}=await import('../server/db.js');const {User,Session,AuditEvent}=await import('../server/models.js');await connectDb();
     const cookies={};for(const name of ['owner','administrator','staff','member']){const user=await User.create({name,role:name==='administrator'?'owner':name,passwordHash:'fixture'});const token=randomBytes(32).toString('hex');await Session.create({tokenHash:createHash('sha256').update(token).digest('hex'),userId:user._id,expiresAt:new Date(Date.now()+3600000)});cookies[name]=`bravo_session=${token}`;}
-    const key=Object.keys(CONTENT_KEYS).find(key=>CONTENT_KEYS[key].text),linkKey=Object.keys(CONTENT_KEYS).find(key=>CONTENT_KEYS[key].link);
+    const key='cinema-hero-intro',linkKey='cinema-nav-training';
     const put=(who,k,data,origin=process.env.APP_ORIGIN)=>{const r=request(app).put(`/api/site-content/${k}`).set('Origin',origin);if(who)r.set('Cookie',cookies[who]);return r.send(data);};
     const data={expectedRevision:0,value:{text:'New copy <script>not executable</script>',font:'georgia',background:'gradient',backgroundColor:'#101010',gradientEnd:'#ba9a64',angle:140}};
     for(const who of [null,'staff','member'])await put(who,key,data).expect(who?403:401);

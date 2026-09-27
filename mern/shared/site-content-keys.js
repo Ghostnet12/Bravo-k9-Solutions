@@ -1,5 +1,23 @@
 // Stable publishing keys. Keep existing keys when changing page layouts.
 export const CONTENT_KEYS = {
+  "cinema-nav-training": {"text": true, "link": true},
+  "cinema-nav-workshops": {"text": true, "link": true},
+  "cinema-nav-online": {"text": true, "link": true},
+  "cinema-nav-about": {"text": true, "link": true},
+  "cinema-location": {"text": true},
+  "cinema-hero-title": {"text": true},
+  "cinema-hero-intro": {"text": true},
+  "cinema-method-title": {"text": true},
+  "cinema-method-copy": {"text": true},
+  "cinema-dogs-title": {"text": true},
+  "cinema-program-title": {"text": true},
+  "cinema-team-title": {"text": true},
+  "cinema-proof-title": {"text": true},
+  "cinema-workshops-title": {"text": true},
+  "cinema-online-title": {"text": true},
+  "cinema-online-copy": {"text": true},
+  "cinema-close-title": {"text": true},
+
   "approach-rewards-title": { "text": true },
   "approach-rewards-copy": { "text": true },
   "approach-private-title": { "text": true },
