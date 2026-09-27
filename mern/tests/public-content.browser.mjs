@@ -37,6 +37,7 @@ try {
             await page.getByRole('alert').filter({hasText:'Training videos could not load. Please try again.'}).waitFor();
             await page.getByRole('link', { name: 'two-trainer behavior assessment' }).click();
             await page.getByRole('heading', { name: 'Dog behavior assessments in Aberdeen.', exact: true }).waitFor();
+            await page.waitForFunction(expected => document.title === expected, 'Dog Behavior Assessment in Aberdeen, SD | Bravo K9 Solutions');
             assert.equal(await page.title(), 'Dog Behavior Assessment in Aberdeen, SD | Bravo K9 Solutions');
           }
           console.log(`PASS ${name}: public HTML survives ${mode} JavaScript; ${mode === 'slow' ? 'interactive navigation resumes' : 'useful content remains'}`);
