@@ -1,8 +1,9 @@
+export const FUNNEL_STAGES = ['visit', 'goal_selected', 'booking_started', 'trainer_step', 'visit_step', 'review_step'];
 // Only fixed labels cross the monitoring boundary. Never accept URL parameters,
 // messages, form fields, account identifiers, or arbitrary event properties.
 export const CHANNELS = ['direct', 'search', 'social', 'referral'];
 export const CLIENT_ERRORS = ['page_crash', 'script_error', 'unhandled_promise', 'network_error', 'request_timeout'];
-export const PUBLIC_PAGES = ['/', '/dog-training', '/dog-walking', '/behavior-assessment', '/contact', '/accessibility', '/media-rights'];
+export const PUBLIC_PAGES = ['/', '/dog-training', '/dog-walking', '/behavior-assessment', '/contact', '/accessibility', '/media-rights', '/workshops', '/learn'];
 export function routeArea(path = '') {
   const clean = String(path).split(/[?#]/)[0];
   if (clean === '/') return 'home';

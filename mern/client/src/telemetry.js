@@ -51,3 +51,19 @@ export function installErrorMonitoring() {
   window.addEventListener('error', scriptError); window.addEventListener('unhandledrejection', rejected);
   return () => { window.removeEventListener('error', scriptError); window.removeEventListener('unhandledrejection', rejected); };
 }
+
+let vitalsInstalled = false;
+export async function installWebVitals() {
+  if (vitalsInstalled || !monitoringEnabled || !enabled || !trackingAllowed()) return;
+  vitalsInstalled = true;
+  // Standard metrics only. No element selectors, field values, URLs or attribution payloads.
+  const area = routeArea(location.pathname), device = matchMedia('(max-width: 760px)').matches ? 'mobile' : 'desktop';
+  try {
+    const { onLCP, onINP, onCLS } = await import('web-vitals');
+    const report = metric => {
+      if (!monitoringEnabled || !enabled || !trackingAllowed()) return;
+      void send('vitals', { id: metric.id, name: metric.name, value: Math.round(metric.value * 1000) / 1000, area, device });
+    };
+    onLCP(report); onINP(report); onCLS(report);
+  } catch { vitalsInstalled = false; }
+}

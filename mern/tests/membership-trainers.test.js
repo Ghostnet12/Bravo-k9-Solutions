@@ -26,7 +26,7 @@ test('invalid or timestamp input cannot silently normalize into another date',()
   for(const value of ['',null,0,'2026-02-29','2026-01-32','2026-13-01','0000-01-01','2026-1-1','2026-01-01T00:00:00Z'])assert.throws(()=>manualMonthTerm(value),/valid membership start/);
 });
 test('David and Ashley is a third option with capacity limited by both real staff profiles',()=>{
-  const options=trainerOptions([ashley,david]);assert.deepEqual(options.map(p=>p.name),['David Northrop','Ashley Northrop','David and Ashley']);
+  const options=trainerOptions([ashley,david]);assert.deepEqual(options.map(p=>p.name),['David Northrop','Ashley Leverock','David and Ashley']);
   const pair=options[2];assert.equal(pair.id,JOINT_TRAINER_ID);assert.equal(pair.spotsRemaining,2);assert.deepEqual(pair.staffIds,[david.id,ashley.id]);assert.equal(pair.disabled,false);
   assert.equal(trainerOptions([david,{...ashley,spotsRemaining:0}])[2].full,true);
 });
@@ -43,7 +43,7 @@ test('legacy and multi-trainer bookings resolve consistently without duplicating
 });
 test('partial acceptance names the remaining trainer and does not claim both accepted',()=>{
   const b={staffId:david,staffIds:[david,ashley],trainerAcceptanceRequired:true,trainerAcceptedIds:[david.id]};
-  assert.equal(scheduledTrainerLabel(b),'Awaiting acceptance from Ashley Northrop');
+  assert.equal(scheduledTrainerLabel(b),'Awaiting acceptance from Ashley Leverock');
   assert.deepEqual(acceptedTrainerIds(b),[david.id]);
   assert.equal(scheduledTrainerLabel({...b,trainerAcceptanceRequired:false,trainerAcceptedIds:[david.id,ashley.id]}),'David and Ashley');
 });

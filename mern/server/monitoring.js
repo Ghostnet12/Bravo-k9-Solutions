@@ -2,9 +2,10 @@ import mongoose from 'mongoose';
 import { randomUUID, createHash } from 'node:crypto';
 import { waitUntil } from '@vercel/functions';
 import { z } from 'zod';
-import { CHANNELS, CLIENT_ERRORS, AREAS, routeArea } from '../shared/telemetry.js';
+import { CHANNELS, CLIENT_ERRORS, AREAS, routeArea, FUNNEL_STAGES } from '../shared/telemetry.js';
 import { FunnelVisit, SiteError, Booking } from './models.js';
 
+export const WebVital = mongoose.models.BravoWebVital || mongoose.model('BravoWebVital', new mongoose.Schema({ _id: String, name: String, value: Number, area: String, device: String, createdAt: { type: Date, index: true }, expiresAt: { type: Date, expires: 0 } }));
 const retention = 30 * 86400000;
 const tokenInput = z.string().uuid();
 const staff = user => ['staff', 'owner'].includes(user?.role);
@@ -36,7 +37,7 @@ export function monitorRequests(req, res, next) {
   });
   next();
 }
-const visitInput = z.object({ token: tokenInput, channel: z.enum(CHANNELS), stage: z.enum(['visit', 'booking_started']) }).strict();
+const visitInput = z.object({ token: tokenInput, channel: z.enum(CHANNELS), stage: z.enum(FUNNEL_STAGES) }).strict();
 const errorInput = z.object({ kind: z.enum(CLIENT_ERRORS), area: z.enum(AREAS) }).strict();
 export async function ingestVisit(req, res) {
   const input = visitInput.parse(req.body);
@@ -44,6 +45,7 @@ export async function ingestVisit(req, res) {
   const now = new Date();
   await FunnelVisit.updateOne({ _id: hash(input.token) }, {
     $setOnInsert: { channel: input.channel, firstSeen: now, expiresAt: new Date(now.getTime() + retention) },
+    $addToSet: { stages: input.stage },
     ...(input.stage === 'booking_started' ? { $set: { started: true } } : {}),
   }, { upsert: true, maxTimeMS: 1000 });
   res.status(204).end();
@@ -52,6 +54,14 @@ export async function ingestError(req, res) {
   const input = errorInput.parse(req.body);
   if (!monitoringEnabled()) return res.status(204).end();
   await recordError({ ...input, source: 'browser' });
+  res.status(204).end();
+}
+export const vitalInput = z.object({ id: z.string().regex(/^[a-zA-Z0-9-]{1,100}$/), name: z.enum(['LCP', 'INP', 'CLS']), value: z.number().finite().min(0).max(3600000), area: z.enum(AREAS), device: z.enum(['mobile', 'desktop']) }).strict();
+export async function ingestVital(req, res) {
+  const input = vitalInput.parse(req.body);
+  if (!monitoringEnabled() || optedOut(req) || staff(req.user)) return res.status(204).end();
+  const now = new Date();
+  await WebVital.updateOne({ _id: hash(`${input.id}:${input.name}`) }, { $set: { name: input.name, value: input.value, area: input.area, device: input.device }, $setOnInsert: { createdAt: now, expiresAt: new Date(now.getTime() + retention) } }, { upsert: true, maxTimeMS: 1000 });
   res.status(204).end();
 }
 // This runs only AFTER the server saved a real request. Client telemetry cannot
@@ -73,7 +83,7 @@ export async function monitoringSummary(req, res) {
   const days = z.enum(['7', '30']).default('30').parse(req.query.days);
   const since = new Date(Date.now() - (Number(days) - 1) * 86400000);
   since.setUTCHours(0, 0, 0, 0);
-  const [funnel, errors] = await Promise.all([
+  const [funnel, errors, vitals, stages] = await Promise.all([
     FunnelVisit.aggregate([
       { $match: { firstSeen: { $gte: since }, expiresAt: { $gt: new Date() } } },
       { $lookup: { from: Booking.collection.name, localField: '_id', foreignField: 'analyticsSession', pipeline: [{ $project: { _id: 0, status: 1, paymentStatus: 1, paidAt: 1 } }], as: 'bookings' } },
@@ -81,7 +91,9 @@ export async function monitoringSummary(req, res) {
       { $group: { _id: '$channel', visits: { $sum: 1 }, started: { $sum: '$started' }, saved: { $sum: '$saved' }, paid: { $sum: '$paid' } } },
     ]).option({ maxTimeMS: 5000 }),
     SiteError.find({ lastSeen: { $gte: since }, expiresAt: { $gt: new Date() } }).select('-_id -__v -expiresAt').sort({ lastSeen: -1 }).limit(200).maxTimeMS(5000).lean(),
+    WebVital.aggregate([{ $match: { createdAt: { $gte: since }, expiresAt: { $gt: new Date() } } }, { $group: { _id: { name: '$name', device: '$device' }, count: { $sum: 1 }, p75: { $percentile: { input: '$value', p: [0.75], method: 'approximate' } } } }]).option({ maxTimeMS: 5000 }),
+    FunnelVisit.aggregate([{ $match: { firstSeen: { $gte: since }, expiresAt: { $gt: new Date() } } }, { $unwind: '$stages' }, { $group: { _id: '$stages', count: { $sum: 1 } } }]).option({ maxTimeMS: 5000 }),
   ]);
   const totals = funnel.reduce((a, row) => { for (const key of ['visits', 'started', 'saved', 'paid']) a[key] += row[key]; return a; }, { visits: 0, started: 0, saved: 0, paid: 0 });
-  res.json({ days: Number(days), since, checkedAt: new Date(), databaseConnected: mongoose.connection.readyState === 1, totals, channels: funnel.map(({ _id, ...row }) => ({ channel: _id, ...row })), errors });
+  res.json({ days: Number(days), since, checkedAt: new Date(), databaseConnected: mongoose.connection.readyState === 1, vitals: vitals.map(row => ({ ...row._id, count: row.count, p75: row.p75[0] })), stages: stages.map(row => ({ stage: row._id, count: row.count })), totals, channels: funnel.map(({ _id, ...row }) => ({ channel: _id, ...row })), errors });
 }

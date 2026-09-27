@@ -1,3 +1,6 @@
+import GoalFinder from './GoalFinder';
+import { WorkshopDetails } from './WorkshopDetails';
+import { publicTrainerName } from '../../shared/discovery';
 import { useEffect, useRef, useState } from 'react';
 import { Header, Footer } from './ui';
 import { Editable } from './SiteContent';
@@ -26,7 +29,7 @@ import './home-polish.css';
 
 const secondary = ['walking', 'aggression'];
 type Trainer = { id: string; name: string; role: string; title: string; bio: string };
-const displayName = (name: string) => name === 'Ashley Northrop' ? 'Ashley Leverock' : name;
+const displayName = publicTrainerName;
 const portraits: Record<string, string> = { 'David Northrop': 'david-northrop', 'Ashley Northrop': 'ashley-northrop', 'Ashley Leverock': 'ashley-leverock', 'Janet Hughes': 'janet-hughes' };
 
 export default function Home() {
@@ -62,9 +65,10 @@ export default function Home() {
         </div>
         <div className="cinema-hero-baseline cinema-shell"><span>REAL DOGS. REAL LIFE. BRAVO.</span><a href="#method" aria-label="Discover the Bravo approach">SCROLL TO DISCOVER <span aria-hidden="true">↓</span></a></div>
       </CinematicFilm>
-      <div className="home-service-strip cinema-service-strip"><span>Private dog training. We come to you.</span><a href="tel:+16058242767">Let’s talk <span>(605) 824-2767</span></a></div>
+      <div className="home-service-strip cinema-service-strip"><span>Private training · {training ? money(training.cents) : '$200'}/month · one dog · We come to you.</span><a href="tel:+16058242767">Let’s talk <span>(605) 824-2767</span></a></div>
       <div className="cinema-shell site-media-tools-slot site-media-tools-slot--home" data-site-media-tools=""/>
 
+      <GoalFinder/>
       <section id="method" className="cinema-intro cinema-shell" aria-labelledby="method-title" data-reveal="">
         <p className="cinema-eyebrow">THE BRAVO APPROACH</p>
         <Editable as="h2" contentKey="cinema-method-title" canEditText id="method-title">Understanding changes<br/><span>everything.</span></Editable>
@@ -115,9 +119,9 @@ export default function Home() {
         <Link className="cinema-link" href="/account#your-review">Share your experience <span aria-hidden="true">↗</span></Link>
       </div></section>
 
-      <section id="workshops" className="cinema-events" aria-labelledby="workshops-title"><div className="cinema-shell cinema-section-heading" data-reveal=""><div><p className="cinema-eyebrow">MORE WAYS TO LEARN</p><Editable as="h2" contentKey="cinema-workshops-title" canEditText id="workshops-title">Come. Learn.<br/><span>Go further.</span></Editable></div><p>Saturday workshops, upcoming courses,<br/>and what’s next at Bravo.</p></div><HomeBanner/><HomeAdCarousel/></section>
+      <section id="workshops" className="cinema-events" aria-labelledby="workshops-title"><div className="cinema-shell cinema-section-heading" data-reveal=""><div><p className="cinema-eyebrow">MORE WAYS TO LEARN</p><Editable as="h2" contentKey="cinema-workshops-title" canEditText id="workshops-title">Come. Learn.<br/><span>Go further.</span></Editable></div><p>Saturday workshops, upcoming courses,<br/>and what’s next at Bravo.</p></div><div className="cinema-shell"><WorkshopDetails compact/></div><HomeBanner/><HomeAdCarousel/></section>
 
-      <section id="online" className="cinema-online" aria-labelledby="online-title"><div className="cinema-shell cinema-online-inner"><div data-reveal=""><p className="cinema-eyebrow">BRAVO. ANYWHERE.</p><Editable as="h2" contentKey="cinema-online-title" canEditText id="online-title">Closer to understanding.<br/><span>Wherever you are.</span></Editable><Editable as="p" contentKey="cinema-online-copy" canEditText>Professional dog-training education from David and Ashley. Learn the method, understand the why, and bring it into your everyday life.</Editable>{lessonsOpen ? <Link href="/learn" className="cinema-button cinema-button-light">Explore online lessons <span aria-hidden="true">↗</span></Link> : <p className="cinema-coming-soon">ONLINE COURSES <span>Coming soon</span></p>}</div><div className="cinema-learning-visual" data-reveal=""><div className="home-lesson-preview"><img src="/images/training-education.webp" width="1600" height="900" loading="lazy" alt="A handler demonstrating clear communication with a dog"/></div><div className="cinema-learning-caption"><img src="/images/bravo-logo-small.webp" width="42" height="48" alt="" data-site-image-ignore=""/><span>Understanding.<br/><strong>At your own pace.</strong></span></div></div></div>{lessonsOpen && <details className="cinema-shell cinema-details"><summary>Online lesson options</summary><LessonOffers/></details>}</section>
+      <section id="online" className="cinema-online" aria-labelledby="online-title"><div className="cinema-shell cinema-online-inner"><div data-reveal=""><p className="cinema-eyebrow">BRAVO. ANYWHERE.</p><Editable as="h2" contentKey="cinema-online-title" canEditText id="online-title">Closer to understanding.<br/><span>Wherever you are.</span></Editable><Editable as="p" contentKey="cinema-online-copy" canEditText>Professional dog-training education from David and Ashley. Learn the method, understand the why, and bring it into your everyday life.</Editable>{lessonsOpen ? <Link href="/learn" className="cinema-button cinema-button-light">Explore online lessons <span aria-hidden="true">↗</span></Link> : <Link href="/learn" className="cinema-button cinema-button-light">Online courses · Coming soon →</Link>}</div><div className="cinema-learning-visual" data-reveal=""><div className="home-lesson-preview"><img src="/images/training-education.webp" width="1600" height="900" loading="lazy" alt="A handler demonstrating clear communication with a dog"/></div><div className="cinema-learning-caption"><img src="/images/bravo-logo-small.webp" width="42" height="48" alt="" data-site-image-ignore=""/><span>Understanding.<br/><strong>At your own pace.</strong></span></div></div></div>{lessonsOpen && <details className="cinema-shell cinema-details"><summary>Online lesson options</summary><LessonOffers/></details>}</section>
 
       <section className="cinema-close cinema-shell" aria-labelledby="booking-title" data-reveal=""><p className="cinema-eyebrow">GOOD THINGS START WITH UNDERSTANDING.</p><Editable as="h2" contentKey="cinema-close-title" canEditText id="booking-title">Let’s meet<br/><span>your dog.</span></Editable><p>Tell us about your dog. We’ll help you take the next step.</p><div className="cinema-actions"><Link href="/portal?program=training" className="cinema-button">Book training <span aria-hidden="true">↗</span></Link><a href="tel:+16058242767" className="cinema-link">Talk to Bravo</a></div><span className="cinema-close-location">ABERDEEN, SOUTH DAKOTA · WE COME TO YOU</span></section>
     </main><Footer/>

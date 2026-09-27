@@ -16,20 +16,26 @@ export function Editable({ as:Tag='div', contentKey, canEditText=false, canEditL
 function ContentEditor({ options, entries, publish, close, preview }) {
   const dialog=useRef(null);
   const [key,setKey]=useState(options[0].key), [draft,setDraft]=useState(entries[options[0].key]?.value || {}), [busy,setBusy]=useState(false), [error,setError]=useState('');
+  const drafts=useRef({});
   const selected=options.find(item=>item.key===key), baseline=entries[key] || {revision:0,value:{}};
+  const changed = (itemKey, value) => JSON.stringify(value) !== JSON.stringify(entries[itemKey]?.value || {});
+  const otherDirty = Object.entries(drafts.current).some(([itemKey, value]) => itemKey !== key && changed(itemKey, value));
+  const dirty = changed(key, draft) || otherDirty;
+  const requestClose = () => { if (busy || (dirty && !window.confirm('Discard your unpublished changes?'))) return false; close(); return true; };
+  useEffect(() => { const warn = event => { if (dirty) { event.preventDefault(); event.returnValue = ''; } }; window.addEventListener('beforeunload', warn); return () => window.removeEventListener('beforeunload', warn); }, [dirty]);
   const change=(name,value)=>setDraft(old=>({...old,[name]:value}));
   useEffect(()=>{dialog.current.showModal();},[]);
   useEffect(()=>{preview({key,value:draft}); return ()=>preview(null);},[key,draft,preview]);
   async function save(undo=false) {
     setBusy(true);setError('');
-    try { const result=await api(`/site-content/${key}`,{method:'PUT',body:{expectedRevision:baseline.revision,...(undo?{undo:true}:{value:draft})}});publish(key,result.entry);close(); }
+    try { const result=await api(`/site-content/${key}`,{method:'PUT',body:{expectedRevision:baseline.revision,...(undo?{undo:true}:{value:draft})}});publish(key,result.entry);delete drafts.current[key];setDraft(result.entry?.value || {});if (!otherDirty) close(); }
     catch(e){setError(e.message);} finally{setBusy(false);}
   }
-  return <dialog ref={dialog} className="site-content-dialog" data-site-image-ignore="" aria-label="Edit website section" onCancel={event=>{event.preventDefault();if(!busy)close();}}>
-    <form onSubmit={event=>{event.preventDefault();save();}}><div className="site-content-heading"><h2>Edit website</h2><button type="button" disabled={busy} onClick={close} aria-label="Close website editor">×</button></div>
-      <p>Changes preview on this page. Publish to make them visible to everyone.</p>
-      <fieldset disabled={busy}><label>Edit this part<select aria-label="Edit this part" value={key} onChange={event=>{setKey(event.target.value);setDraft(entries[event.target.value]?.value || {});setError('');}}>{options.map(item=><option key={item.key} value={item.key}>{item.title}</option>)}</select></label>
-      {selected.media?.map(item=><button type="button" key={item.key} onClick={()=>{close();window.dispatchEvent(new CustomEvent('bravo-edit-photo',{detail:{key:item.key}}));}}>Edit photo/video: {item.title}</button>)}
+  return <dialog ref={dialog} className="site-content-dialog" data-site-image-ignore="" aria-label="Edit website section" onCancel={event=>{event.preventDefault();if(!busy)requestClose();}}>
+    <form onSubmit={event=>{event.preventDefault();save();}}><div className="site-content-heading"><h2>Edit website</h2><button type="button" disabled={busy} onClick={requestClose} aria-label="Close website editor">×</button></div>
+      <p>Changes preview on this page. Publish to make them visible to everyone.</p><p className="editor-save-state" role="status">{busy ? "Saving your changes…" : dirty ? "Unpublished changes" : "Matches the published version"}</p>
+      <fieldset disabled={busy}><label>Edit this part<select aria-label="Edit this part" value={key} onChange={event=>{drafts.current[key] = draft;setKey(event.target.value);setDraft(drafts.current[event.target.value] || entries[event.target.value]?.value || {});setError('');}}>{options.map(item=><option key={item.key} value={item.key}>{item.title}</option>)}</select></label>
+      {selected.media?.map(item=><button type="button" key={item.key} onClick={()=>{if (!requestClose()) return;window.dispatchEvent(new CustomEvent('bravo-edit-photo',{detail:{key:item.key}}));}}>Edit photo/video: {item.title}</button>)}
       {selected.text && <label>Text<textarea aria-label="Text" rows={5} maxLength={8000} value={draft.text ?? selected.original} onChange={event=>change('text',event.target.value)}/></label>}
       {selected.link && <label>Link address<input type="text" maxLength={1000} value={draft.link ?? selected.link} onChange={event=>change('link',event.target.value)}/></label>}
       {!selected.text && key!=='site-theme' && <p>This area contains live information or other elements. Choose a text item to edit its words.</p>}
@@ -44,7 +50,7 @@ function ContentEditor({ options, entries, publish, close, preview }) {
       <label>Opacity: {draft.opacity ?? 1}<input type="range" min="0.1" max="1" step="0.05" value={draft.opacity ?? 1} onChange={event=>change('opacity',Number(event.target.value))}/></label></div>
       <button type="button" onClick={()=>setDraft({})}>Reset this part to original</button>
       {baseline.canUndo && <button type="button" onClick={()=>save(true)}>Restore previous published edit</button>}
-      </fieldset>{error && <p role="alert">{error}</p>}<div className="site-content-actions"><button type="button" disabled={busy} onClick={close}>Cancel</button><button type="submit" disabled={busy || JSON.stringify(draft)===JSON.stringify(baseline.value)}>{busy?'Publishing…':'Publish website changes'}</button></div>
+      </fieldset>{error && <p role="alert">{error}</p>}<div className="site-content-actions"><button type="button" disabled={busy} onClick={requestClose}>Cancel</button><button type="submit" disabled={busy || JSON.stringify(draft)===JSON.stringify(baseline.value)}>{busy?'Publishing…':'Publish website changes'}</button></div>
     </form>
   </dialog>;
 }
@@ -52,7 +58,8 @@ function initialEntries() { try{return typeof document==='undefined'?{}:JSON.par
 export function SiteContentProvider({ children }) {
   const {user}=useBravo(), {pathname}=useLocation(), canEdit=isImageEditor(user) && !user?.mustChangePassword;
   useEffect(()=>{document.getElementById('bravo-published-theme')?.remove();},[]);
-  const [entries,setEntries]=useState(initialEntries), [selection,setSelection]=useState(null), [preview,setPreview]=useState(null), [error,setError]=useState('');
+  const [entries,setEntries]=useState(initialEntries), [selection,setSelection]=useState(null), [preview,setPreview]=useState(null), [error,setError]=useState(''), [status,setStatus]=useState('');
+  useEffect(() => { if (!status) return; const timer = setTimeout(() => setStatus(''), 7000); return () => clearTimeout(timer); }, [status]);
   const allowed=useRef(canEdit);allowed.current=canEdit;
   useEffect(()=>{let live=true;api('/site-content').then(data=>{if(live)setEntries(data.entries || {});}).catch(()=>{});return()=>{live=false;};},[pathname]);
   useEffect(()=>{setSelection(null);setPreview(null);},[pathname,canEdit]);
@@ -77,8 +84,8 @@ export function SiteContentProvider({ children }) {
     const move=event=>{if(hold && Math.hypot(event.clientX-hold.x,event.clientY-hold.y)>12)cancel();};
     const click=event=>{if(Date.now()<suppressUntil && !event.target.closest?.('dialog')){event.preventDefault();event.stopPropagation();}};
     const context=event=>{if(event.target instanceof Element && !ignored(event.target) && event.target.closest('[data-site-content-key]'))event.preventDefault();};
-    const requested=event=>{const key=event.detail?.key;if(typeof key!=='string'||!/^[-a-z0-9]+$/.test(key))return;const target=document.querySelector(`[data-site-content-key="${key}"]`);if(target)open(target);};
-    const keyboard=event=>{if(event.altKey && event.key.toLowerCase()==='e' && !document.querySelector('dialog[open]')){const target=document.activeElement?.closest('[data-site-content-key]') || document.querySelector('main[data-site-content-key]');if(target){event.preventDefault();open(target);}}};
+    const requested=event=>{const key=event.detail?.key;if(typeof key!=='string'||!/^[-a-z0-9]+$/.test(key))return;const target=key === 'page' ? document.querySelector('main') : document.querySelector(`[data-site-content-key="${key}"]`);if(target)open(target);};
+    const keyboard=event=>{if(event.altKey && event.key.toLowerCase()==='e' && !document.querySelector('dialog[open]')){const target=document.activeElement?.closest('[data-site-content-key]') || document.querySelector('main');if(target){event.preventDefault();open(target);}}};
     window.addEventListener('keydown',keyboard);window.addEventListener('bravo-content-edit',requested);
     document.addEventListener('pointerdown',down,true);document.addEventListener('pointermove',move,true);document.addEventListener('click',click,true);document.addEventListener('contextmenu',context,true);
     for(const type of ['pointerup','pointercancel','scroll'])document.addEventListener(type,cancel,true);
@@ -87,5 +94,5 @@ export function SiteContentProvider({ children }) {
     return()=>{disposed=true;cancel();window.removeEventListener('keydown',keyboard);window.removeEventListener('bravo-content-edit',requested);document.documentElement.classList.remove('site-content-owner');document.removeEventListener('pointerdown',down,true);document.removeEventListener('pointermove',move,true);document.removeEventListener('click',click,true);document.removeEventListener('contextmenu',context,true);for(const type of ['pointerup','pointercancel','scroll'])document.removeEventListener(type,cancel,true);window.removeEventListener('blur',cancel);};
   },[canEdit]);
   const theme=preview?.key==='site-theme'?preview.value:entries['site-theme']?.value;
-  return <Content.Provider value={{entries,preview}}><style>{themeCss(theme)}</style>{children}{canEdit && error && <p role="alert">{error}</p>}{canEdit && selection && <ContentEditor options={selection} entries={entries} preview={setPreview} close={()=>{setSelection(null);setPreview(null);}} publish={(key,entry)=>setEntries(old=>({...old,[key]:entry}))}/>}</Content.Provider>;
+  return <Content.Provider value={{entries,preview}}><style>{themeCss(theme)}</style>{children}{canEdit && ['/', '/dog-training', '/dog-walking', '/behavior-assessment', '/contact', '/learn', '/workshops'].includes(pathname) && <button type="button" className="content-edit-launcher" onClick={() => window.dispatchEvent(new CustomEvent('bravo-content-edit', { detail: { key: 'page' } }))}>Edit page text &amp; design</button>}{canEdit && status && <p className="content-save-status" role="status">{status}</p>}{canEdit && error && <p role="alert">{error}</p>}{canEdit && selection && <ContentEditor options={selection} entries={entries} preview={setPreview} close={()=>{setSelection(null);setPreview(null);}} publish={(key,entry)=>{setEntries(old=>({...old,[key]:entry}));setStatus('Saved. Your website changes are published.');}}/>}</Content.Provider>;
 }

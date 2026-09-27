@@ -1,3 +1,4 @@
+import { PROOF_TOPICS, proofMatches } from '../../shared/discovery';
 import { Editable } from './SiteContent';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useBravo } from './context';
@@ -43,7 +44,8 @@ function VideoPlayer({ clip, onPlay }: { clip: ProofClip; onPlay: (video: HTMLVi
     {error && <p className="proof-play-error" role="status">Couldn’t play this video. Tap play to retry.</p>}
   </>;
 }
-export default function ProofVideoCarousel() {
+export default function ProofVideoCarousel({ initialTopic = 'all' }: { initialTopic?: string }) {
+  const [topic, setTopic] = useState(initialTopic);
   const { user } = useBravo(), canEdit = isImageEditor(user) && !user?.mustChangePassword;
   const [clips, setClips] = useState<ProofClip[]>([]), [cursor, setCursor] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false), [loading, setLoading] = useState(false), [error, setError] = useState(''), [status, setStatus] = useState('');
@@ -119,6 +121,8 @@ export default function ProofVideoCarousel() {
     {(!loaded && loading) && <p role="status">Loading videos…</p>}
     {error && <p role="alert">{error} <button type="button" disabled={loading} onClick={() => load(loaded ? cursor : null)}>Retry loading videos</button></p>}
     {loaded && !clips.length && <p>No training videos published yet.</p>}
+    <div className="proof-topics" role="group" aria-label="Filter training videos">{PROOF_TOPICS.map(item => <button type="button" key={item.id} aria-pressed={topic === item.id} onClick={() => { root.current?.querySelectorAll('video').forEach(video => video.pause()); setTopic(item.id); rail.current?.scrollTo({ left: 0, behavior: 'instant' }); }}>{item.label}</button>)}</div>
+    {loaded && clips.length > 0 && !clips.some(clip => proofMatches(clip, topic)) && <p role="status">No videos in this topic on this page yet. Choose All training{cursor ? ' or load more videos below' : ''}.</p>}
     <div ref={rail} className="home-work-proof-grid proof-video-carousel" role="region" aria-roledescription="carousel" aria-label="Training video carousel" tabIndex={0} onScroll={() => {
       cancelHold();
       // Restart the full interval after every movement, including touch momentum
@@ -132,7 +136,7 @@ export default function ProofVideoCarousel() {
         if (box.right <= bounds.left + 8 || box.left >= bounds.right - 8) video.pause();
       });
     }}>
-      {clips.map(clip => <article key={clip.id} data-proof-video={clip.id} data-facebook-reel={clip.facebookUrl ? clip.id : undefined} data-proof-editable={canEdit || undefined} tabIndex={canEdit ? 0 : undefined} aria-keyshortcuts={canEdit ? 'F2' : undefined}
+      {clips.filter(clip => proofMatches(clip, topic)).map(clip => <article key={clip.id} data-proof-video={clip.id} data-facebook-reel={clip.facebookUrl ? clip.id : undefined} data-proof-editable={canEdit || undefined} tabIndex={canEdit ? 0 : undefined} aria-keyshortcuts={canEdit ? 'F2' : undefined}
         onPointerDownCapture={event => beginHold(event, clip)} onPointerUpCapture={cancelHold} onPointerCancelCapture={cancelHold}
         onPointerMoveCapture={event => { const hold = gesture.current; if (hold && (event.pointerId !== hold.pointer || Math.hypot(event.clientX - hold.x, event.clientY - hold.y) > 12)) cancelHold(); }}
         onContextMenu={event => { if (canEdit && !(event.target as Element).closest('[data-proof-action]')) { event.preventDefault(); suppressUntil.current = Date.now() + 1000; open(clip); } }}

@@ -88,6 +88,11 @@
       "source": "/bravo-shell.html",
       "destination": "/",
       "permanent": true
+    },
+    {
+      "source": "/workshops.html",
+      "destination": "/workshops",
+      "permanent": true
     }
   ],
   "functions": {
@@ -114,6 +119,10 @@
       "destination": "/api"
     },
     {
+      "source": "/workshops",
+      "destination": "/api/public-page?path=/workshops"
+    },
+    {
       "source": "/dog-training",
       "destination": "/api/public-page?path=/dog-training"
     },
@@ -131,7 +140,7 @@
     },
     {
       "source": "/learn",
-      "destination": "/learn.html"
+      "destination": "/api/public-page?path=/learn"
     },
     {
       "source": "/contact",

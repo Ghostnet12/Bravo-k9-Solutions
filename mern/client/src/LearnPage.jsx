@@ -1,5 +1,6 @@
+import CourseLaunch, { CourseInterests } from './CourseLaunch';
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { api } from './api';
 import { useBravo } from './context';
 import { Page, Notice } from './ui';
@@ -7,6 +8,7 @@ import { Editable } from './SiteContent';
 import { lessonLibraryVisible } from '../../shared/lesson-library';
 import LessonOffers from './LessonOffers';
 export default function LearnPage() {
+  const [params] = useSearchParams();
   const { user, services, config, membership, refreshUser } = useBravo();
   const [lessons,setLessons]=useState([]),[sections,setSections]=useState([]),[filter,setFilter]=useState('All'),[selected,setSelected]=useState(null),[transcript,setTranscript]=useState(''),[error,setError]=useState(''),[loading,setLoading]=useState(true);
   const visible=lessonLibraryVisible(config,user), editor=user?.role==='owner';
@@ -16,9 +18,10 @@ export default function LearnPage() {
   useEffect(()=>{if(selected)document.getElementById('current-lesson')?.scrollIntoView({behavior:'smooth',block:'start'});},[selected]);
   useEffect(()=>{if(!member){setSelected(null);setTranscript('');}},[member,user?.id]);
   async function open(lesson){setError('');setSelected(null);setTranscript('');try{const data=await api(`/lessons/${lesson._id}/transcript`);setTranscript(data.transcript);setSelected(lesson);}catch(e){setError(e.message);}}
-  if(!visible)return <Page title="This page is unavailable."><p><Link to="/">Return to Bravo</Link></p></Page>;
+  if(!visible || (editor && params.get('preview') === 'launch'))return <CourseLaunch/>;
   const groups=[...sections,{_id:'',title:'General lessons',description:''}];
   return <Page className="learning-page" title="Learn the Bravo way." eyebrow={editor&&!config?.lessonLibrary?.open?'PRIVATE LIBRARY PREVIEW':'BRAVO ONLINE LESSONS'} intro="Practical lessons from David and Ashley. Follow the sections at your own pace.">
+    {editor && <><p><Link to="/learn?preview=launch">Preview the public coming-soon page →</Link></p><CourseInterests/></>}
     {editor&&<Notice><Link to="/admin?tab=lessons">Open Lesson studio →</Link>{!config?.lessonLibrary?.open&&<p>Only owners and administrators can see this library while it is closed.</p>}</Notice>}
     <Editable as="div" contentKey="learnpage-1" className="learn-banner"><img src="/images/training-education.webp" width="1600" height="900" alt="Bravo training lesson with a handler and Belgian Malinois"/><Editable as="div" contentKey="learnpage-2"><Editable as="h2" contentKey="learnpage-4" canEditText>Better handlers.<br/>Better dogs.</Editable><Editable as="p" contentKey="learnpage-5" canEditText>Video lessons, helpful photos, and clear written instructions from your trainers.</Editable></Editable></Editable>
     <Notice error>{error}</Notice>{(!member||editor)&&<LessonOffers/>}{membership?.manual&&<Notice>Your active Member access includes published lessons. No additional lesson purchase is needed.</Notice>}

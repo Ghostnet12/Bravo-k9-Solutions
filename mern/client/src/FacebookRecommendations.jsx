@@ -4,7 +4,7 @@ import ReviewPreview from './ReviewPreview';
 // Five-star ratings were explicitly confirmed by Bravo’s owner after supplying the screenshot.
 // These remain separate from verified website-account ratings.
 import ReviewStars from './ReviewStars';
-const recommendations = [
+export const recommendations = [
   {
     rating: 5,
     source: 'Google review',
