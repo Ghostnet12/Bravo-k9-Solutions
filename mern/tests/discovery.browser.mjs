@@ -67,6 +67,7 @@ try {
           assert.ok(layout.scroll<=layout.width+1,`${path} ${width} no overflow: ${JSON.stringify(layout)}`);
         }
         await visit(origin);
+        await page.locator('.goal-proof figcaption').waitFor();await settleApi();
         await page.locator('.goal-choices').screenshot({path:`test-results/program-cards-${engineName}-${width}.png`});
         for(const [label,price,program,focus,details] of [
           ['Everyday manners','$200','training','basic-obedience','/dog-training'],
@@ -97,7 +98,7 @@ try {
             assert.match(await selected.innerText(),program==='walking' ? /Dog Walking/ : /Aggressive-dog intake/);
             assert.equal(await page.getByRole('combobox',{name:'Schedule visits for',exact:true}).inputValue(),program);
           }
-          await visit(origin);
+          await visit(origin);await page.locator('.goal-proof figcaption').waitFor();await settleApi();
         }
         const proof=page.locator('.home-work-proof');await proof.getByRole('button',{name:'Working dogs',exact:true}).click();assert.equal(await proof.locator('article[data-proof-video]').count(),1);await proof.getByRole('button',{name:'All training',exact:true}).click();assert.equal(await proof.locator('article[data-proof-video]').count(),3);
         await visit(origin+'/learn');await page.getByLabel('Email address',{exact:true}).fill('visitor@example.test');await page.getByLabel('Email me once when Bravo online courses launch.').check();await page.getByRole('button',{name:'Request a launch update'}).click();await page.getByText('Your launch-update request is saved.',{exact:false}).waitFor();assert.equal(signup.consent,true);assert.equal(signup.email,'visitor@example.test');
