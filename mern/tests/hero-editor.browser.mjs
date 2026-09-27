@@ -36,8 +36,9 @@ try {
       const context = await browser.newContext({ viewport: { width, height: 900 }, isMobile: width === 390, hasTouch: width === 390 });
       const signIn = async name => { await context.clearCookies(); if (name) await context.addCookies([{ name: 'bravo_session', value: tokens[name], url: origin }]); };
       await signIn('owner');
-      const page = await context.newPage(), errors = [];
+      const page = await context.newPage(), errors = [], retiredRequests = [];
       page.on('pageerror', error => errors.push(error.message));
+      page.on('request', request => { if (/bravo-real-world\.(mp4|webm)|bravo-film-poster\.webp/.test(request.url())) retiredRequests.push(request.url()); });
       const film = page.locator('.cinema-film video');
       const videoDialog = page.getByRole('dialog', { name: 'Edit hero video', exact: true });
       const copyDialog = page.getByRole('dialog', { name: 'Edit website section', exact: true });
@@ -77,9 +78,11 @@ try {
         assert.equal((await HeroFilm.findById('opening').lean()).description, 'Owner uploaded opening film.');
         await page.waitForFunction(() => { const video = document.querySelector('.cinema-film video'); return video.currentSrc.includes('/api/hero-film/opening/video') && !video.paused && video.currentTime > 0; });
         await editCopy('Owner saved homepage copy.');
+        retiredRequests.length = 0;
         await page.reload(); await page.waitForLoadState('networkidle');
         assert.equal(await page.locator('.cinema-hero-intro').innerText(), 'Owner saved homepage copy.');
         assert.ok((await film.evaluate(video => video.currentSrc)).includes('/api/hero-film/opening/video'));
+        assert.deepEqual(retiredRequests, [], 'reload never downloads the retired opening film or poster');
         await signIn('administrator'); await page.reload(); await page.waitForLoadState('networkidle');
         await page.getByRole('button', { name: 'Edit hero video', exact: true }).click(); await videoDialog.waitFor();
         await videoDialog.getByLabel('Description', { exact: true }).fill('Administrator updated opening film.');
@@ -91,6 +94,12 @@ try {
         assert.equal(await film.getAttribute('aria-label'), 'Administrator updated opening film.');
         await page.waitForFunction(() => { const video = document.querySelector('.cinema-film video'); return video.muted && video.playsInline && !video.paused && video.currentTime > 0; });
         assert.equal(await page.getByRole('button', { name: 'Edit hero video', exact: true }).count(), 0);
+        const noScript = await browser.newContext({ javaScriptEnabled: false, viewport: { width, height: 900 } });
+        try {
+          const visitor = await noScript.newPage(); await visitor.goto(origin);
+          assert.match(await visitor.locator('.cinema-film video source').first().getAttribute('src'), /^\/api\/hero-film\/opening\/video\?v=2$/);
+          assert.equal(await visitor.locator('.cinema-hero-intro').innerText(), 'Administrator saved homepage copy.');
+        } finally { await noScript.close(); }
         await page.screenshot({ path: `test-results/hero-editor-published-${engineName}-${width}.png` });
         await signIn('staff'); await page.reload(); await page.waitForLoadState('networkidle');
         assert.equal(await page.getByRole('button', { name: 'Edit hero video', exact: true }).count(), 0);

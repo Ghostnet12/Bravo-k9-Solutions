@@ -2,20 +2,26 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { api } from './api';
 import { useBravo } from './context';
 import { isImageEditor } from '../../shared/site-images.js';
-import { DEFAULT_HERO_FILM } from '../../shared/hero-film.js';
+import { DEFAULT_HERO_FILM, heroFilmSnapshot, readHeroFilm } from '../../shared/hero-film.js';
 
 const VideoEditor = lazy(() => import('./ProofVideoEditor'));
+let publishedFilm = readHeroFilm(typeof document === 'undefined' ? null : document);
 
 export default function CinematicFilm({ children }) {
   const root = useRef(null), video = useRef(null);
   const { user } = useBravo(), canEdit = isImageEditor(user);
-  const [clip, setClip] = useState(DEFAULT_HERO_FILM), [editing, setEditing] = useState(null);
+  const [clip, setClip] = useState(() => publishedFilm), [editing, setEditing] = useState(null);
+  const rememberFilm = value => {
+    const next = heroFilmSnapshot(value);
+    if (next.revision < publishedFilm.revision) return;
+    publishedFilm = next; setClip(next);
+  };
   const [opening, setOpening] = useState(false), [message, setMessage] = useState(''), [error, setError] = useState('');
   const hold = useRef(null), suppressUntil = useRef(0), alive = useRef(false), requesting = useRef(false);
   const cancelHold = () => { clearTimeout(hold.current?.timer); hold.current = null; };
   useEffect(() => {
     alive.current = true;
-    api('/hero-film').then(data => { if (alive.current) setClip(data.clips?.[0] || DEFAULT_HERO_FILM); }).catch(() => {});
+    api('/hero-film').then(data => { if (alive.current && data.clips?.[0]) rememberFilm(data.clips[0]); }).catch(() => {});
     window.addEventListener('scroll', cancelHold, true); window.addEventListener('blur', cancelHold);
     return () => { alive.current = false; cancelHold(); window.removeEventListener('scroll', cancelHold, true); window.removeEventListener('blur', cancelHold); };
   }, []);
@@ -75,12 +81,12 @@ export default function CinematicFilm({ children }) {
     onClickCapture={event => { if (!event.target.closest('dialog') && Date.now() < suppressUntil.current) { event.preventDefault(); event.stopPropagation(); } }}
     onContextMenu={event => { if (canEdit && isFilmTarget(event.target)) event.preventDefault(); }}>
     <div className="cinema-hero-media" data-site-image-ignore=""><div className="cinema-film">
-    <video key={clip.src} ref={video} className={playing ? 'is-playing' : ''} poster={clip.poster || undefined} autoPlay muted loop playsInline preload="auto" style={{ objectFit: clip.fit }} aria-label={clip.description || clip.title} onPlaying={() => { setPlaying(true); setFailed(false); }} onPause={() => setPlaying(false)} onError={() => { setFailed(true); setPlaying(false); }}><source src={clip.src} type={clip.revision === 0 ? 'video/mp4' : undefined}/>{clip.src === DEFAULT_HERO_FILM.src && <source src="/videos/bravo-real-world.webm" type="video/webm"/>}</video>
+    <video data-hero-film="" key={clip.src} ref={video} className={playing ? 'is-playing' : ''} poster={clip.poster || undefined} autoPlay muted loop playsInline preload="auto" style={{ objectFit: clip.fit }} aria-label={clip.description || clip.title} onPlaying={() => { setPlaying(true); setFailed(false); }} onPause={() => setPlaying(false)} onError={() => { setFailed(true); setPlaying(false); }}><source src={clip.src} type={clip.revision === 0 ? 'video/mp4' : undefined}/>{clip.src === DEFAULT_HERO_FILM.src && <source src="/videos/bravo-real-world.webm" type="video/webm"/>}</video>
     <div className="cinema-hero-shade" aria-hidden="true"/>
     {!failed && <button className="cinema-film-control" type="button" aria-label={playing ? 'Pause training film' : 'Play training film'} onClick={() => { if (playing) setPaused(true); else { setPaused(false); video.current?.play().catch(() => setPlaying(false)); } }}><span aria-hidden="true">{playing ? 'Ⅱ' : '▷'}</span><span>{playing ? 'Pause film' : 'Play film'}</span></button>}
     </div></div>
     {children}
     {canEdit && <div className="cinema-film-edit" data-site-image-ignore=""><button type="button" disabled={opening} onClick={editFilm}>{opening ? 'Opening editor…' : 'Edit hero video'}</button><span role="status">{message}</span>{error && <span role="alert">{error}</span>}</div>}
-    {editing && canEdit && <Suspense fallback={<p role="status" className="cinema-film-edit">Opening video editor…</p>}><VideoEditor apiBase="/hero-film" clip={editing} onClose={() => setEditing(null)} onSaved={saved => { setClip(saved); setEditing(null); setFailed(false); setPlaying(false); setMessage('Hero video published.'); }}/></Suspense>}
+    {editing && canEdit && <Suspense fallback={<p role="status" className="cinema-film-edit">Opening video editor…</p>}><VideoEditor apiBase="/hero-film" clip={editing} onClose={() => setEditing(null)} onSaved={saved => { rememberFilm(saved); setEditing(null); setFailed(false); setPlaying(false); setMessage('Hero video published.'); }}/></Suspense>}
   </section>;
 }
