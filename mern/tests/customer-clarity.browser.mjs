@@ -28,7 +28,11 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){const br
  try{
   await page.goto(origin);await page.waitForLoadState('networkidle');
   assert.equal(await page.locator('.home-hero-image').getAttribute('src'),'/images/bravo-client-training.jpeg');
+  // The gallery now follows the goal selector; WebKit correctly defers this off-screen image.
+  await page.locator('.home-hero-image').scrollIntoViewIfNeeded();
+  await page.waitForFunction(()=>{const image=document.querySelector('.home-hero-image');return image?.complete && image.naturalWidth>0;});
   assert.equal(await page.locator('.home-hero-image').evaluate(el=>el.complete && el.naturalWidth>0),true);
+  await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
   assert.equal(await page.locator('.home-hero-image').evaluate(el=>getComputedStyle(el).objectFit),'contain');
   assert.match(await page.locator('h1').innerText(), /Training built\s*around the dog/i);
   assert.ok(await page.locator('.cinema-price').isVisible());
