@@ -3,16 +3,17 @@ import assert from 'node:assert/strict';
 import express from 'express';
 import request from 'supertest';
 import { readFile, access } from 'node:fs/promises';
-import { HOME_HERO_SOURCE, homeHeroSnapshot, readHomeHero } from '../shared/home-hero.js';
+import { homeHeroSnapshot, readHomeHero } from '../shared/home-hero.js';
 import { createHomepageHandler, renderHomepage } from '../server/homepage.js';
 
 const hero = { revision: 13, src: '/api/site-images/home-training-hero/image?v=13', alt: 'Bravo team', fit: 'contain', x: 13, y: 19.5, zoom: 1.36, framed: true, canUndo: true };
 const template = '<html><head><link rel="preload" as="image" href="/images/hero-bravo-launch.webp" fetchpriority="high"/><link rel="preload" as="font" href="/fonts/bebas-neue.ttf"/><script type="module" src="/assets/app.js"></script></head><body><div id="root"></div></body></html>';
 
-test('published hero is available in initial HTML and has the only image preload', () => {
+test('film poster has the only image preload while the saved gallery snapshot remains available', () => {
   const html = renderHomepage(template, hero);
   assert.equal((html.match(/as="image"/g) || []).length, 1);
-  assert.match(html, /href="\/api\/site-images\/home-training-hero\/image\?v=13"/);
+  assert.match(html, /href="\/images\/bravo-film-poster.webp"/);
+  assert.doesNotMatch(html, /<link[^>]*href="\/api\/site-images/);
   assert.doesNotMatch(html, /hero-bravo-launch/);
   assert.match(html, /bravo-home-hero/);
   assert.match(html, /&quot;fit&quot;:&quot;contain&quot;/);
@@ -59,7 +60,7 @@ test('missing media and unavailable database still return usable HTML', async ()
   for (const loadHero of [async () => null, async () => { throw new Error('private database detail'); }]) {
     const app = express().get('/', createHomepageHandler({ loadTemplate: async () => template, loadHero }));
     const response = await request(app).get('/').expect(200);
-    assert.ok(response.text.includes(HOME_HERO_SOURCE));
+    assert.ok(response.text.includes('/images/bravo-film-poster.webp'));
     assert.doesNotMatch(response.text, /private database detail/);
   }
 });
@@ -73,6 +74,6 @@ test('Vercel homepage uses the dynamic snapshot and includes its production HTML
   const source = await readFile(new URL('../client/src/Home.tsx', import.meta.url), 'utf8');
   assert.equal((source.match(/className="home-hero-image"/g) || []).length, 1);
   assert.ok(source.indexOf('data-site-media-tools') > source.indexOf('home-service-strip'));
-  assert.match(source, /loading="eager"/);
+  assert.match(source, /className="home-hero-image"[^>]*loading="lazy" fetchPriority="low"/);
   assert.match(source, /data-site-image-original=\{HOME_HERO_SOURCE\}/);
 });

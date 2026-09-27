@@ -9,6 +9,7 @@ import { DEFAULT_PROOF_VIDEOS } from '../shared/proof-videos.js';
 
 const dist = fileURLToPath(new URL('../client/dist/', import.meta.url));
 const html = await readFile(`${dist}/bravo-shell.html`, 'utf8');
+assert.doesNotMatch(html, /<h3[^>]*>(?:David Northrop|Ashley Leverock)<\/h3>/, 'static HTML must not publish a fallback roster');
 const reviews = [
   { _id: 'review-1', authorName: 'Bravo Client One', rating: 5, body: 'Our walks are calmer and our home finally has clear boundaries.' },
   { _id: 'review-2', authorName: 'Bravo Client Two', rating: 5, body: 'The private sessions helped us understand what our dog needed.' },
@@ -18,12 +19,13 @@ const team = [
   { id: 'david', name: 'David Northrop', role: 'owner', title: 'Owner & Lead Trainer', bio: 'Fixture profile.' },
   { id: 'ashley', name: 'Ashley Northrop', role: 'staff', title: 'Trainer & Pitbull Specialist', bio: 'Fixture profile.' },
 ];
+let publicTeam = team;
 const app = express();
 app.get('/api/proof-videos', (_req, res) => res.json({ clips: DEFAULT_PROOF_VIDEOS, nextCursor: null }));
 app.get('/api/config', (_req, res) => res.json({ connected: false, paymentsReady: false, services: SERVICES, schedule: { enabled: false, weekdays: [1,2,3,4,5], hours: [] } }));
 app.get('/api/auth/me', (_req, res) => res.json({ user: null, services: [], membership: { active: false } }));
 app.get('/api/site-images', (_req, res) => res.json({ images: {} }));
-app.get('/api/team', (_req, res) => res.json({ team }));
+app.get('/api/team', (_req, res) => publicTeam === null ? res.status(503).json({ error: 'Fixture team unavailable' }) : res.json({ team: publicTeam }));
 app.get('/api/team/schedules', (_req, res) => res.json({ schedules: [], checkedAt: new Date().toISOString() }));
 app.get('/api/reviews', (_req, res) => res.json({ reviews, average: 5, count: reviews.length }));
 app.use(express.static(dist));
@@ -39,6 +41,7 @@ try {
     const browser = await engine.launch({ headless: true });
     try {
       for (const width of [390, 1440]) {
+        publicTeam = team;
         const context = await browser.newContext({ viewport: { width, height: width === 390 ? 844 : 1000 }, isMobile: width === 390 });
         const page = await context.newPage(); const errors = [];
         page.on('pageerror', error => errors.push(error.message));
@@ -116,6 +119,13 @@ try {
           assert.deepEqual(errors, [], `${engineName}: booking runtime errors`);
           await page.screenshot({ path: `test-results/booking-controls-${engineName}-390.png`, fullPage: false });
         }
+        // Empty and unavailable live rosters must never retain named fallbacks.
+        for (const roster of [[], null]) {
+          publicTeam = roster;
+          await page.goto(origin, { waitUntil: 'networkidle' });
+          assert.equal(await page.locator('.cinema-team-grid article').count(), 0);
+        }
+        publicTeam = team;
         await context.close();
       }
     } finally { await browser.close(); }

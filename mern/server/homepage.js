@@ -12,7 +12,9 @@ function readTemplate() {
 
 export function renderHomepage(html, value) {
   const hero = homeHeroSnapshot(value);
-  const preload = `<link rel="preload" as="image" href="${escapeAttribute(hero?.src || HOME_HERO_SOURCE)}" fetchpriority="high"/>`;
+  // The saved photo now lives in the below-fold gallery. Prioritize the visible
+  // film poster while preserving the gallery's initial source/framing snapshot.
+  const preload = '<link rel="preload" as="image" href="/images/bravo-film-poster.webp" fetchpriority="high"/>';
   // The pre-rendered photo must match the published snapshot on the very first
   // frame, including before JavaScript starts. Preserve the editor's original
   // source attributes so existing image edits and undo keep working.
@@ -23,7 +25,8 @@ export function renderHomepage(html, value) {
       .replace(/ style="[^"]*"/, '')
       .replace(/\/?>(?=$)/, ` style="${escapeAttribute(styles)}"/>`);
   });
-  // Replace the original preload, rather than downloading two hero photos.
+  // Replace React's image preloads so below-fold uploads cannot compete with
+  // the first visible poster for high-priority bandwidth.
   return html.replace(/<link\b(?=[^>]*\brel="preload")(?=[^>]*\bas="image")[^>]*>/g, '')
     .replace('</head>', `${preload}<meta name="${HOME_HERO_META}" content="${escapeAttribute(JSON.stringify(hero))}"/></head>`);
 }

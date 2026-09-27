@@ -26,10 +26,6 @@ import './home-polish.css';
 
 const secondary = ['walking', 'aggression'];
 type Trainer = { id: string; name: string; role: string; title: string; bio: string };
-const fallbackTeam: Trainer[] = [
-  { id: '', name: 'David Northrop', role: 'owner', title: 'Founder / Lead Trainer', bio: '' },
-  { id: '', name: 'Ashley Leverock', role: 'staff', title: 'Trainer / Pit Bull Specialist', bio: '' },
-];
 const displayName = (name: string) => name === 'Ashley Northrop' ? 'Ashley Leverock' : name;
 const portraits: Record<string, string> = { 'David Northrop': 'david-northrop', 'Ashley Northrop': 'ashley-northrop', 'Ashley Leverock': 'ashley-leverock', 'Janet Hughes': 'janet-hughes' };
 
@@ -40,14 +36,14 @@ export default function Home() {
   const { config, user } = useBravo();
   const catalog = config?.services?.length ? config.services : SERVICES;
   const training = catalog.find(service => service.id === 'training');
-  const [team, setTeam] = useState<Trainer[]>(fallbackTeam);
+  const [team, setTeam] = useState<Trainer[]>([]);
   const [teamVisible, setTeamVisible] = useState(false);
   const liveSchedules = useLiveTrainerSchedules(teamVisible);
   const [reviews, setReviews] = useState<{reviews: Array<{_id: string; authorName: string; rating: number; body: string}>; average: number; count: number}>({ reviews: [], average: 0, count: 0 });
   const lessonsOpen = lessonLibraryVisible(config, user);
   useEffect(() => {
     let live = true;
-    api('/team').then(data => { if (live && data.team?.length) setTeam([...data.team].sort((a, b) => Number(b.role === 'owner') - Number(a.role === 'owner'))); }).catch(() => {});
+    api('/team').then(data => { if (live) setTeam(Array.isArray(data.team) ? [...data.team].sort((a, b) => Number(b.role === 'owner') - Number(a.role === 'owner')) : []); }).catch(() => { if (live) setTeam([]); });
     api('/reviews').then(data => { if (live) setReviews(data); }).catch(() => {});
     const observer = new IntersectionObserver(([entry]) => setTeamVisible(entry.isIntersecting), { rootMargin: '300px' });
     const section = document.getElementById('team');
@@ -93,7 +89,7 @@ export default function Home() {
       <section id="dogs" className="cinema-dogs cinema-shell" aria-labelledby="dogs-title">
         <div className="cinema-section-heading" data-reveal=""><div><p className="cinema-eyebrow">INDIVIDUAL DOGS. INDIVIDUAL APPROACH.</p><Editable as="h2" contentKey="cinema-dogs-title" canEditText id="dogs-title">Different dogs.<br/><span>Same goal.</span></Editable></div><p>Clear communication.<br/>Our method adapts to the dog standing in front of us.</p></div>
         <div className="cinema-dog-gallery home-hero-authentic">
-          <HeroPhotoCarousel><img className="home-hero-image" src={hero?.src || HOME_HERO_SOURCE} width="828" height="1121" loading="eager" fetchPriority="high" alt={hero?.framed ? hero.alt : HOME_HERO_ALT} style={hero?.framed ? framingStyle(hero) : undefined} data-site-image-original={HOME_HERO_SOURCE} data-site-image-original-alt={HOME_HERO_ALT} data-site-media-original-styles='{"objectFit":"","objectPosition":"","transform":"","transformOrigin":"","clipPath":""}'/></HeroPhotoCarousel>
+          <HeroPhotoCarousel><img className="home-hero-image" src={hero?.src || HOME_HERO_SOURCE} width="828" height="1121" loading="lazy" fetchPriority="low" alt={hero?.framed ? hero.alt : HOME_HERO_ALT} style={hero?.framed ? framingStyle(hero) : undefined} data-site-image-original={HOME_HERO_SOURCE} data-site-image-original-alt={HOME_HERO_ALT} data-site-media-original-styles='{"objectFit":"","objectPosition":"","transform":"","transformOrigin":"","clipPath":""}'/></HeroPhotoCarousel>
           <div className="cinema-gallery-note"><span>THE BRAVO FIELD NOTES</span><p>Real moments.<br/>Real connection.</p><small>Swipe to meet more of Bravo.</small></div>
         </div>
       </section>
