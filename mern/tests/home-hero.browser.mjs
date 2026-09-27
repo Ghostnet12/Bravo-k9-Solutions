@@ -78,7 +78,7 @@ try {
           await page.screenshot({ path: `test-results/${label}.png` });
           if (owner) {
             const button = page.getByRole('button', { name: 'Edit photos & videos', exact: true });
-            assert.equal(await button.isVisible(), false, `${label}: editing controls stay hidden until a hold`);
+            assert.equal(await button.isVisible(), true, `${label}: owners and administrators have a visible media editor`);
             assert.equal(await page.locator('.home-hero-image').getAttribute('data-site-image-editable'), '');
             await page.locator('.home-hero-image').focus(); await page.keyboard.press('F2');
             await page.getByRole('dialog').waitFor({ state: 'visible' });
