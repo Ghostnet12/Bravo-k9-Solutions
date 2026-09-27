@@ -74,6 +74,17 @@ test('September 27 security audit: client privacy, recovery revocation and dated
       assert.ok(!peopleIds(await call('member', 'get', '/api/groups').expect(200)).includes(String(users.peer._id)));
       await call('member', 'post', '/api/groups', { name: 'Blocked contact', members: [String(users.peer._id)] }).expect(403);
     });
+    await t.test('administrators can repair groups with inactive creators without restoring their access', async () => {
+      for (const inactive of [users.peer, users.removed]) {
+        const group = await CommunityGroup.create({ name: 'Retained conversation', ownerId: inactive._id, members: [inactive._id, users.member._id] });
+        await call('admin', 'patch', `/api/groups/${group._id}`, { members: [String(users.member._id), String(users.staff._id)] }).expect(200);
+        const saved = await CommunityGroup.findById(group._id);
+        assert.equal(String(saved.ownerId), String(inactive._id));
+        assert.deepEqual(new Set(saved.members.map(String)), new Set([users.member._id, users.staff._id].map(String)));
+        await call('member', 'get', `/api/groups/${group._id}/messages`).expect(200);
+        await call(inactive.name, 'get', `/api/groups/${group._id}/messages`).expect(401);
+      }
+    });
     await t.test('stale administrator credentials cannot issue recovery tokens', async () => {
       const { issueRecovery } = await import('../server/account-recovery.js');
       await User.updateOne({ _id: users.admin._id }, { $inc: { credentialVersion: 1 } });

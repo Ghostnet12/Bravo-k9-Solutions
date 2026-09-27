@@ -48,4 +48,7 @@ test('early routes and dependency failures retain headers without Vercel', async
   const rejected = await request(app).post('/api/site-ads').set('Origin', 'https://unrelated.example').send({}).expect(403);
   assertPolicy(rejected.headers);
   assert.match(rejected.headers['cache-control'], /no-store/);
+  const cron = await request(app).get('/api/cron/memberships').expect(401);
+  assertPolicy(cron.headers);
+  assert.match(cron.headers['cache-control'], /no-store/);
 });

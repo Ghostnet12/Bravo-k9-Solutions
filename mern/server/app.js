@@ -256,7 +256,10 @@ app.patch('/api/groups/:id', requireUser, async (req, res) => {
   if (!group || group.archived || (String(group.ownerId) !== String(req.user._id) && req.user.role !== 'owner')) return res.status(404).json({ error: 'Group not found.' });
   if (req.user.mutedUntil > new Date()) return res.status(403).json({ error: 'Group changes are paused while this account is muted.' });
   const data = z.object({ members: z.array(z.string().regex(/^[a-f\d]{24}$/i)).max(30) }).parse(req.body);
-  group.members = await selectableGroupMembers(req.user, [group.ownerId, ...data.members]);
+  // Administrators can repair groups after the creator's account is removed or
+  // blocked. Preserve the creator attribution without restoring their access.
+  const activeOwner = await User.exists({ _id: group.ownerId, blocked: { $ne: true }, removedAt: null });
+  group.members = await selectableGroupMembers(req.user, [...(activeOwner ? [group.ownerId] : []), ...data.members]);
   await group.save(); res.json({ ok: true });
 });
 app.get('/api/groups/:id/messages', requireUser, async (req, res) => {
