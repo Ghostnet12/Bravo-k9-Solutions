@@ -22,6 +22,7 @@ import heroCarouselRouter from './hero-carousel.js';
 import siteBannerRouter from './site-banner.js';
 import siteAdsRouter from './site-ads.js';
 import { DEFAULT_HERO_FILM } from '../shared/hero-film.js';
+import { heroRendition, heroPosterRendition } from './hero-rendition.js';
 
 // Existing collection and image URLs remain compatible with saved portraits.
 // Video records store framing only; actual video bytes still use the protected
@@ -40,8 +41,8 @@ export const homepageHandler = createHomepageHandler({ loadWorkshop: loadPublicW
   await connectDb();
   const film = await HeroFilm.findOne({ _id: DEFAULT_HERO_FILM.id, deleted: false }).select('title description fit revision uploadId hasPoster').maxTimeMS(2000).lean();
   if (!film) return DEFAULT_HERO_FILM;
-  return { ...film, src: film.uploadId ? `/api/hero-film/opening/video?v=${film.revision}` : DEFAULT_HERO_FILM.src,
-    poster: film.uploadId ? film.hasPoster ? `/api/hero-film/opening/poster?v=${film.revision}` : null : DEFAULT_HERO_FILM.poster };
+  return { ...film, src: film.uploadId ? heroRendition(film) || `/api/hero-film/opening/video?v=${film.revision}` : DEFAULT_HERO_FILM.src,
+    poster: film.uploadId ? film.hasPoster ? heroPosterRendition(film) || `/api/hero-film/opening/poster?v=${film.revision}` : null : DEFAULT_HERO_FILM.poster };
 }, loadHero: async () => {
   await connectDb();
   const image = await SiteImage.findById(HOME_HERO_KEY).select('_id current revision previous.uploadId').maxTimeMS(2000).lean();

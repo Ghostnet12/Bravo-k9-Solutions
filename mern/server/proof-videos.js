@@ -9,6 +9,7 @@ import { ProofVideo, ProofCarousel, MediaUpload, MediaChunk, AuditEvent } from '
 import { identify, requireUser, requireOwner, sameOrigin, rateLimit } from './auth.js';
 import { CHUNK_SIZE, MEDIA_LIMITS, validMediaHeader, mediaBytes, sendUploadedMedia } from './media.js';
 import { DEFAULT_PROOF_VIDEOS, PROOF_PAGE_SIZE, PROOF_VIDEO_TYPES, compareProofVideos, normalizeFacebookReelUrl } from '../shared/proof-videos.js';
+import { heroRendition, heroPosterRendition } from './hero-rendition.js';
 
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const idInput = z.string().regex(/^[a-z0-9][a-z0-9-]{0,80}$/);
@@ -28,8 +29,8 @@ const publicClip = row => {
   const original = defaultFor(row._id);
   const facebookUrl = row.uploadId ? null : normalizeFacebookReelUrl(row.facebookUrl || original?.facebookUrl);
   return { id: row._id, title: row.title, description: row.description, order: row.order, revision: row.revision,
-    fit: row.fit || 'contain', src: row.uploadId ? `${apiPath}/${row._id}/video?v=${row.revision}` : original?.src || null,
-    poster: row.uploadId ? row.hasPoster ? `${apiPath}/${row._id}/poster?v=${row.revision}` : null : (!facebookUrl && original?.src) || facebookUrl === original?.facebookUrl ? original?.poster || null : null, facebookUrl };
+    fit: row.fit || 'contain', src: row.uploadId ? (mediaScope === 'hero-film' && heroRendition(row)) || `${apiPath}/${row._id}/video?v=${row.revision}` : original?.src || null,
+    poster: row.uploadId ? row.hasPoster ? (mediaScope === 'hero-film' && heroPosterRendition(row)) || `${apiPath}/${row._id}/poster?v=${row.revision}` : null : (!facebookUrl && original?.src) || facebookUrl === original?.facebookUrl ? original?.poster || null : null, facebookUrl };
 };
 const publicCarousel = row => ({ intervalSeconds: Math.max(2, row?.intervalSeconds ?? 8), revision: row?.revision ?? 0 });
 const after = (clip, cursor) => !cursor || compareProofVideos(clip, cursor) > 0;

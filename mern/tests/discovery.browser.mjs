@@ -66,7 +66,13 @@ try {
           const layout=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,overflow:[...document.querySelectorAll('main *')].filter(el=>el.getBoundingClientRect().right>innerWidth+1 && getComputedStyle(el).position!=='absolute').map(el=>({tag:el.tagName,class:el.className,width:el.getBoundingClientRect().width,right:el.getBoundingClientRect().right})).slice(0,15)}));
           assert.ok(layout.scroll<=layout.width+1,`${path} ${width} no overflow: ${JSON.stringify(layout)}`);
         }
-        await visit(origin);await page.getByRole('button',{name:'Walking & distractions',exact:true}).click();
+        await visit(origin);
+        for(const [label,price] of [['Everyday manners','$200'],['Walking & distractions','$200'],['Aggression & handling','$400'],['Specialized training','$200']]){
+          const tab=page.getByRole('button',{name:label,exact:true});
+          assert.ok((await tab.innerText()).includes(price),`${label} has its own service price`);
+          await tab.click();assert.ok((await page.locator('.goal-price').innerText()).includes(price));
+        }
+        await page.getByRole('button',{name:'Walking & distractions',exact:true}).click();
         assert.match(await page.locator('.goal-result').innerText(),/Skills that travel/);
         await page.locator('.goal-result').getByRole('link',{name:'Plan my first visit'}).click();
         await page.getByRole('combobox',{name:'What would you like help with?',exact:true}).waitFor();

@@ -5,6 +5,7 @@
 .goal-choices button,.proof-topics button{min-height:46px;padding:11px 18px;border:1px solid #64533a;border-radius:30px;background:#161513;color:#eee6d7;font:inherit;font-size:.9rem;cursor:pointer;transition:background .18s,color .18s,transform .18s}
 .goal-choices button[aria-pressed=true],.proof-topics button[aria-pressed=true]{background:#ba9a64;color:#101010;border-color:#ba9a64}
 .goal-choices button:active,.proof-topics button:active{transform:scale(.97)}
+.goal-choices button{display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:12px;flex:1 1 200px;text-align:left;border-radius:22px;padding:18px 20px}.goal-tab-price{font-size:1.25rem;font-weight:600;line-height:1.4}.goal-tab-price>span{font-size:.875rem;font-weight:400}.goal-tab-price small{display:block;margin-top:3px;font-size:.875rem;font-weight:400}
 .goal-result{display:grid;grid-template-columns:1.1fr 1fr;gap:clamp(24px,5vw,72px);padding:clamp(24px,4vw,48px);border:1px solid #403626;border-radius:24px;background:linear-gradient(125deg,#201c16,#111);align-items:center;animation:discovery-enter .24s ease-out}
 .goal-result h3{font:600 clamp(1.6rem,2.5vw,2.5rem)/1.12 Montserrat,sans-serif;letter-spacing:-.035em;margin:0 0 20px;color:#fff}
 .goal-result p{line-height:1.75;color:#d6d0c6}

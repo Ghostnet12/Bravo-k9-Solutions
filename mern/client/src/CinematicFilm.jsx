@@ -43,7 +43,8 @@ export default function CinematicFilm({ children }) {
     const element = video.current;
     if (!element) return;
     const preference = matchMedia('(prefers-reduced-motion: reduce)');
-    let visible = false, disposed = false;
+    const bounds = root.current.getBoundingClientRect();
+    let visible = bounds.bottom > 0 && bounds.top < window.innerHeight, disposed = false;
     // Safari requires a muted inline element before the first play attempt.
     element.defaultMuted = true;
     element.muted = true;
@@ -56,6 +57,9 @@ export default function CinematicFilm({ children }) {
     };
     const observer = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; update(); });
     observer.observe(root.current);
+    // Begin immediately for the first viewport; don't pause the parser-started
+    // autoplay while waiting for the first asynchronous observer callback.
+    update();
     const accessibility = new MutationObserver(update);
     accessibility.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
     preference.addEventListener('change', update); document.addEventListener('visibilitychange', update);
