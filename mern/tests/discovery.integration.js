@@ -47,7 +47,7 @@ test('discovery publishing, consent, privacy and performance reporting persist',
     await call('staff','get','/api/admin/course-interest').expect(403);
     const list = (await call('owner','get','/api/admin/course-interest').expect(200)).body.interests;
     assert.equal(list.length,1); assert.equal(list[0].email,'visitor@example.test');
-    await call('owner','delete',`/api/admin/course-interest/${list[0]._id}`).expect(200);
+    await call('owner','delete',`/api/admin/course-interest/${list[0]._id}`,{}).expect(200);
     assert.equal((await call('owner','get','/api/admin/course-interest')).body.interests.length,0);
   });
   await t.test('metrics validate input, honor privacy and report genuine samples', async () => {
