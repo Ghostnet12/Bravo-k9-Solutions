@@ -111,7 +111,7 @@ export function SiteContentProvider({ children }) {
       catch(e){if(!disposed)setError(e.message);}finally{pending=false;}
     }
     const down=event=>{cancel();suppressUntil=0;const target=event.target;if(!(target instanceof Element)||event.button!==0||event.isPrimary===false||ignored(target)||!target.closest('main,header,footer,[data-site-content-key],[data-site-service],[data-site-trainer]'))return;hold={x:event.clientX,y:event.clientY,timer:setTimeout(()=>{suppressUntil=Date.now()+1200;open(target);},650)};};
-    const move=event=>{if(hold && Math.hypot(event.clientX-hold.x,event.clientY-hold.y)>12)cancel();};
+    const move=event=>{if(hold && Math.hypot(event.clientX-hold.x,event.clientY-hold.y)>12){suppressUntil=Date.now()+1200;cancel();}};
     const click=event=>{if(Date.now()<suppressUntil && !event.target.closest?.('dialog')){event.preventDefault();event.stopPropagation();}};
     const context=event=>{if(event.target instanceof Element && !ignored(event.target) && event.target.closest('main,header,footer,[data-site-content-key],[data-site-service],[data-site-trainer]'))event.preventDefault();};
     const requested=event=>{if(event.detail?.record){const {kind,id}=event.detail.record;if(['trainer','service'].includes(kind) && /^[-a-z0-9]+$/.test(id)){setSelection(null);setEditingRecord({kind,id});}return;}const key=event.detail?.key;if(typeof key!=='string'||!/^[-a-z0-9]+$/.test(key))return;const target=key === 'page' ? document.getElementById('root') : document.querySelector(`[data-site-content-key="${key}"]`);if(target)open(target,!!event.detail?.design);};
