@@ -26,6 +26,7 @@ try {
       for (const width of [320, 390, 1440]) {
         const context = await browser.newContext({ viewport: { width, height: 844 }, isMobile: width < 700 });
         const page = await context.newPage(), errors = []; let printed = false, read = false, role = 'member', changeBody = null, saved = false;
+        await page.clock.setFixedTime(new Date('2026-09-13T12:00:00Z'));
         let singleVisitBody=null;
         let trainerAssigned='aaaaaaaaaaaaaaaaaaaaaaaa',trainerPending=false,trainerAccepted=null;
         let savedVisits=['2026-09-21','2026-09-28','2026-10-05'].map(date=>({date,time:'10:00',service:'training'}));

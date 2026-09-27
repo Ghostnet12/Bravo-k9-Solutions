@@ -188,6 +188,7 @@ body .banner-editor :is(input,select,textarea) { background: #090909; color: var
 .app-header.bravo-nav #bravo-navigation.is-open .nav-explore a { flex: 1 1 40%; padding: 10px 12px; font-size: 14px; }
 .app-header.bravo-nav #bravo-navigation.is-open .nav-workspace { padding-top: 16px; border-top: 1px solid var(--line); }
 .app-header.bravo-nav #bravo-navigation.is-open .nav-workspace a { font-size: 13px; }
+.app-header.bravo-nav[data-signed-in=true] #bravo-navigation.is-open .nav-workspace { order: -1; padding-top: 0; border-top: 0; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
 .app-header.bravo-nav #bravo-navigation.is-open .nav-sign-out { border-top: 1px solid var(--line); padding-top: 8px; }
 @keyframes bravo-menu-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 @media(min-width:1601px) { .app-header.bravo-nav[data-signed-in=true] { width: calc(100% - 40px); max-width: 1640px; } }
