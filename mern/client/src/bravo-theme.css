@@ -74,7 +74,7 @@ html { scrollbar-color: #6f6049 #101010; }
 /* Avoid WebKit's intrinsic native-menu width for long option labels. */
 .app-page select:not([multiple]):not([size]) {
   appearance: none; -webkit-appearance: none; min-inline-size: 0; max-inline-size: 100%;
-  padding-right: 2.5rem; text-overflow: ellipsis;
+  padding-right: 2.5rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%23e1c99d' stroke-width='1.5'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 16px center;
 }
