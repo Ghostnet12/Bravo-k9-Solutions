@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { LessonLibrary, LessonSection, Lesson, Booking, AuditEvent } from './models.js';
+import { LessonLibrary, LessonSection, Lesson, Booking, AuditEvent, ServiceSetting } from './models.js';
 import { requireUser, requireOwner } from './auth.js';
 import { LESSON_PRICE_CENTS, LESSON_BUNDLE_CENTS } from '../shared/lesson-library.js';
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
@@ -37,7 +37,8 @@ export async function readLessonLibrary() {
     await reconcileClosedLibrary();
     record = await LessonLibrary.findById('library').lean();
   }
-  return { open: record?.open === true, revision: record?.revision || 0, pendingCheckouts: record?.open ? 0 : record?.pendingCheckouts || 0, lessonCents: LESSON_PRICE_CENTS, bundleCents: LESSON_BUNDLE_CENTS };
+  const pricing = await ServiceSetting.findById('online').lean();
+  return { open: record?.open === true, revision: record?.revision || 0, pendingCheckouts: record?.open ? 0 : record?.pendingCheckouts || 0, lessonCents: pricing?.cents ?? LESSON_PRICE_CENTS, bundleCents: pricing?.bundleCents ?? LESSON_BUNDLE_CENTS };
 }
 export async function requireOpenLibrary(user) {
   if (user?.role !== 'owner' && !(await readLessonLibrary()).open) throw fail('This page is not available.', 404);

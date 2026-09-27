@@ -16,6 +16,7 @@ export const User = model('BravoUser', new Schema({
   lastReauthenticatedAt: { type: Date, select: false },
   phone: { type: String, default: '' }, dogName: { type: String, default: '' }, address: { type: String, default: '' },
   title: { type: String, default: '' }, bio: { type: String, default: '' }, showPhone: { type: Boolean, default: false },
+  publicName: String, publicProfileRevision: { type: Number, default: 0 },
   mutedUntil: Date, blocked: { type: Boolean, default: false },
   removedAt: Date, removedBy: id,
   stripeCustomerId: String, firstPaidAt: Date,
@@ -47,7 +48,7 @@ export const Booking = model('BravoBooking', bookingSchema);
 export const Slot = model('BravoSlot', new Schema({ _id: String, bookingId: id, date: String, time: String, reason: String }));
 export const TrainerSchedule = model('BravoTrainerSchedule', new Schema({ _id: String, enabled: Boolean, weekdays: [Number], hours: [String], overrides: [new Schema({ date: String, hours: [String] }, { _id: false })], revision: { type: Number, default: 0 } }, { timestamps: true }));
 export const Settings = model('BravoSettings', new Schema({ _id: String, weekdays: [Number], hours: [String], overrides: [new Schema({date:String,hours:[String]}, {_id:false})], enabled: Boolean, revision: { type: Number, default: 0 } }));
-export const ServiceSetting = model('BravoServiceSetting', new Schema({ _id: String, cents: { type: Number, min: 0, max: 1000000 }, enabled: { type: Boolean, default: true }, updatedBy: id }, { timestamps: true }));
+export const ServiceSetting = model('BravoServiceSetting', new Schema({ _id: String, name: String, description: String, cents: { type: Number, min: 0, max: 1000000 }, additionalDogCents: { type: Number, min: 0, max: 1000000 }, bundleCents: { type: Number, min: 0, max: 1000000 }, revision: { type: Number, default: 0 }, enabled: { type: Boolean, default: true }, updatedBy: id }, { timestamps: true }));
 export const ChatReset = model('BravoChatReset', new Schema({ _id: String, clearedAt: { type: Date, required: true } }, { timestamps: true }));
 export const Message = model('BravoMessage', new Schema({ userId: id, authorName: String, role: String, kind: { type: String, enum: ['message', 'announcement', 'alert'] }, body: String, deleted: { type: Boolean, default: false } }, { timestamps: true }));
 export const Review = model('BravoReview', new Schema({ userId: { type: id, required: true, unique: true, index: true }, authorName: String, rating: { type: Number, min: 1, max: 5 }, body: String, hidden: { type: Boolean, default: false }, moderatedAt: Date, moderatedBy: id }, { timestamps: true }));

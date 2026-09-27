@@ -1,0 +1,70 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import mongoose from 'mongoose';
+import request from 'supertest';
+import { randomBytes, createHash } from 'node:crypto';
+import { MongoMemoryReplSet } from 'mongodb-memory-server';
+import { quote } from '../shared/catalog.js';
+import { validatedCheckoutPricing } from '../server/payments.js';
+import { jointTrainerPair, trainerOptions } from '../shared/trainers.js';
+
+test('owner toolkit persists real catalog prices and trainer profiles with permission and conflict protection', {timeout:180000},async()=>{
+ const replica=await MongoMemoryReplSet.create({replSet:{count:1},binary:{version:'7.0.14'}});
+ process.env.NODE_ENV='test';process.env.MONGODB_URI=replica.getUri();process.env.MONGODB_DB='website_editor_test';process.env.APP_ORIGIN='http://localhost:5173';
+ try {
+  const {default:app}=await import('../server/site-image-app.js');
+  const {connectDb}=await import('../server/db.js');const {User,Session,AuditEvent}=await import('../server/models.js');
+  const {SiteContent}=await import('../server/site-content-store.js');await connectDb();await SiteContent.init();
+  const cookies={},users={};
+  for(const role of ['owner','administrator','staff','member']){
+   const user=await User.create({name:role==='owner'?'David Northrop':role==='administrator'?'Ashley Northrop':role,role:role==='administrator'?'owner':role,passwordHash:'fixture'});users[role]=user;
+   const token=randomBytes(32).toString('hex');await Session.create({tokenHash:createHash('sha256').update(token).digest('hex'),userId:user._id,expiresAt:new Date(Date.now()+3600000)});cookies[role]=`bravo_session=${token}`;
+  }
+  process.env.OWNER_USER_ID=String(users.owner._id);
+  const call=(who,method,path,body,origin=process.env.APP_ORIGIN)=>{const req=request(app)[method](path).set('Origin',origin);if(who)req.set('Cookie',cookies[who]);return body===undefined?req:req.send(body);};
+  const training={expectedRevision:0,cents:22500,additionalDogCents:12500,name:'Private training fixture',description:'Published program description',enabled:true};
+  for(const who of [null,'staff','member'])await call(who,'patch','/api/admin/services/training',training).expect(who?403:401);
+  await call('owner','patch','/api/admin/services/training',training,'https://wrong.example').expect(403);
+  await call('owner','patch','/api/admin/services/training',{...training,cents:-1}).expect(400);
+  await call('owner','patch','/api/admin/services/training',{...training,cents:1.5}).expect(400);
+  await call('owner','patch','/api/admin/services/training',{...training,role:'owner'}).expect(400);
+  const published=(await call('owner','patch','/api/admin/services/training',training).expect(200)).body.service;
+  assert.equal(published.cents,22500);assert.equal(published.additionalDogCents,12500);assert.equal(published.revision,1);
+  await call('administrator','patch','/api/admin/services/training',training).expect(409);
+  await call('administrator','patch','/api/admin/services/online',{expectedRevision:0,cents:9000,bundleCents:30000}).expect(200);
+  await call('administrator','patch','/api/admin/services/walking',{expectedRevision:0,cents:3500,enabled:true}).expect(200);
+  await call('owner','patch','/api/admin/services/online',{expectedRevision:1,cents:9000,bundleCents:10000}).expect(400);
+  const config=(await call(null,'get','/api/config').expect(200)).body;
+  assert.equal(config.services.find(row=>row.id==='training').name,training.name);
+  assert.equal(config.lessonLibrary.lessonCents,9000);assert.equal(config.lessonLibrary.bundleCents,30000);
+  const preview=(await call(null,'post','/api/quote',{serviceIds:['training'],dogCount:3,visits:[{date:'2026-10-05',time:'09:00',service:'training'}]}).expect(200)).body;
+  assert.equal(preview.dueNowCents,47500);
+  const saved={serviceIds:['training','online'],dogCount:2,visits:[],quote:quote(['training','online'],[],{dogCount:2},config.services)};
+  assert.equal(saved.quote.dueNowCents,42500);assert.equal(validatedCheckoutPricing(saved).dueNowCents,42500);
+  await call('owner','patch','/api/admin/services/training',{...training,expectedRevision:1,cents:24000}).expect(200);
+  assert.equal(validatedCheckoutPricing(saved).dueNowCents,42500,'existing quotes retain their exact agreement');
+  const altered=structuredClone(saved);altered.quote.lines[0].unitCents=1;assert.throws(()=>validatedCheckoutPricing(altered));
+  const key='trainer-ashley-introduction';await SiteContent.create({_id:key,revision:1,value:{text:'Earlier introduction',font:'georgia'}});
+  const before=(await call(null,'get','/api/team')).body.team.find(row=>row.id===String(users.administrator._id));
+  const profile={expectedRevision:0,expectedIntroductionRevision:1,name:'Ashley Example',title:'Trainer / Pit Bull Specialist',bio:'Updated public introduction.'};
+  for(const who of [null,'staff','member'])await call(who,'patch',`/api/admin/team/${before.id}`,profile).expect(who?403:401);
+  await call('owner','patch',`/api/admin/team/${users.member._id}`,profile).expect(404);
+  await call('administrator','patch',`/api/admin/team/${before.id}`,{...profile,role:'owner'}).expect(400);
+  const after=(await call('administrator','patch',`/api/admin/team/${before.id}`,profile).expect(200)).body.person;
+  assert.equal(after.name,profile.name);assert.equal(after.title,profile.title);assert.equal(after.bio,profile.bio);
+  assert.equal(after.imageKey,before.imageKey);assert.equal(after.image,before.image);assert.equal(after.id,before.id);
+  await call('owner','patch',`/api/admin/team/${before.id}`,profile).expect(409);
+  const canonical=await User.findById(before.id).lean();assert.equal(canonical.name,'Ashley Northrop');assert.equal(canonical.role,'owner');
+  assert.equal(jointTrainerPair([users.owner,canonical]).length,2);
+  assert.equal(trainerOptions([users.owner,canonical]).find(row=>String(row._id)===before.id).name,'Ashley Example');
+  assert.equal((await call(null,'get','/api/site-content')).body.entries[key].value.text,profile.bio);
+  const batch={changes:[{key:'copy-home-10',expectedRevision:0,value:{text:'New approach'}},{key:'goal-manners-label',expectedRevision:0,value:{text:'Daily skills'}}]};
+  await call('member','post','/api/site-content/batch',batch).expect(403);
+  await call('administrator','post','/api/site-content/batch',batch).expect(200);
+  await call('owner','post','/api/site-content/batch',{changes:[{key:'copy-home-10',expectedRevision:1,value:{text:'Must roll back'}},{key:'goal-manners-label',expectedRevision:0,value:{text:'Stale'}}]}).expect(409);
+  const entries=(await call(null,'get','/api/site-content')).body.entries;assert.equal(entries['copy-home-10'].value.text,'New approach');assert.equal(entries['goal-manners-label'].value.text,'Daily skills');
+  for(const value of [{background:'image',backgroundImage:'javascript:alert(1)'},{background:'image',backgroundImage:'https://unapproved.example/a.jpg'}])await call('owner','put','/api/site-content/copy-home-9',{expectedRevision:0,value}).expect(400);
+  assert.ok(await AuditEvent.exists({action:'trainer.profile.published'}));assert.ok(await AuditEvent.exists({action:'service.updated'}));
+  users.administrator.blocked=true;await users.administrator.save();await call('administrator','patch',`/api/admin/team/${before.id}`,{...profile,expectedRevision:1}).expect(401);
+ } finally {await mongoose.disconnect();await replica.stop();}
+});

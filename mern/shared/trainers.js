@@ -18,14 +18,16 @@ export const acceptedTrainerIds = booking => unique(booking?.trainerAcceptedIds?
 export function jointTrainerPair(people = []) {
   const real = people.filter(person => identity(person) !== JOINT_TRAINER_ID && !person.blocked);
   const normalized = person => String(person.name || '').trim().replace(/\s+/g, ' ');
-  const david = real.filter(person => /^(?:david|dave)(?: northrop)?$/i.test(normalized(person)));
-  const ashley = real.filter(person => /^ashley(?: northrop| leverock)?$/i.test(normalized(person)));
+  const david = real.filter(person => person.profileKey ? person.profileKey === 'david' : /^(?:david|dave)(?: northrop)?$/i.test(normalized(person)));
+  const ashley = real.filter(person => person.profileKey ? person.profileKey === 'ashley' : /^ashley(?: northrop| leverock)?$/i.test(normalized(person)));
   // Fail closed when profiles are missing or names are ambiguous.
   return david.length === 1 && ashley.length === 1 && identity(david[0]) !== identity(ashley[0]) ? [david[0], ashley[0]] : [];
 }
 export function trainerOptions(people = []) {
-  const real = people.filter(person => identity(person) !== JOINT_TRAINER_ID).map(person => ({ ...person, name: publicTrainerName(person.name) }));
-  const pair = jointTrainerPair(real), ids = pair.map(identity);
+  const canonical = people.filter(person => identity(person) !== JOINT_TRAINER_ID);
+  const ids = jointTrainerPair(canonical).map(identity);
+  const real = canonical.map(person => ({ ...person, name: person.publicName ?? (person.profileKey ? person.name : publicTrainerName(person.name)) }));
+  const pair = ids.map(id => real.find(person => identity(person) === id));
   const capacityKnown = pair.length === 2 && pair.every(person => Number.isFinite(person.spotsRemaining));
   const group = { id: JOINT_TRAINER_ID, _id: JOINT_TRAINER_ID, name: JOINT_TRAINER_LABEL, staffIds: ids, disabled: pair.length !== 2, joint: true,
     ...(capacityKnown ? { spotsRemaining: Math.min(...pair.map(person => person.spotsRemaining)), activeDogs: Math.max(...pair.map(person => person.activeDogs || 0)), limit: Math.min(...pair.map(person => person.limit || 5)), full: pair.some(person => person.full || person.spotsRemaining === 0) } : {}) };

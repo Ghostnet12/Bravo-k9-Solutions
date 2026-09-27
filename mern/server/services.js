@@ -8,7 +8,10 @@ export async function effectiveServices({ includeDisabled = false } = {}) {
   const overrides = new Map(stored.map(setting => [setting._id, setting]));
   return SERVICES.map(service => {
     const setting = overrides.get(service.id);
-    if (service.id === 'online') return { ...service, enabled: library.open };
-    return { ...service, cents: Number.isInteger(setting?.cents) ? setting.cents : service.cents, enabled: setting?.enabled !== false };
+    return { ...service, name: setting?.name ?? service.name, description: setting?.description ?? service.description,
+      cents: setting?.cents ?? service.cents, revision: setting?.revision || 0,
+      ...(service.id === 'training' ? { additionalDogCents: setting?.additionalDogCents ?? service.additionalDogCents } : {}),
+      ...(service.id === 'online' ? { bundleCents: setting?.bundleCents ?? service.bundleCents } : {}),
+      enabled: service.id === 'online' ? library.open : setting?.enabled !== false };
   }).filter(service => includeDisabled || service.enabled);
 }

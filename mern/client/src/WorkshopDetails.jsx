@@ -16,7 +16,14 @@ export function WorkshopDetails({ compact = false }) {
   const [event, setEvent] = useState(initialWorkshop), [error, setError] = useState(''), [editing, setEditing] = useState(false), [status, setStatus] = useState('');
   const owner = user?.role === 'owner' && !user.mustChangePassword;
   useEffect(() => { let active = true; api('/workshops').then(data => { if (active) { setEvent(data.event); } }).catch(() => { if (active) setError('Workshop details could not load. Call Bravo for the latest information.'); }); return () => { active = false; }; }, []);
-  return <section className="workshop-details" aria-label="Featured workshop">
+  useEffect(()=>{
+    if(!owner)return;
+    let live=true;
+    const open=()=>api('/workshops').then(data=>{if(live){setEvent(data.event);setEditing(true);}}).catch(cause=>{if(live)setError(cause.message);});
+    window.addEventListener('bravo-workshop-edit',open);
+    return()=>{live=false;window.removeEventListener('bravo-workshop-edit',open);};
+  },[owner]);
+  return <section data-site-workshop="" className="workshop-details" aria-label="Featured workshop">
     {error && <Notice error>{error}</Notice>}
     <div data-workshop-content={compact ? 'compact' : 'full'} dangerouslySetInnerHTML={{ __html: workshopMarkup(event, compact) }}/>
     {owner && event && !compact && <button type="button" className="button button-ghost" onClick={() => setEditing(true)}>Edit workshop details</button>}

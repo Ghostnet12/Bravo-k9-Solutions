@@ -58,7 +58,7 @@ export default function StaffBooking({ team, onSaved }) {
       <label>Opening (Aberdeen time)<select value={time} required disabled={busy || !slots.length} onChange={e => setTime(e.target.value)}><option value="">{date && !slots.length ? 'No openings that day' : 'Choose a time'}</option>{slots.map(value => <option key={value} value={value}>{formatTime(value)}</option>)}</select></label>
       <label>Dog’s name<input name="dogName" required maxLength="80" defaultValue={client.dogName}/></label>
       <label>Client phone<input type="tel" name="phone" required minLength="7" maxLength="30" defaultValue={client.phone}/></label>
-      <label>Number of dogs<input name="dogCount" type="number" min="1" max="10" defaultValue="1"/><small>Training: $200/month for the first dog, then $100/month per additional dog. Walking: {money(catalog.find(service => service.id === 'walking')?.cents ?? 2500)} per dog.</small></label>
+      <label>Number of dogs<input name="dogCount" type="number" min="1" max="10" defaultValue="1"/><small>Training: {money(catalog.find(service => service.id === 'training')?.cents ?? 20000)}/month for the first dog, then {money(catalog.find(service => service.id === 'training')?.additionalDogCents ?? 10000)}/month per additional dog. Walking: {money(catalog.find(service => service.id === 'walking')?.cents ?? 2500)} per dog.</small></label>
     </div><label>Visit address<input name="address" required minLength="5" maxLength="300" defaultValue={client.address}/></label><label>Private booking notes<textarea name="notes" maxLength="1500" rows="3"/></label><AppointmentNotice compact/><button className="button" disabled={busy || loadingSlots || !time}>{busy ? 'Working…' : 'Add visit request'}</button></form>}
   </details>;
 }

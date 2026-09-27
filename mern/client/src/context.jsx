@@ -1,9 +1,18 @@
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { api } from './api';
+import { publicCatalogSnapshot } from '../../shared/catalog';
 const Context = createContext(null);
 const noMembership = { active: false, manual: false, onlineAccess: false };
+function initialCatalog() {
+  try {
+    const services = publicCatalogSnapshot(typeof document === 'undefined' ? null : JSON.parse(document.querySelector('meta[name="bravo-catalog"]')?.content || 'null'));
+    if (!services) return null;
+    const online = services.find(service => service.id === 'online');
+    return { services, lessonLibrary: { open: online.enabled, lessonCents: online.cents, bundleCents: online.bundleCents } };
+  } catch { return null; }
+}
 export function AppProvider({ children }) {
-  const [config, setConfig] = useState(null), [user, setUser] = useState(null), [services, setServices] = useState([]), [authReady, setAuthReady] = useState(false);
+  const [config, setConfig] = useState(initialCatalog), [user, setUser] = useState(null), [services, setServices] = useState([]), [authReady, setAuthReady] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const readNotifications = useRef(new Set()), notificationUser = useRef(user?.id);
   notificationUser.current = user?.id;
@@ -50,7 +59,11 @@ export function AppProvider({ children }) {
     setUser(null); setServices([]); setMembership(noMembership); setNotifications([]); setBookingDraft(null);
   }, []);
   const refreshConfig = useCallback(() => api('/config').then(setConfig), []);
+  const updateService = useCallback(service => setConfig(old => ({ ...old,
+    services: (old?.services || []).map(item => item.id === service.id ? service : item),
+    ...(service.id === 'online' ? { lessonLibrary: { ...old?.lessonLibrary, lessonCents: service.cents, bundleCents: service.bundleCents } } : {}),
+  })), []);
   useEffect(() => { refreshConfig().catch(() => setConfig({ connected: false, paymentsReady: false })); refreshUser().catch(() => {}); }, [refreshUser, refreshConfig]);
-  return <Context.Provider value={{ signOut, notifications, refreshNotifications, markNotificationsRead, config, user, services, membership, setUser, authReady, refreshUser, refreshConfig, bookingDraft, setBookingDraft }}>{children}</Context.Provider>;
+  return <Context.Provider value={{ signOut, notifications, refreshNotifications, markNotificationsRead, config, user, services, membership, setUser, authReady, refreshUser, refreshConfig, updateService, bookingDraft, setBookingDraft }}>{children}</Context.Provider>;
 }
 export const useBravo = () => useContext(Context);
