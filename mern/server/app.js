@@ -1,4 +1,5 @@
 import { discoveryRoutes } from './discovery.js';
+import { groupPeopleFilter, selectableGroupMembers } from './group-privacy.js';
 import { publicTrainerName } from '../shared/discovery.js';
 import { mfaRoutes } from './mfa-routes.js';
 import { attributeBooking, monitoringEnabled } from './monitoring.js';
@@ -241,14 +242,13 @@ app.post('/api/direct', requireUser, rateLimit('direct', 20, 60000), async (req,
 });
 app.get('/api/groups', requireUser, async (req, res) => {
   const groups = await CommunityGroup.find({ ...(req.user.role === 'owner' ? {} : { members: req.user._id }), archived: false }).lean();
-  const people = await User.find({ blocked: { $ne: true } }).select('name role').sort({ name: 1 }).limit(300).lean();
+  const people = await User.find(await groupPeopleFilter(req.user)).select('name role').sort({ name: 1 }).limit(300).lean();
   res.json({ groups: groups.map(group => ({ ...group, _id: String(group._id), ownerId: String(group.ownerId), members: group.members.map(String) })), people: people.map(person => ({ id: String(person._id), name: person.name, role: publicRole(person) })) });
 });
 app.post('/api/groups', requireUser, rateLimit('groups', 8, 3600000), async (req, res) => {
   if (req.user.mutedUntil > new Date()) return res.status(403).json({ error: 'Group creation is paused while this account is muted.' });
   const data = z.object({ name: z.string().trim().min(2).max(60), members: z.array(z.string().regex(/^[a-f\d]{24}$/i)).max(30).default([]) }).parse(req.body);
-  const members = [...new Set([String(req.user._id), ...data.members])];
-  if (await User.countDocuments({ _id: { $in: members }, blocked: { $ne: true } }) !== members.length) throw new Error('Choose active Bravo accounts for your group.');
+  const members = await selectableGroupMembers(req.user, [req.user._id, ...data.members]);
   const group = await CommunityGroup.create({ name: data.name, ownerId: req.user._id, members }); res.status(201).json({ group });
 });
 app.patch('/api/groups/:id', requireUser, async (req, res) => {
@@ -256,9 +256,11 @@ app.patch('/api/groups/:id', requireUser, async (req, res) => {
   if (!group || group.archived || (String(group.ownerId) !== String(req.user._id) && req.user.role !== 'owner')) return res.status(404).json({ error: 'Group not found.' });
   if (req.user.mutedUntil > new Date()) return res.status(403).json({ error: 'Group changes are paused while this account is muted.' });
   const data = z.object({ members: z.array(z.string().regex(/^[a-f\d]{24}$/i)).max(30) }).parse(req.body);
-  const members = [...new Set([String(group.ownerId), ...data.members])];
-  const active = await User.find({ _id: { $in: members }, blocked: { $ne: true } }).select('_id').lean();
-  group.members = active.map(person => person._id); await group.save(); res.json({ ok: true });
+  // Administrators can repair groups after the creator's account is removed or
+  // blocked. Preserve the creator attribution without restoring their access.
+  const activeOwner = await User.exists({ _id: group.ownerId, blocked: { $ne: true }, removedAt: null });
+  group.members = await selectableGroupMembers(req.user, [...(activeOwner ? [group.ownerId] : []), ...data.members]);
+  await group.save(); res.json({ ok: true });
 });
 app.get('/api/groups/:id/messages', requireUser, async (req, res) => {
   const group = await CommunityGroup.findOne({ _id: req.params.id, ...(req.user.role === 'owner' ? {} : { members: req.user._id }), archived: false });

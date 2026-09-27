@@ -34,3 +34,21 @@ test('real application health and rejected writes retain the shared security pol
   const denied = await request(app).post('/api/auth/login').set('Origin', 'https://unrelated.example').send({}).expect(403);
   assertPolicy(denied.headers);
 });
+
+test('early routes and dependency failures retain headers without Vercel', async t => {
+  const previous = process.env.MONGODB_URI;
+  delete process.env.MONGODB_URI;
+  t.after(() => { if (previous !== undefined) process.env.MONGODB_URI = previous; });
+  for (const path of ['/api/health/ready', '/api/site-ads', '/api/site-ads/example/image']) {
+    const response = await request(app).get(path).expect(503);
+    assertPolicy(response.headers);
+    assert.match(response.headers['cache-control'], /no-store/);
+    assert.doesNotMatch(response.text, /MONGODB_URI|passwordHash|stack/);
+  }
+  const rejected = await request(app).post('/api/site-ads').set('Origin', 'https://unrelated.example').send({}).expect(403);
+  assertPolicy(rejected.headers);
+  assert.match(rejected.headers['cache-control'], /no-store/);
+  const cron = await request(app).get('/api/cron/memberships').expect(401);
+  assertPolicy(cron.headers);
+  assert.match(cron.headers['cache-control'], /no-store/);
+});
