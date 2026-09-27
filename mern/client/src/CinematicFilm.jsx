@@ -79,7 +79,12 @@ export default function CinematicFilm({ children }) {
       hold.current = { x: event.clientX, y: event.clientY, timer: setTimeout(() => { suppressUntil.current = Date.now() + 1200; editFilm(); }, 650) };
     }}
     onPointerMove={event => { if (hold.current && Math.hypot(event.clientX - hold.current.x, event.clientY - hold.current.y) > 12) cancelHold(); }}
-    onPointerUp={cancelHold} onPointerCancel={cancelHold} onPointerLeave={cancelHold}
+    onPointerUp={cancelHold} onPointerCancel={cancelHold}
+    onPointerLeave={event => {
+      // WebKit emits layer-leave events when capture retargets the pointer.
+      // Movement, release and cancellation still stop an actual abandoned hold.
+      if (!event.currentTarget.hasPointerCapture(event.pointerId)) cancelHold();
+    }}
     onClickCapture={event => { if (!event.target.closest('dialog') && Date.now() < suppressUntil.current) { event.preventDefault(); event.stopPropagation(); } }}
     onContextMenu={event => { if (canEdit && isFilmTarget(event.target)) event.preventDefault(); }}>
     <div className="cinema-hero-media" data-site-image-ignore=""><div className="cinema-film">
