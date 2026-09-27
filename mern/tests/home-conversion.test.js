@@ -2,13 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-test('homepage puts verified proof before the primary training decision', async () => {
+test('homepage tells the requested story while preserving proof and booking', async () => {
   const source = await readFile(new URL('../client/src/Home.tsx', import.meta.url), 'utf8');
   const proof = source.indexOf('id="reviews"');
   const training = source.indexOf('id="training"');
-  assert.ok(proof > 0 && training > proof);
+  assert.ok(training > 0 && proof > training);
   assert.match(source, /Verified Bravo account/);
-  assert.match(source, /Calmer walks, clearer routines, and practical help at home/);
+  assert.match(source, /We train where life happens/);
   assert.match(source, /href="\/portal\?program=training"/);
   assert.match(source, /Start with private training/);
   assert.equal((source.match(/id="reviews"/g) || []).length, 1);
@@ -26,7 +26,7 @@ test('proof cards link directly to the original videos without blank third-party
 test('homepage keeps specialist choices subordinate and does not invent credentials', async () => {
   const source = await readFile(new URL('../client/src/Home.tsx', import.meta.url), 'utf8');
   assert.match(source, /const secondary = \['walking', 'aggression'\]/);
-  assert.match(source, /team\.slice\(0, 3\)/);
+  assert.match(source, /team\.map\(person/);
   assert.doesNotMatch(source, /certified|award-winning|years of experience/i);
 });
 

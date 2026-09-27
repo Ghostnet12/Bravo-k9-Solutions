@@ -36,7 +36,7 @@ try { for (const [name, engine] of Object.entries({ chromium, webkit })) {
   assert.equal(await page.getByRole('button',{name:'Add photos',exact:true}).count(),0);
   const start=await track.evaluate(el=>el.scrollLeft);await page.waitForTimeout(2200);
   assert.notEqual(await track.evaluate(el=>el.scrollLeft),start,'automatically moves left');
-  assert.equal(await page.locator('.hero-photo-controls').evaluate(el=>getComputedStyle(el).clipPath),'inset(50%)','controls hidden in normal view');
+  assert.equal(await page.locator('.hero-photo-controls').evaluate(el=>getComputedStyle(el).clipPath),'none','gallery controls are available to pause the motion');
   assert.equal(await page.locator('.hero-photo-controls').innerText().then(text=>text.includes('/')),false,'no slide counter');
   await gallery.click({position:{x:100,y:70}});await page.waitForTimeout(650);
   const paused=await track.evaluate(el=>el.scrollLeft);await page.waitForTimeout(2200);assert.equal(await track.evaluate(el=>el.scrollLeft),paused);

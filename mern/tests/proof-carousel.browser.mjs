@@ -10,6 +10,7 @@ const server = app.listen(0, '127.0.0.1'); await once(server, 'listening'); cons
 await mkdir('test-results', { recursive: true });
 try {
   for (const [name, engine] of Object.entries({ chromium, webkit })) {
+    if (process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(name)) continue;
     const browser = await engine.launch();
     try {
       for (const width of [390, 1440]) {
@@ -37,13 +38,13 @@ try {
           assert.ok((await rail.evaluate(el => el.scrollLeft)) > stopped + 10);
           await page.screenshot({ path: `test-results/proof-carousel-${name}-${width}.png` });
           // A playing native video blocks the timer, independent of pointer/focus.
-          await page.locator('video').first().evaluate(video => { Object.defineProperty(video, 'paused', { configurable: true, get: () => false }); });
+          await rail.locator('video').first().evaluate(video => { Object.defineProperty(video, 'paused', { configurable: true, get: () => false }); });
           await page.getByRole('button', { name: 'Resume videos', exact: true }).click();
           await page.getByRole('heading', { name: 'Training you can actually see.' }).evaluate(el => { el.tabIndex = -1; });
           await page.locator('#main-content').focus(); await rail.scrollIntoViewIfNeeded(); await page.mouse.move(0, 0);
           const playingPosition = await rail.evaluate(el => el.scrollLeft); await page.waitForTimeout(5500);
           assert.ok(Math.abs((await rail.evaluate(el => el.scrollLeft)) - playingPosition) < 2);
-          await page.locator('video').first().evaluate(video => { delete video.paused; });
+          await rail.locator('video').first().evaluate(video => { delete video.paused; });
           await page.emulateMedia({ reducedMotion: 'reduce' }); const reducedPosition = await rail.evaluate(el => el.scrollLeft); await page.waitForTimeout(5500);
           assert.ok(Math.abs((await rail.evaluate(el => el.scrollLeft)) - reducedPosition) < 2);
           const reel = page.getByRole('link', { name: 'Watch Training 2 on Facebook', exact: true });

@@ -33,7 +33,6 @@ for (const [name, engine, width] of [['webkit', webkit, 390], ['chromium', chrom
     });
     await page.goto(origin, { waitUntil: 'domcontentloaded' });
     await page.locator('.home-hero-image').waitFor({ state: 'visible' });
-    await page.waitForFunction(() => { const image = document.querySelector('.home-hero-image'); return image?.complete && image.naturalWidth > 0; });
     await page.waitForTimeout(5000);
     const state = await page.evaluate(() => {
       window.stopHeroSamples = true;
@@ -48,6 +47,8 @@ for (const [name, engine, width] of [['webkit', webkit, 390], ['chromium', chrom
     for (const key of ['height', 'top']) assert.ok(Math.max(...samples.map(row => row[key])) - Math.min(...samples.map(row => row[key])) < 1, `Live ${name} ${width}: ${key} shifted`);
     assert.deepEqual(errors, []);
     assert.equal(await page.locator('.home-hero-image').count(), 1);
+    await page.locator('.home-hero-image').scrollIntoViewIfNeeded();
+    await page.waitForFunction(() => { const image = document.querySelector('.home-hero-image'); return image?.complete && image.naturalWidth > 0; });
     results.push({ browser: name, width, frames: samples.length, revision: hero.revision, first: samples[0], last: samples.at(-1) });
     console.log(`PASS LIVE ${name} ${width}: revision ${hero.revision}, ${samples.length} stable frames`);
   } finally { await browser.close(); }
