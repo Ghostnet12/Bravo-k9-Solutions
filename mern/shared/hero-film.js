@@ -7,12 +7,14 @@ export const DEFAULT_HERO_FILM = {
 };
 
 export const HERO_FILM_META = 'bravo-hero-film';
+export const OPTIMIZED_HERO_FILM_SRC = '/assets/bravo-opening-565c14182176.mp4';
+export const OPTIMIZED_HERO_POSTER = '/assets/bravo-opening-78f72cb21c5c.jpg';
 export function heroFilmSnapshot(value) {
   if (!value || typeof value !== 'object') return { ...DEFAULT_HERO_FILM };
   const revision = Number.isSafeInteger(value.revision) && value.revision >= 0 ? value.revision : 0;
   const source = `/api/hero-film/opening/video?v=${revision}`;
-  if (value.src !== source && value.src !== DEFAULT_HERO_FILM.src) return { ...DEFAULT_HERO_FILM };
-  const poster = value.src === DEFAULT_HERO_FILM.src ? DEFAULT_HERO_FILM.poster : value.poster === `/api/hero-film/opening/poster?v=${revision}` ? value.poster : null;
+  if (value.src !== source && value.src !== DEFAULT_HERO_FILM.src && !(revision > 0 && value.src === OPTIMIZED_HERO_FILM_SRC)) return { ...DEFAULT_HERO_FILM };
+  const poster = value.src === DEFAULT_HERO_FILM.src ? DEFAULT_HERO_FILM.poster : value.poster === `/api/hero-film/opening/poster?v=${revision}` || (value.src === OPTIMIZED_HERO_FILM_SRC && revision === 1 && value.poster === OPTIMIZED_HERO_POSTER) ? value.poster : null;
   return { id: 'opening', order: 0, revision, src: value.src, poster,
     title: String(value.title || DEFAULT_HERO_FILM.title).slice(0, 120),
     description: String(value.description ?? '').slice(0, 5000), fit: value.fit === 'contain' ? 'contain' : 'cover' };

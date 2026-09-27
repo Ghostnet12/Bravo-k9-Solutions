@@ -19,7 +19,13 @@ export default function GoalFinder() {
   return <section className="goal-finder cinema-shell" id="find-training" aria-labelledby="goal-title">
     <Editable as="p" contentKey="goal-eyebrow" canEditText className="cinema-eyebrow">YOUR DOG. YOUR STARTING POINT.</Editable>
     <Editable as="h2" contentKey="discovery-goal-title" canEditText id="goal-title">What would you like help with?</Editable>
-    <div className="goal-choices" role="group" aria-label="Choose a training goal">{GOALS.map(item => <button type="button" key={item.id} aria-pressed={selected === item.id} onClick={() => { setSelected(item.id); trackVisit('goal_selected'); }}><Editable as="span" contentKey={`goal-${item.id}-label`} canEditText>{item.label}</Editable></button>)}</div>
+    <div className="goal-choices" role="group" aria-label="Choose a training goal">{GOALS.map(item => {
+      const price = (config?.services || SERVICES).find(service => service.id === item.program);
+      return <button type="button" key={item.id} aria-labelledby={`goal-tab-${item.id}`} aria-describedby={`goal-price-${item.id}`} aria-pressed={selected === item.id} onClick={() => { setSelected(item.id); trackVisit('goal_selected'); }}>
+        <Editable as="span" id={`goal-tab-${item.id}`} contentKey={`goal-${item.id}-label`} canEditText>{item.label}</Editable>
+        <span className="goal-tab-price" id={`goal-price-${item.id}`}>{price ? <>{money(price.cents)} <span>{price.interval === 'once' ? 'initial intake' : '/ month'}</span><small>{item.program === 'aggression' ? 'Two-trainer assessment' : 'Training · one dog'}</small></> : 'Ask Bravo for pricing'}</span>
+      </button>;
+    })}</div>
     <div className="goal-result" key={selected}>
       <Editable as="div" contentKey={`goal-${goal.id}-copy`} aria-live="polite" aria-atomic="true"><Editable as="h3" contentKey={`goal-${goal.id}-title`} canEditText>{goal.title}</Editable><Editable as="p" contentKey={`goal-${goal.id}-description`} canEditText>{goal.description}</Editable>{service && <p className="goal-price">{money(service.cents)} <span>{goal.program === 'aggression' ? 'initial intake · ongoing training separate' : '/month · one dog · manual renewal'}</span></p>}
         <Editable as="p" contentKey={`goal-${goal.id}-details`} canEditText className="helper">{goal.program === 'training' ? 'Private visits. Monday–Friday, up to one hour per day. We come to you in Aberdeen.' : 'Two trainers. Call before the visit to discuss handling or access concerns.'}</Editable>

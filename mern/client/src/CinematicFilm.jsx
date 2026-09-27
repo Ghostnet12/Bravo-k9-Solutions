@@ -43,7 +43,8 @@ export default function CinematicFilm({ children }) {
     const element = video.current;
     if (!element) return;
     const preference = matchMedia('(prefers-reduced-motion: reduce)');
-    let visible = false, disposed = false;
+    const bounds = root.current.getBoundingClientRect();
+    let visible = bounds.bottom > 0 && bounds.top < window.innerHeight, disposed = false;
     // Safari requires a muted inline element before the first play attempt.
     element.defaultMuted = true;
     element.muted = true;
@@ -56,6 +57,9 @@ export default function CinematicFilm({ children }) {
     };
     const observer = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; update(); });
     observer.observe(root.current);
+    // Begin immediately for the first viewport; don't pause the parser-started
+    // autoplay while waiting for the first asynchronous observer callback.
+    update();
     const accessibility = new MutationObserver(update);
     accessibility.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
     preference.addEventListener('change', update); document.addEventListener('visibilitychange', update);
@@ -82,8 +86,11 @@ export default function CinematicFilm({ children }) {
     onPointerUp={cancelHold} onPointerCancel={cancelHold}
     onPointerLeave={event => {
       // WebKit emits layer-leave events when capture retargets the pointer.
-      // Movement, release and cancellation still stop an actual abandoned hold.
-      if (!event.currentTarget.hasPointerCapture(event.pointerId)) cancelHold();
+      // Capture can still be pending at that point. Only an actual exit from
+      // the hero cancels the hold; movement, release, scroll and blur also do.
+      const box = event.currentTarget.getBoundingClientRect();
+      const outside = event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom;
+      if (outside && !event.currentTarget.hasPointerCapture(event.pointerId)) cancelHold();
     }}
     onClickCapture={event => { if (!event.target.closest('dialog') && Date.now() < suppressUntil.current) { event.preventDefault(); event.stopPropagation(); } }}
     onContextMenu={event => { if (canEdit && isFilmTarget(event.target)) event.preventDefault(); }}>
