@@ -8,9 +8,13 @@ export default function CinematicFilm() {
     if (!element) return;
     const preference = matchMedia('(prefers-reduced-motion: reduce)');
     let visible = false, disposed = false;
+    // Safari requires a muted inline element before the first play attempt.
+    element.defaultMuted = true;
+    element.muted = true;
     const update = () => {
       const reduce = preference.matches || document.documentElement.classList.contains('access-reduced-motion');
-      if (paused || reduce || !visible || document.hidden) { element.pause(); return; }
+      element.autoplay = !paused && !reduce && visible && !document.hidden;
+      if (!element.autoplay) { element.pause(); return; }
       element.muted = true;
       element.play().catch(() => { if (!disposed) setPlaying(false); });
     };
@@ -19,10 +23,20 @@ export default function CinematicFilm() {
     const accessibility = new MutationObserver(update);
     accessibility.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
     preference.addEventListener('change', update); document.addEventListener('visibilitychange', update);
-    return () => { disposed = true; element.pause(); observer.disconnect(); accessibility.disconnect(); preference.removeEventListener('change', update); document.removeEventListener('visibilitychange', update); };
+    // Retry delayed media and browser-blocked autoplay without undoing Pause.
+    element.addEventListener('canplay', update);
+    document.addEventListener('pointerdown', update);
+    document.addEventListener('keydown', update);
+    return () => {
+      disposed = true; element.pause(); observer.disconnect(); accessibility.disconnect();
+      preference.removeEventListener('change', update); document.removeEventListener('visibilitychange', update);
+      element.removeEventListener('canplay', update);
+      document.removeEventListener('pointerdown', update); document.removeEventListener('keydown', update);
+    };
   }, [paused]);
   return <div ref={root} className="cinema-film">
-    <video ref={video} className={playing ? 'is-playing' : ''} data-site-media-key="video-asset-bravo-real-world.mp4" poster="/images/bravo-film-poster.webp" muted loop playsInline preload="metadata" aria-label="Bravo dog training outdoors with its handler" onPlaying={() => { setPlaying(true); setFailed(false); }} onPause={() => setPlaying(false)} onError={() => { setFailed(true); setPlaying(false); }}><source src="/videos/bravo-real-world.mp4" type="video/mp4"/><source src="/videos/bravo-real-world.webm" type="video/webm"/></video>
+    <video ref={video} className={playing ? 'is-playing' : ''} data-site-media-key="video-asset-bravo-real-world.mp4" poster="/images/bravo-film-poster.webp" autoPlay muted loop playsInline preload="auto" aria-label="Bravo dog training outdoors with its handler" onPlaying={() => { setPlaying(true); setFailed(false); }} onPause={() => setPlaying(false)} onError={() => { setFailed(true); setPlaying(false); }}><source src="/videos/bravo-real-world.mp4" type="video/mp4"/><source src="/videos/bravo-real-world.webm" type="video/webm"/></video>
+    <div className="cinema-hero-shade" aria-hidden="true"/>
     {!failed && <button className="cinema-film-control" type="button" aria-label={playing ? 'Pause training film' : 'Play training film'} onClick={() => { if (playing) setPaused(true); else { setPaused(false); video.current?.play().catch(() => setPlaying(false)); } }}><span aria-hidden="true">{playing ? 'Ⅱ' : '▷'}</span><span>{playing ? 'Pause film' : 'Play film'}</span></button>}
   </div>;
 }
