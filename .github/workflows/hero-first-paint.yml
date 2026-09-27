@@ -37,6 +37,7 @@ jobs:
       - name: Install media decoders
         run: sudo apt-get install -y ffmpeg gstreamer1.0-libav
       - name: Verify the published homepage without signing in
+        if: github.event_name == 'push' && github.ref == 'refs/heads/bravo-mern'
         run: node tests/home-hero.live.mjs
       - name: Verify hero replacement and copy saves through the real database
         run: node tests/hero-editor.browser.mjs
