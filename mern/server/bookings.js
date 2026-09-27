@@ -78,7 +78,11 @@ export async function createBooking(userId, payload, assignment = {}) {
   const chosenTrainerId = chosenTrainerIds[0] || null;
   delete data.preferredTrainerId;
   const entitlements = await getEntitlements(userId, { includeFuture: true });
-  const covered = bookingCoveredByEntitlements(data.serviceIds, data.dogCount, entitlements) && data.visits.every(visit => entitlements.subscriptions.some(term => serviceSelection(term.serviceIds, ALL_SERVICES).some(service => service.includes.includes(visit.service)) && dateTime(visit.date, visit.time).toJSDate() < term.validUntil && (!term.validFrom || dateTime(visit.date, visit.time).toJSDate() >= term.validFrom)));
+  const covered = bookingCoveredByEntitlements(data.serviceIds, data.dogCount, entitlements) && data.visits.every(visit => entitlements.subscriptions.some(term =>
+    serviceSelection(term.serviceIds, ALL_SERVICES).some(service => service.includes.includes(visit.service)) &&
+    (visit.service !== 'training' || (term.dogCount || 1) >= data.dogCount) &&
+    dateTime(visit.date, visit.time).toJSDate() < term.validUntil &&
+    (!term.validFrom || dateTime(visit.date, visit.time).toJSDate() >= term.validFrom)));
   if (!covered && data.visits.some(visit => visit.service === 'training' && dateTime(visit.date, visit.time).toJSDate() >= monthTerm().validUntil)) throw Object.assign(new Error('A training purchase covers one month. Choose training dates within the next month, then renew manually for later visits.'), { status: 400 });
   let booking;
   try {

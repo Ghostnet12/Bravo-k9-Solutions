@@ -33,6 +33,8 @@ test('owner/staff workspace contracts over HTTP with isolated model mocks', asyn
   const accessAudit = t.mock.method(AuditEvent, 'create', async events => events);
   t.mock.method(User, 'exists', filter => query(users[String(filter._id)] && !users[String(filter._id)].blocked ? { _id: filter._id } : null));
   t.mock.method(User, 'find', () => query(Object.values(users)));
+  t.mock.method(User, 'countDocuments', filter => query(filter._id.$in.filter(id => users[String(id)] && !users[String(id)].blocked).length));
+  t.mock.method(CommunityGroup, 'distinct', () => query([]));
   t.mock.method(Session, 'findOne', filter => query(Object.entries(ids).find(([token]) => digest(digest(token)) === filter.tokenHash) ? { _id: new mongoose.Types.ObjectId(), issuedAt: new Date(), lastSeenAt: new Date(), userId: ids[Object.entries(ids).find(([token]) => digest(digest(token)) === filter.tokenHash)[0]] } : null));
   t.mock.method(Session, 'find', () => query([]));
   t.mock.method(Session, 'updateOne', async () => ({ matchedCount: 1 }));

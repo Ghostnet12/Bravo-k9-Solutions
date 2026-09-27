@@ -7,6 +7,7 @@ import express from 'express';
 import { requestError } from './errors.js';
 import { bookingTrainerIds, trainerChoice, scheduledTrainerLabel } from '../shared/trainers.js';
 import { sessionMiddleware } from './session-middleware.js';
+import { securityHeaders, privateResponse } from './http-security.js';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { DateTime } from 'luxon';
 import { z } from 'zod';
@@ -28,6 +29,10 @@ import { trainerClients, acceptClient } from './trainer-clients.js';
 import { stripeClient, processStripeEvent } from './payments.js';
 
 const app = express();
+// Cover early-mounted routers, health failures and errors as well as the legacy
+// application. Vercel headers must not be the only protection for these routes.
+app.use(securityHeaders());
+app.use('/api', privateResponse);
 app.use(monitorRequests);
 app.disable('x-powered-by'); app.set('trust proxy', process.env.VERCEL ? 1 : false);
 const session = sessionMiddleware();
@@ -110,7 +115,7 @@ app.post('/api/client-schedule/visit', ...session, requireUser, ...write, rateLi
         await checkTrainerVisits(bookingTrainerIds(booking), [next], team, session);
         if (next.service === 'training') {
           if ((booking.termStartsAt && when.toJSDate() < booking.termStartsAt) || (booking.termEndsAt && when.toJSDate() >= booking.termEndsAt)) throw fail('Choose a date within this request’s training membership period.');
-          const terms = await Subscription.find({ userId: booking.userId, status: { $in: ['active', 'trialing', 'canceled'] }, serviceIds: { $in: ALL_SERVICES.filter(s => s.includes.includes('training')).map(s => s.id) } }).session(session).lean();
+          const terms = await Subscription.find({ userId: booking.userId, status: { $in: ['active', 'trialing', 'canceled'] }, dogCount: { $gte: booking.dogCount || 1 }, serviceIds: { $in: ALL_SERVICES.filter(s => s.includes.includes('training')).map(s => s.id) } }).session(session).lean();
           if (!terms.some(t => t.validFrom && when.toJSDate() >= t.validFrom && when.toJSDate() < t.validUntil)) throw fail('Choose a date within your paid membership month.', 400);
         }
         if (booking.visits.some(v => v.date === next.date && v.time === next.time)) throw fail('You already have a visit at that time.', 409);

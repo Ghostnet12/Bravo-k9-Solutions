@@ -2,20 +2,21 @@ import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import { User, Session, PasswordReset, AuditEvent } from './models.js';
 import { transaction } from './db.js';
-import { digest, hashPassword, verifyPassword } from './auth.js';
+import { digest, hashPassword } from './auth.js';
+import { confirmOwnerPassword, lockOwnerReauthentication } from './reauthentication.js';
 const id = z.string().regex(/^[a-f\d]{24}$/i);
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 
 export async function issueRecovery(req, res) {
   const targetId = id.parse(req.params.id);
   const { currentPassword } = z.object({ currentPassword: z.string().min(1).max(128) }).strict().parse(req.body);
-  const actor = await User.findById(req.user._id).select('+passwordHash');
-  if (!actor || actor.blocked || actor.role !== 'owner' || !await verifyPassword(currentPassword, actor.passwordHash)) throw fail('Confirm your administrator password.', 403);
+  const actor = await confirmOwnerPassword(req.user, currentPassword);
   const target = await User.findOne({ _id: targetId, role: 'member', blocked: false, removedAt: null }).select('name +credentialVersion');
   if (!target) throw fail('Choose an unblocked client account.', 404);
   const token = randomBytes(32).toString('hex');
   const expiresAt = new Date(Date.now() + 30 * 60000);
   await transaction(async dbSession => {
+    await lockOwnerReauthentication(actor, dbSession);
     // A credential/permission change between verification and issuance must not
     // produce a recovery token for the newer account state.
     const eligible = await User.exists({ _id: targetId, role: 'member', blocked: false, removedAt: null, credentialVersion: target.credentialVersion || { $in: [0, null] } }).session(dbSession);
