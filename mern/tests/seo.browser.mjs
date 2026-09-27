@@ -46,7 +46,11 @@ try {
         });
         await page.goto(origin);
         const cards = page.locator('.facebook-recommendations article');
-        assert.equal(await cards.count(), 5);
+        assert.equal(await cards.count(), 6);
+        const justine = cards.filter({ hasText: 'Justine Harty West' });
+        assert.equal(await justine.count(), 1);
+        assert.equal(await justine.locator('small').innerText(), 'Facebook comment');
+        assert.equal(await justine.locator('.review-full blockquote p').textContent(), "They do an awesome job! We highly recommend what they did for our adoptive Star girl. We love her. 🥰 Can't thank them enough! ⭐⭐⭐⭐⭐");
         for (const card of await cards.all()) {
           const original = await card.locator('.review-full blockquote').textContent();
           assert.equal(await card.locator('.review-full blockquote').isVisible(), false);
