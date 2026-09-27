@@ -33,7 +33,7 @@ try {
           await page.goto(origin); await page.locator('[data-banner-editable]').waitFor();
           assert.equal(await page.getByRole('button', { name: 'Edit banner', exact: true }).count(), 0);
           const banner = page.locator('.home-status-banner');
-          assert.equal(await banner.evaluate(el => el.previousElementSibling.classList.contains('home-hero')), true);
+          assert.equal(await banner.evaluate(el => el.parentElement.id === 'workshops'), true);
           assert.ok((await banner.innerText()).includes('63°F'));assert.match(await banner.innerText(),/[A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2}, \d{4} ·/);assert.ok((await banner.boundingBox()).height < 100, 'moving banner stays one compact strip');
           weatherAvailable = false; await page.reload(); await page.waitForLoadState('networkidle');
           assert.equal((await banner.innerText()).includes('Weather temporarily unavailable'), false, 'failed weather stays invisible to visitors');

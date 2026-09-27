@@ -30,10 +30,10 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){const br
   assert.equal(await page.locator('.home-hero-image').getAttribute('src'),'/images/bravo-client-training.jpeg');
   assert.equal(await page.locator('.home-hero-image').evaluate(el=>el.complete && el.naturalWidth>0),true);
   assert.equal(await page.locator('.home-hero-image').evaluate(el=>getComputedStyle(el).objectFit),'contain');
-  assert.match(await page.locator('h1').innerText(), /In-home dog training/i);
-  assert.ok(await page.locator('.home-quick-price').isVisible());
-  assert.ok(await page.getByText('No treats. No toys.',{exact:true}).isVisible());
-  assert.ok(await page.getByText('One hour per day · Monday–Friday',{exact:true}).isVisible());
+  assert.match(await page.locator('h1').innerText(), /Training built\s*around the dog/i);
+  assert.ok(await page.locator('.cinema-price').isVisible());
+  assert.ok(await page.getByText('Not treats. Not toys. Understanding.',{exact:true}).isVisible());
+  assert.ok(await page.getByText(/Up to one hour per day. Monday–Friday./).isVisible());
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth + 1),'homepage fits viewport');
   await page.evaluate(()=>document.documentElement.style.fontSize='200%');
   const enlargedFits=await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth + 1);
@@ -42,7 +42,7 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){const br
   await page.screenshot({path:`test-results/authentic-home-${engineName}-${width}.png`});
   assert.equal(await page.locator('[data-site-content-key="home-53"] .review-stars').count(),0);
   assert.equal(await page.locator('.facebook-recommendations .review-stars[aria-label="5 out of 5 stars"]').count(),5);assert.equal(await page.locator('.banner-track').evaluate(el=>getComputedStyle(el).animationName),'none');
-  await page.getByRole('link',{name:'Start private training',exact:true}).click();await page.getByRole('heading',{name:'Let’s start with your dog.',exact:true}).waitFor();
+  await page.getByRole('link',{name:/Start with private training/}).click();await page.getByRole('heading',{name:'Let’s start with your dog.',exact:true}).waitFor();
   assert.equal(await page.getByText('IMPORTANT APPOINTMENT NOTICE',{exact:true}).count(),0);assert.equal(await page.getByRole('heading',{name:'Build your schedule',exact:true}).count(),0);
   await page.getByLabel('Dog’s name',{exact:true}).fill('Biscuit');await page.getByLabel('Number of dogs',{exact:true}).fill('2');await page.getByLabel('What would you like help with?',{exact:true}).selectOption('puppy-foundations');await page.getByLabel('Anything you’d like your trainer to know? (optional)',{exact:true}).fill('Jumps when visitors arrive.');
   assert.ok((await page.locator('.first-visit-intro .price-total').innerText()).includes('$300/month'));

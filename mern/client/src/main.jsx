@@ -21,6 +21,7 @@ import './site-image-editor.css';
 import './accessibility-layout.css';
 import './reset-layout.css';
 import './usability-polish.css';
+import './cinematic-home.css';
 // Keep the server-rendered public page readable until its interactive module
 // is ready. A failed chunk must not replace useful HTML with a loading/error shell.
 const publicPageLoaders = {

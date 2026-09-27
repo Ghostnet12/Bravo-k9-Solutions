@@ -17,13 +17,13 @@ try{for(const [name,engine]of Object.entries({chromium,webkit})){const browser=a
     await route.fulfill({status,json});});
   async function hold(locator){await locator.scrollIntoViewIfNeeded();const b=await locator.boundingBox();await page.mouse.move(b.x+Math.min(30,b.width/2),b.y+Math.min(12,b.height/2));await page.mouse.down();await page.waitForTimeout(750);await page.mouse.up();}
   try{
-    await page.goto(origin);await page.waitForLoadState('networkidle');const intro=page.locator('.home-intro'),key=await intro.getAttribute('data-site-content-key'),original=await intro.innerText();
+    await page.goto(origin);await page.waitForLoadState('networkidle');const intro=page.locator('.cinema-hero-intro'),key=await intro.getAttribute('data-site-content-key'),original=await intro.innerText();
     assert.equal(await page.getByRole('button',{name:'Edit photos & videos',exact:true}).isVisible(),false);
     await hold(intro);const dialog=page.getByRole('dialog',{name:'Edit website section',exact:true});await dialog.waitFor();
     await dialog.getByLabel('Text',{exact:true}).fill('Training edited by the owner. <script>plain text</script>');
     await dialog.getByLabel('Font',{exact:true}).selectOption('georgia');
     await dialog.getByLabel('Background',{exact:true}).selectOption('gradient');
-    await page.waitForFunction(()=>getComputedStyle(document.querySelector('.home-intro')).backgroundImage.includes('linear-gradient'));
+    await page.waitForFunction(()=>getComputedStyle(document.querySelector('.cinema-hero-intro')).backgroundImage.includes('linear-gradient'));
     assert.ok((await intro.innerText()).includes('Training edited'));assert.ok((await intro.evaluate(el=>getComputedStyle(el).backgroundImage)).includes('linear-gradient'));
     await dialog.getByRole('button',{name:'Cancel',exact:true}).click();assert.equal(await intro.innerText(),original);
     await hold(intro);await dialog.waitFor();await dialog.getByLabel('Edit this part',{exact:true}).selectOption('site-theme');await dialog.getByLabel('Font',{exact:true}).selectOption('georgia');

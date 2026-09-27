@@ -43,10 +43,10 @@ try {
         const page = await context.newPage(); const errors = [];
         page.on('pageerror', error => errors.push(error.message));
         await page.goto(origin, { waitUntil: 'networkidle' });
-        await page.getByRole('heading', { name: /See the work\.\s*Meet your team\./ }).waitFor();
+        await page.getByRole('heading', { name: /Don’t take\s*our word for it\./ }).waitFor();
         const proofTop = await page.locator('#reviews').evaluate(element => element.offsetTop);
         const trainingTop = await page.locator('#training').evaluate(element => element.offsetTop);
-        assert.ok(proofTop < trainingTop, `${engineName}-${width}: proof must precede training`);
+        assert.ok(proofTop > trainingTop, `${engineName}-${width}: proof follows the program and trainer story`);
         const accountReviews = page.locator('.home-proof-reviews article').filter({ hasText: 'Verified Bravo account' });
         assert.equal(await accountReviews.count(), reviews.length);
         for (const review of reviews) await accountReviews.getByText(review.authorName, { exact: true }).waitFor();
@@ -78,7 +78,7 @@ try {
           assert.equal(await card.locator('iframe').count(), 0);
           assert.equal(await watch.isVisible(), true, `${engineName}-${width}: Back must return to the Bravo carousel`);
         }
-        assert.equal(await page.locator('.home-proof-team').getByText('David Northrop', { exact: true }).count(), 1);
+        assert.equal(await page.locator('#team').getByText('David Northrop', { exact: true }).count(), 1);
         assert.equal(await page.locator('.home-training-offer').getByRole('link', { name: /Start with private training/ }).getAttribute('href'), '/portal?program=training');
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${engineName}-${width}: homepage overflow`);
         assert.deepEqual(errors, [], `${engineName}-${width}: homepage runtime errors`);
