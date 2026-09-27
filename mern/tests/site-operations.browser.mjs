@@ -27,7 +27,7 @@ try {
         await page.route('**/api/**', async route => {
           const path = new URL(route.request().url()).pathname; let json = {};
           if (path.startsWith('/api/telemetry/')) { events.push({ path, body: route.request().postDataJSON() }); return route.fulfill({ status: 204 }); }
-          if (path === '/api/config') json = { monitoringEnabled: true, connected: true, paymentsReady: false, services: SERVICES, schedule: { enabled: true, weekdays: [1,2,3,4,5], hours: ['10:00'] } };
+          if (path === '/api/config') json = { monitoringEnabled: true, lessonLibrary: { open: true }, connected: true, paymentsReady: false, services: SERVICES, schedule: { enabled: true, weekdays: [1,2,3,4,5], hours: ['10:00'] } };
           else if (path === '/api/auth/me') json = { user, services: [], subscriptions: [], membership: { active: false } };
           else if (path === '/api/site-images') json = { images: {} };
           else if (path === '/api/team') json = { team: [] };
