@@ -18,7 +18,17 @@ try{for(const [engineName,engine] of Object.entries({chromium,webkit})){
  if(process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(engineName))continue;
  const browser=await engine.launch();try{for(const width of [390,1440]){
   const context=await browser.newContext({viewport:{width,height:900},hasTouch:true}),page=await context.newPage();
-  const errors=[];page.on('pageerror',error=>errors.push(error.message));page.on('dialog',dialog=>dialog.accept());
+  const errors=[],browserDiagnostics=[];
+  // WebKit's Playwright adapter maps JavaScript console errors (including
+  // handled fetch cancellations during navigation) to pageerror. Observe the
+  // browser's actual uncaught-error events, while preserving all diagnostics.
+  page.on('pageerror',error=>browserDiagnostics.push({message:error.message,stack:error.stack,url:page.url()}));
+  await page.exposeFunction('reportToolkitError',message=>errors.push(message));
+  await page.addInitScript(()=>{
+   window.addEventListener('error',event=>{if(event instanceof ErrorEvent)void window.reportToolkitError(event.error?.stack||event.message).catch(()=>{});});
+   window.addEventListener('unhandledrejection',event=>{void window.reportToolkitError(event.reason?.stack||event.reason?.message||String(event.reason)).catch(()=>{});});
+  });
+  page.on('dialog',dialog=>dialog.accept());
   let role='owner',entries={},catalog=SERVICES.map(row=>({...row,enabled:row.id!=='online',revision:0})),failPrice=false,failConfig=false;
   const team=[{id:'111111111111111111111111',name:'David Northrop',title:'Owner & Lead Trainer',role:'owner',profileKey:'david',imageKey:'team-david-northrop',image:'/images/david-northrop.webp',revision:0,bio:'David fixture introduction.'},{id:'222222222222222222222222',name:'Ashley Leverock',title:'Trainer / Pit Bull Specialist',role:'staff',profileKey:'ashley',imageKey:'team-ashley-northrop',image:'/images/ashley-northrop.webp',revision:0,bio:'Ashley fixture introduction.'}];
   const workshop={title:'Workshop fixture',date:'2026-10-03',time:'10 am',location:'Aberdeen',duration:'One hour',cents:10000,description:'Workshop details fixture.',published:true,revision:0};
@@ -86,7 +96,8 @@ try{for(const [engineName,engine] of Object.entries({chromium,webkit})){
    role=null;failConfig=true;
    pageHTML=renderSiteContent(html,{},undefined,catalog);
    await page.goto(`${origin}/?config-failure`);await page.waitForLoadState('networkidle');assert.match(await page.locator('#goal-price-manners').innerText(),/\$225/,'failed API refresh retains server-published prices');
+   await writeFile(`test-results/website-editor-diagnostics-${engineName}-${width}.json`,JSON.stringify({errors,browserDiagnostics},null,2));
    assert.deepEqual(errors,[]);console.log(`PASS ${engineName}/${width}: all-part publication, price sync, trainer identity, backgrounds, media/workshop holds, scrolling, navigation and permissions`);
-  }catch(error){await page.screenshot({path:`test-results/website-editor-failure-${engineName}-${width}.png`,fullPage:true});await writeFile(`test-results/website-editor-failure-${engineName}-${width}.json`,JSON.stringify({error:error.message,errors,text:await page.locator('body').innerText()},null,2));throw error;}finally{await context.close();}
+  }catch(error){await page.screenshot({path:`test-results/website-editor-failure-${engineName}-${width}.png`,fullPage:true});await writeFile(`test-results/website-editor-failure-${engineName}-${width}.json`,JSON.stringify({error:error.message,errors,browserDiagnostics,text:await page.locator('body').innerText()},null,2));throw error;}finally{await context.close();}
  }}finally{await browser.close();}
 }}finally{server.close();}
