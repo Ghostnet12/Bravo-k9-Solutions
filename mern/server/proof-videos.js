@@ -21,15 +21,15 @@ const editInput = z.object({
 }).strict().refine(input => !(input.uploadId && input.facebookUrl) && !(input.facebookUrl && input.posterData));
 const uploadInput = z.object({ filename: z.string().trim().min(1).max(160), contentType: z.enum(PROOF_VIDEO_TYPES), size: z.number().int().min(1).max(MEDIA_LIMITS.video), chunks: z.number().int().min(1).max(Math.ceil(MEDIA_LIMITS.video / CHUNK_SIZE)) }).strict();
 const chunkInput = z.object({ data: z.string().min(4).max(Math.ceil(CHUNK_SIZE / 3) * 4).regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/) }).strict();
-export function createProofVideoRouter({ VideoModel = ProofVideo, defaults = DEFAULT_PROOF_VIDEOS, apiPath = '/api/proof-videos', mediaScope = 'proof', withSettings = true } = {}) {
+export function createProofVideoRouter({ VideoModel = ProofVideo, defaults = DEFAULT_PROOF_VIDEOS, apiPath = '/api/proof-videos', mediaScope = 'proof', withSettings = true, editableIds = null, allowFacebook = true, allowDelete = true } = {}) {
 const defaultFor = id => defaults.find(clip => clip.id === id);
 const scope = id => `${mediaScope}:${id}`;
 const publicClip = row => {
   const original = defaultFor(row._id);
   const facebookUrl = row.uploadId ? null : normalizeFacebookReelUrl(row.facebookUrl || original?.facebookUrl);
   return { id: row._id, title: row.title, description: row.description, order: row.order, revision: row.revision,
-    fit: row.fit || 'contain', src: row.uploadId ? `${apiPath}/${row._id}/video?v=${row.revision}` : null,
-    poster: row.uploadId ? row.hasPoster ? `${apiPath}/${row._id}/poster?v=${row.revision}` : null : facebookUrl === original?.facebookUrl ? original.poster : null, facebookUrl };
+    fit: row.fit || 'contain', src: row.uploadId ? `${apiPath}/${row._id}/video?v=${row.revision}` : original?.src || null,
+    poster: row.uploadId ? row.hasPoster ? `${apiPath}/${row._id}/poster?v=${row.revision}` : null : (!facebookUrl && original?.src) || facebookUrl === original?.facebookUrl ? original?.poster || null : null, facebookUrl };
 };
 const publicCarousel = row => ({ intervalSeconds: Math.max(2, row?.intervalSeconds ?? 8), revision: row?.revision ?? 0 });
 const after = (clip, cursor) => !cursor || compareProofVideos(clip, cursor) > 0;
@@ -39,7 +39,7 @@ router.use(securityHeaders(), (_req, res, next) => { res.set('Cache-Control', 'p
 // the homepage keeps its static content. Never mask a configured database error.
 router.get('/', (_req, res, next) => !process.env.MONGODB_URI ? res.json({ clips: defaults, nextCursor: null, carousel: publicCarousel(null) }) : next());
 router.use(async (_req, _res, next) => { await connectDb(); next(); });
-router.param('id', (_req, _res, next, id) => { idInput.parse(id); next(); });
+router.param('id', (_req, _res, next, id) => { idInput.parse(id); if (editableIds && !editableIds.includes(id)) return next(fail('Video not found.', 404)); next(); });
 router.get('/', async (req, res) => {
   let cursor = null;
   if (req.query.after) {
@@ -112,6 +112,7 @@ router.put('/:id/uploads/:uploadId/chunks/:index', rateLimit('proof-upload-chunk
 });
 router.put('/:id', rateLimit('proof-video-edit', 240, 3600000), express.json({ limit: '300kb' }), async (req, res) => {
   const input = editInput.parse(req.body), id = req.params.id;
+  if (!allowFacebook && input.facebookUrl) throw fail('Upload a video file for the opening film.');
   await VideoModel.init();
   let result;
   await transaction(async session => {
@@ -160,6 +161,7 @@ router.put('/:id', rateLimit('proof-video-edit', 240, 3600000), express.json({ l
   res.json({ clip: result });
 });
 router.delete('/:id', rateLimit('proof-video-edit', 240, 3600000), express.json({ limit: '2kb' }), async (req, res) => {
+  if (!allowDelete) throw fail('Choose a replacement video to change the opening film.', 405);
   const input = z.object({ expectedRevision: revision }).strict().parse(req.body), id = req.params.id;
   await transaction(async session => {
     let row = await VideoModel.findById(id).session(session);

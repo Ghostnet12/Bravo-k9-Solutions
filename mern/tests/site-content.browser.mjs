@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { CONTENT_KEYS } from '../shared/site-content-keys.js';
 import express from 'express';
 import { once } from 'node:events';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
@@ -7,13 +8,13 @@ import { chromium, webkit } from 'playwright';
 const dist=fileURLToPath(new URL('../client/dist/',import.meta.url)),html=await readFile(`${dist}/bravo-shell.html`,'utf8');
 const app=express();app.use(express.static(dist));app.get('/{*path}',(_req,res)=>res.type('html').send(html));const server=app.listen(0,'127.0.0.1');await once(server,'listening');const origin=`http://127.0.0.1:${server.address().port}`;
 await mkdir('test-results',{recursive:true});
-try{for(const [name,engine]of Object.entries({chromium,webkit})){const browser=await engine.launch();try{for(const width of [390,1440]){
+try{for(const [name,engine]of Object.entries({chromium,webkit})){if(process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(name))continue;const browser=await engine.launch();try{for(const width of [390,1440]){
   const context=await browser.newContext({viewport:{width,height:900},hasTouch:true}),page=await context.newPage(),errors=[];let role='owner',entries={},failSave=false;
   page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/api/**',async route=>{const path=new URL(route.request().url()).pathname;let status=200,json={services:[],team:[],reviews:[],images:{},clips:[],schedules:[],alerts:[],revision:0};
     if(path==='/api/auth/me')json={user:role?{id:'fixture',name:'Fixture',role}:null,services:[]};
     if(path==='/api/site-content')json={entries};
-    if(path.startsWith('/api/site-content/')){const key=path.split('/').at(-1),body=route.request().postDataJSON();if(failSave){status=409;json={error:'Someone else changed this item. Reopen the editor.'};}else{const old=entries[key]||{revision:0,value:{}};assert.equal(body.expectedRevision,old.revision);entries[key]={value:body.undo?old.previous:body.value,previous:old.value,revision:old.revision+1,canUndo:true};json={entry:entries[key]};}}
+    if(path.startsWith('/api/site-content/')){const key=path.split('/').at(-1),body=route.request().postDataJSON();assert.ok(CONTENT_KEYS[key], `Unregistered publishing key: ${key}`);if(failSave){status=409;json={error:'Someone else changed this item. Reopen the editor.'};}else{const old=entries[key]||{revision:0,value:{}};assert.equal(body.expectedRevision,old.revision);entries[key]={value:body.undo?old.previous:body.value,previous:old.value,revision:old.revision+1,canUndo:true};json={entry:entries[key]};}}
     await route.fulfill({status,json});});
   async function hold(locator){await locator.scrollIntoViewIfNeeded();const b=await locator.boundingBox();await page.mouse.move(b.x+Math.min(30,b.width/2),b.y+Math.min(12,b.height/2));await page.mouse.down();await page.waitForTimeout(750);await page.mouse.up();}
   try{

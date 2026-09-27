@@ -10,7 +10,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import legacyApp from './app.js';
 import { connectDb, transaction } from './db.js';
-import { MediaUpload, MediaChunk, AuditEvent, HeroVideo } from './models.js';
+import { MediaUpload, MediaChunk, AuditEvent, HeroVideo, HeroFilm } from './models.js';
 import { identify, requireUser, requireOwner, sameOrigin, rateLimit } from './auth.js';
 import { CHUNK_SIZE, validMediaHeader, sendUploadedMedia } from './media.js';
 import { isEditableMediaKey, SITE_IMAGE_MAX_BYTES } from '../shared/site-images.js';
@@ -20,6 +20,7 @@ import proofVideoRouter, { createProofVideoRouter } from './proof-videos.js';
 import heroCarouselRouter from './hero-carousel.js';
 import siteBannerRouter from './site-banner.js';
 import siteAdsRouter from './site-ads.js';
+import { DEFAULT_HERO_FILM } from '../shared/hero-film.js';
 
 // Existing collection and image URLs remain compatible with saved portraits.
 // Video records store framing only; actual video bytes still use the protected
@@ -124,6 +125,7 @@ app.disable('x-powered-by'); app.set('trust proxy', process.env.VERCEL ? 1 : fal
 app.get(['/', '/api/homepage'], securityHeaders(), homepageHandler);
 app.use('/api/site-images', router);
 app.use('/api/proof-videos', proofVideoRouter);
+app.use('/api/hero-film', createProofVideoRouter({ VideoModel: HeroFilm, defaults: [DEFAULT_HERO_FILM], apiPath: '/api/hero-film', mediaScope: 'hero-film', withSettings: false, editableIds: [DEFAULT_HERO_FILM.id], allowFacebook: false, allowDelete: false }));
 app.use('/api/hero-videos', createProofVideoRouter({ VideoModel: HeroVideo, defaults: [], apiPath: '/api/hero-videos', mediaScope: 'hero', withSettings: false }));
 app.use('/api/hero-carousel', heroCarouselRouter);
 app.use('/api/site-banner', siteBannerRouter);
