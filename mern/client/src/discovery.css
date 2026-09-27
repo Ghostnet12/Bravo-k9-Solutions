@@ -23,3 +23,5 @@
 @media(max-width:460px){.service-journey ol,.course-topics{grid-template-columns:1fr}.workshop-facts{grid-template-columns:1fr}.goal-actions>.button{width:100%;justify-content:center}.service-journey{padding:40px 0}.goal-finder h2{font-size:1.8rem}.content-edit-launcher{bottom:14px;left:12px}.course-interest-admin li{flex-direction:column}.proof-topics{gap:8px}.proof-topics button{padding:10px 13px}}
 @media(prefers-reduced-motion:reduce){.goal-result{animation:none}.goal-choices button,.proof-topics button{transition:none}}
 html.a11y-reduce-motion .goal-result{animation:none}
+
+.goal-early-review{max-width:800px;margin:28px 0 0;padding:8px 0 8px 24px;border-left:2px solid #ba9a64}.goal-early-review blockquote{margin:0;color:#ece4d7;font-size:clamp(1rem,1.6vw,1.25rem);line-height:1.7}.goal-early-review p,.goal-early-review a{font-size:.875rem;line-height:1.6;color:#d1b585}

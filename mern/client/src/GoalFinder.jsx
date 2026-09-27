@@ -1,3 +1,4 @@
+import { recommendations } from './FacebookRecommendations';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useBravo } from './context';
@@ -25,5 +26,6 @@ export default function GoalFinder() {
       </div>
       {clip ? <figure className="goal-proof">{clip.src ? <video key={clip.src} src={clip.src} poster={clip.poster || undefined} controls playsInline preload="none" aria-label={clip.title}/> : <a href={clip.facebookUrl}><img src={clip.poster} width="640" height="420" loading="lazy" alt={clip.title}/><span>Watch on Facebook ↗</span></a>}<figcaption><strong>{clip.title}</strong><p>{clip.description}</p><Link to={`/#reviews`}>Explore more training videos →</Link></figcaption></figure> : <div className="goal-consult"><img src="/images/bravo-client-training.jpeg" width="828" height="1121" loading="lazy" alt="Bravo training in an everyday public setting"/><div><strong>Let’s talk about your dog.</strong><p>Not sure where to begin? We’ll help you choose.</p><a href="tel:+16058242767">Call (605) 824-2767</a></div></div>}
     </div>
+    <aside className="goal-early-review" aria-label="A Bravo client’s experience"><blockquote>“{recommendations[0].excerpt}”</blockquote><p>{recommendations[0].author} · {recommendations[0].source}</p><Link to="/#reviews">Read client experiences →</Link></aside>
   </section>;
 }
