@@ -1,5 +1,7 @@
 name: Public indexing and rendering
 on:
+  pull_request:
+    branches: [bravo-mern]
   push:
     branches: [bravo-mern, 'seo/**']
     paths: ['mern/**', '.github/workflows/public-indexing.yml']

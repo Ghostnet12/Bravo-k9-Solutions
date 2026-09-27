@@ -1,5 +1,7 @@
 name: Homepage banner verification
 on:
+  pull_request:
+    branches: [bravo-mern]
   push:
     branches: [bravo-mern, 'fix/bravo-hero-copy-*', 'feature/bravo-cinematic-*', 'feature/bravo-black-gold-*', 'feature/home-status-banner-*', 'feature/home-ad-carousel-*', 'fix/fade-homepage-ads-*', 'feature/banner-video-controls-*', 'feature/site-hold-editor', 'feature/customer-clarity', 'feature/first-visit-details']
     paths: ['mern/**', '.github/workflows/home-banner.yml']

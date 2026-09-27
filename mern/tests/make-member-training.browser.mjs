@@ -74,7 +74,7 @@ try {
           const trainer = setup.getByLabel('Assigned trainer', { exact: true });
           await trainer.locator(`option[value="${JOINT_TRAINER_ID}"]`).waitFor({ state: 'attached' });
           assert.equal(savedBody.startDate, startDate); assert.equal(savedBody.trainingDogCount, 2);
-          assert.deepEqual(await trainer.locator('option').allTextContents(), ['David Northrop', 'Ashley Northrop', 'David and Ashley']);
+          assert.deepEqual(await trainer.locator('option').allTextContents(), ['David Northrop', 'Ashley Leverock', 'David and Ashley']);
           await trainer.selectOption(JOINT_TRAINER_ID); await setup.getByRole('button', { name: 'Assign trainer', exact: true }).click();
           await setup.getByText('Trainer assigned. Each assigned trainer can now accept from their staff profile.', { exact: true }).waitFor();
           await setup.getByRole('button', { name: 'Add or Cancel Date', exact: true }).click();

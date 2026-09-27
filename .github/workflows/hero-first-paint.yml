@@ -1,5 +1,7 @@
 name: Hero first-paint regression
 on:
+  pull_request:
+    branches: [bravo-mern]
   push:
     branches: [bravo-mern, 'fix/bravo-hero-copy-*', 'feature/bravo-cinematic-*', 'feature/bravo-black-gold-*', hero-first-paint-20260912, 'polish/**', 'proof/**']
     paths: ['mern/**', '.github/workflows/hero-first-paint.yml']
@@ -34,6 +36,8 @@ jobs:
           npx playwright install chrome
       - name: Install media decoders
         run: sudo apt-get install -y ffmpeg gstreamer1.0-libav
+      - name: Verify the published homepage without signing in
+        run: node tests/home-hero.live.mjs
       - name: Verify hero replacement and copy saves through the real database
         run: node tests/hero-editor.browser.mjs
       - name: Verify shared theme, navigation and autoplay recovery
@@ -44,9 +48,6 @@ jobs:
         run: node tests/home-hero.browser.mjs
       - name: Verify homepage conversion hierarchy and mobile fixed controls
         run: node tests/home-conversion.browser.mjs
-      - name: Verify the published homepage without signing in
-        if: github.ref == 'refs/heads/bravo-mern'
-        run: node tests/home-hero.live.mjs
       - uses: actions/upload-artifact@v7
         if: always()
         with:

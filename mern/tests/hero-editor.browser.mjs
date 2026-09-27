@@ -38,6 +38,7 @@ try {
       await signIn('owner');
       const page = await context.newPage(), errors = [], retiredRequests = [];
       page.on('pageerror', error => errors.push(error.message));
+      await page.addInitScript(()=>{window.heroPointerEvents=[];for(const type of ['pointerdown','pointerup','pointermove','pointercancel','pointerleave','scroll','blur'])document.addEventListener(type,event=>{window.heroPointerEvents.push({type,pointer:event.pointerType,target:event.target?.className,x:event.clientX,y:event.clientY});window.heroPointerEvents=window.heroPointerEvents.slice(-30);},true);});
       page.on('request', request => { if (/bravo-real-world\.(mp4|webm)|bravo-film-poster\.webp/.test(request.url())) retiredRequests.push(request.url()); });
       const film = page.locator('.cinema-film video');
       const videoDialog = page.getByRole('dialog', { name: 'Edit hero video', exact: true });
@@ -45,6 +46,7 @@ try {
       async function holdAt(x, y) { await page.mouse.move(x, y); await page.mouse.down(); await page.waitForTimeout(800); await page.mouse.up(); }
       async function holdFilm() {
         // Hit the actual visible hero, including its overlaid background layers.
+        await page.evaluate(()=>document.fonts.ready);
         const point = await page.locator('.cinema-hero').evaluate(hero => {
           const box = hero.getBoundingClientRect();
           for (let y = Math.max(170, box.top + 170); y < Math.min(innerHeight - 120, box.bottom - 120); y += 30) {
@@ -107,7 +109,7 @@ try {
         console.log(`PASS ${engineName}/${width}: real hold, upload, database save, owner/admin copy, reload, public SSR and muted autoplay`);
       } catch (error) {
         await page.screenshot({ path: `test-results/hero-editor-failure-${engineName}-${width}.png`, fullPage: true });
-        await writeFile(`test-results/hero-editor-failure-${engineName}-${width}.json`, JSON.stringify({ error: error.message, errors, body: await page.locator('body').innerText() }, null, 2));
+        await writeFile(`test-results/hero-editor-failure-${engineName}-${width}.json`, JSON.stringify({ error: error.message, errors, pointers:await page.evaluate(()=>window.heroPointerEvents), body: await page.locator('body').innerText() }, null, 2));
         throw error;
       } finally { await context.close(); }
     }} finally { await browser.close(); }

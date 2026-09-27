@@ -74,6 +74,8 @@ export default function CinematicFilm({ children }) {
     onPointerDown={event => {
       cancelHold();
       if (!canEdit || event.button !== 0 || event.isPrimary === false || !isFilmTarget(event.target)) return;
+      // Keep the hold on the hero while its video and depth layers move.
+      try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* Synthetic pointers have no active capture. */ }
       hold.current = { x: event.clientX, y: event.clientY, timer: setTimeout(() => { suppressUntil.current = Date.now() + 1200; editFilm(); }, 650) };
     }}
     onPointerMove={event => { if (hold.current && Math.hypot(event.clientX - hold.current.x, event.clientY - hold.current.y) > 12) cancelHold(); }}

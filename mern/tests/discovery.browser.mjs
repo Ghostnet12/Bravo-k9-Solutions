@@ -61,8 +61,10 @@ try {
           if(path==='/')await page.locator('.goal-proof figcaption').waitFor();
           if(path==='/workshops')await page.getByRole('heading',{name:'Saturday dog-training workshop',exact:true}).waitFor();
           if(path==='/contact')await page.getByText('Ashley Leverock',{exact:true}).waitFor();
-          assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${path} ${width} no overflow`);
+          await settleApi();await page.evaluate(()=>document.fonts.ready);
           await page.screenshot({path:`test-results/discovery-${engineName}-${width}-${path.slice(1)||'home'}.png`,fullPage:true});
+          const layout=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,overflow:[...document.querySelectorAll('main *')].filter(el=>el.getBoundingClientRect().right>innerWidth+1 && getComputedStyle(el).position!=='absolute').map(el=>({tag:el.tagName,class:el.className,width:el.getBoundingClientRect().width,right:el.getBoundingClientRect().right})).slice(0,15)}));
+          assert.ok(layout.scroll<=layout.width+1,`${path} ${width} no overflow: ${JSON.stringify(layout)}`);
         }
         await visit(origin);await page.getByRole('button',{name:'Walking & distractions',exact:true}).click();
         assert.match(await page.locator('.goal-result').innerText(),/Skills that travel/);
