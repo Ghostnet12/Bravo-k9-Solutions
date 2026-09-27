@@ -58,11 +58,11 @@ try {
         }
         if (width === 390) {
           await page.goto(origin);
-          const facts = page.locator('.home-quick-facts');
-          await facts.waitFor();
-          assert.match(await facts.innerText(), /\$200/);
-          assert.match(await facts.innerText(), /Aberdeen/);
-          const cta = page.getByRole('link', { name: 'Start private training', exact: true });
+          const price = page.locator('.cinema-training-card .cinema-price');
+          await price.waitFor();
+          assert.match(await price.innerText(), /\$200/);
+          assert.match(await page.locator('.cinema-hero .cinema-eyebrow').innerText(), /Aberdeen/i);
+          const cta = page.locator('.cinema-hero').getByRole('link', { name: /Book training/ });
           const box = await cta.boundingBox();
           assert.ok(box && box.y >= 0 && box.y + box.height <= 900, 'booking action fits in initial mobile viewport');
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));

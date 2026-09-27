@@ -43,6 +43,25 @@ try {
         const page = await context.newPage(); const errors = [];
         page.on('pageerror', error => errors.push(error.message));
         await page.goto(origin, { waitUntil: 'networkidle' });
+        // The cinematic hero adds a separate film, not a proof-carousel item.
+        const film = page.locator('.cinema-film video');
+        await page.waitForFunction(() => {
+          const video = document.querySelector('.cinema-film video');
+          return video && !video.paused && video.currentTime > 0 && video.videoWidth > 0;
+        });
+        assert.ok(await film.evaluate(video => video.muted && video.playsInline));
+        const heroBooking = await page.locator('.cinema-hero').getByRole('link', { name: /Book training/ }).boundingBox();
+        assert.ok(heroBooking && heroBooking.y > 0 && heroBooking.y + heroBooking.height <= (width === 390 ? 844 : 1000), 'hero booking is immediately visible');
+        await page.getByRole('button', { name: 'Pause training film', exact: true }).click();
+        await page.waitForFunction(() => document.querySelector('.cinema-film video').paused);
+        await page.getByRole('button', { name: 'Play training film', exact: true }).click();
+        await page.waitForFunction(() => !document.querySelector('.cinema-film video').paused);
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await page.waitForFunction(() => document.querySelector('.cinema-film video').paused && document.querySelector('.cinema-home').dataset.motion === 'off');
+        await page.emulateMedia({ reducedMotion: 'no-preference' });
+        await page.waitForFunction(() => !document.querySelector('.cinema-film video').paused);
+        await page.locator('#training').scrollIntoViewIfNeeded();
+        await page.waitForFunction(() => document.querySelector('.cinema-film video').paused);
         await page.getByRole('heading', { name: /Don’t take\s*our word for it\./ }).waitFor();
         const proofTop = await page.locator('#reviews').evaluate(element => element.offsetTop);
         const trainingTop = await page.locator('#training').evaluate(element => element.offsetTop);
