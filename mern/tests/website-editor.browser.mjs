@@ -8,7 +8,10 @@ import {SERVICES} from '../shared/catalog.js';
 import {CONTENT_KEYS} from '../shared/site-content-keys.js';
 import {renderSiteContent} from '../server/content-html.js';
 const dist=fileURLToPath(new URL('../client/dist/',import.meta.url)),html=await readFile(`${dist}/bravo-shell.html`,'utf8');
-const app=express();app.use(express.static(dist));app.get('/{*path}',(_req,res)=>res.type('html').send(html));
+let fixtureHandler,fixtureFailure,pageHTML=html;
+const app=express();app.use(express.json({limit:'5mb'}));
+app.use('/api',async(req,res)=>{try{await fixtureHandler(req,res);}catch(error){fixtureFailure(error);res.status(500).json({error:'Test API failure'});}});
+app.use(express.static(dist,{index:false}));app.get('/{*path}',(_req,res)=>res.type('html').send(pageHTML));
 const server=app.listen(0,'127.0.0.1');await once(server,'listening');const origin=`http://127.0.0.1:${server.address().port}`;
 await mkdir('test-results',{recursive:true});
 try{for(const [engineName,engine] of Object.entries({chromium,webkit})){
@@ -19,8 +22,9 @@ try{for(const [engineName,engine] of Object.entries({chromium,webkit})){
   let role='owner',entries={},catalog=SERVICES.map(row=>({...row,enabled:row.id!=='online',revision:0})),failPrice=false,failConfig=false;
   const team=[{id:'111111111111111111111111',name:'David Northrop',title:'Owner & Lead Trainer',role:'owner',profileKey:'david',imageKey:'team-david-northrop',image:'/images/david-northrop.webp',revision:0,bio:'David fixture introduction.'},{id:'222222222222222222222222',name:'Ashley Leverock',title:'Trainer / Pit Bull Specialist',role:'staff',profileKey:'ashley',imageKey:'team-ashley-northrop',image:'/images/ashley-northrop.webp',revision:0,bio:'Ashley fixture introduction.'}];
   const workshop={title:'Workshop fixture',date:'2026-10-03',time:'10 am',location:'Aberdeen',duration:'One hour',cents:10000,description:'Workshop details fixture.',published:true,revision:0};
-  await page.route('**/api/**',async route=>{
-   const request=route.request(),path=new URL(request.url()).pathname;
+  pageHTML=html;fixtureFailure=error=>errors.push(error.message);
+  fixtureHandler=async(req,res)=>{
+   const request={postDataJSON:()=>req.body,method:()=>req.method},path=req.originalUrl.split('?')[0];
    let json={services:[],team:[],reviews:[],images:{},clips:[],schedules:[],alerts:[],revision:0},status=200;
    if(path==='/api/auth/me')json={user:role?{id:team[0].id,name:'Fixture',role,isPrimaryOwner:width===390}:null,services:[]};
    if(path==='/api/config'){json={connected:true,paymentsReady:false,services:catalog,lessonLibrary:{open:false,lessonCents:7500,bundleCents:25000}};if(failConfig){status=503;json={error:'Temporary outage fixture'};}}
@@ -39,10 +43,10 @@ try{for(const [engineName,engine] of Object.entries({chromium,webkit})){
    if(path==='/api/trainers')json={trainers:team};
    if(path.startsWith('/api/site-images/background-')){
     if(request.method()==='PUT'){const key=path.split('/').at(-1);json={image:{src:`/api/site-images/${key}/image?v=1`,revision:1,framed:true}};}
-    else return route.fulfill({path:`${dist}/images/bravo-client-training.jpeg`,contentType:'image/jpeg'});
+    else return res.sendFile(`${dist}/images/bravo-client-training.jpeg`);
    }
-   await route.fulfill({status,json});
-  });
+   res.status(status).json(json);
+  };
   const hold=async locator=>{await locator.scrollIntoViewIfNeeded();const box=await locator.boundingBox();await page.mouse.move(box.x+Math.min(24,box.width/2),box.y+Math.min(12,box.height/2));await page.mouse.down();await page.waitForTimeout(780);await page.mouse.up();};
   const content=page.getByRole('dialog',{name:'Edit website section',exact:true});
   try{
@@ -77,11 +81,10 @@ try{for(const [engineName,engine] of Object.entries({chromium,webkit})){
    assert.equal(new URL(page.url()).pathname,'/','dragging an editable link must not navigate');
    await page.locator('.goal-choice-link').first().click();await page.waitForURL(url=>url.pathname==='/portal');await page.waitForLoadState('networkidle');
    role=null;await page.goto(origin);await page.waitForLoadState('networkidle');await page.locator('.goal-choice-link').first().click();await page.getByRole('heading',{name:'Let’s start with your dog.',exact:true}).waitFor();await page.getByLabel('Number of dogs',{exact:true}).fill('2');assert.match(await page.locator('.price-total').innerText(),/\$350/);assert.equal(new URL(page.url()).searchParams.get('focus'),'puppy-foundations');await page.waitForLoadState('networkidle');
-   // WebKit reports aborted intercepted requests as page errors. Complete each
-   // ordinary link navigation before changing the next fixture account.
+   // Complete normal link navigation before changing the next test account.
    for(const outsider of [null,'member','staff']){role=outsider;await page.goto(origin);await page.waitForLoadState('networkidle');await hold(page.locator('#goal-price-manners'));await page.waitForLoadState('networkidle');assert.equal(await page.locator('dialog[open]').count(),0);assert.equal(await page.getByRole('button',{name:'Edit page text & design'}).count(),0);}
    role=null;failConfig=true;
-   await page.route(`${origin}/?config-failure`,route=>route.fulfill({contentType:'text/html',body:renderSiteContent(html,{},undefined,catalog)}));
+   pageHTML=renderSiteContent(html,{},undefined,catalog);
    await page.goto(`${origin}/?config-failure`);await page.waitForLoadState('networkidle');assert.match(await page.locator('#goal-price-manners').innerText(),/\$225/,'failed API refresh retains server-published prices');
    assert.deepEqual(errors,[]);console.log(`PASS ${engineName}/${width}: all-part publication, price sync, trainer identity, backgrounds, media/workshop holds, scrolling, navigation and permissions`);
   }catch(error){await page.screenshot({path:`test-results/website-editor-failure-${engineName}-${width}.png`,fullPage:true});await writeFile(`test-results/website-editor-failure-${engineName}-${width}.json`,JSON.stringify({error:error.message,errors,text:await page.locator('body').innerText()},null,2));throw error;}finally{await context.close();}
