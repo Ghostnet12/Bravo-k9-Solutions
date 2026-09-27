@@ -1,6 +1,7 @@
 import { discoveryRoutes } from './discovery.js';
 import { groupPeopleFilter, selectableGroupMembers } from './group-privacy.js';
-import { publicTrainerName } from '../shared/discovery.js';
+import { publicTrainerProfile } from '../shared/trainer-profile.js';
+import { editWebsiteService, editWebsiteTrainer } from './website-records.js';
 import { mfaRoutes } from './mfa-routes.js';
 import { attributeBooking, monitoringEnabled } from './monitoring.js';
 import { reserveVisits, assertVisitsFree } from './reservations.js';
@@ -19,7 +20,7 @@ import { access } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { connectDb, transaction } from './db.js';
-import { User, Session, PasswordReset, Booking, Slot, Subscription, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Lesson, LessonSection, BillingLock, MediaUpload, MediaChunk } from './models.js';
+import { User, Session, PasswordReset, Booking, Slot, Subscription, Settings, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Lesson, LessonSection, BillingLock, MediaUpload, MediaChunk } from './models.js';
 import { hashPassword, verifyPassword, issueSession, identify, requireUser, requireStaff, requireOwner, signOut, publicUser, publicRole, isPrimaryOwner, sameOrigin, rateLimit } from './auth.js';
 import { createBooking, getAvailability, getEntitlements, cancelBooking, trainerCapacity, assignTrainer, TRAINER_DOG_LIMIT } from './bookings.js';
 import { stripeClient, stripeMode, stripeWebhook, checkout, refundBooking } from './payments.js';
@@ -65,8 +66,8 @@ app.get('/api/lessons', (_req,res,next) => !process.env.MONGODB_URI ? res.status
 app.get('/api/team', async (_req, res) => {
   if (!process.env.MONGODB_URI) return res.json({ team: [] });
   await connectDb();
-  const team = await User.find({ role: { $in: ['owner', 'staff'] }, blocked: { $ne: true } }).select('name role phone title bio showPhone').sort({ role: 1, name: 1 }).lean();
-  res.json({ team: team.map(user => ({ id: String(user._id), name: publicTrainerName(user.name), role: publicRole(user), title: user.title || (publicRole(user) === 'owner' ? 'Owner & Lead Trainer' : 'Bravo Trainer'), bio: user.bio || '', phone: user.showPhone ? user.phone : '' })) });
+  const team = await User.find({ role: { $in: ['owner', 'staff'] }, blocked: { $ne: true } }).select('name publicName publicProfileRevision role phone title bio showPhone').sort({ role: 1, name: 1 }).lean();
+  res.json({ team: team.map(user => publicTrainerProfile(user, publicRole(user))) });
 });
 app.use('/api', sameOrigin, async (_req, _res, next) => { await connectDb(); next(); }, identify);
 app.use('/api', rateLimit('api', 240, 60000));
@@ -101,8 +102,8 @@ app.post('/api/auth/password-setup', requireUser, rateLimit('password-setup', 5,
 app.post('/api/auth/logout', async (req, res) => { await signOut(req, res); res.json({ ok: true }); });
 app.get('/api/auth/me', async (req, res) => res.json({ user: req.user ? publicUser(req.user) : null, ...(req.user && !req.user.mustChangePassword ? await getEntitlements(req.user._id) : { services: [], subscriptions: [] }) }));
 app.patch('/api/auth/profile', requireUser, async (req, res) => {
-  const fields = z.object({ name: z.string().trim().min(2).max(80), dogName: z.string().trim().max(80), phone: z.string().trim().max(30), address: z.string().trim().max(300), title: z.string().trim().max(80).optional(), bio: z.string().trim().max(500).optional(), showPhone: z.boolean().optional() }).parse(req.body);
-  const user = await User.findByIdAndUpdate(req.user._id, { $set: fields }, { returnDocument: 'after' });
+  const fields = z.object({ name: z.string().trim().min(2).max(80), dogName: z.string().trim().max(80), phone: z.string().trim().max(30), address: z.string().trim().max(300), title: z.string().trim().max(80).optional(), bio: z.string().trim().max(8000).optional(), showPhone: z.boolean().optional() }).parse(req.body);
+  const user = await User.findByIdAndUpdate(req.user._id, { $set: fields, $inc: { publicProfileRevision: 1 } }, { returnDocument: 'after' });
   res.json({ user: publicUser(user) });
 });
 app.post('/api/auth/password', requireUser, rateLimit('password', 5, 900000), async (req, res) => {
@@ -132,8 +133,8 @@ app.post('/api/quote', async (req, res) => {
 });
 app.get('/api/bookings', requireUser, async (req, res) => res.json({ bookings: await Booking.find({ userId: req.user._id }).sort({ createdAt: -1 }).limit(100).lean() }));
 app.get('/api/trainers', requireUser, async (_req, res) => {
-  const people = await User.find({ role: { $in: ['staff', 'owner'] }, blocked: { $ne: true } }).select('name role title').sort({ name: 1 }).lean();
-  const trainers = await Promise.all(people.map(async person => ({ id: String(person._id), name: person.name, title: person.title || 'Bravo Trainer', ...(await trainerCapacity(person._id)), limit: TRAINER_DOG_LIMIT })));
+  const people = await User.find({ role: { $in: ['staff', 'owner'] }, blocked: { $ne: true } }).select('name publicName role title').sort({ name: 1 }).lean();
+  const trainers = await Promise.all(people.map(async person => ({ id: String(person._id), name: person.name, publicName: person.publicName, title: person.title || 'Bravo Trainer', ...(await trainerCapacity(person._id)), limit: TRAINER_DOG_LIMIT })));
   res.json({ trainers: trainerOptions(trainers) });
 });
 app.post('/api/bookings', requireUser, rateLimit('booking', req => req.user?.role === 'owner' ? 50 : 10, 3600000), async (req, res) => {
@@ -281,7 +282,7 @@ for (const type of ['video', 'captions', 'transcript', 'photo']) app.get(`/api/l
 app.get('/api/admin', requireUser, requireStaff, async (req, res) => {
   const [settings, bookings, blocks, inbox] = await Promise.all([Settings.findById('schedule'), Booking.find().sort({ createdAt: -1 }).limit(200).populate({ path: 'userId', model: User, select: 'name email' }), Slot.find({ bookingId: { $exists: false } }).sort({ _id: 1 }).limit(200), DirectMessage.aggregate([{ $match: { deleted: false, ...await chatFilter(req.user, 'inbox') } }, { $sort: { createdAt: -1 } }, { $group: { _id: '$memberId', lastMessage: { $first: '$body' }, updatedAt: { $first: '$createdAt' } } }, { $limit: 100 }])]);
   const names = await User.find({ _id: { $in: inbox.map(thread => thread._id) } }).select('name').lean(); const nameMap = new Map(names.map(person => [String(person._id), person.name]));
-  const team = await User.find({ role: { $in: ['staff', 'owner'] }, blocked: { $ne: true } }).select('name role').sort({ name: 1 }).lean();
+  const team = await User.find({ role: { $in: ['staff', 'owner'] }, blocked: { $ne: true } }).select('name publicName role').sort({ name: 1 }).lean();
   res.json({ settings, bookings, blocks, team: team.map(person => ({ ...person, role: publicRole(person) })), inbox: (await visibleInbox(req.user, inbox)).map(thread => ({ ...thread, memberName: nameMap.get(String(thread._id)) || 'Client' })), role: req.user.role });
 });
 const objectId = z.string().regex(/^[a-f\d]{24}$/i);
@@ -316,7 +317,7 @@ app.delete('/api/admin/administrators/:id', requireUser, requirePrimaryOwner, ra
 app.patch('/api/admin/users/:id', requireUser, requireOwner, rateLimit('admin-user-edit', 30, 3600000), async (req, res) => {
   const target = await User.findById(objectId.parse(req.params.id));
   if (!target || target.removedAt) return res.status(404).json({ error: 'Account not found.' });
-  const { confirmOwnerAccess, ...fields } = z.object({ role: z.enum(['member', 'staff', 'owner']).optional(), confirmOwnerAccess: z.boolean().optional(), email: z.string().trim().email().max(254).transform(value => value.toLowerCase()).optional(), dogName: z.string().trim().max(80).optional(), address: z.string().trim().max(300).optional(), name: z.string().trim().min(2).max(80).optional(), phone: z.string().trim().max(30).optional(), title: z.string().trim().max(80).optional(), bio: z.string().trim().max(500).optional(), showPhone: z.boolean().optional(), blocked: z.boolean().optional(), mutedUntil: z.union([z.string().datetime(), z.null()]).optional() }).parse(req.body);
+  const { confirmOwnerAccess, ...fields } = z.object({ role: z.enum(['member', 'staff', 'owner']).optional(), confirmOwnerAccess: z.boolean().optional(), email: z.string().trim().email().max(254).transform(value => value.toLowerCase()).optional(), dogName: z.string().trim().max(80).optional(), address: z.string().trim().max(300).optional(), name: z.string().trim().min(2).max(80).optional(), phone: z.string().trim().max(30).optional(), title: z.string().trim().max(80).optional(), bio: z.string().trim().max(8000).optional(), showPhone: z.boolean().optional(), blocked: z.boolean().optional(), mutedUntil: z.union([z.string().datetime(), z.null()]).optional() }).parse(req.body);
   if (fields.email && (target.role !== 'member' || target.email)) throw new Error('An email can only be added to a client who does not have one yet.');
   const changesRole = fields.role !== undefined && fields.role !== target.role;
   if (changesRole && fields.role !== 'member' && target.mustChangePassword) throw new Error('This client must choose their own password before receiving staff permissions.');
@@ -331,7 +332,7 @@ app.patch('/api/admin/users/:id', requireUser, requireOwner, rateLimit('admin-us
   let updated;
   await transaction(async session => {
     // Compare the role so concurrent saves cannot silently overwrite a promotion.
-    updated = await User.findOneAndUpdate({ _id: target._id, removedAt: null, role: target.role, blocked: target.blocked, ...(changesRole && fields.role !== 'member' ? { mustChangePassword: { $ne: true } } : {}), ...(fields.email ? { email: null } : {}) }, { $set: fields, ...(changesRole || fields.blocked ? { $inc: { credentialVersion: 1 } } : {}) }, { returnDocument: 'after', runValidators: true, session });
+    updated = await User.findOneAndUpdate({ _id: target._id, removedAt: null, role: target.role, blocked: target.blocked, ...(changesRole && fields.role !== 'member' ? { mustChangePassword: { $ne: true } } : {}), ...(fields.email ? { email: null } : {}) }, { $set: fields, ...((changesRole || fields.blocked || fields.title !== undefined || fields.bio !== undefined || fields.name !== undefined) ? { $inc: { ...(changesRole || fields.blocked ? { credentialVersion: 1 } : {}), publicProfileRevision: 1 } } : {}) }, { returnDocument: 'after', runValidators: true, session });
     if (!updated) throw Object.assign(new Error('This account changed. Refresh it before saving again.'), { status: 409 });
     if (changesRole) await AuditEvent.create([{ actorId: req.user._id, action: 'user.access.changed', targetType: 'user', targetId: String(target._id), details: { from: target.role, to: fields.role } }], { session });
     if (changesRole || fields.blocked) await Session.deleteMany({ userId: updated._id }, { session });
@@ -340,15 +341,8 @@ app.patch('/api/admin/users/:id', requireUser, requireOwner, rateLimit('admin-us
 });
 app.get('/api/admin/reviews', requireUser, requireOwner, async (_req, res) => res.json({ reviews: await Review.find().sort({ createdAt: -1 }).limit(200).lean() }));
 app.get('/api/admin/services', requireUser, requireOwner, async (_req, res) => res.json({ services: await effectiveServices({ includeDisabled: true }) }));
-app.patch('/api/admin/services/:id', requireUser, requireOwner, rateLimit('admin-service-edit', 20, 3600000), async (req, res) => {
-  const service = SERVICES.find(item => item.id === req.params.id); if (!service) return res.status(404).json({ error: 'Service not found.' });
-  const fields = z.object({ cents: z.number().int().min(0).max(1000000), enabled: z.boolean() }).parse(req.body);
-  if (service.id === 'online') throw new Error('Manage online lessons from Lesson studio. Lessons are $75/month; the training bundle is $250/month.');
-  if (service.id === 'training' && fields.cents !== 20000) throw new Error('The primary training price is fixed at $200/month by the current business directive.');
-  const setting = await ServiceSetting.findOneAndUpdate({ _id: service.id }, { $set: { ...fields, updatedBy: req.user._id } }, { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true });
-  await AuditEvent.create({ actorId: req.user._id, action: 'service.updated', targetType: 'service', targetId: service.id, details: fields });
-  res.json({ service: { ...service, cents: setting.cents, enabled: setting.enabled } });
-});
+app.patch('/api/admin/services/:id', requireUser, requireOwner, rateLimit('admin-service-edit', 60, 3600000), editWebsiteService);
+app.patch('/api/admin/team/:id', requireUser, requireOwner, rateLimit('admin-team-edit', 60, 3600000), editWebsiteTrainer);
 app.patch('/api/admin/reviews/:id', requireUser, requireOwner, async (req, res) => {
   const { hidden } = z.object({ hidden: z.boolean() }).parse(req.body);
   const review = await Review.findByIdAndUpdate(objectId.parse(req.params.id), { $set: { hidden, moderatedAt: new Date(), moderatedBy: req.user._id } }, { returnDocument: 'after' });

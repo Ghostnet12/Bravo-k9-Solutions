@@ -1,14 +1,26 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { api } from './api';
 import { useBravo } from './context';
 import { useSiteContent, Editable } from './SiteContent';
 import { isImageEditor } from '../../shared/site-images';
 const VideoEditor = lazy(() => import('./ProofVideoEditor'));
+function MediaToolkit({ children, close }) {
+  const dialog = useRef(null);
+  useEffect(() => { const previous=document.activeElement; dialog.current.showModal(); return()=>previous?.focus?.(); },[]);
+  return <dialog ref={dialog} className="site-content-dialog" aria-label="Edit program media" onCancel={event=>{event.preventDefault();close();}}><div className="site-content-heading"><h2>Program photo &amp; video</h2><button type="button" aria-label="Close program media" onClick={close}>×</button></div>{children}</dialog>;
+}
 export default function ProgramMedia({ goal, automaticClip }) {
   const { user } = useBravo(), owner = isImageEditor(user) && !user?.mustChangePassword;
   const { entries, publishEntry } = useSiteContent();
   const key = `goal-${goal.id}-media`, kind = entries[key]?.value?.mediaKind || 'automatic';
   const [video, setVideo] = useState(null), [editing, setEditing] = useState(null), [busy, setBusy] = useState(false), [error, setError] = useState(''), [status, setStatus] = useState('');
+  const [toolkit, setToolkit] = useState(false);
+  useEffect(()=>{
+    if(!owner){setToolkit(false);return;}
+    const open=event=>{if(event.detail?.id===goal.id)setToolkit(true);};
+    window.addEventListener('bravo-program-edit',open);
+    return()=>window.removeEventListener('bravo-program-edit',open);
+  },[owner,goal.id]);
   useEffect(() => { let live = true; api('/program-videos').then(data => { if (live) setVideo(data.clips?.find(item => item.id === goal.id) || null); }).catch(() => { if(live)setError('Program media could not load. Reload to try again.'); }); return () => { live = false; }; }, [goal.id]);
   async function selectKind(next) {
     setBusy(true); setError(''); setStatus('');
@@ -24,7 +36,8 @@ export default function ProgramMedia({ goal, automaticClip }) {
     catch(cause){setError(cause.message);}finally{setBusy(false);}
   }
   const clip = kind === 'photo' ? null : kind === 'video' ? video : automaticClip;
-  return <div className="program-media">
+  return <div className="program-media" data-site-program={goal.id}>
+    {owner && toolkit && <MediaToolkit close={()=>setToolkit(false)}><p>Choose a photo, your own video, or the suggested training footage. Changes publish when saved.</p><label>Show in this program<select value={kind} disabled={busy} onChange={event=>selectKind(event.target.value)}><option value="automatic">Suggested training video</option><option value="photo">Program photo</option><option value="video" disabled={!video}>Program video</option></select></label><button type="button" disabled={busy} onClick={()=>{setToolkit(false);editVideo();}}>{video?'Edit program video':'Upload program video'}</button>{kind==='photo' && <button type="button" disabled={busy} onClick={()=>{setToolkit(false);window.dispatchEvent(new CustomEvent('bravo-edit-photo',{detail:{key:`program-${goal.id}`}}));}}>Edit program photo</button>}<button type="button" onClick={()=>{setToolkit(false);window.dispatchEvent(new CustomEvent('bravo-content-edit',{detail:{key:`goal-${goal.id}-copy`}}));}}>Edit program text &amp; design</button>{error && <p role="alert">{error}</p>}<p role="status">{busy?'Publishing…':status}</p></MediaToolkit>}
     {owner && <div className="program-media-tools" data-site-image-ignore="" aria-label={`Edit ${goal.label} media`}>
       <label>Program photo or video<select aria-label="Program photo or video" value={kind} disabled={busy} onChange={event=>selectKind(event.target.value)}><option value="automatic">Suggested training video</option><option value="photo">Program photo</option><option value="video" disabled={!video}>Program video</option></select></label>
       <button type="button" disabled={busy} onClick={editVideo}>{video ? 'Edit program video' : 'Upload program video'}</button>

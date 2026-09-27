@@ -3287,3 +3287,916 @@ CONTENT_KEYS['course-public-5']={text:true};
 CONTENT_KEYS['course-public-6']={text:true};
 CONTENT_KEYS['course-public-7']={text:true};
 CONTENT_KEYS['course-public-8']={text:true};
+
+// Stable fields for the complete website hold toolkit.
+Object.assign(CONTENT_KEYS, {
+  "copy-home-1": {
+    "text": false
+  },
+  "copy-home-2": {
+    "text": true,
+    "link": true
+  },
+  "copy-home-3": {
+    "text": true,
+    "link": true
+  },
+  "copy-home-4": {
+    "text": true
+  },
+  "copy-home-5": {
+    "text": true,
+    "link": true
+  },
+  "copy-home-6": {
+    "text": true
+  },
+  "copy-home-7": {
+    "text": true
+  },
+  "copy-home-8": {
+    "text": true,
+    "link": true
+  },
+  "copy-home-9": {
+    "text": false
+  },
+  "copy-home-10": {
+    "text": true
+  },
+  "copy-home-11": {
+    "text": true
+  },
+  "copy-home-12": {
+    "text": true
+  },
+  "copy-home-13": {
+    "text": true
+  },
+  "copy-home-14": {
+    "text": false
+  },
+  "copy-home-15": {
+    "text": true
+  },
+  "copy-home-16": {
+    "text": true
+  },
+  "copy-home-17": {
+    "text": true
+  },
+  "copy-home-18": {
+    "text": false
+  },
+  "copy-home-19": {
+    "text": true
+  },
+  "copy-home-20": {
+    "text": true
+  },
+  "copy-home-21": {
+    "text": true
+  },
+  "copy-home-22": {
+    "text": true
+  },
+  "copy-home-23": {
+    "text": true
+  },
+  "copy-home-24": {
+    "text": false
+  },
+  "copy-home-25": {
+    "text": true
+  },
+  "copy-home-26": {
+    "text": true,
+    "link": true
+  },
+  "copy-home-27": {
+    "text": false
+  },
+  "copy-home-28": {
+    "text": true
+  },
+  "copy-home-29": {
+    "text": true
+  },
+  "copy-home-30": {
+    "text": true
+  },
+  "copy-home-31": {
+    "text": true
+  },
+  "copy-home-32": {
+    "text": true,
+    "link": true
+  },
+  "copy-home-33": {
+    "text": true
+  },
+  "copy-home-34": {
+    "text": true
+  },
+  "copy-home-35": {
+    "text": true
+  },
+  "copy-home-36": {
+    "text": true
+  },
+  "copy-home-37": {
+    "text": true
+  },
+  "copy-home-38": {
+    "text": true
+  },
+  "copy-home-39": {
+    "text": false
+  },
+  "copy-home-40": {
+    "text": true
+  },
+  "copy-home-41": {
+    "text": true
+  },
+  "copy-home-42": {
+    "text": false
+  },
+  "copy-home-43": {
+    "text": true
+  },
+  "copy-home-44": {
+    "text": true
+  },
+  "copy-home-45": {
+    "text": true
+  },
+  "copy-home-46": {
+    "text": true
+  },
+  "copy-home-47": {
+    "text": false
+  },
+  "copy-home-48": {
+    "text": true
+  },
+  "copy-home-49": {
+    "text": true,
+    "link": true
+  },
+  "copy-home-50": {
+    "text": false
+  },
+  "copy-home-51": {
+    "text": true
+  },
+  "copy-home-52": {
+    "text": true
+  },
+  "copy-home-53": {
+    "text": false
+  },
+  "copy-home-54": {
+    "text": true
+  },
+  "copy-home-55": {
+    "text": true,
+    "link": true
+  },
+  "copy-home-56": {
+    "text": true,
+    "link": true
+  },
+  "copy-home-57": {
+    "text": true
+  },
+  "copy-home-58": {
+    "text": true
+  },
+  "copy-home-59": {
+    "text": false
+  },
+  "copy-home-60": {
+    "text": true
+  },
+  "copy-home-61": {
+    "text": true
+  },
+  "copy-home-62": {
+    "text": true,
+    "link": true
+  },
+  "copy-home-63": {
+    "text": true,
+    "link": true
+  },
+  "copy-home-64": {
+    "text": true
+  },
+  "copy-goalfinder-1": {
+    "text": false
+  },
+  "copy-goalfinder-2": {
+    "text": true
+  },
+  "copy-goalfinder-3": {
+    "text": true,
+    "link": true
+  },
+  "copy-trainerintroduction-1": {
+    "text": true,
+    "link": true
+  },
+  "copy-trainerintroduction-2": {
+    "text": true,
+    "link": true
+  },
+  "copy-trainingfacts-1": {
+    "text": true
+  },
+  "copy-trainingfacts-2": {
+    "text": true
+  },
+  "copy-servicejourney-1": {
+    "text": true
+  },
+  "copy-servicejourney-2": {
+    "text": true
+  },
+  "copy-servicejourney-3": {
+    "text": true
+  },
+  "copy-servicejourney-4": {
+    "text": true
+  },
+  "copy-servicejourney-5": {
+    "text": false
+  },
+  "copy-servicejourney-6": {
+    "text": true,
+    "link": true
+  },
+  "copy-courselaunch-1": {
+    "text": true,
+    "link": true
+  },
+  "copy-courselaunch-2": {
+    "text": false
+  },
+  "copy-courselaunch-3": {
+    "text": true
+  },
+  "copy-courselaunch-4": {
+    "text": false
+  },
+  "copy-courselaunch-5": {
+    "text": false
+  },
+  "copy-courselaunch-6": {
+    "text": false
+  },
+  "copy-courselaunch-7": {
+    "text": false
+  },
+  "copy-courselaunch-8": {
+    "text": true,
+    "link": true
+  },
+  "copy-courselaunch-9": {
+    "text": false
+  },
+  "copy-courselaunch-10": {
+    "text": true
+  },
+  "copy-courselaunch-11": {
+    "text": true
+  },
+  "copy-courselaunch-12": {
+    "text": true
+  },
+  "copy-courselaunch-13": {
+    "text": true
+  },
+  "copy-courselaunch-14": {
+    "text": true
+  },
+  "copy-courselaunch-15": {
+    "text": true
+  },
+  "copy-courselaunch-16": {
+    "text": true
+  },
+  "copy-courselaunch-17": {
+    "text": true,
+    "link": true
+  },
+  "copy-courselaunch-18": {
+    "text": true,
+    "link": true
+  },
+  "copy-courselaunch-19": {
+    "text": true
+  },
+  "copy-courselaunch-20": {
+    "text": true
+  },
+  "copy-courselaunch-21": {
+    "text": true
+  },
+  "copy-courselaunch-22": {
+    "text": true
+  },
+  "copy-courselaunch-23": {
+    "text": true
+  },
+  "copy-courselaunch-24": {
+    "text": true
+  },
+  "copy-courselaunch-25": {
+    "text": true
+  },
+  "copy-courselaunch-26": {
+    "text": true
+  },
+  "copy-lessonoffers-1": {
+    "text": false
+  },
+  "copy-lessonoffers-2": {
+    "text": true
+  },
+  "copy-lessonoffers-3": {
+    "text": true
+  },
+  "copy-lessonoffers-4": {
+    "text": true
+  },
+  "copy-lessonoffers-5": {
+    "text": true,
+    "link": true
+  },
+  "copy-lessonoffers-6": {
+    "text": true,
+    "link": true
+  },
+  "copy-lessonoffers-7": {
+    "text": false
+  },
+  "copy-lessonoffers-8": {
+    "text": true
+  },
+  "copy-lessonoffers-9": {
+    "text": true
+  },
+  "copy-lessonoffers-10": {
+    "text": true
+  },
+  "copy-lessonoffers-11": {
+    "text": true,
+    "link": true
+  },
+  "copy-lessonoffers-12": {
+    "text": true
+  },
+  "copy-lessonoffers-13": {
+    "text": true
+  },
+  "copy-firstvisitintro-1": {
+    "text": true
+  },
+  "copy-firstvisitintro-2": {
+    "text": true
+  },
+  "copy-firstvisitintro-3": {
+    "text": true
+  },
+  "copy-firstvisitintro-4": {
+    "text": true
+  },
+  "copy-firstvisitintro-5": {
+    "text": true
+  },
+  "copy-firstvisitintro-6": {
+    "text": true
+  },
+  "copy-firstvisitintro-7": {
+    "text": true
+  },
+  "copy-firstvisitintro-8": {
+    "text": true
+  },
+  "copy-firstvisitintro-9": {
+    "text": true,
+    "link": true
+  },
+  "copy-firstvisitintro-10": {
+    "text": true
+  },
+  "copy-firstvisitintro-11": {
+    "text": true,
+    "link": true
+  },
+  "copy-firstvisitintro-12": {
+    "text": true
+  },
+  "copy-firstvisitintro-13": {
+    "text": true
+  },
+  "copy-firstvisitintro-14": {
+    "text": true,
+    "link": true
+  },
+  "copy-firstvisitintro-15": {
+    "text": true
+  },
+  "copy-firstvisitintro-16": {
+    "text": true,
+    "link": true
+  },
+  "copy-dogtrainingpage-1": {
+    "text": true
+  },
+  "copy-dogtrainingpage-2": {
+    "text": true
+  },
+  "copy-dogtrainingpage-3": {
+    "text": true
+  },
+  "copy-dogtrainingpage-4": {
+    "text": true
+  },
+  "copy-dogtrainingpage-5": {
+    "text": true
+  },
+  "copy-dogtrainingpage-6": {
+    "text": true
+  },
+  "copy-dogtrainingpage-7": {
+    "text": true
+  },
+  "copy-dogwalkingpage-1": {
+    "text": true
+  },
+  "copy-dogwalkingpage-2": {
+    "text": true
+  },
+  "copy-dogwalkingpage-3": {
+    "text": true
+  },
+  "copy-dogwalkingpage-4": {
+    "text": false
+  },
+  "copy-dogwalkingpage-5": {
+    "text": true
+  },
+  "copy-dogwalkingpage-6": {
+    "text": true
+  },
+  "copy-behaviorassessmentpage-1": {
+    "text": true
+  },
+  "copy-behaviorassessmentpage-2": {
+    "text": true
+  },
+  "copy-behaviorassessmentpage-3": {
+    "text": true
+  },
+  "copy-contactpage-1": {
+    "text": true
+  },
+  "copy-contactpage-2": {
+    "text": true
+  },
+  "copy-contactpage-3": {
+    "text": true
+  },
+  "copy-contactpage-4": {
+    "text": true
+  },
+  "copy-contactpage-5": {
+    "text": true
+  },
+  "copy-contactpage-6": {
+    "text": true
+  },
+  "copy-learnpage-1": {
+    "text": true,
+    "link": true
+  },
+  "copy-learnpage-2": {
+    "text": true,
+    "link": true
+  },
+  "copy-learnpage-3": {
+    "text": true
+  },
+  "copy-learnpage-4": {
+    "text": false
+  },
+  "copy-learnpage-5": {
+    "text": true
+  },
+  "copy-learnpage-6": {
+    "text": true
+  },
+  "copy-learnpage-7": {
+    "text": false
+  },
+  "copy-learnpage-8": {
+    "text": true
+  },
+  "copy-learnpage-9": {
+    "text": true
+  },
+  "copy-learnpage-10": {
+    "text": true
+  },
+  "copy-learnpage-11": {
+    "text": false
+  },
+  "copy-learnpage-12": {
+    "text": false
+  },
+  "copy-learnpage-13": {
+    "text": true
+  },
+  "copy-learnpage-14": {
+    "text": true
+  },
+  "copy-workshoppage-1": {
+    "text": false
+  },
+  "copy-workshoppage-2": {
+    "text": true
+  },
+  "copy-workshoppage-3": {
+    "text": true
+  },
+  "copy-workshoppage-4": {
+    "text": true
+  },
+  "copy-workshoppage-5": {
+    "text": true,
+    "link": true
+  },
+  "copy-accessibilitypage-1": {
+    "text": true
+  },
+  "copy-accessibilitypage-2": {
+    "text": true
+  },
+  "copy-accessibilitypage-3": {
+    "text": true
+  },
+  "copy-accessibilitypage-4": {
+    "text": true
+  },
+  "copy-accessibilitypage-5": {
+    "text": true
+  },
+  "copy-mediarightspage-1": {
+    "text": true
+  },
+  "copy-mediarightspage-2": {
+    "text": true
+  },
+  "copy-ui-1": {
+    "text": true,
+    "link": true
+  },
+  "copy-bookingpage-1": {
+    "text": true,
+    "link": true
+  },
+  "copy-bookingpage-2": {
+    "text": true
+  },
+  "copy-bookingpage-3": {
+    "text": true
+  },
+  "copy-bookingpage-4": {
+    "text": true
+  },
+  "copy-bookingpage-5": {
+    "text": false
+  },
+  "copy-bookingpage-6": {
+    "text": true
+  },
+  "copy-bookingpage-7": {
+    "text": true
+  },
+  "copy-bookingpage-8": {
+    "text": true
+  },
+  "copy-bookingpage-9": {
+    "text": true
+  },
+  "copy-bookingpage-10": {
+    "text": true
+  },
+  "copy-bookingpage-11": {
+    "text": true
+  },
+  "copy-bookingpage-12": {
+    "text": true,
+    "link": true
+  },
+  "copy-bookingpage-13": {
+    "text": true
+  },
+  "copy-bookingpage-14": {
+    "text": true
+  },
+  "copy-bookingpage-15": {
+    "text": true
+  },
+  "copy-bookingpage-16": {
+    "text": true
+  },
+  "copy-bookingpage-17": {
+    "text": true
+  },
+  "copy-bookingpage-18": {
+    "text": true
+  },
+  "copy-bookingpage-19": {
+    "text": true
+  },
+  "copy-bookingpage-20": {
+    "text": true
+  },
+  "copy-bookingpage-21": {
+    "text": true
+  },
+  "copy-bookingpage-22": {
+    "text": true
+  },
+  "copy-bookingpage-23": {
+    "text": true
+  },
+  "copy-bookingpage-24": {
+    "text": true
+  },
+  "copy-bookingpage-25": {
+    "text": true
+  },
+  "copy-bookingpage-26": {
+    "text": true
+  },
+  "copy-bookingpage-27": {
+    "text": true
+  },
+  "copy-bookingpage-28": {
+    "text": true
+  },
+  "copy-bookingpage-29": {
+    "text": true
+  },
+  "copy-bookingpage-30": {
+    "text": true
+  },
+  "copy-bookingpage-31": {
+    "text": true
+  },
+  "copy-bookingpage-32": {
+    "text": true
+  },
+  "copy-bookingpage-33": {
+    "text": true
+  },
+  "copy-bookingpage-34": {
+    "text": true
+  },
+  "copy-bookingpage-35": {
+    "text": true
+  },
+  "copy-bookingpage-36": {
+    "text": true
+  },
+  "copy-bookingpage-37": {
+    "text": true
+  },
+  "copy-bookingpage-38": {
+    "text": true
+  },
+  "copy-bookingpage-39": {
+    "text": true
+  },
+  "copy-bookingpage-40": {
+    "text": true
+  },
+  "copy-bookingpage-41": {
+    "text": true
+  },
+  "copy-bookingpage-42": {
+    "text": true
+  },
+  "copy-bookingpage-43": {
+    "text": true
+  },
+  "copy-bookingpage-44": {
+    "text": true
+  },
+  "copy-bookingpage-45": {
+    "text": true
+  },
+  "copy-bookingpage-46": {
+    "text": true
+  },
+  "copy-bookingpage-47": {
+    "text": true
+  },
+  "copy-bookingpage-48": {
+    "text": true
+  },
+  "copy-accountpage-1": {
+    "text": true
+  },
+  "copy-accountpage-2": {
+    "text": true
+  },
+  "copy-accountpage-3": {
+    "text": true
+  },
+  "copy-accountpage-4": {
+    "text": true
+  },
+  "copy-accountpage-5": {
+    "text": true
+  },
+  "copy-accountpage-6": {
+    "text": true
+  },
+  "copy-accountpage-7": {
+    "text": true
+  },
+  "copy-accountpage-8": {
+    "text": false
+  },
+  "copy-accountpage-9": {
+    "text": true
+  },
+  "copy-accountpage-10": {
+    "text": true
+  },
+  "copy-accountpage-11": {
+    "text": true
+  },
+  "copy-accountpage-12": {
+    "text": true
+  },
+  "copy-accountpage-13": {
+    "text": true
+  },
+  "copy-accountpage-14": {
+    "text": true,
+    "link": true
+  },
+  "copy-accountpage-15": {
+    "text": true
+  },
+  "copy-accountpage-16": {
+    "text": true
+  },
+  "copy-accountpage-17": {
+    "text": true
+  },
+  "copy-accountpage-18": {
+    "text": true
+  },
+  "copy-accountpage-19": {
+    "text": true
+  },
+  "copy-accountpage-20": {
+    "text": true
+  },
+  "copy-accountpage-21": {
+    "text": true
+  },
+  "copy-accountpage-22": {
+    "text": true
+  },
+  "copy-accountpage-23": {
+    "text": true
+  },
+  "copy-accountpage-24": {
+    "text": true
+  },
+  "copy-accountpage-25": {
+    "text": true
+  },
+  "copy-accountpage-26": {
+    "text": true
+  },
+  "copy-accountpage-27": {
+    "text": true
+  },
+  "copy-accountpage-28": {
+    "text": true
+  },
+  "copy-accountpage-29": {
+    "text": true
+  },
+  "copy-schedulepage-1": {
+    "text": true
+  },
+  "copy-schedulepage-2": {
+    "text": true
+  },
+  "copy-schedulepage-3": {
+    "text": true
+  },
+  "copy-schedulepage-4": {
+    "text": true
+  },
+  "copy-schedulepage-5": {
+    "text": true
+  },
+  "copy-schedulepage-6": {
+    "text": true
+  },
+  "copy-schedulepage-7": {
+    "text": true
+  },
+  "copy-schedulepage-8": {
+    "text": true
+  },
+  "copy-schedulepage-9": {
+    "text": true
+  },
+  "copy-schedulepage-10": {
+    "text": true
+  },
+  "copy-adminpage-1": {
+    "text": true
+  },
+  "copy-adminpage-2": {
+    "text": true
+  },
+  "copy-adminpage-3": {
+    "text": true
+  },
+  "copy-adminpage-4": {
+    "text": true
+  },
+  "copy-adminpage-5": {
+    "text": true
+  },
+  "copy-adminpage-6": {
+    "text": true
+  },
+  "copy-adminpage-7": {
+    "text": true
+  },
+  "copy-adminpage-8": {
+    "text": true
+  },
+  "copy-adminpage-9": {
+    "text": true
+  },
+  "copy-adminpage-10": {
+    "text": true
+  },
+  "copy-adminpage-11": {
+    "text": true
+  },
+  "copy-adminpage-12": {
+    "text": true
+  },
+  "copy-adminpage-13": {
+    "text": true
+  },
+  "copy-adminpage-14": {
+    "text": true
+  },
+  "copy-adminpage-15": {
+    "text": true,
+    "link": true
+  },
+  "copy-adminpage-16": {
+    "text": true
+  },
+  "copy-adminpage-17": {
+    "text": true
+  },
+  "copy-adminpage-18": {
+    "text": true
+  }
+});
+
+for (const key of ['copy-bookingpage-10', 'copy-lessonoffers-10']) CONTENT_KEYS[key].text = false;
+
+CONTENT_KEYS['copy-home-16'].text = false;
+for (let i = 0; i < 3; i++) CONTENT_KEYS[`home-story-line-${i}`] = { text: true };
+for (let i = 0; i < 4; i++) CONTENT_KEYS[`home-specialist-${i}`] = { text: true, link: true };
+for (const id of ['walking', 'aggression']) {
+  for (const part of ['eyebrow', 'title', 'copy']) CONTENT_KEYS[`home-service-${id}-${part}`] = { text: true };
+  CONTENT_KEYS[`home-service-${id}-link`] = { text: true, link: true };
+}
+for (const id of ['manners', 'walks', 'handling', 'specialist']) CONTENT_KEYS[`goal-${id}-choice`] = { text: false, link: true };
+
+for (const id of ['manners', 'walks', 'handling', 'specialist']) {
+  CONTENT_KEYS[`goal-${id}-card`] = { text: false };
+  for (const part of ['unit','summary','action','preview']) CONTENT_KEYS[`goal-${id}-${part}`] = {text:true};
+}
+for (const id of ['david','ashley','janet','other']) CONTENT_KEYS[`trainer-${id}-card`] = {text:false};

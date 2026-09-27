@@ -4,7 +4,7 @@ import { useBravo } from './context';
 import { Notice } from './ui';
 import { money } from '../../shared/catalog';
 export default function LessonLibraryControls({ onChange }) {
-  const { refreshConfig } = useBravo();
+  const { refreshConfig, config } = useBravo();
   const [library, setLibrary] = useState(null), [sections, setSections] = useState([]), [draft, setDraft] = useState(null);
   const [pendingCheckouts, setPendingCheckouts] = useState(0);
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState('');
@@ -20,7 +20,7 @@ export default function LessonLibraryControls({ onChange }) {
     <h3>Open when you’re ready.</h3>
     <Notice error>{error}</Notice><Notice>{notice}</Notice>
     {library && <><label className="check-label library-switch"><input type="checkbox" role="switch" checked={library.open} disabled={busy} onChange={e => setOpen(e.target.checked)}/>{library.open ? 'Library open' : 'Library closed'}</label>
-    {pendingCheckouts > 0 && !library.open && <><p role="status">{pendingCheckouts} previous checkout link(s) still need to close. Automatic retries run while the site is being used; you can retry now.</p><button type="button" className="quiet-button" disabled={busy} onClick={()=>setOpen(false)}>Retry closing checkout links</button></>}<p>Lessons: <strong>{money(library.lessonCents)}/month</strong> · Training + lessons: <strong>{money(library.bundleCents)}/month</strong> for one dog. Additional training dogs are $100/month each. Monthly access renews manually.</p>
+    {pendingCheckouts > 0 && !library.open && <><p role="status">{pendingCheckouts} previous checkout link(s) still need to close. Automatic retries run while the site is being used; you can retry now.</p><button type="button" className="quiet-button" disabled={busy} onClick={()=>setOpen(false)}>Retry closing checkout links</button></>}<p data-site-service="online">Lessons: <strong>{money(config?.lessonLibrary?.lessonCents ?? library.lessonCents)}/month</strong> · Training + lessons: <strong>{money(config?.lessonLibrary?.bundleCents ?? library.bundleCents)}/month</strong> for one dog. Additional training dogs are {money(config?.services?.find(service => service.id === 'training')?.additionalDogCents ?? 10000)}/month each. Monthly access renews manually.</p>
     <p className="helper">Closed means only owners and administrators can view and edit the library. Purchase options disappear too. Closing does not cancel memberships, pause their end dates, or issue refunds.</p></>}
     <div className="section-label"><h3>Library sections</h3><button type="button" className="button button-small" disabled={busy} onClick={()=>setDraft({_id:'',title:'',description:'',order:sections.length})}>Add section</button></div>
     {sections.length ? <ul className="lesson-section-list">{sections.map(section=><li key={section._id}><span><strong>{section.title}</strong><small>{section.description}</small></span><button type="button" className="quiet-button" disabled={busy} onClick={()=>setDraft(section)}>Edit section</button><button type="button" className="quiet-button" disabled={busy} onClick={()=>act(async()=>{await api(`/admin/lesson-sections/${section._id}`,{method:'DELETE',body:{}});setNotice('Empty section removed.');})}>Remove empty section</button></li>)}</ul> : <p>Add sections such as Foundations, Leash Skills, or Everyday Behavior, then place lessons inside them.</p>}

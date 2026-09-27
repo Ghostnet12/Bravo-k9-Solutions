@@ -52,7 +52,7 @@ try {
           for (let y = Math.max(170, box.top + 170); y < Math.min(innerHeight - 120, box.bottom - 120); y += 30) {
             for (let x = 15; x < innerWidth - 15; x += 40) {
               const target = document.elementFromPoint(x, y);
-              if (hero.contains(target) && !target.closest('button,a,[data-site-content-key],dialog')) return { x, y };
+              if (hero.contains(target) && !target.closest('button,a,[data-site-content-text=true],dialog')) return { x, y };
             }
           }
           throw new Error('No visible hero film surface');

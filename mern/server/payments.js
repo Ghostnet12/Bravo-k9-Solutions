@@ -2,7 +2,7 @@ import { readLessonLibrary } from './lesson-library.js';
 import Stripe from 'stripe';
 import { Booking, User, Subscription, StripeEvent, BillingLock, Lesson, Settings } from './models.js';
 import { connectDb, transaction } from './db.js';
-import { ALL_SERVICES, TRAINING_ADDITIONAL_DOG_CENTS, serviceSelection } from '../shared/catalog.js';
+import { ALL_SERVICES, SERVICES, TRAINING_ADDITIONAL_DOG_CENTS, serviceSelection, quote } from '../shared/catalog.js';
 import { monthTerm } from '../shared/membership-terms.js';
 export function stripeMode() {
   const key = process.env.STRIPE_SECRET_KEY || '';
@@ -21,6 +21,26 @@ export function stripeClient() {
 export function validatedCheckoutPricing(booking) {
   const pricing = booking.quote;
   if (!pricing?.lines?.length || pricing.currency !== 'usd') throw new Error('This booking needs a fresh server quote before checkout.');
+  if (pricing.pricingVersion === 2) {
+    // This snapshot is written only by createBooking's server-side catalog.
+    // Never compare a customer's saved agreement with a later owner price edit.
+    const invalid = () => { throw Object.assign(new Error('The saved price is incomplete. Contact Bravo before checkout.'), { status: 409 }); };
+    const rates = pricing.rateSnapshot;
+    if (!Array.isArray(rates) || rates.length !== booking.serviceIds.length || new Set(rates.map(rate => rate.id)).size !== rates.length) invalid();
+    const catalog = rates.map(rate => {
+      const base = SERVICES.find(service => service.id === rate.id);
+      if (!base || !booking.serviceIds.includes(rate.id)) invalid();
+      for (const key of ['cents', ...(rate.id === 'training' ? ['additionalDogCents'] : []), ...(rate.id === 'online' ? ['bundleCents'] : [])]) {
+        if (!Number.isInteger(rate[key]) || rate[key] < 0 || rate[key] > 1000000) invalid();
+      }
+      return { ...base, cents: rate.cents, additionalDogCents: rate.additionalDogCents, bundleCents: rate.bundleCents };
+    });
+    const expected = quote(booking.serviceIds, booking.visits || [], { dogCount: booking.dogCount || 1 }, catalog);
+    const amounts = lines => lines.map(({ id, unitCents, quantity, interval }) => ({ id, unitCents, quantity, interval }));
+    if (JSON.stringify(amounts(pricing.lines)) !== JSON.stringify(amounts(expected.lines)) || ['monthlyCents', 'oneTimeCents', 'dueNowCents'].some(key => pricing[key] !== expected[key])) invalid();
+    return pricing;
+  }
+  // Keep the migration guard for old requests created before catalog snapshots.
   if (booking.serviceIds.includes('training')) {
     const dogCount = booking.dogCount || 1;
     const expected = 20000 + (dogCount - 1) * TRAINING_ADDITIONAL_DOG_CENTS;

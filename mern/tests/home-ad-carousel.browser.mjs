@@ -37,7 +37,8 @@ try{
    });
    await page.goto(origin);await page.locator('[data-ad-editable]').waitFor();
    const carousel=page.locator('.home-ad-carousel');
-   assert.equal(await carousel.evaluate(el=>{let previous=el.previousElementSibling;while(previous?.classList.contains('section-edit-button'))previous=previous.previousElementSibling;return previous?.classList.contains('home-status-banner');}),true);
+   assert.equal(await carousel.evaluate(el=>!!el.closest('#workshops')),true);
+   assert.equal(await page.locator('.home-status-banner').evaluate(el=>el.previousElementSibling.classList.contains('home-hero')),true);
    await page.getByRole('button',{name:'Edit information banner',exact:true}).waitFor();
    await page.getByRole('button',{name:'Manage advertisements',exact:true}).waitFor();
    assert.equal(await carousel.getByRole('img',{name:'Workshop banner'}).count(),1);

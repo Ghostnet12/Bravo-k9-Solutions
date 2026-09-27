@@ -7,6 +7,10 @@ export function contentStyle(value = {}) {
   if (value.background === 'solid') out.background = value.backgroundColor || '#101010';
   if (value.background === 'gradient') out.background = `linear-gradient(${value.angle ?? 90}deg, ${value.backgroundColor || '#101010'}, ${value.gradientEnd || '#ba9a64'})`;
   if (value.background === 'transparent') out.background = 'transparent';
+  if (value.background === 'image' && /^\/api\/site-images\/background-[a-f0-9-]{36}\/image\?v=\d+$/.test(value.backgroundImage || '')) {
+    out.backgroundImage = `linear-gradient(#000000${Math.round((value.backgroundShade ?? .35) * 255).toString(16).padStart(2,'0')},#000000${Math.round((value.backgroundShade ?? .35) * 255).toString(16).padStart(2,'0')}),url("${value.backgroundImage}")`;
+    out.backgroundSize = 'cover'; out.backgroundPosition = `${value.backgroundX ?? 50}% ${value.backgroundY ?? 50}%`;
+  }
   if (value.textAlign) out.textAlign = value.textAlign;
   if (value.paddingY !== undefined) { out.paddingTop = `${value.paddingY}px`; out.paddingBottom = `${value.paddingY}px`; }
   if (value.opacity !== undefined) out.opacity = value.opacity;

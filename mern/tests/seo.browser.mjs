@@ -51,7 +51,7 @@ try {
           const original = await card.locator('.review-full blockquote').textContent();
           assert.equal(await card.locator('.review-full blockquote').isVisible(), false);
           await card.getByText('Read full review', { exact: true }).click();
-          assert.equal(await card.locator('.review-excerpt').isVisible(), false);
+          await card.locator('.review-excerpt').waitFor({state:'hidden'});
           assert.equal((await card.locator('.review-full blockquote').innerText()).trim(), original.trim());
           await card.getByText('Show less', { exact: true }).click();
           assert.ok(await card.locator('.review-excerpt').isVisible());

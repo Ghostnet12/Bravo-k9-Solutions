@@ -1,42 +1,44 @@
+import CatalogPrice from './CatalogPrice';
 import { recommendations } from './FacebookRecommendations';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useBravo } from './context';
 import { api } from './api';
-import { SERVICES, money } from '../../shared/catalog';
+import { SERVICES } from '../../shared/catalog';
 import { GOALS, goalBookingPath, goalDetailsPath, proofMatches } from '../../shared/discovery';
 import { trackVisit } from './telemetry';
 import ProgramMedia from './ProgramMedia';
-import { Editable } from './SiteContent';
+import { Editable, useSiteContent } from './SiteContent';
 
 export default function GoalFinder() {
   const { config } = useBravo();
+  const {entries}=useSiteContent();
   const [selected, setSelected] = useState('manners'), [clips, setClips] = useState([]);
   const goal = GOALS.find(item => item.id === selected);
   const service = (config?.services || SERVICES).find(item => item.id === goal.program);
   const clip = goal.proof && clips.find(item => proofMatches(item, goal.proof));
   useEffect(() => { let current = true; api('/proof-videos').then(data => { if (current) setClips(Array.isArray(data.clips) ? data.clips : []); }).catch(() => {}); return () => { current = false; }; }, []);
-  return <section className="goal-finder cinema-shell" id="find-training" aria-labelledby="goal-title">
+  return <Editable as="section" contentKey="copy-goalfinder-1" className="goal-finder cinema-shell" id="find-training" aria-labelledby="goal-title">
     <Editable as="p" contentKey="goal-eyebrow" canEditText className="cinema-eyebrow">YOUR DOG. YOUR STARTING POINT.</Editable>
     <Editable as="h2" contentKey="discovery-goal-title" canEditText id="goal-title">What would you like help with?</Editable>
     <div className="goal-choices" role="group" aria-label="Choose a training goal">{GOALS.map(item => {
       const price = (config?.services || SERVICES).find(service => service.id === item.program);
-      return <div className="goal-choice" key={item.id} data-selected={selected === item.id}>
-      <Link className="goal-choice-link" to={price?.enabled === false ? '/contact' : goalBookingPath(item)} aria-labelledby={`goal-tab-${item.id}`} aria-describedby={`goal-price-${item.id}`} onClick={() => trackVisit('goal_selected')}>
+      return <Editable as="div" contentKey={`goal-${item.id}-card`} data-site-service={item.program} className="goal-choice" key={item.id} data-selected={selected === item.id}>
+      <Editable as={Link} contentKey={`goal-${item.id}-choice`} canEditLink className="goal-choice-link" to={price?.enabled === false ? '/contact' : goalBookingPath(item)} aria-labelledby={`goal-tab-${item.id}`} aria-describedby={`goal-price-${item.id}`} onClick={() => trackVisit('goal_selected')}>
         <Editable as="span" id={`goal-tab-${item.id}`} contentKey={`goal-${item.id}-label`} canEditText>{item.label}</Editable>
-        <span className="goal-tab-price" id={`goal-price-${item.id}`}>{price ? <>{money(price.cents)} <span>{price.interval === 'once' ? 'initial intake' : price.interval === 'walk' ? '/ dog / walk' : '/ month'}</span><small>{item.program === 'aggression' ? 'Two-trainer assessment' : item.program === 'walking' ? `${price.durationMinutes || 30}-minute walk` : 'Training · one dog'}</small></> : 'Ask Bravo for pricing'}</span>
-        <span className="goal-choice-action">{price?.enabled === false ? 'Ask about availability' : 'Choose program'} <span aria-hidden="true">→</span></span>
-      </Link>
-      <button className="goal-preview" type="button" aria-label={`Preview ${item.label}`} aria-pressed={selected === item.id} aria-controls="goal-result" onClick={() => setSelected(item.id)}>Preview details</button>
-      </div>;
+        <span className="goal-tab-price" id={`goal-price-${item.id}`}>{price ? <><CatalogPrice service={item.program}/> <Editable as="span" contentKey={`goal-${item.id}-unit`} canEditText>{price.interval === 'once' ? 'initial intake' : price.interval === 'walk' ? '/ dog / walk' : '/ month'}</Editable><Editable as="small" contentKey={`goal-${item.id}-summary`} canEditText>{item.program === 'aggression' ? 'Two-trainer assessment' : item.program === 'walking' ? `${price.durationMinutes || 30}-minute walk` : 'Training · one dog'}</Editable></> : 'Ask Bravo for pricing'}</span>
+        <Editable as="span" contentKey={`goal-${item.id}-action`} canEditText className="goal-choice-action">{price?.enabled === false ? 'Ask about availability' : 'Choose program'} <span aria-hidden="true">→</span></Editable>
+      </Editable>
+      <Editable as="button" contentKey="copy-goalfinder-2" canEditText className="goal-preview" type="button" aria-label={`Preview ${entries[`goal-${item.id}-label`]?.value?.text ?? item.label}`} aria-pressed={selected === item.id} aria-controls="goal-result" onClick={() => setSelected(item.id)}>Preview details</Editable>
+      </Editable>;
     })}</div>
     <div className="goal-result" id="goal-result" key={selected}>
-      <Editable as="div" contentKey={`goal-${goal.id}-copy`} aria-live="polite" aria-atomic="true"><Editable as="h3" contentKey={`goal-${goal.id}-title`} canEditText>{goal.title}</Editable><Editable as="p" contentKey={`goal-${goal.id}-description`} canEditText>{goal.description}</Editable>{service && <p className="goal-price">{money(service.cents)} <span>{goal.program === 'aggression' ? 'initial intake · ongoing training separate' : goal.program === 'walking' ? `/dog · ${service.durationMinutes || 30} minutes per walk` : '/month · one dog · manual renewal'}</span></p>}
+      <Editable as="div" contentKey={`goal-${goal.id}-copy`} aria-live="polite" aria-atomic="true"><Editable as="h3" contentKey={`goal-${goal.id}-title`} canEditText>{goal.title}</Editable><Editable as="p" contentKey={`goal-${goal.id}-description`} canEditText>{goal.description}</Editable>{service && <p data-site-service={goal.program} className="goal-price"><CatalogPrice service={goal.program}/> <span>{goal.program === 'aggression' ? 'initial intake · ongoing training separate' : goal.program === 'walking' ? `/dog · ${service.durationMinutes || 30} minutes per walk` : '/month · one dog · manual renewal'}</span></p>}
         <Editable as="p" contentKey={`goal-${goal.id}-details`} canEditText className="helper">{goal.program === 'training' ? 'Private visits. Monday–Friday, up to one hour per day. We come to you in Aberdeen.' : goal.program === 'walking' ? 'Choose your walking dates and times. Each 30-minute walk is priced per dog.' : 'Two trainers. Call before the visit to discuss handling or access concerns.'}</Editable>
         <div className="goal-actions">{service?.enabled !== false && <Editable as={Link} contentKey={`goal-${goal.id}-book`} canEditText canEditLink className="button" to={goalBookingPath(goal)}>{goal.program === 'aggression' ? 'Request an assessment' : goal.program === 'walking' ? 'Schedule a walk' : 'Plan my first visit'} →</Editable>}<Editable as={Link} contentKey={`goal-${goal.id}-included`} canEditText canEditLink className="inline-link" to={goalDetailsPath(goal)}>What’s included</Editable></div>
       </Editable>
       <ProgramMedia key={goal.id} goal={goal} automaticClip={clip}/>
     </div>
-    <aside className="goal-early-review" aria-label="A Bravo client’s experience"><blockquote>“{recommendations[0].excerpt}”</blockquote><p>{recommendations[0].author} · {recommendations[0].source}</p><Link to="/#reviews">Read client experiences →</Link></aside>
-  </section>;
+    <aside className="goal-early-review" aria-label="A Bravo client’s experience"><blockquote>“{recommendations[0].excerpt}”</blockquote><p>{recommendations[0].author} · {recommendations[0].source}</p><Editable as={Link} contentKey="copy-goalfinder-3" canEditText canEditLink to="/#reviews">Read client experiences →</Editable></aside>
+  </Editable>;
 }

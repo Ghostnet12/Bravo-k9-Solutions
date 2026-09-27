@@ -9,7 +9,7 @@ let publishedFilm = readHeroFilm(typeof document === 'undefined' ? null : docume
 
 export default function CinematicFilm({ children }) {
   const root = useRef(null), video = useRef(null);
-  const { user } = useBravo(), canEdit = isImageEditor(user);
+  const { user } = useBravo(), canEdit = isImageEditor(user) && !user?.mustChangePassword;
   const [clip, setClip] = useState(() => publishedFilm), [editing, setEditing] = useState(null);
   const rememberFilm = value => {
     const next = heroFilmSnapshot(value);
@@ -37,7 +37,7 @@ export default function CinematicFilm({ children }) {
     } catch (cause) { if (alive.current) setError(cause.message); }
     finally { requesting.current = false; if (alive.current) setOpening(false); }
   }
-  const isFilmTarget = target => !target.closest('dialog,button,a,input,textarea,select,[data-site-content-key]');
+  const isFilmTarget = target => !target.closest('dialog,button,a,input,textarea,select,[data-site-content-text=true]');
   const [paused, setPaused] = useState(false), [playing, setPlaying] = useState(false), [failed, setFailed] = useState(false);
   useEffect(() => {
     const element = video.current;

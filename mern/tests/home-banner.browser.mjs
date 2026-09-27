@@ -10,6 +10,7 @@ const server = app.listen(0, '127.0.0.1'); await once(server, 'listening'); cons
 await mkdir('test-results', { recursive: true });
 try {
   for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
+    if(process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(engineName))continue;
     const browser = await engine.launch();
     try {
       for (const width of [390, 1440]) {
@@ -33,7 +34,7 @@ try {
           await page.goto(origin); await page.locator('[data-banner-editable]').waitFor();
           assert.equal(await page.getByRole('button', { name: 'Edit banner', exact: true }).count(), 0);
           const banner = page.locator('.home-status-banner');
-          assert.equal(await banner.evaluate(el => el.parentElement.id === 'workshops'), true);
+          assert.equal(await banner.evaluate(el => el.previousElementSibling?.classList.contains('home-hero')), true);
           assert.ok((await banner.innerText()).includes('63°F'));assert.match(await banner.innerText(),/[A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2}, \d{4} ·/);assert.ok((await banner.boundingBox()).height < 100, 'moving banner stays one compact strip');
           weatherAvailable = false; await page.reload(); await page.waitForLoadState('networkidle');
           assert.equal((await banner.innerText()).includes('Weather temporarily unavailable'), false, 'failed weather stays invisible to visitors');

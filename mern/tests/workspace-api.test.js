@@ -45,6 +45,7 @@ test('owner/staff workspace contracts over HTTP with isolated model mocks', asyn
   t.mock.method(Settings, 'findOneAndUpdate', () => query({ enabled: true, weekdays: [1, 2, 3, 4, 5], hours: ['09:00'] }));
   t.mock.method(Settings, 'findById', () => query({ enabled: true, weekdays: [1, 2, 3, 4, 5], hours: ['09:00'] }));
   t.mock.method(ServiceSetting, 'find', () => query([]));
+  t.mock.method(ServiceSetting, 'findById', () => query(null));
   t.mock.method(LessonLibrary, 'findById', () => query({open:true,revision:0}));
   t.mock.method(Subscription, 'find', () => query([]));
   // No saved per-viewer cutoff in this isolated authorization fixture.
@@ -241,7 +242,7 @@ test('owner/staff workspace contracts over HTTP with isolated model mocks', asyn
     assert.equal(result.body.review.rating, 5);
     await call('staff', 'patch', `/api/admin/reviews/${ids.other}`, { hidden: true }).expect(403);
   });
-  await t.test('service pricing is owner-only and primary training stays fixed', async () => {
+  await t.test('service pricing is owner-only and requires a revision', async () => {
     for (const role of ['member', 'staff']) await call(role, 'patch', '/api/admin/services/walking', { cents: 1, enabled: true }).expect(403);
     await call('owner', 'patch', '/api/admin/services/training', { cents: 19999, enabled: true }).expect(400);
   });

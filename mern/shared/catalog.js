@@ -1,10 +1,23 @@
 export const SERVICES = [
-  { id: 'training', name: 'Professional training', cents: 20000, interval: 'month', includes: ['training'], description: 'Private mobile training, Monday–Friday, one hour per day. Customize your schedule in your profile. $200/month for one dog; $100/month for each additional dog.' },
+  { id: 'training', name: 'Professional training', cents: 20000, additionalDogCents: 10000, interval: 'month', includes: ['training'], description: 'Private mobile training, Monday–Friday, one hour per day. Customize your schedule in your profile. Monthly pricing is per household, with an additional rate for each extra dog.' },
   { id: 'walking', name: 'Dog Walking', cents: 2500, interval: 'walk', durationMinutes: 30, includes: ['walking'], description: 'A focused 30-minute walk, priced per dog.' },
   { id: 'online', name: 'Online training', cents: 7500, bundleCents: 25000, interval: 'month', includes: ['online'], description: 'Member lessons, captions, and written transcripts.' },
   { id: 'aggression', name: 'Aggressive-dog intake', cents: 40000, interval: 'once', includes: ['aggression'], description: 'Initial assessment with two trainers.' },
 ];
 export const TRAINING_ADDITIONAL_DOG_CENTS = 10000;
+export function publicCatalogSnapshot(catalog) {
+  if (!Array.isArray(catalog)) return null;
+  return SERVICES.map(base => {
+    const item = catalog.find(row => row.id === base.id) || base;
+    const cents = field => Number.isInteger(item[field]) && item[field] >= 0 && item[field] <= 1000000 ? item[field] : base[field];
+    return { ...base, cents: cents('cents'), enabled: item.enabled !== false,
+      name: typeof item.name === 'string' ? item.name.slice(0,100) : base.name,
+      description: typeof item.description === 'string' ? item.description.slice(0,2000) : base.description,
+      ...(base.id === 'training' ? { additionalDogCents: cents('additionalDogCents') } : {}),
+      ...(base.id === 'online' ? { bundleCents: cents('bundleCents') } : {}),
+    };
+  });
+}
 export const TRAINING_FOCUSES = [
   { id: 'basic-obedience', name: 'Basic obedience' },
   { id: 'advanced-obedience', name: 'Advanced obedience' },
@@ -49,12 +62,17 @@ export function quote(ids, visits = [], details = {}, catalog = SERVICES) {
     return [base, {
       id: 'training-additional-dogs',
       name: additionalDogs === 1 ? 'Additional training dog' : 'Additional training dogs',
-      interval: 'month', unitCents: TRAINING_ADDITIONAL_DOG_CENTS, quantity: additionalDogs, dogCount,
+      interval: 'month', unitCents: item.additionalDogCents ?? TRAINING_ADDITIONAL_DOG_CENTS, quantity: additionalDogs, dogCount,
     }];
   });
   const monthlyCents = lines.filter(l => l.interval === 'month').reduce((n, l) => n + l.unitCents * l.quantity, 0);
   const oneTimeCents = lines.filter(l => l.interval !== 'month').reduce((n, l) => n + l.unitCents * l.quantity, 0);
-  return { lines, monthlyCents, oneTimeCents, dueNowCents: monthlyCents + oneTimeCents, currency: 'usd' };
+  return { lines, monthlyCents, oneTimeCents, dueNowCents: monthlyCents + oneTimeCents, currency: 'usd', pricingVersion: 2,
+    rateSnapshot: items.map(item => ({ id: item.id, cents: item.cents, revision: item.revision || 0,
+      ...(item.id === 'training' ? { additionalDogCents: item.additionalDogCents ?? TRAINING_ADDITIONAL_DOG_CENTS } : {}),
+      ...(item.id === 'online' ? { bundleCents: item.bundleCents ?? 25000 } : {}),
+    })),
+  };
 }
 export const money = cents => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: cents % 100 ? 2 : 0 }).format(cents / 100);
 
