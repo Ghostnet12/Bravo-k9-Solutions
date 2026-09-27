@@ -44,7 +44,13 @@ try {
       });
       try {
         for(const path of ['/','/dog-training','/behavior-assessment','/dog-walking','/workshops','/learn','/contact']){
-          await page.goto(origin+path);await page.waitForLoadState('networkidle');
+          // Video range requests can stay active in WebKit; wait for the usable page instead.
+          const configured=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/config' && response.ok());
+          await page.goto(origin+path,{waitUntil:'domcontentloaded'});await configured;
+          await page.locator('.accessibility-trigger').waitFor();
+          if(path==='/')await page.locator('.goal-proof figcaption').waitFor();
+          if(path==='/workshops')await page.getByRole('heading',{name:'Saturday dog-training workshop',exact:true}).waitFor();
+          if(path==='/contact')await page.getByText('Ashley Leverock',{exact:true}).waitFor();
           assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${path} ${width} no overflow`);
           await page.screenshot({path:`test-results/discovery-${engineName}-${width}-${path.slice(1)||'home'}.png`,fullPage:true});
         }
