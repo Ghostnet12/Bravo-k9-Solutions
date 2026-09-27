@@ -56,7 +56,7 @@ test('owner toolkit persists real catalog prices and trainer profiles with permi
   await call('owner','patch',`/api/admin/team/${before.id}`,profile).expect(409);
   const canonical=await User.findById(before.id).lean();assert.equal(canonical.name,'Ashley Northrop');assert.equal(canonical.role,'owner');
   assert.equal(jointTrainerPair([users.owner,canonical]).length,2);
-  assert.equal(trainerOptions([users.owner,canonical]).find(row=>String(row._id)===before.id).name,'Ashley Example');
+  assert.equal(trainerOptions([users.owner.toObject(),canonical]).find(row=>String(row._id)===before.id).name,'Ashley Example');
   assert.equal((await call(null,'get','/api/site-content')).body.entries[key].value.text,profile.bio);
   const batch={changes:[{key:'copy-home-10',expectedRevision:0,value:{text:'New approach'}},{key:'goal-manners-label',expectedRevision:0,value:{text:'Daily skills'}}]};
   await call('member','post','/api/site-content/batch',batch).expect(403);

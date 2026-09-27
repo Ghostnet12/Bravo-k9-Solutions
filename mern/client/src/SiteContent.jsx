@@ -96,6 +96,7 @@ export function SiteContentProvider({ children }) {
       if(target.closest('[data-site-workshop]')){window.dispatchEvent(new CustomEvent('bravo-workshop-edit'));pending=false;return;}
       const entity=target.closest('[data-site-trainer],[data-site-service]');
       const currentRecord=entity ? entity.dataset.siteTrainer ? {kind:'trainer',id:entity.dataset.siteTrainer} : {kind:'service',id:entity.dataset.siteService} : null;
+      if(currentRecord)currentRecord.styleKey=entity.closest('[data-site-content-key]')?.dataset.siteContentKey;
       setRecord(currentRecord);
       if(currentRecord && !design && !target.closest('[data-site-content-text=true]')) { setEditingRecord(currentRecord); pending=false; return; }
       if(target.closest('[data-site-program]') && !target.closest('[data-site-program]').contains(target.closest('[data-site-content-key]'))) { window.dispatchEvent(new CustomEvent('bravo-program-edit',{detail:{id:target.closest('[data-site-program]').dataset.siteProgram}})); pending=false; return; }
@@ -124,7 +125,7 @@ export function SiteContentProvider({ children }) {
   },[canEdit]);
   const theme=preview?.key==='site-theme'?preview.value:entries['site-theme']?.value;
   return <Content.Provider value={{entries,preview,publishEntry:(key,entry)=>setEntries(old=>({...old,[key]:entry}))}}><style>{themeCss(theme)}</style>{children}{canEdit && <button type="button" className="content-edit-launcher" onClick={() => window.dispatchEvent(new CustomEvent('bravo-content-edit', { detail: { key: 'page' } }))}>Edit page text &amp; design</button>}{canEdit && status && <p className="content-save-status" role="status">{status}</p>}{canEdit && error && <p role="alert">{error}</p>}{canEdit && selection && <ContentEditor record={record} editRecord={setEditingRecord} options={selection} entries={entries} preview={setPreview} close={()=>{setSelection(null);setPreview(null);}} publish={(key,entry)=>{setEntries(old=>({...old,[key]:entry}));setStatus('Saved. Your website changes are published.');}}/>}{canEdit && editingRecord && <Suspense fallback={<p className="content-save-status" role="status">Opening editor…</p>}><WebsiteRecordEditor key={`${editingRecord.kind}-${editingRecord.id}`} record={editingRecord} close={()=>setEditingRecord(null)} published={setStatus} design={()=>{
-      const target=document.querySelector(`[data-site-${editingRecord.kind==='trainer'?'trainer':'service'}="${editingRecord.id}"]`)?.closest('[data-site-content-key]');
+      const target=editingRecord.styleKey ? document.querySelector(`[data-site-content-key="${editingRecord.styleKey}"]`) : document.querySelector(`[data-site-${editingRecord.kind==='trainer'?'trainer':'service'}="${editingRecord.id}"]`)?.closest('[data-site-content-key]');
       setEditingRecord(null);if(target)window.dispatchEvent(new CustomEvent('bravo-content-edit',{detail:{key:target.dataset.siteContentKey,design:true}}));
     }}/></Suspense>}</Content.Provider>;
 }
