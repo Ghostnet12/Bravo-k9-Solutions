@@ -14,4 +14,6 @@ Editors are available only to owner/administrator accounts that have completed p
 
 All writes use server authorization, same-origin enforcement, validation and audit records. Content and program/profile editors detect stale revisions. Program prices stay in the catalog rather than arbitrary display-text overrides. Server-rendered prices and the browser start with the same published catalog snapshot.
 
+The previously published online-course rate stays in effect during the upgrade. Legacy database amounts that the old lesson studio ignored remain inactive until an owner or administrator deliberately publishes a price through the new editor.
+
 Validation: `npm run lint`, `npm run build`, `npm test`, `tests/website-editor.integration.js`, `tests/website-editor.browser.mjs`, and the existing content, program media, hero, banner, scheduling, payment and security suites. Hosted CI runs isolated MongoDB and Chromium/WebKit. Local MongoDB cannot start in the managed sandbox; production data is never used for tests.

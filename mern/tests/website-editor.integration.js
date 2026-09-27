@@ -13,7 +13,8 @@ test('owner toolkit persists real catalog prices and trainer profiles with permi
  process.env.NODE_ENV='test';process.env.MONGODB_URI=replica.getUri();process.env.MONGODB_DB='website_editor_test';process.env.APP_ORIGIN='http://localhost:5173';
  try {
   const {default:app}=await import('../server/client-services-app.js');
-  const {connectDb}=await import('../server/db.js');const {User,Session,AuditEvent,Booking,MediaUpload,MediaChunk}=await import('../server/models.js');
+  const {connectDb}=await import('../server/db.js');const {User,Session,AuditEvent,Booking,MediaUpload,MediaChunk,ServiceSetting}=await import('../server/models.js');
+  const {effectiveServices}=await import('../server/services.js');
   const {SiteImage}=await import('../server/site-image-store.js');
   const {SiteContent}=await import('../server/site-content-store.js');await connectDb();await SiteContent.init();
   const cookies={},users={};
@@ -23,6 +24,11 @@ test('owner toolkit persists real catalog prices and trainer profiles with permi
   }
   process.env.OWNER_USER_ID=String(users.owner._id);
   const call=(who,method,path,body,origin=process.env.APP_ORIGIN)=>{const req=request(app)[method](path).set('Origin',origin);if(who)req.set('Cookie',cookies[who]);return body===undefined?req:req.send(body);};
+  await ServiceSetting.create({_id:'online',cents:5000});
+  const legacyConfig=(await call(null,'get','/api/config').expect(200)).body;
+  assert.equal(legacyConfig.services.find(row=>row.id==='online').cents,7500,'legacy hidden rates must not replace the previously published course price');
+  assert.equal(legacyConfig.lessonLibrary.lessonCents,7500);
+  assert.equal((await effectiveServices({includeDisabled:true,readOnly:true})).find(row=>row.id==='online').cents,7500,'the initial HTML uses the same published rate');
   const training={expectedRevision:0,cents:22500,additionalDogCents:12500,name:'Private training fixture',description:'Published program description',enabled:true};
   for(const who of [null,'staff','member'])await call(who,'patch','/api/admin/services/training',training).expect(who?403:401);
   await call('owner','patch','/api/admin/services/training',training,'https://wrong.example').expect(403);
