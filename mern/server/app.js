@@ -1,3 +1,5 @@
+import { discoveryRoutes } from './discovery.js';
+import { publicTrainerName } from '../shared/discovery.js';
 import { mfaRoutes } from './mfa-routes.js';
 import { attributeBooking, monitoringEnabled } from './monitoring.js';
 import { reserveVisits, assertVisitsFree } from './reservations.js';
@@ -63,10 +65,11 @@ app.get('/api/team', async (_req, res) => {
   if (!process.env.MONGODB_URI) return res.json({ team: [] });
   await connectDb();
   const team = await User.find({ role: { $in: ['owner', 'staff'] }, blocked: { $ne: true } }).select('name role phone title bio showPhone').sort({ role: 1, name: 1 }).lean();
-  res.json({ team: team.map(user => ({ id: String(user._id), name: user.name, role: publicRole(user), title: user.title || (publicRole(user) === 'owner' ? 'Owner & Lead Trainer' : 'Bravo Trainer'), bio: user.bio || '', phone: user.showPhone ? user.phone : '' })) });
+  res.json({ team: team.map(user => ({ id: String(user._id), name: publicTrainerName(user.name), role: publicRole(user), title: user.title || (publicRole(user) === 'owner' ? 'Owner & Lead Trainer' : 'Bravo Trainer'), bio: user.bio || '', phone: user.showPhone ? user.phone : '' })) });
 });
 app.use('/api', sameOrigin, async (_req, _res, next) => { await connectDb(); next(); }, identify);
 app.use('/api', rateLimit('api', 240, 60000));
+discoveryRoutes(app);
 lessonLibraryRoutes(app);
 mfaRoutes(app);
 app.get('/api/lessons', async (req, res) => {

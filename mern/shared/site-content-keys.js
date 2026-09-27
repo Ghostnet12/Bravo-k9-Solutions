@@ -1,5 +1,8 @@
 // Stable publishing keys. Keep existing keys when changing page layouts.
 export const CONTENT_KEYS = {
+  "discovery-goal-title": {"text": true},
+  "discovery-course-title": {"text": true},
+  "discovery-course-copy": {"text": true},
   "cinema-nav-training": {"text": true, "link": true},
   "cinema-nav-workshops": {"text": true, "link": true},
   "cinema-nav-online": {"text": true, "link": true},

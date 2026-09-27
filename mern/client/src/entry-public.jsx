@@ -1,3 +1,4 @@
+import WorkshopPage from './WorkshopPage';
 // Build-time rendering of the actual public components. No credentials, API
 // calls, member content or browser automation are used to produce this HTML.
 import { renderToString } from 'react-dom/server';
@@ -13,7 +14,7 @@ import AccessibilityPage from './AccessibilityPage';
 import MediaRightsPage from './MediaRightsPage';
 import NotFoundPage from './NotFoundPage';
 
-const pages = { '/': Home, '/dog-training': DogTrainingPage, '/behavior-assessment': BehaviorAssessmentPage, '/dog-walking': DogWalkingPage, '/learn': LearnPage, '/contact': ContactPage, '/accessibility': AccessibilityPage, '/media-rights': MediaRightsPage, '/404': NotFoundPage };
+const pages = { '/workshops': WorkshopPage, '/': Home, '/dog-training': DogTrainingPage, '/behavior-assessment': BehaviorAssessmentPage, '/dog-walking': DogWalkingPage, '/learn': LearnPage, '/contact': ContactPage, '/accessibility': AccessibilityPage, '/media-rights': MediaRightsPage, '/404': NotFoundPage };
 export function renderPublicPage(route) {
   const Component = pages[route];
   if (!Component) throw new Error(`No public component for ${route}`);

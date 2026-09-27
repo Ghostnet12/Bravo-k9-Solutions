@@ -1,6 +1,6 @@
 import FirstVisitIntro from './FirstVisitIntro';
 import { Editable } from './SiteContent';
-import { bookingTrackingHeaders } from './telemetry';
+import { bookingTrackingHeaders, trackVisit } from './telemetry';
 import { trainerChoice, trainerOptions, JOINT_TRAINER_ID } from '../../shared/trainers';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
@@ -35,7 +35,7 @@ export default function BookingPage() {
   const [ids, setIds] = useState(resume?.ids || (program === 'training' && params.get('lessons') === '1' ? ['training','online'] : [program]));
   const simpleBooking = catalog.find(service=>service.id==='training')?.enabled !== false && firstVisit && !editId && ids.includes('training') && ids.every(id=>['training','online'].includes(id)) && !['staff','owner'].includes(user?.role) && !membership?.active;
   const [visits, setVisits] = useState(resume?.visits || []), [kind, setKind] = useState(resume?.kind || (program === 'aggression' ? 'aggression' : program));
-  const [trainingFocus, setTrainingFocus] = useState(resume?.trainingFocus || 'basic-obedience');
+  const [trainingFocus, setTrainingFocus] = useState(resume?.trainingFocus || (TRAINING_FOCUSES.some(item => item.id === params.get('focus')) ? params.get('focus') : 'basic-obedience'));
   const [trainerId, setTrainerId] = useState(resume?.trainerId || (params.get('trainer') === JOINT_TRAINER_ID || /^[a-f\d]{24}$/i.test(params.get('trainer') || '') ? params.get('trainer') : '')), [trainers, setTrainers] = useState([]), [trainersLoading, setTrainersLoading] = useState(false);
   const [from, setFrom] = useState(resume?.from || today()), [to, setTo] = useState(resume?.to || addDays(today(), 13));
   const [startTime, setStartTime] = useState(resume?.startTime || '09:00'), [endTime, setEndTime] = useState(resume?.endTime || '21:00');
@@ -65,6 +65,7 @@ export default function BookingPage() {
     });
     return () => cancelAnimationFrame(frame);
   }, [guidedStep, simpleBooking, introDone, saved, !!user]);
+  useEffect(() => { if (simpleBooking && introDone && !editId && !saved) trackVisit(guidedStep === 'trainer' ? 'trainer_step' : guidedStep === 'visit' ? 'visit_step' : 'review_step'); }, [simpleBooking, introDone, guidedStep, editId, saved]);
   const unavailable = !editId && ids.some(id => catalog.find(service => service.id === id)?.enabled === false);
   const trainingMonthlyCents = pricing.lines.filter(line => line.id === 'training' || line.id === 'training-additional-dogs' || line.id === 'online').reduce((total, line) => total + line.unitCents * line.quantity, 0);
   const hours = Array.from({ length: 13 }, (_, i) => `${i + 9}:00`.padStart(5, '0'));
@@ -171,7 +172,7 @@ export default function BookingPage() {
   return <Page title={editId ? 'Adjust your visits.' : 'Let’s plan your visit.'} className={`booking-page ${simpleBooking ? 'first-visit-mode guided-booking-page' : ''}`} eyebrow="BOOK WITH BRAVO" intro={simpleBooking ? 'Choose a trainer, pick one visit, then review your request. All times are local to Aberdeen, South Dakota.' : 'Choose your program, review available visits, and send your request to Bravo. All times are local to Aberdeen, South Dakota.'}>
     {simpleBooking && !saved && <div className="guided-booking-header">
       {ids.includes('online') && <p>Training + online lessons bundle</p>}<p className="guided-booking-price"><strong>{form.dogName || 'Private training'}</strong><span>{dogCount} {dogCount === 1 ? 'dog' : 'dogs'} · {money(trainingMonthlyCents)}/month</span></p>
-      <nav className="guided-booking-steps" aria-label="First visit steps">{[['trainer','1. Trainer'],['visit','2. Date & time'],['review','3. Review']].map(([step,label])=><button key={step} type="button" aria-current={guidedStep === step ? 'step' : undefined} disabled={busy || (step === 'visit' && !trainerReady) || (step === 'review' && !visitReady)} onClick={()=>setBookingStep(step)}>{label}</button>)}</nav>
+      <p className="booking-progress-note">Draft request · Nothing is booked or charged yet. Review your details before sending to Bravo.</p><nav className="guided-booking-steps" aria-label="First visit steps">{[['trainer','1. Trainer'],['visit','2. Date & time'],['review','3. Review']].map(([step,label])=><button key={step} type="button" aria-current={guidedStep === step ? 'step' : undefined} disabled={busy || (step === 'visit' && !trainerReady) || (step === 'review' && !visitReady)} onClick={()=>setBookingStep(step)}>{label}</button>)}</nav>
       <button type="button" className="quiet-button" onClick={()=>{setIntroDone(false);setBookingStep('trainer');setTimeConfirmed(false);setVisits([]);}}>Change your dog’s details</button>
     </div>}
 

@@ -1,7 +1,7 @@
 import { issueRecovery, completeRecovery } from './account-recovery.js';
 import { readLessonLibrary } from './lesson-library.js';
 import siteAdsRouter from './site-ads.js';
-import { monitorRequests, ingestVisit, ingestError, monitoringSummary, pingDatabase } from './monitoring.js';
+import { monitorRequests, ingestVisit, ingestError, ingestVital, monitoringSummary, pingDatabase } from './monitoring.js';
 import { reserveVisits, releaseVisit } from './reservations.js';
 import express from 'express';
 import { requestError } from './errors.js';
@@ -39,6 +39,7 @@ const audience = user => staff(user) ? { $or: [{ staff: true }, { staff: false, 
 
 // Bounded, same-origin telemetry; aggregate reports require the actual Owner.
 app.post('/api/telemetry/visit', ...session, ...write, rateLimit('telemetry-visit', 30, 60000), ingestVisit);
+app.post('/api/telemetry/vitals', ...session, ...write, rateLimit('telemetry-vitals', 15, 60000), ingestVital);
 app.post('/api/telemetry/error', ...session, ...write, rateLimit('telemetry-error', 10, 60000), ingestError);
 app.get('/api/admin/site-health', ...session, requireUser, (req, _res, next) => {
   if (req.user.role !== 'owner' || !isPrimaryOwner(req.user)) throw fail('Only the Owner can view website monitoring.', 403);

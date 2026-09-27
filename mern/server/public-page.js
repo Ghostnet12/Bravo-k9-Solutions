@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { renderSiteContent } from './content-html.js';
 import { loadSiteContent } from './site-content-store.js';
-export const publicPagePaths=['dog-training','behavior-assessment','dog-walking','learn','contact','accessibility','media-rights'].map(path=>'/' + path);
+export const publicPagePaths=['workshops','dog-training','behavior-assessment','dog-walking','learn','contact','accessibility','media-rights'].map(path=>'/' + path);
 const pages=new Set(publicPagePaths.map(path=>path.slice(1)));
 export async function publicPageHandler(req,res) {
   const path=String(req.query?.path || req.path || '').replace(/^\//,'');

@@ -1,3 +1,4 @@
+import { publicTrainerName } from './discovery.js';
 // Booking choices are distinct from real staff identities. Never create a fake user.
 export const JOINT_TRAINER_ID = 'david-and-ashley';
 export const JOINT_TRAINER_LABEL = 'David and Ashley';
@@ -23,7 +24,7 @@ export function jointTrainerPair(people = []) {
   return david.length === 1 && ashley.length === 1 && identity(david[0]) !== identity(ashley[0]) ? [david[0], ashley[0]] : [];
 }
 export function trainerOptions(people = []) {
-  const real = people.filter(person => identity(person) !== JOINT_TRAINER_ID);
+  const real = people.filter(person => identity(person) !== JOINT_TRAINER_ID).map(person => ({ ...person, name: publicTrainerName(person.name) }));
   const pair = jointTrainerPair(real), ids = pair.map(identity);
   const capacityKnown = pair.length === 2 && pair.every(person => Number.isFinite(person.spotsRemaining));
   const group = { id: JOINT_TRAINER_ID, _id: JOINT_TRAINER_ID, name: JOINT_TRAINER_LABEL, staffIds: ids, disabled: pair.length !== 2, joint: true,
@@ -37,7 +38,7 @@ export function scheduledTrainerLabel(booking) {
   if (booking.trainerAcceptanceRequired) {
     const accepted = acceptedTrainerIds(booking);
     const pending = assigned.filter(person => !accepted.includes(identity(person)));
-    return `Awaiting acceptance from ${(pending.length ? pending : assigned).map(person => person.name).join(' and ')}`;
+    return `Awaiting acceptance from ${(pending.length ? pending : assigned).map(person => publicTrainerName(person.name)).join(' and ')}`;
   }
-  return assigned.length > 1 ? JOINT_TRAINER_LABEL : assigned[0].name;
+  return assigned.length > 1 ? JOINT_TRAINER_LABEL : publicTrainerName(assigned[0].name);
 }
