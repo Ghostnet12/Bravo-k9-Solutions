@@ -77,6 +77,7 @@ try {
         await page.screenshot({ path: `test-results/seo-training-${name}-${width}.png`, fullPage: true });
         await page.getByRole('link', { name: 'two-trainer behavior assessment' }).click();
         await page.getByRole('heading', { level: 1, name: 'Dog behavior assessments in Aberdeen.' }).waitFor();
+        await page.waitForFunction(expected => document.title === expected, PAGE_METADATA['/behavior-assessment'].title);
         assert.equal(await page.title(), PAGE_METADATA['/behavior-assessment'].title);
         const service = await page.locator('#bravo-structured-data').textContent();
         assert.ok(JSON.parse(service)['@graph'].some(item => item['@type'] === 'Service' && item.url === canonicalUrl('/behavior-assessment')));
