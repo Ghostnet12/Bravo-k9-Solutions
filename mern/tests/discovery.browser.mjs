@@ -67,18 +67,39 @@ try {
           assert.ok(layout.scroll<=layout.width+1,`${path} ${width} no overflow: ${JSON.stringify(layout)}`);
         }
         await visit(origin);
-        for(const [label,price] of [['Everyday manners','$200'],['Walking & distractions','$200'],['Aggression & handling','$400'],['Specialized training','$200']]){
-          const tab=page.getByRole('button',{name:label,exact:true});
-          assert.ok((await tab.innerText()).includes(price),`${label} has its own service price`);
-          await tab.click();assert.ok((await page.locator('.goal-price').innerText()).includes(price));
+        await page.locator('.goal-proof figcaption').waitFor();await settleApi();
+        await page.locator('.goal-choices').screenshot({path:`test-results/program-cards-${engineName}-${width}.png`});
+        for(const [label,price,program,focus,details] of [
+          ['Everyday manners','$200','training','basic-obedience','/dog-training'],
+          ['Dog walking','$25','walking',null,'/dog-walking'],
+          ['Aggression & handling','$400','aggression',null,'/behavior-assessment'],
+          ['Specialized training','$200','training','job-specific','/dog-training'],
+        ]){
+          const card=page.getByRole('link',{name:label,exact:true});
+          assert.ok((await card.innerText()).includes(price),`${label} has its own service price`);
+          await page.getByRole('button',{name:`Preview ${label}`,exact:true}).click();
+          assert.ok((await page.locator('.goal-price').innerText()).includes(price));
+          assert.equal(await page.locator('.goal-result').getByRole('link',{name:'What’s included'}).getAttribute('href'),details);
+          const expected=`/portal?program=${program}${focus ? `&focus=${focus}` : ''}`;
+          assert.equal(await card.getAttribute('href'),expected);
+          assert.equal(await page.locator('.goal-result .goal-actions .button').getAttribute('href'),expected);
+          // The price card itself must navigate, without another CTA tap.
+          await card.click();await page.waitForURL(origin+expected);
+          if(program==='training'){
+            const field=page.getByRole('combobox',{name:'What would you like help with?',exact:true});
+            await field.waitFor();assert.equal(await field.inputValue(),focus);
+            assert.match(await page.locator('.price-total').innerText(),/\$200/);
+            if(focus==='basic-obedience'){
+              await page.getByLabel('Number of dogs',{exact:true}).fill('2');assert.match(await page.locator('.price-total').innerText(),/\$300/);
+            }
+          }else{
+            const selected=page.locator('.program-choice[aria-pressed="true"]');await selected.waitFor();
+            assert.equal(await selected.count(),1);assert.ok((await selected.innerText()).includes(price));
+            assert.match(await selected.innerText(),program==='walking' ? /Dog Walking/ : /Aggressive-dog intake/);
+            assert.equal(await page.getByRole('combobox',{name:'Schedule visits for',exact:true}).inputValue(),program);
+          }
+          await visit(origin);await page.locator('.goal-proof figcaption').waitFor();await settleApi();
         }
-        await page.getByRole('button',{name:'Walking & distractions',exact:true}).click();
-        assert.match(await page.locator('.goal-result').innerText(),/Skills that travel/);
-        await page.locator('.goal-result').getByRole('link',{name:'Plan my first visit'}).click();
-        await page.getByRole('combobox',{name:'What would you like help with?',exact:true}).waitFor();
-        assert.equal(await page.getByRole('combobox',{name:'What would you like help with?',exact:true}).inputValue(),'advanced-obedience');
-        await page.getByLabel('Number of dogs',{exact:true}).fill('2');assert.match(await page.locator('.price-total').innerText(),/\$300/);
-        await visit(origin);await page.getByRole('button',{name:'Aggression & handling',exact:true}).click();assert.match(await page.locator('.goal-result').innerText(),/\$400/);assert.match(await page.locator('.goal-result').getByRole('link',{name:'Request an assessment'}).getAttribute('href'),/program=aggression/);
         const proof=page.locator('.home-work-proof');await proof.getByRole('button',{name:'Working dogs',exact:true}).click();assert.equal(await proof.locator('article[data-proof-video]').count(),1);await proof.getByRole('button',{name:'All training',exact:true}).click();assert.equal(await proof.locator('article[data-proof-video]').count(),3);
         await visit(origin+'/learn');await page.getByLabel('Email address',{exact:true}).fill('visitor@example.test');await page.getByLabel('Email me once when Bravo online courses launch.').check();await page.getByRole('button',{name:'Request a launch update'}).click();await page.getByText('Your launch-update request is saved.',{exact:false}).waitFor();assert.equal(signup.consent,true);assert.equal(signup.email,'visitor@example.test');
         owner=true;await visit(origin+'/workshops');await page.getByRole('button',{name:'Edit workshop details'}).click();await page.getByLabel('Time (Central)',{exact:true}).fill('10:00 a.m.');await page.getByLabel('Location',{exact:true}).fill('Fixture venue');await page.getByRole('button',{name:'Publish workshop'}).click();await page.getByText('Workshop details saved.',{exact:true}).waitFor();await reload();await page.getByText('10:00 a.m. · Central',{exact:true}).waitFor();
