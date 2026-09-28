@@ -38,8 +38,12 @@ export default function CinematicFilm({ children }) {
 
   const allowed = useRef(canEdit); allowed.current = canEdit;
   async function refreshFilms() {
-    const data = await api('/hero-film');
-    return rememberFilms(data.clips);
+    const all = []; let after = null;
+    do {
+      const data = await api(`/hero-film${after ? `?after=${encodeURIComponent(after)}` : ''}`);
+      all.push(...(Array.isArray(data.clips) ? data.clips : [])); after = data.nextCursor;
+    } while (after && all.length < 100);
+    return rememberFilms(all);
   }
   async function openManager() {
     if (!allowed.current || requesting.current) return;
@@ -117,12 +121,13 @@ export default function CinematicFilm({ children }) {
     const accessibility = new MutationObserver(update);
     accessibility.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
     preference.addEventListener('change', update); document.addEventListener('visibilitychange', update);
-    element.addEventListener('canplay', update); element.addEventListener('volumechange', () => !disposed && setMuted(element.muted));
+    const volumeChanged = () => { if (!disposed) setMuted(element.muted); };
+    element.addEventListener('canplay', update); element.addEventListener('volumechange', volumeChanged);
     document.addEventListener('pointerdown', interacted); document.addEventListener('keydown', interacted);
     return () => {
       disposed = true; element.pause(); observer.disconnect(); accessibility.disconnect();
       preference.removeEventListener('change', update); document.removeEventListener('visibilitychange', update);
-      element.removeEventListener('canplay', update);
+      element.removeEventListener('canplay', update); element.removeEventListener('volumechange', volumeChanged);
       document.removeEventListener('pointerdown', interacted); document.removeEventListener('keydown', interacted);
     };
   }, [paused, editing, managerOpen, clip.src, clip.sound, visitorSound]);
@@ -136,7 +141,8 @@ export default function CinematicFilm({ children }) {
   }
   function nextFilm() {
     if (clips.length < 2) return;
-    setIndex(current => (current + 1) % clips.length); setPlaying(false);
+    if (video.current) video.current.muted = true;
+    setMuted(true); setVisitorSound(null); setIndex(current => (current + 1) % clips.length); setPlaying(false);
   }
 
   return <section ref={root} className="home-hero cinema-hero" aria-labelledby="home-title"
