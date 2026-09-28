@@ -20,9 +20,9 @@ function thumbnail(video: HTMLVideoElement | null) {
     return data.length <= 256 * 1024 ? data : undefined;
   } catch { return undefined; }
 }
-export default function ProofVideoEditor({ clip, onClose, onSaved, onRemoved, apiBase = '/proof-videos' }: { apiBase?: '/proof-videos' | '/hero-videos' | '/hero-film' | '/program-videos'; clip: ProofClip; onClose: () => void; onSaved: (clip: ProofClip) => void; onRemoved?: (id: string) => void }) {
+export default function ProofVideoEditor({ clip, onClose, onSaved, onRemoved, allowRemove, apiBase = '/proof-videos' }: { apiBase?: '/proof-videos' | '/hero-videos' | '/hero-film' | '/program-videos'; clip: ProofClip; onClose: () => void; onSaved: (clip: ProofClip) => void; onRemoved?: (id: string) => void; allowRemove?: boolean }) {
   const dialog = useRef<HTMLDialogElement>(null), preview = useRef<HTMLVideoElement>(null), mounted = useRef(true);
-  const [title, setTitle] = useState(clip.title), [description, setDescription] = useState(clip.description), [fit, setFit] = useState(clip.fit || 'contain');
+  const [title, setTitle] = useState(clip.title), [description, setDescription] = useState(clip.description), [fit, setFit] = useState(clip.fit || 'contain'), [sound, setSound] = useState(clip.sound === true);
   const [selectedPoster, setSelectedPoster] = useState<string | undefined>();
   const [file, setFile] = useState<File | null>(null), [source, setSource] = useState(''), [ready, setReady] = useState(false);
   const [sourceType, setSourceType] = useState(clip.facebookUrl ? 'facebook' : 'upload'), [facebookUrl, setFacebookUrl] = useState(clip.facebookUrl || '');
@@ -30,10 +30,12 @@ export default function ProofVideoEditor({ clip, onClose, onSaved, onRemoved, ap
   const saving = useRef(false), mutation = useRef(crypto.randomUUID());
   const upload = useRef<{ id: string; next: number } | null>(null);
   const isHeroFilm = apiBase === '/hero-film';
+  const supportsSoundPreference = isHeroFilm || apiBase === '/hero-videos';
+  const canRemoveVideo = allowRemove ?? (!isHeroFilm && apiBase !== '/program-videos');
   const isNew = !clip.src && !clip.facebookUrl;
   const isFacebook = sourceType === 'facebook', reelUrl = normalizeFacebookReelUrl(facebookUrl);
   const replacingUpload = !isFacebook && !!file;
-  const changed = !!selectedPoster || (isFacebook ? reelUrl !== clip.facebookUrl : !!file) || title !== clip.title || description !== clip.description || fit !== (clip.fit || 'contain');
+  const changed = !!selectedPoster || (isFacebook ? reelUrl !== clip.facebookUrl : !!file) || title !== clip.title || description !== clip.description || fit !== (clip.fit || 'contain') || (supportsSoundPreference && sound !== (clip.sound === true));
   const canPublish = changed && !!title.trim() && (isFacebook ? !!reelUrl : file ? ready : !!clip.src);
   useEffect(() => {
     mounted.current = true; const previous = document.activeElement as HTMLElement | null;
@@ -86,7 +88,7 @@ export default function ProofVideoEditor({ clip, onClose, onSaved, onRemoved, ap
       }
       if (!mounted.current) return;
       setProgress('Publishing video and description…');
-      const result = await api(`${apiBase}/${clip.id}`, { method: 'PUT', body: { expectedRevision: clip.revision, mutationId: mutation.current, title, description, fit, ...(isFacebook ? { facebookUrl: reelUrl } : file ? { uploadId: upload.current!.id, ...(posterData ? { posterData } : {}) } : posterData ? { posterData } : {}) } });
+      const result = await api(`${apiBase}/${clip.id}`, { method: 'PUT', body: { expectedRevision: clip.revision, mutationId: mutation.current, title, description, fit, ...(supportsSoundPreference ? { sound } : {}), ...(isFacebook ? { facebookUrl: reelUrl } : file ? { uploadId: upload.current!.id, ...(posterData ? { posterData } : {}) } : posterData ? { posterData } : {}) } });
       if (mounted.current) onSaved(result.clip);
     } catch (cause: any) {
       if (mounted.current) { setError(cause.message); setProgress(''); }
@@ -103,7 +105,7 @@ export default function ProofVideoEditor({ clip, onClose, onSaved, onRemoved, ap
   return <dialog ref={dialog} className="site-photo-dialog proof-video-dialog" data-site-image-editor="" aria-labelledby="proof-editor-title" aria-busy={busy} onCancel={event => { event.preventDefault(); if (!saving.current) onClose(); }}>
     <form onSubmit={publish}>
       <div className="site-photo-heading"><div><p>BRAVO · VIDEO EDITOR</p><h2 id="proof-editor-title">{isHeroFilm ? 'Edit hero video' : isNew ? 'Add a video' : 'Edit this video'}</h2></div><button type="button" disabled={busy} onClick={onClose} aria-label="Close video editor">×</button></div>
-      <p className="site-photo-intro">{isHeroFilm ? 'Choose a replacement film, preview it, then publish. The hero plays automatically with sound muted.' : 'Upload a video or link a Facebook Reel, add its story, then publish it to the homepage.'}</p>
+      <p className="site-photo-intro">{isHeroFilm ? 'Upload or replace this hero clip, choose its sound preference, preview it, then publish. Hero clips play in order and advance when each video ends.' : 'Upload a video or link a Facebook Reel, add its story, then publish it to the homepage.'}</p>
       <fieldset disabled={busy} className="proof-editor-fields">
         {!isHeroFilm && <fieldset className="proof-source-picker"><legend>Video source</legend><label><input type="radio" name="proof-video-source" value="upload" checked={!isFacebook} onChange={() => changeSource('upload')}/>Upload video</label><label><input type="radio" name="proof-video-source" value="facebook" checked={isFacebook} onChange={() => changeSource('facebook')}/>Facebook Reel URL</label></fieldset>}
         {isFacebook ? <div className="site-photo-description"><label htmlFor="proof-facebook-url">Facebook Reel URL</label><input id="proof-facebook-url" type="text" inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} maxLength={2048} value={facebookUrl} placeholder="https://www.facebook.com/reel/…" aria-describedby="proof-facebook-help" onChange={event => { dirty(); setFacebookUrl(event.target.value); }}/><p id="proof-facebook-help" className="site-photo-note">Paste a public Reel link or a facebook.com/share/r/ link. Tapping the card opens Facebook in this tab; use Back to return to Bravo.</p>{facebookUrl.trim() && !reelUrl && <p className="site-photo-error" role="alert">Enter a Facebook Reel URL, such as facebook.com/reel/123456789/.</p>}</div> : <>
@@ -115,11 +117,12 @@ export default function ProofVideoEditor({ clip, onClose, onSaved, onRemoved, ap
         <label className="site-photo-description">Video title<input type="text" required maxLength={120} value={title} onChange={event => { dirty(); setTitle(event.target.value); }}/></label>
         <div className="site-photo-description"><label htmlFor="proof-video-description">Description</label><textarea id="proof-video-description" rows={4} maxLength={5000} value={description} placeholder="Starting challenge → what we practiced → progress visible in this clip." onChange={event => { dirty(); setDescription(event.target.value); }}/></div>
         {!isFacebook && <label className="site-photo-description">Video fit<select value={fit} onChange={event => { dirty(); setFit(event.target.value as 'contain' | 'cover'); }}><option value="contain">Show the whole video</option><option value="cover">Fill the frame</option></select></label>}
+        {supportsSoundPreference && <label className="site-photo-description"><span><input type="checkbox" checked={sound} onChange={event => { dirty(); setSound(event.target.checked); }}/> Prefer sound for this video</span><small>Autoplay starts muted when a browser requires it. After the visitor interacts with the page, Bravo can honor this sound preference automatically.</small></label>}
       </fieldset>
       <p className="site-photo-note">{!isFacebook && 'Up to 80 MB per video. MP4 works best across devices; MOV and WebM can also be selected. '}Describe the starting challenge, what you practiced, and the progress this clip actually shows. Include a timeframe only when known. Changes go live when you publish.</p>
       <p className="proof-upload-progress" role="status" aria-live="polite">{progress || (!isFacebook && file && !ready && !previewError ? 'Preparing video preview…' : '')}</p>
       {(error || previewError) && <p className="site-photo-error" role="alert">{error || previewError}</p>}
-      <div className="site-photo-actions">{!isNew && !isHeroFilm && apiBase !== '/program-videos' && <button type="button" disabled={busy} onClick={remove}>Remove video</button>}<button type="button" disabled={busy} onClick={onClose}>Cancel</button><button type="submit" className="site-photo-publish" disabled={busy || !canPublish}>{busy ? 'Publishing…' : isNew ? 'Publish video' : 'Publish changes'}</button></div>
+      <div className="site-photo-actions">{!isNew && canRemoveVideo && <button type="button" disabled={busy} onClick={remove}>Remove video</button>}<button type="button" disabled={busy} onClick={onClose}>Cancel</button><button type="submit" className="site-photo-publish" disabled={busy || !canPublish}>{busy ? 'Publishing…' : isNew ? 'Publish video' : 'Publish changes'}</button></div>
     </form>
   </dialog>;
 }
