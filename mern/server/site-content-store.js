@@ -12,8 +12,24 @@ export const SiteContent = mongoose.models.BravoSiteContent || mongoose.model('B
   updatedBy: mongoose.Schema.Types.ObjectId,
 }, { timestamps: true }));
 
+const LEGACY_TEXT_REFINEMENTS = {
+  'trainer-david-focus': {
+    from: 'Specialized  with FCI Belgian Malinois, ex-military, law enforcement, and executive protection K9’s • Behavior modification • Puppy behavioral issues • Obedience • Executive protection and everyday behavior. ',
+    to: 'Specializes in working with FCI Belgian Malinois, ex-military, law-enforcement, and executive-protection K9s • Behavior modification • Puppy behavior • Obedience • Everyday behavior.',
+  },
+  'ui-52': {
+    from: 'Built by Northrop Web Design & Development Team using the  FRACTURE framework.',
+    to: 'Built by Northrop Web Design & Development Team using the FRACTURE framework.',
+  },
+};
+
+export function normalizeLegacySiteContentValue(key, value = {}) {
+  const legacy = LEGACY_TEXT_REFINEMENTS[key];
+  return legacy && value?.text === legacy.from ? { ...value, text: legacy.to } : value || {};
+}
+
 export const publicSiteContentRow = row => ({
-  value: row.value || {},
+  value: normalizeLegacySiteContentValue(row._id, row.value),
   revision: row.revision || 0,
   canUndo: row.previous != null,
 });

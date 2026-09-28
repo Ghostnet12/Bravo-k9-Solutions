@@ -81,7 +81,6 @@ try {
           ['Everyday manners','$200','training','basic-obedience','/dog-training'],
           ['Dog walking','$25','walking',null,'/dog-walking'],
           ['Aggression & handling','$400','aggression',null,'/behavior-assessment'],
-          ['Specialized training','$200','training','job-specific','/dog-training'],
         ]){
           const card=page.getByRole('link',{name:label,exact:true});
           assert.ok((await card.innerText()).includes(price),`${label} has its own service price`);
@@ -108,6 +107,18 @@ try {
           }
           await visit(origin);await page.locator('.goal-proof figcaption').waitFor();await settleApi();
         }
+        const specialistCard=page.getByRole('link',{name:'Specialized training',exact:true});
+        const specialistText=await specialistCard.innerText();
+        assert.equal(specialistText.includes('$200'),false,'specialist card does not promise the standard monthly rate');
+        assert.match(specialistText,/Talk with Bravo/);assert.match(specialistText,/Scope & pricing are goal-specific/);
+        assert.equal(await specialistCard.getAttribute('href'),'/contact');
+        await page.getByRole('button',{name:'Preview Specialized training',exact:true}).click();
+        assert.equal(await page.locator('.goal-result .goal-price').count(),0,'specialist preview has no standard membership price');
+        assert.match(await page.locator('.goal-result').innerText(),/scoped individually/i);
+        assert.equal(await page.locator('.goal-result .goal-actions .button').getAttribute('href'),'/contact');
+        assert.equal(await page.locator('.goal-result').getByRole('link',{name:'See the training approach'}).getAttribute('href'),'/dog-training');
+        await specialistCard.click();await page.waitForURL(origin+'/contact');await page.getByRole('heading',{name:'Talk to Bravo.',exact:true}).waitFor();
+        await visit(origin);await page.locator('.goal-proof figcaption').waitFor();await settleApi();
         const proof=page.locator('.home-work-proof');await proof.getByRole('button',{name:'Working dogs',exact:true}).click();assert.equal(await proof.locator('article[data-proof-video]').count(),1);await proof.getByRole('button',{name:'All training',exact:true}).click();assert.equal(await proof.locator('article[data-proof-video]').count(),3);
         await visit(origin+'/learn');await page.getByLabel('Email address',{exact:true}).fill('visitor@example.test');await page.getByLabel('Email me once when Bravo online courses launch.').check();await page.getByRole('button',{name:'Request a launch update'}).click();await page.getByText('Your launch-update request is saved.',{exact:false}).waitFor();assert.equal(signup.consent,true);assert.equal(signup.email,'visitor@example.test');
         owner=true;await visit(origin+'/workshops');await page.getByRole('button',{name:'Edit workshop details'}).click();await page.getByLabel('Time (Central)',{exact:true}).fill('10:00 a.m.');await page.getByLabel('Location',{exact:true}).fill('Fixture venue');await page.getByRole('button',{name:'Publish workshop'}).click();await page.getByText('Workshop details saved.',{exact:true}).waitFor();await reload();await page.getByText('10:00 a.m. · Central',{exact:true}).waitFor();

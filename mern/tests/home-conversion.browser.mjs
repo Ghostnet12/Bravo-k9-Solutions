@@ -73,6 +73,8 @@ try {
         assert.equal(await accountReviews.count(), reviews.length);
         for (const review of reviews) await accountReviews.getByText(review.authorName, { exact: true }).waitFor();
         assert.equal(await page.locator('.facebook-recommendations article').count(), 6);
+        assert.equal(await page.locator('.facebook-recommendations-more[open]').count(), 0, 'additional reviews start collapsed');
+        assert.equal((await page.locator('.goal-choice').filter({ hasText: 'Specialized training' }).innerText()).includes('$200'), false, 'specialist goals do not inherit the standard monthly price');
         for (const author of ['Tamyra Borg', 'Waneta Malsom']) {
           const card = page.locator('.facebook-recommendations article').filter({ hasText: author });
           await card.getByText('Google review', { exact: true }).waitFor();

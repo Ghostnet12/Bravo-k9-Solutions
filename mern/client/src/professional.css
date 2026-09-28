@@ -218,3 +218,6 @@ html.access-high-contrast :is(.home-training-offer,.home-training-offer aside,.h
 .guided-booking-page .notice a{display:inline-flex;align-items:center;min-height:44px}
 .guided-booking-page .guided-booking-steps button{font-size:.9375rem}
 @media(max-width:420px){.guided-booking-page .guided-booking-steps{gap:5px}.guided-booking-page .guided-booking-steps button{font-size:.875rem;padding:12px 5px}}
+
+/* Refinement pass: keep the proof section strong without making the homepage feel endless. */
+.facebook-recommendations-more{margin:1rem 0 1.25rem;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.facebook-recommendations-more>summary{display:flex;align-items:center;justify-content:space-between;gap:1rem;min-height:52px;cursor:pointer;color:var(--gold-light);font-weight:700;list-style:none}.facebook-recommendations-more>summary::-webkit-details-marker{display:none}.facebook-recommendations-more>summary span{font-size:1.25rem;transition:transform .2s ease}.facebook-recommendations-more[open]>summary span{transform:rotate(45deg)}.facebook-recommendations-more .review-grid{margin-top:1rem}

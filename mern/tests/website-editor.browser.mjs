@@ -72,7 +72,7 @@ try{for(const [engineName,engine] of Object.entries({chromium,webkit})){
    await pricing.getByLabel('Monthly price (USD)').fill('225');await pricing.getByLabel('Each additional dog / month (USD)').fill('125');
    failPrice=true;await pricing.getByRole('button',{name:'Publish program & prices'}).click();await pricing.getByRole('alert').waitFor();assert.equal(await pricing.getByLabel('Monthly price (USD)').inputValue(),'225');
    failPrice=false;await pricing.getByRole('button',{name:'Publish program & prices'}).click();await pricing.waitFor({state:'hidden'});
-   assert.match(await page.locator('#goal-price-manners').innerText(),/\$225/);assert.match(await page.locator('#goal-price-specialist').innerText(),/\$225/);assert.match(await page.locator('#goal-price-walks').innerText(),/\$25/);
+   assert.match(await page.locator('#goal-price-manners').innerText(),/\$225/);assert.equal((await page.locator('#goal-price-specialist').innerText()).includes('$225'),false);assert.match(await page.locator('#goal-price-specialist').innerText(),/Talk with Bravo/);assert.match(await page.locator('#goal-price-walks').innerText(),/\$25/);
    const ashley=page.locator('[data-site-trainer="222222222222222222222222"]'),photoKey=await ashley.locator('img').getAttribute('data-site-image-key');
    await hold(ashley.locator('h3'));const trainer=page.getByRole('dialog',{name:'Edit trainer profile'});await trainer.waitFor();
    await trainer.getByLabel('Public name',{exact:true}).fill('Ashley Example');await trainer.getByLabel('Public title',{exact:true}).fill('Bravo trainer');await trainer.getByLabel('Introduction',{exact:true}).fill('Updated Ashley biography.');

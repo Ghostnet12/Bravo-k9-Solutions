@@ -7,6 +7,7 @@ import { publicTrainerProfile } from '../shared/trainer-profile.js';
 import { trainerOptions, scheduledTrainerLabel } from '../shared/trainers.js';
 import { contentStyle } from '../shared/site-content.js';
 import { contentInput } from '../server/site-content.js';
+import { normalizeLegacySiteContentValue } from '../server/site-content-store.js';
 
 test('published rates flow through multi-dog quotes, bundles, checkout and historical rescheduling',()=>{
  const catalog=SERVICES.map(row=>({...row,...({training:{cents:22500,additionalDogCents:12500},walking:{cents:3500},online:{cents:9000,bundleCents:30000}}[row.id]||{})}));
@@ -50,4 +51,13 @@ test('background photos use public uploaded image paths and reject CSS or extern
   assert.equal(contentInput.safeParse({background:'image',backgroundImage}).success,false);
   assert.equal(contentStyle({background:'image',backgroundImage}).backgroundImage,undefined);
  }
+});
+
+test('legacy owner copy typos are refined without overriding later edits',()=>{
+ const david='Specialized  with FCI Belgian Malinois, ex-military, law enforcement, and executive protection K9’s • Behavior modification • Puppy behavioral issues • Obedience • Executive protection and everyday behavior. ';
+ const footer='Built by Northrop Web Design & Development Team using the  FRACTURE framework.';
+ assert.match(normalizeLegacySiteContentValue('trainer-david-focus',{text:david}).text,/Specializes in working with FCI Belgian Malinois/);
+ assert.equal(normalizeLegacySiteContentValue('ui-52',{text:footer}).text,'Built by Northrop Web Design & Development Team using the FRACTURE framework.');
+ assert.equal(normalizeLegacySiteContentValue('trainer-david-focus',{text:'Owner custom copy'}).text,'Owner custom copy');
+ assert.equal(normalizeLegacySiteContentValue('ui-52',{text:'Custom footer'}).text,'Custom footer');
 });
