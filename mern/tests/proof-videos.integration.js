@@ -60,7 +60,7 @@ test('homepage video publishing, isolation, and persistence', { timeout: 180000 
         await callFilm(who, 'put', '/opening', edit).expect(who ? 403 : 401);
       }
       await request(app).put('/api/hero-film/opening').set('Origin', 'https://wrong.example').set('Cookie', cookies.owner).send(edit).expect(403);
-      await callFilm('owner', 'post', '/arbitrary/uploads', meta).expect(404);
+      for (const who of [null, 'staff', 'client']) await callFilm(who, 'put', '/order', { ids: ['opening'] }).expect(who ? 403 : 401);
       await callFilm('owner', 'delete', '/opening', { expectedRevision: 0 }).expect(405);
       await callFilm('owner', 'put', '/opening', { ...edit, facebookUrl: 'https://www.facebook.com/reel/123456789' }).expect(400);
       // Description-only edits preserve the bundled video before any upload.
@@ -75,12 +75,23 @@ test('homepage video publishing, isolation, and persistence', { timeout: 180000 
       const saved = (await callFilm('administrator', 'put', '/opening', publish).expect(200)).body.clip;
       assert.equal(saved.revision, 2); assert.match(saved.src, /^\/api\/hero-film\/opening\/video\?v=2$/);
       assert.deepEqual((await callFilm(null, 'get', '/').expect(200)).body.clips, [saved]);
+      const secondId = 'second-hero', secondUpload = (await callFilm('owner', 'post', `/${secondId}/uploads`, meta).expect(201)).body.uploadId;
+      for (let index = 0; index < 2; index++) await callFilm('owner', 'put', `/${secondId}/uploads/${secondUpload}/chunks/${index}`, { data: data.subarray(index * CHUNK_SIZE, (index + 1) * CHUNK_SIZE).toString('base64') }).expect(200);
+      const second = (await callFilm('owner', 'put', `/${secondId}`, { ...edit, mutationId: randomUUID(), title: 'Second hero clip', description: 'Second clip in the opening playlist.', sound: true, uploadId: secondUpload }).expect(200)).body.clip;
+      assert.equal(second.sound, true);
+      const ordered = (await callFilm('administrator', 'put', '/order', { ids: [secondId, 'opening'] }).expect(200)).body.clips;
+      assert.deepEqual(ordered.map(clip => clip.id), [secondId, 'opening']);
+      assert.deepEqual((await callFilm(null, 'get', '/').expect(200)).body.clips.map(clip => clip.id), [secondId, 'opening']);
+      assert.deepEqual((await HeroFilm.find({ deleted: false }).sort({ order: 1, _id: 1 }).lean()).map(row => String(row._id)), [secondId, 'opening']);
+      await callFilm('owner', 'delete', `/${secondId}`, { expectedRevision: second.revision }).expect(200);
+      assert.deepEqual((await callFilm(null, 'get', '/').expect(200)).body.clips.map(clip => clip.id), ['opening']);
       const range = await request(app).get(saved.src).set('Range', 'bytes=0-23').expect(206);
       assert.equal(range.headers['content-range'], `bytes 0-23/${data.length}`);
       assert.deepEqual(range.body, data.subarray(0, 24));
       await callFilm('owner', 'put', '/opening', { ...edit, expectedRevision: 1, mutationId: randomUUID() }).expect(409);
       assert.equal((await request(app).get('/api/hero-videos').expect(200)).body.clips.length, 0);
-      assert.equal(await AuditEvent.countDocuments({ action: 'hero-film-video.published' }), 1);
+      assert.equal(await AuditEvent.countDocuments({ action: 'hero-film-video.published' }), 2);
+      assert.equal(await AuditEvent.countDocuments({ action: 'hero-film-video.reordered' }), 1);
     });
     await t.test('program media is isolated, durable, and editable by owner and administrator only', async () => {
       const program = (who, method, path, body={}) => {
@@ -129,8 +140,8 @@ test('homepage video publishing, isolation, and persistence', { timeout: 180000 
       const uploadId=(await hero('owner','post',`/${id}/uploads`,meta).expect(201)).body.uploadId;
       for(const index of [0,1]) await hero('owner','put',`/${id}/uploads/${uploadId}/chunks/${index}`,{data:data.subarray(index*CHUNK_SIZE,(index+1)*CHUNK_SIZE).toString('base64')}).expect(200);
       await call('owner','put',`/${id}`,{...edit,uploadId,mutationId:randomUUID()}).expect(400);
-      const clip=(await hero('owner','put',`/${id}`,{...edit,uploadId,mutationId:randomUUID()}).expect(200)).body.clip;
-      assert.match(clip.src,/^\/api\/hero-videos\//);
+      const clip=(await hero('owner','put',`/${id}`,{...edit,sound:true,uploadId,mutationId:randomUUID()}).expect(200)).body.clip;
+      assert.match(clip.src,/^\/api\/hero-videos\//); assert.equal(clip.sound,true);
       await request(app).get(`/api/hero-videos/${id}/video`).set('Range','bytes=0-23').expect(206);
       await request(app).get(`/api/proof-videos/${id}/video`).expect(404);
       assert.equal((await request(app).get('/api/proof-videos')).body.clips.some(clip=>clip.id===id),false);
