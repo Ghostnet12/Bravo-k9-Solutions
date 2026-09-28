@@ -8,7 +8,7 @@ import { compareProofVideos } from '../../shared/proof-videos.js';
 import './proof-videos.css';
 
 const Editor = lazy(() => import('./ProofVideoEditor'));
-export type ProofClip = { id: string; title: string; description: string; order: number; revision: number; src: string | null; poster?: string | null; facebookUrl?: string | null; fit?: 'contain' | 'cover' };
+export type ProofClip = { id: string; title: string; description: string; order: number; revision: number; src: string | null; poster?: string | null; facebookUrl?: string | null; fit?: 'contain' | 'cover'; sound?: boolean };
 
 type CarouselSettings = { intervalSeconds: number; revision: number };
 function CarouselTiming({ saved, onSaved }: { saved: CarouselSettings; onSaved: (value: CarouselSettings) => void }) {
