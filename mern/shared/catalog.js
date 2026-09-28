@@ -24,6 +24,7 @@ export const TRAINING_FOCUSES = [
   { id: 'puppy-foundations', name: 'Puppy foundations' },
   { id: 'behavior-modification', name: 'Behavior modification' },
   { id: 'job-specific', name: 'Job-specific working-dog training' },
+  { id: 'hunting-dog', name: 'Hunting dog training' },
   { id: 'service-dog', name: 'Service dog training' },
   { id: 'law-enforcement', name: 'Law-enforcement K9 training' },
   { id: 'search-and-rescue', name: 'Search-and-rescue training' },
