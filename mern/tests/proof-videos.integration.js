@@ -13,7 +13,7 @@ test('homepage video publishing, isolation, and persistence', { timeout: 180000 
   try {
     const { default: app } = await import('../server/site-image-app.js');
     const { connectDb } = await import('../server/db.js');
-    const { User, Session, ProofVideo, MediaUpload, MediaChunk, AuditEvent } = await import('../server/models.js');
+    const { User, Session, ProofVideo, HeroFilm, MediaUpload, MediaChunk, AuditEvent } = await import('../server/models.js');
     const { CHUNK_SIZE } = await import('../server/media.js');
     await connectDb();
     const users = {}, cookies = {};
