@@ -4,7 +4,7 @@ export const DEFAULT_BANNER = {
   weatherLabel: 'WEATHER · NWS', weatherOverride: '', showWeather: true,
   alertLabel: 'BRAVO ALERT', showAlerts: true,
   fallbackLabel: 'BRAVO', fallback: 'Trust. Train. Deploy.',
-  textColor: '#101010', borderColor: '#101010', centerColor: '#ffe8a4', edgeColor: '#f58a24',
+  textColor: '#101010', borderColor: '#ba9a64', centerColor: '#ba9a64', edgeColor: '#ba9a64',
   motion: 'always', speed: 1, fontSize: 14, borderWidth: 2,
 };
 
