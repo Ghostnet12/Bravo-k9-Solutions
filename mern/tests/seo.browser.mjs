@@ -47,7 +47,7 @@ try {
         await page.goto(origin);
         const cards = page.locator('.facebook-recommendations article');
         assert.equal(await cards.count(), 6);
-        await page.locator('.facebook-recommendations-more summary').click();
+        await page.locator('.facebook-recommendations-more > summary').click();
         const justine = cards.filter({ hasText: 'Justine Harty West' });
         assert.equal(await justine.count(), 1);
         assert.equal(await justine.locator('small').innerText(), 'Facebook comment');
