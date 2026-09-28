@@ -40,10 +40,20 @@ function publicImage(image) {
 }
 export const homepageHandler = createHomepageHandler({ loadCatalog: async () => { await connectDb(); return effectiveServices({includeDisabled:true,readOnly:true}); }, loadWorkshop: loadPublicWorkshop, loadContent: loadSiteContent, loadFilm: async () => {
   await connectDb();
-  const film = await HeroFilm.findOne({ _id: DEFAULT_HERO_FILM.id, deleted: false }).select('title description fit revision uploadId hasPoster').maxTimeMS(2000).lean();
-  if (!film) return DEFAULT_HERO_FILM;
-  return { ...film, src: film.uploadId ? heroRendition(film) || `/api/hero-film/opening/video?v=${film.revision}` : DEFAULT_HERO_FILM.src,
-    poster: film.uploadId ? film.hasPoster ? heroPosterRendition(film) || `/api/hero-film/opening/poster?v=${film.revision}` : null : DEFAULT_HERO_FILM.poster };
+  const rows = await HeroFilm.find({ deleted: false }).select('title description fit sound order revision uploadId hasPoster').sort({ order: 1, _id: 1 }).maxTimeMS(2000).lean();
+  const clips = rows.map(row => {
+    const id = String(row._id), opening = id === DEFAULT_HERO_FILM.id;
+    const src = row.uploadId ? heroRendition(row) || `/api/hero-film/${id}/video?v=${row.revision}` : opening ? DEFAULT_HERO_FILM.src : null;
+    if (!src) return null;
+    return {
+      id, title: row.title || (opening ? DEFAULT_HERO_FILM.title : 'Bravo training video'),
+      description: row.description || '', fit: row.fit || 'cover', sound: row.sound === true,
+      order: Number.isSafeInteger(row.order) ? row.order : 0, revision: row.revision || 0, src,
+      poster: row.uploadId ? row.hasPoster ? heroPosterRendition(row) || `/api/hero-film/${id}/poster?v=${row.revision}` : null : opening ? DEFAULT_HERO_FILM.poster : null,
+    };
+  }).filter(Boolean);
+  if (!clips.some(clip => clip.id === DEFAULT_HERO_FILM.id)) clips.unshift({ ...DEFAULT_HERO_FILM });
+  return clips.sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
 }, loadHero: async () => {
   await connectDb();
   const image = await SiteImage.findById(HOME_HERO_KEY).select('_id current revision previous.uploadId').maxTimeMS(2000).lean();
@@ -138,7 +148,7 @@ app.disable('x-powered-by'); app.set('trust proxy', process.env.VERCEL ? 1 : fal
 app.get(['/', '/api/homepage'], securityHeaders(), homepageHandler);
 app.use('/api/site-images', router);
 app.use('/api/proof-videos', proofVideoRouter);
-app.use('/api/hero-film', createProofVideoRouter({ VideoModel: HeroFilm, defaults: [DEFAULT_HERO_FILM], apiPath: '/api/hero-film', mediaScope: 'hero-film', withSettings: false, editableIds: [DEFAULT_HERO_FILM.id], allowFacebook: false, allowDelete: false }));
+app.use('/api/hero-film', createProofVideoRouter({ VideoModel: HeroFilm, defaults: [DEFAULT_HERO_FILM], apiPath: '/api/hero-film', mediaScope: 'hero-film', withSettings: false, withOrdering: true, protectedDeleteIds: [DEFAULT_HERO_FILM.id], allowFacebook: false, allowDelete: true }));
 app.use('/api/program-videos', createProofVideoRouter({ VideoModel: ProgramVideo, defaults: [], apiPath: '/api/program-videos', mediaScope: 'program', withSettings: false, editableIds: ['manners', 'walks', 'handling', 'specialist'], allowDelete: false }));
 app.use('/api/hero-videos', createProofVideoRouter({ VideoModel: HeroVideo, defaults: [], apiPath: '/api/hero-videos', mediaScope: 'hero', withSettings: false }));
 app.use('/api/hero-carousel', heroCarouselRouter);
