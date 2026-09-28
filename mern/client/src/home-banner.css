@@ -1,11 +1,11 @@
-.home-status-banner{position:relative;display:flex;align-items:stretch;width:100%;min-height:64px;border:2px solid #101010;background:linear-gradient(90deg,#f58a24 0%,#ffd879 22%,#ffe8a4 50%,#ffd879 78%,#f58a24 100%);color:#101010;overflow:hidden;font-family:Montserrat,sans-serif}
+.home-status-banner{position:relative;display:flex;align-items:stretch;width:100%;min-height:64px;border:2px solid #ba9a64;background:#ba9a64;color:#101010;overflow:hidden;font-family:Montserrat,sans-serif}
 .banner-viewport{flex:1;min-width:0;overflow:hidden;align-content:center}
 .banner-track{display:flex;width:max-content;animation:bravo-banner-left var(--banner-duration,40s) linear infinite}
 .banner-group{display:flex;align-items:center;flex-shrink:0}
 .banner-item{display:flex;align-items:center;gap:14px;white-space:nowrap;padding:18px 18px;font-size:14px;font-weight:600;line-height:1.4}
 .banner-item strong{font-size:10px;letter-spacing:.12em;border:1px solid #101010;padding:5px 7px;border-radius:3px;font-weight:800}
 .banner-item i{font-style:normal;margin-left:22px;font-size:18px}
-.banner-controls{position:relative;display:flex;flex-shrink:0;align-items:center;gap:6px;padding:7px 10px;background:#f59a35;border-left:1px solid #101010}
+.banner-controls{position:relative;display:flex;flex-shrink:0;align-items:center;gap:6px;padding:7px 10px;background:#ba9a64;border-left:1px solid #101010}
 .home-status-banner .banner-controls button{min-width:44px;min-height:44px;padding:8px;border:1px solid #101010;border-radius:5px;background:transparent;color:#101010;font:700 11px Montserrat,sans-serif;cursor:pointer}
 .home-status-banner button:focus-visible{outline:3px solid #101010;outline-offset:2px}
 @media(hover:hover){.home-status-banner:hover .banner-track{animation-play-state:paused}}
@@ -29,10 +29,10 @@
 @media(max-width:600px){.banner-item{font-size:12px;padding:15px 12px}.banner-controls{padding:5px;gap:4px}.banner-editor{padding:18px}.banner-editor h2{font-size:24px}}
 
 
-.home-status-banner{border-width:var(--banner-outline,2px);border-color:var(--banner-border,#101010);background:linear-gradient(90deg,var(--banner-edge,#f58a24),var(--banner-center,#ffe8a4) 45%,var(--banner-center,#ffe8a4) 55%,var(--banner-edge,#f58a24));color:var(--banner-text,#101010)}
+.home-status-banner{border-width:var(--banner-outline,2px);border-color:var(--banner-border,#ba9a64);background:linear-gradient(90deg,var(--banner-edge,#ba9a64),var(--banner-center,#ba9a64) 45%,var(--banner-center,#ba9a64) 55%,var(--banner-edge,#ba9a64));color:var(--banner-text,#101010)}
 .home-status-banner .banner-item{font-size:var(--banner-size,14px)}
-.home-status-banner .banner-item strong,.home-status-banner .banner-controls,.home-status-banner .banner-controls button{border-color:var(--banner-border,#101010);color:var(--banner-text,#101010)}
-.home-status-banner .banner-controls{background:var(--banner-edge,#f58a24)}
+.home-status-banner .banner-item strong,.home-status-banner .banner-controls,.home-status-banner .banner-controls button{border-color:var(--banner-border,#ba9a64);color:var(--banner-text,#101010)}
+.home-status-banner .banner-controls{background:var(--banner-edge,#ba9a64)}
 .banner-settings{display:grid;gap:14px;margin:16px 0}.banner-settings label{color:#101010;font-size:14px}.banner-settings input:not([type=checkbox]){display:block;width:100%;box-sizing:border-box;margin-top:5px;min-height:44px;background:#fff;color:#101010;border:1px solid #101010;padding:8px;border-radius:5px;font:inherit}.banner-settings input[type=color]{padding:3px}.banner-settings .banner-check{display:flex;align-items:center;gap:10px;min-height:44px}.banner-settings input[type=checkbox]{width:20px;height:20px;accent-color:#101010}.banner-editor details{margin:16px 0;border-bottom:1px solid #10101040;padding-bottom:12px}.banner-editor summary{cursor:pointer;min-height:44px;font-weight:700;align-content:center}.banner-editor h3{color:#101010}
 
 .home-status-banner[data-banner-editable] .banner-viewport{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}.banner-controls:empty{display:none}
