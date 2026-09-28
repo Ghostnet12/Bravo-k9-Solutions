@@ -54,6 +54,9 @@ try {
           await page.getByLabel('Custom time text (blank = automatic Central Time)', { exact: true }).fill('Training hours: call Bravo');
           await page.getByLabel('Custom weather text (blank = automatic Aberdeen weather)', { exact: true }).fill('Outdoor sessions available');
           await page.getByText('Colors, text size & scrolling', { exact: true }).click();
+          assert.equal(await page.getByLabel('Outline color', { exact: true }).inputValue(), '#ba9a64');
+          assert.equal(await page.getByLabel('Center color', { exact: true }).inputValue(), '#ba9a64');
+          assert.equal(await page.getByLabel('Edge color', { exact: true }).inputValue(), '#ba9a64');
           await page.getByLabel('Text size: 14', { exact: true }).press('ArrowRight');
           await page.getByRole('button', { name: '+ Add alert', exact: true }).click();
           await page.getByLabel('Alert 2', { exact: true }).fill('New training notice <script>not executable</script>');
