@@ -41,11 +41,13 @@ function clipSnapshot(value) {
 }
 
 export function heroFilmSnapshot(value) {
-  return clipSnapshot(value) || { ...DEFAULT_HERO_FILM };
+  const candidate = value && typeof value === 'object' && !value.id ? { ...value, id: DEFAULT_HERO_FILM.id } : value;
+  return clipSnapshot(candidate) || { ...DEFAULT_HERO_FILM };
 }
 
 export function heroFilmPlaylistSnapshot(value) {
-  const source = Array.isArray(value) ? value : value ? [value] : [];
+  const legacySingle = !Array.isArray(value) && value && typeof value === 'object' && !value.id ? { ...value, id: DEFAULT_HERO_FILM.id } : value;
+  const source = Array.isArray(legacySingle) ? legacySingle : legacySingle ? [legacySingle] : [];
   const clips = source.map(clipSnapshot).filter(Boolean).sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
   return clips.length ? clips : [{ ...DEFAULT_HERO_FILM }];
 }
