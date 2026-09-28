@@ -16,20 +16,20 @@ const idInput = z.string().regex(/^[a-z0-9][a-z0-9-]{0,80}$/);
 const revision = z.number().int().min(0);
 const editInput = z.object({
   expectedRevision: revision, mutationId: z.uuid(), title: z.string().trim().min(1).max(120),
-  description: z.string().trim().max(5000), fit: z.enum(['contain', 'cover']), uploadId: z.uuid().optional(),
+  description: z.string().trim().max(5000), fit: z.enum(['contain', 'cover']), sound: z.boolean().optional(), uploadId: z.uuid().optional(),
   facebookUrl: z.string().max(2048).refine(value => !!normalizeFacebookReelUrl(value)).transform(normalizeFacebookReelUrl).optional(),
   posterData: z.string().max(256 * 1024).regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/).optional(),
 }).strict().refine(input => !(input.uploadId && input.facebookUrl) && !(input.facebookUrl && input.posterData));
 const uploadInput = z.object({ filename: z.string().trim().min(1).max(160), contentType: z.enum(PROOF_VIDEO_TYPES), size: z.number().int().min(1).max(MEDIA_LIMITS.video), chunks: z.number().int().min(1).max(Math.ceil(MEDIA_LIMITS.video / CHUNK_SIZE)) }).strict();
 const chunkInput = z.object({ data: z.string().min(4).max(Math.ceil(CHUNK_SIZE / 3) * 4).regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/) }).strict();
-export function createProofVideoRouter({ VideoModel = ProofVideo, defaults = DEFAULT_PROOF_VIDEOS, apiPath = '/api/proof-videos', mediaScope = 'proof', withSettings = true, editableIds = null, allowFacebook = true, allowDelete = true } = {}) {
+export function createProofVideoRouter({ VideoModel = ProofVideo, defaults = DEFAULT_PROOF_VIDEOS, apiPath = '/api/proof-videos', mediaScope = 'proof', withSettings = true, withOrdering = false, editableIds = null, protectedDeleteIds = [], allowFacebook = true, allowDelete = true } = {}) {
 const defaultFor = id => defaults.find(clip => clip.id === id);
 const scope = id => `${mediaScope}:${id}`;
 const publicClip = row => {
   const original = defaultFor(row._id);
   const facebookUrl = row.uploadId ? null : normalizeFacebookReelUrl(row.facebookUrl || original?.facebookUrl);
   return { id: row._id, title: row.title, description: row.description, order: row.order, revision: row.revision,
-    fit: row.fit || 'contain', src: row.uploadId ? (mediaScope === 'hero-film' && heroRendition(row)) || `${apiPath}/${row._id}/video?v=${row.revision}` : original?.src || null,
+    fit: row.fit || 'contain', sound: row.sound === true || (!row.sound && original?.sound === true), src: row.uploadId ? (mediaScope === 'hero-film' && heroRendition(row)) || `${apiPath}/${row._id}/video?v=${row.revision}` : original?.src || null,
     poster: row.uploadId ? row.hasPoster ? (mediaScope === 'hero-film' && heroPosterRendition(row)) || `${apiPath}/${row._id}/poster?v=${row.revision}` : null : (!facebookUrl && original?.src) || facebookUrl === original?.facebookUrl ? original?.poster || null : null, facebookUrl };
 };
 const publicCarousel = row => ({ intervalSeconds: Math.max(2, row?.intervalSeconds ?? 8), revision: row?.revision ?? 0 });
@@ -76,6 +76,35 @@ router.get('/:id/poster', async (req, res) => {
 
 // Reuse the photo editor's real Owner/Administrator permission checks.
 router.use(sameOrigin, cookieParser(), identify, requireUser, requireOwner);
+if (withOrdering) router.put('/order', rateLimit(`${mediaScope}-video-order`, 120, 3600000), express.json({ limit: '8kb' }), async (req, res) => {
+  const input = z.object({ ids: z.array(idInput).min(1).max(100).refine(ids => new Set(ids).size === ids.length) }).strict().parse(req.body);
+  await VideoModel.init();
+  let result;
+  await transaction(async session => {
+    const rows = await VideoModel.find({}).session(session);
+    const byId = new Map(rows.map(row => [String(row._id), row]));
+    const defaultIds = new Set(defaults.map(clip => clip.id));
+    const liveIds = [
+      ...defaults.filter(clip => !byId.get(clip.id)?.deleted).map(clip => clip.id),
+      ...rows.filter(row => !row.deleted && !defaultIds.has(String(row._id))).sort((a, b) => compareProofVideos(a, b)).map(row => String(row._id)),
+    ];
+    if (liveIds.length !== input.ids.length || liveIds.some(id => !input.ids.includes(id))) throw fail('The hero video list changed. Reopen it before moving videos.', 409);
+    for (const [order, id] of input.ids.entries()) {
+      let row = byId.get(id);
+      const original = defaultFor(id);
+      if (row?.deleted || (!row && !original)) throw fail('The hero video list changed. Reopen it before moving videos.', 409);
+      if (!row) {
+        row = new VideoModel({ _id: id, title: original.title, description: original.description, fit: original.fit || 'contain', sound: original.sound === true, order, revision: original.revision || 0 });
+        byId.set(id, row);
+      }
+      row.order = order; row.updatedBy = req.user._id;
+      await row.save({ session });
+    }
+    await AuditEvent.create([{ actorId: req.user._id, action: `${mediaScope}-video.reordered`, targetType: `${mediaScope}-video`, targetId: 'playlist', details: { ids: input.ids } }], { session });
+    result = input.ids.map(id => publicClip(byId.get(id)));
+  });
+  res.json({ clips: result });
+});
 if (!withSettings) router.all('/settings', (_req, res) => res.status(404).json({ error: 'Settings belong to the hero carousel.' }));
 if (withSettings) router.put('/settings', rateLimit('proof-carousel-edit', 60, 3600000), express.json({ limit: '2kb' }), async (req, res) => {
   const data = z.object({ expectedRevision: revision, intervalSeconds: z.number().int().min(2).max(60) }).strict().parse(req.body);
@@ -135,6 +164,7 @@ router.put('/:id', rateLimit('proof-video-edit', 240, 3600000), express.json({ l
     }
     row ||= new VideoModel({ _id: id, order: original?.order ?? Date.now() });
     row.title = input.title; row.description = input.description; row.fit = input.fit;
+    if (input.sound !== undefined) row.sound = input.sound;
     if (input.uploadId) {
       row.uploadId = input.uploadId; row.facebookUrl = undefined; row.poster = undefined; row.hasPoster = false;
       if (input.posterData) {
@@ -162,7 +192,7 @@ router.put('/:id', rateLimit('proof-video-edit', 240, 3600000), express.json({ l
   res.json({ clip: result });
 });
 router.delete('/:id', rateLimit('proof-video-edit', 240, 3600000), express.json({ limit: '2kb' }), async (req, res) => {
-  if (!allowDelete) throw fail('Choose a replacement video to change the opening film.', 405);
+  if (!allowDelete || protectedDeleteIds.includes(req.params.id)) throw fail('Keep at least the primary opening film in the hero playlist.', 405);
   const input = z.object({ expectedRevision: revision }).strict().parse(req.body), id = req.params.id;
   await transaction(async session => {
     let row = await VideoModel.findById(id).session(session);
@@ -188,7 +218,7 @@ router.use((error, req, res, _next) => {
   const transport = requestError(error);
   if (transport) return res.status(transport.status).json({ error: transport.message });
   const status = error instanceof z.ZodError ? 400 : error.code === 11000 ? 409 : Number(error.status) || 500;
-  res.status(status).json({ error: error instanceof z.ZodError ? (req.path === '/settings' ? 'Choose a whole number from 2 to 60 seconds.' : 'Check the video size, title and description, then try again.') : status === 409 ? (req.path === '/settings' ? 'Carousel timing changed. Reload the page before saving.' : 'This video changed. Close and reopen the editor before saving.') : status >= 500 ? req.method === 'GET' ? 'Videos are temporarily unavailable. Please try again.' : 'Unable to confirm this update. Refresh to check before retrying.' : error.message });
+  res.status(status).json({ error: error instanceof z.ZodError ? (req.path === '/settings' ? 'Choose a whole number from 2 to 60 seconds.' : req.path === '/order' ? 'Choose a valid video order.' : 'Check the video size, title and description, then try again.') : status === 409 ? (req.path === '/settings' ? 'Carousel timing changed. Reload the page before saving.' : req.path === '/order' ? 'Hero video order changed. Reopen the playlist before saving.' : 'This video changed. Close and reopen the editor before saving.') : status >= 500 ? req.method === 'GET' ? 'Videos are temporarily unavailable. Please try again.' : 'Unable to confirm this update. Refresh to check before retrying.' : error.message });
 });
 return router;
 }
