@@ -104,7 +104,7 @@ export default function ProofVideoEditor({ clip, onClose, onSaved, onRemoved, al
   }
   return <dialog ref={dialog} className="site-photo-dialog proof-video-dialog" data-site-image-editor="" aria-labelledby="proof-editor-title" aria-busy={busy} onCancel={event => { event.preventDefault(); if (!saving.current) onClose(); }}>
     <form onSubmit={publish}>
-      <div className="site-photo-heading"><div><p>BRAVO · VIDEO EDITOR</p><h2 id="proof-editor-title">{isHeroFilm ? 'Edit hero video' : isNew ? 'Add a video' : 'Edit this video'}</h2></div><button type="button" disabled={busy} onClick={onClose} aria-label="Close video editor">×</button></div>
+      <div className="site-photo-heading"><div><p>BRAVO · VIDEO EDITOR</p><h2 id="proof-editor-title">{isHeroFilm ? isNew ? 'Add hero video' : 'Edit hero video' : isNew ? 'Add a video' : 'Edit this video'}</h2></div><button type="button" disabled={busy} onClick={onClose} aria-label="Close video editor">×</button></div>
       <p className="site-photo-intro">{isHeroFilm ? 'Upload or replace this hero clip, choose its sound preference, preview it, then publish. Hero clips play in order and advance when each video ends.' : 'Upload a video or link a Facebook Reel, add its story, then publish it to the homepage.'}</p>
       <fieldset disabled={busy} className="proof-editor-fields">
         {!isHeroFilm && <fieldset className="proof-source-picker"><legend>Video source</legend><label><input type="radio" name="proof-video-source" value="upload" checked={!isFacebook} onChange={() => changeSource('upload')}/>Upload video</label><label><input type="radio" name="proof-video-source" value="facebook" checked={isFacebook} onChange={() => changeSource('facebook')}/>Facebook Reel URL</label></fieldset>}
