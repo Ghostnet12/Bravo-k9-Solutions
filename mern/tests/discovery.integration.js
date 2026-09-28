@@ -27,7 +27,7 @@ test('discovery publishing, consent, privacy and performance reporting persist',
   const publicApp = express().get('/workshops', publicPageHandler);
   await t.test('workshop owner publishing with stale-write protection and private drafts', async () => {
     const first = (await call(null,'get','/api/workshops').expect(200)).body.event;
-    assert.equal(first.cents,10000); assert.equal(first.time,'');
+    assert.equal(first.cents,10000); assert.equal(first.time,'12:00 PM–2:00 PM'); assert.equal(first.location,'Wylie Park, Aberdeen, SD');
     const { revision, ...details } = first;
     const update = { ...details, expectedRevision: revision, location: 'Fixture training location', time: '10:00 a.m.' };
     await call('staff','put','/api/workshops',update).expect(403);
