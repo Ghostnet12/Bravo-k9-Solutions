@@ -12,6 +12,7 @@ test('banner permissions, validation, durable updates and edit conflicts', { tim
     const { default: app } = await import('../server/site-image-app.js');
     const { connectDb } = await import('../server/db.js');
     const { User, Session, AuditEvent } = await import('../server/models.js');
+    const { SiteBanner } = await import('../server/site-banner.js');
     await connectDb(); const cookies = {};
     for (const role of ['owner', 'administrator', 'staff', 'member']) {
       const user = await User.create({ name: role, role: role === 'administrator' ? 'owner' : role, passwordHash: 'fixture' });
@@ -34,6 +35,14 @@ test('banner permissions, validation, durable updates and edit conflicts', { tim
     const cleared = await put('administrator', { expectedRevision: 1, alerts: [] }).expect(200); assert.deepEqual(cleared.body.alerts, []);
     assert.deepEqual(cleared.body.settings, update.settings, 'Old clients preserve the published settings');
     assert.equal(await AuditEvent.countDocuments({ action: 'site-banner.published' }), 2);
+    await SiteBanner.updateOne({ _id: 'home' }, { $set: { settings: { ...DEFAULT_BANNER, textColor: '#101010', borderColor: '#101010', centerColor: '#ffe8a4', edgeColor: '#f58a24' } } });
+    const migratedLegacy = await request(app).get('/api/site-banner').expect(200);
+    assert.equal(migratedLegacy.body.settings.textColor, '#101010');
+    for (const key of ['borderColor', 'centerColor', 'edgeColor']) assert.equal(migratedLegacy.body.settings[key], '#ba9a64', `${key} migrates from the exact legacy default palette`);
+    const customPalette = { ...DEFAULT_BANNER, textColor: '#fefefe', borderColor: '#123456', centerColor: '#654321', edgeColor: '#abcdef' };
+    await SiteBanner.updateOne({ _id: 'home' }, { $set: { settings: customPalette } });
+    const preservedCustom = await request(app).get('/api/site-banner').expect(200);
+    assert.deepEqual(preservedCustom.body.settings, customPalette, 'Genuinely customized banner colors are preserved');
     const blocked = await User.findOne({ role: 'owner' }); blocked.blocked = true; await blocked.save(); await put('owner', { expectedRevision: 2, alerts: ['blocked'] }).expect(401);
   } finally { await mongoose.disconnect(); await replica.stop(); }
 });
