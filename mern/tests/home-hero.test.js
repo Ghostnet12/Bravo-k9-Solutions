@@ -127,6 +127,7 @@ test('site uses a persistent soundtrack on every route with no public hero playb
   assert.match(soundtrack, /const shouldPlay = \(\) => enabled\.current && !document\.hidden/);
   assert.match(soundtrack, /bravo-site-soundtrack-position/);
   assert.match(soundtrack, /pagehide/);
+  assert.doesNotMatch(soundtrack, /beforeunload/);
   assert.doesNotMatch(film, /cinema-film-controls|Pause training film|Turn hero video sound on|Next hero video/);
   assert.equal(audio.subarray(4, 8).toString(), 'ftyp');
   assert.ok(audio.length > 100000 && audio.length < 3 * 1024 * 1024, 'web soundtrack is optimized instead of shipping the source WAV');
