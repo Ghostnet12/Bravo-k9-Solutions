@@ -113,7 +113,7 @@ test('Vercel homepage uses the dynamic snapshot and includes its production HTML
 });
 
 
-test('homepage uses a persistent site soundtrack and no public hero playback controls', async () => {
+test('site uses a persistent soundtrack on every route with no public hero playback controls', async () => {
   const [main, film, soundtrack, audio] = await Promise.all([
     readFile(new URL('../client/src/main.jsx', import.meta.url), 'utf8'),
     readFile(new URL('../client/src/CinematicFilm.jsx', import.meta.url), 'utf8'),
@@ -123,7 +123,11 @@ test('homepage uses a persistent site soundtrack and no public hero playback con
   assert.match(main, /<SiteSoundtrack\/>/);
   assert.match(soundtrack, /loop preload="none"/);
   assert.match(soundtrack, /window\.addEventListener\('load'/);
-  assert.match(soundtrack, /pathname === '\/'/);
+  assert.doesNotMatch(soundtrack, /pathname === '\/'/);
+  assert.match(soundtrack, /const shouldPlay = \(\) => enabled\.current && !document\.hidden/);
+  assert.match(soundtrack, /bravo-site-soundtrack-position/);
+  assert.match(soundtrack, /pagehide/);
+  assert.doesNotMatch(soundtrack, /beforeunload/);
   assert.doesNotMatch(film, /cinema-film-controls|Pause training film|Turn hero video sound on|Next hero video/);
   assert.equal(audio.subarray(4, 8).toString(), 'ftyp');
   assert.ok(audio.length > 100000 && audio.length < 3 * 1024 * 1024, 'web soundtrack is optimized instead of shipping the source WAV');
