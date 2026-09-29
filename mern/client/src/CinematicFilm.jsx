@@ -75,6 +75,15 @@ export default function CinematicFilm({ children }) {
     setEditing(null); setMessage('Hero video removed.'); setError('');
     try { await refreshFilms(); setIndex(0); setManagerOpen(true); } catch (cause) { setError(cause.message); }
   }
+  async function removeFilm(item) {
+    if (!allowed.current || managerBusy || clips.length < 2 || !window.confirm(`Remove “${item.title}” from the hero playlist?`)) return;
+    setManagerBusy(true); setError('');
+    try {
+      await api(`/hero-film/${item.id}`, { method: 'DELETE', body: { expectedRevision: item.revision } });
+      await afterRemoved();
+    } catch (cause) { setError(cause.message); }
+    finally { setManagerBusy(false); }
+  }
 
   useEffect(() => {
     const element = video.current; if (!element) return;
@@ -147,9 +156,10 @@ export default function CinematicFilm({ children }) {
           <span className="hero-video-badge">Video {itemIndex + 1}</span>
           <button type="button" className="hero-film-manager-edit" disabled={managerBusy} onClick={() => editFilm(item)}><strong>{item.title || `Video ${itemIndex + 1}`}</strong><small>{item.fit === 'contain' ? 'Show whole video' : 'Fill frame'}</small></button>
           <label>Position<select aria-label={`Position for ${item.title || `Video ${itemIndex + 1}`}`} value={itemIndex + 1} disabled={managerBusy || clips.length < 2} onChange={event => reorderFilm(item.id, event.target.value)}>{clips.map((_, optionIndex) => <option key={optionIndex} value={optionIndex + 1}>{optionIndex + 1}</option>)}</select></label>
+          {clips.length > 1 && <button type="button" className="hero-film-remove" disabled={managerBusy} aria-label={`Remove ${item.title || `Video ${itemIndex + 1}`}`} onClick={() => removeFilm(item)}>Remove video</button>}
         </div>)}
       </div>
     </dialog>}
-    {editing && canEdit && <Suspense fallback={<p role="status" className="cinema-film-edit">Opening video editor…</p>}><VideoEditor apiBase="/hero-film" clip={editing} allowRemove={editing.id !== DEFAULT_HERO_FILM.id} onClose={() => { setEditing(null); setManagerOpen(true); }} onSaved={afterSaved} onRemoved={afterRemoved}/></Suspense>}
+    {editing && canEdit && <Suspense fallback={<p role="status" className="cinema-film-edit">Opening video editor…</p>}><VideoEditor apiBase="/hero-film" clip={editing} allowRemove={clips.length > 1} onClose={() => { setEditing(null); setManagerOpen(true); }} onSaved={afterSaved} onRemoved={afterRemoved}/></Suspense>}
   </section>;
 }

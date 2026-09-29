@@ -47,7 +47,7 @@ test('homepage video publishing, isolation, and persistence', { timeout: 180000 
       assert.equal(await AuditEvent.countDocuments({ action: 'proof-carousel.published' }), 2);
       assert.equal(await ProofVideo.countDocuments(), 0, 'timing changes do not modify videos');
     });
-    await t.test('opening film has its own protected, durable upload slot', async () => {
+    await t.test('hero playlist uploads are durable and any secondary clip can be removed', async () => {
       const callFilm = (who, method, path, body = {}) => {
         const req = request(app)[method](`/api/hero-film${path}`).set('Origin', process.env.APP_ORIGIN);
         if (who) req.set('Cookie', cookies[who]);
@@ -83,8 +83,6 @@ test('homepage video publishing, isolation, and persistence', { timeout: 180000 
       assert.deepEqual(ordered.map(clip => clip.id), [secondId, 'opening']);
       assert.deepEqual((await callFilm(null, 'get', '/').expect(200)).body.clips.map(clip => clip.id), [secondId, 'opening']);
       assert.deepEqual((await HeroFilm.find({ deleted: false }).sort({ order: 1, _id: 1 }).lean()).map(row => String(row._id)), [secondId, 'opening']);
-      await callFilm('owner', 'delete', `/${secondId}`, { expectedRevision: second.revision }).expect(200);
-      assert.deepEqual((await callFilm(null, 'get', '/').expect(200)).body.clips.map(clip => clip.id), ['opening']);
       const range = await request(app).get(saved.src).set('Range', 'bytes=0-23').expect(206);
       assert.equal(range.headers['content-range'], `bytes 0-23/${data.length}`);
       assert.deepEqual(range.body, data.subarray(0, 24));
@@ -92,6 +90,20 @@ test('homepage video publishing, isolation, and persistence', { timeout: 180000 
       assert.equal((await request(app).get('/api/hero-videos').expect(200)).body.clips.length, 0);
       assert.equal(await AuditEvent.countDocuments({ action: 'hero-film-video.published' }), 2);
       assert.equal(await AuditEvent.countDocuments({ action: 'hero-film-video.reordered' }), 1);
+      // The original upload is removable after it becomes a secondary clip.
+      await callFilm('owner', 'delete', '/opening', { expectedRevision: saved.revision }).expect(200);
+      assert.deepEqual((await callFilm(null, 'get', '/').expect(200)).body.clips.map(clip => clip.id), [secondId]);
+      await callFilm('owner', 'delete', `/${secondId}`, { expectedRevision: second.revision }).expect(405);
+      const html = (await request(app).get('/').expect(200)).text;
+      const playlist = JSON.parse(html.match(/name="bravo-hero-film" content="([^"]+)"/)[1].replace(/&quot;/g, '"'));
+      assert.deepEqual(playlist.map(clip => clip.id), [secondId], 'server render does not resurrect a removed opening video');
+      const thirdId = 'third-hero', thirdUpload = (await callFilm('owner', 'post', `/${thirdId}/uploads`, meta).expect(201)).body.uploadId;
+      for (let index = 0; index < 2; index++) await callFilm('owner', 'put', `/${thirdId}/uploads/${thirdUpload}/chunks/${index}`, { data: data.subarray(index * CHUNK_SIZE, (index + 1) * CHUNK_SIZE).toString('base64') }).expect(200);
+      const third = (await callFilm('owner', 'put', `/${thirdId}`, { ...edit, mutationId: randomUUID(), title: 'Third hero clip', uploadId: thirdUpload }).expect(200)).body.clip;
+      const removals = await Promise.all([second, third].map(clip => callFilm('owner', 'delete', `/${clip.id}`, { expectedRevision: clip.revision })));
+      assert.equal(removals.filter(response => response.status === 200).length, 1);
+      assert.ok(removals.every(response => [200, 405, 409].includes(response.status)));
+      assert.equal((await callFilm(null, 'get', '/').expect(200)).body.clips.length, 1, 'concurrent removals keep one playable clip');
     });
     await t.test('program media is isolated, durable, and editable by owner and administrator only', async () => {
       const program = (who, method, path, body={}) => {

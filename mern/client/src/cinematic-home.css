@@ -82,6 +82,7 @@
 .hero-film-manager-edit small{margin-top:4px;color:#d8c8ad;font-size:11px}
 .hero-film-manager-row label{display:grid;gap:4px;font-size:11px;color:#d8c8ad}
 .hero-film-manager-row select{min-width:72px;min-height:40px;border:1px solid #ba9a64;border-radius:10px;background:#0b0b0b;color:#f4e4c8;padding:6px 10px}
+.hero-film-remove{grid-column:1/-1;justify-self:end;min-height:44px;padding:8px 14px;border:1px solid #ba9a64;border-radius:10px;background:#101010;color:#f4e4c8}
 @media(max-width:620px){
   .cinema-film-controls{gap:6px}
   .cinema-film-controls .cinema-film-control{min-width:44px;padding:7px 10px}
