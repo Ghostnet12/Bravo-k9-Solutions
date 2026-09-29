@@ -7,6 +7,15 @@ import { DEFAULT_HERO_FILM, heroFilmPlaylistSnapshot, readHeroFilms } from '../.
 const VideoEditor = lazy(() => import('./ProofVideoEditor'));
 let publishedFilms = readHeroFilms(typeof document === 'undefined' ? null : document);
 
+async function loadHeroFilms() {
+  const all = []; let after = null;
+  do {
+    const data = await api(`/hero-film${after ? `?after=${encodeURIComponent(after)}` : ''}`);
+    all.push(...(Array.isArray(data.clips) ? data.clips : [])); after = data.nextCursor;
+  } while (after && all.length < 100);
+  return all;
+}
+
 export default function CinematicFilm({ children }) {
   const root = useRef(null), video = useRef(null), managerDialog = useRef(null);
   const { user } = useBravo(), canEdit = isImageEditor(user) && !user?.mustChangePassword;
@@ -26,7 +35,7 @@ export default function CinematicFilm({ children }) {
 
   useEffect(() => {
     alive.current = true;
-    api('/hero-film').then(data => { if (alive.current) rememberFilms(data.clips); }).catch(() => {});
+    loadHeroFilms().then(data => { if (alive.current) rememberFilms(data); }).catch(() => {});
     window.addEventListener('scroll', cancelHold, true); window.addEventListener('blur', cancelHold);
     return () => { alive.current = false; cancelHold(); window.removeEventListener('scroll', cancelHold, true); window.removeEventListener('blur', cancelHold); };
   }, []);
@@ -38,12 +47,7 @@ export default function CinematicFilm({ children }) {
 
   const allowed = useRef(canEdit); allowed.current = canEdit;
   async function refreshFilms() {
-    const all = []; let after = null;
-    do {
-      const data = await api(`/hero-film${after ? `?after=${encodeURIComponent(after)}` : ''}`);
-      all.push(...(Array.isArray(data.clips) ? data.clips : [])); after = data.nextCursor;
-    } while (after && all.length < 100);
-    return rememberFilms(all);
+    return rememberFilms(await loadHeroFilms());
   }
   async function openManager() {
     if (!allowed.current || requesting.current) return;
@@ -108,11 +112,15 @@ export default function CinematicFilm({ children }) {
         } else if (!disposed) setPlaying(false);
       }
     };
-    const interacted = () => {
+    const interacted = event => {
+      // Let the dedicated Sound button own its first pointer gesture. Otherwise
+      // this document-level retry could unmute before onClick and make that
+      // click immediately mute the clip again.
+      if (event.type === 'pointerdown' && event.target?.closest?.('.cinema-film-sound')) return;
       gestureSeen.current = true;
       // Browsers may block the parser/observer autoplay attempt until the
-      // visitor interacts. Retry every clip here; update() still preserves an
-      // explicit Pause and reduced-motion preference.
+      // visitor interacts. Retry every other interaction; update() still
+      // preserves an explicit Pause and reduced-motion preference.
       update();
     };
     const observer = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; update(); });
