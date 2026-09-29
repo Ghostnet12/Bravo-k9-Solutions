@@ -34,6 +34,9 @@ jobs:
               js,js_final,js_type=get(script_url)
               print('SCRIPT',js_final,js_type,len(js))
               source=js.decode('utf-8','replace')
+              print('SCRIPT_SOURCE_BEGIN')
+              print(source)
+              print('SCRIPT_SOURCE_END')
               strings=set(re.findall(r'["\']([^"\']{1,500})["\']',source))
               print('INTERESTING_BEGIN')
               for value in sorted(strings):
