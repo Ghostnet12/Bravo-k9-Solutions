@@ -23,7 +23,7 @@ try { for (const [name, engine] of Object.entries({ chromium, webkit })) {
    if (/^\/api\/hero-videos\/[^/]+\/video$/.test(path)) return route.continue();
    if (path === '/api/hero-videos') json={clips:Object.values(videos),nextCursor:null};
    if (/^\/api\/hero-videos\/[^/]+\/uploads$/.test(path)) json={uploadId:'11111111-1111-4111-8111-111111111111'};
-   if (/^\/api\/hero-videos\/[^/]+$/.test(path) && route.request().method()==='PUT') { const id=path.split('/')[3],body=route.request().postDataJSON(); videos[id]={id,title:body.title,description:body.description,revision:(videos[id]?.revision||0)+1,order:Date.now(),fit:body.fit,src:`/api/hero-videos/${id}/video?v=1`};json={clip:videos[id]}; }
+   if (/^\/api\/hero-videos\/[^/]+$/.test(path) && route.request().method()==='PUT') { const id=path.split('/')[3],body=route.request().postDataJSON(); videos[id]={id,title:body.title,description:body.description,revision:(videos[id]?.revision||0)+1,order:Date.now(),fit:body.fit,sound:body.sound===true,src:`/api/hero-videos/${id}/video?v=1`};json={clip:videos[id]}; }
    if (path === '/api/auth/me') json = { user: role ? {id:'owner', role, name:'Fixture'} : null, services:[] };
    if (path === '/api/hero-carousel') { if (route.request().method() === 'PUT') { const body = route.request().postDataJSON(); assert.equal(body.expectedRevision,settings.revision); settings = {revision:settings.revision+1,intervalSeconds:body.intervalSeconds,photos:body.photos}; } json = {carousel:settings}; }
    if (path.startsWith('/api/site-images/')) { const key=path.split('/')[3]; if(route.request().method()==='PUT') { const body=route.request().postDataJSON(); assert.equal(body.fit,'contain'); images[key]={...body,revision:1,src:'/images/bravo-client-training.jpeg',framed:true}; json={image:images[key]}; } }
@@ -50,6 +50,7 @@ try { for (const [name, engine] of Object.entries({ chromium, webkit })) {
   const videoEditor=page.getByRole('dialog',{name:'Add a video'});await videoEditor.waitFor();
   await page.getByLabel('Choose video from your photo library').setInputFiles(videoFixture);
   await page.getByLabel('Video title',{exact:true}).fill('Hero training video');await videoEditor.getByLabel('Description',{exact:true}).fill('Real training session description.');
+  await videoEditor.getByRole('checkbox',{name:/Prefer sound for this video/}).check();
   await page.getByRole('button',{name:'Publish video',exact:true}).click();await editor.waitFor();await page.getByText('Hero carousel saved.',{exact:true}).waitFor();
   assert.equal(settings.photos.length,4);const videoKey=settings.photos.find(key=>key.startsWith('hero-video-'));assert.ok(videoKey);
   await page.screenshot({path:`test-results/hero-editor-${name}-${width}.png`});
@@ -58,6 +59,8 @@ try { for (const [name, engine] of Object.entries({ chromium, webkit })) {
   await page.reload();await page.waitForLoadState('networkidle');await page.getByRole('region',{name:'Trainer photos'}).waitFor();await page.getByRole('region',{name:'Trainer photos'}).scrollIntoViewIfNeeded();await page.waitForTimeout(700);assert.equal(await page.locator('.hero-photo-slide').count(),5);
   const activeVideo=page.locator('.hero-video video');await page.waitForFunction(()=>{const v=document.querySelector('.hero-video video');return v && v.currentTime>0.2 && !v.paused;},null,{timeout:18000});
   assert.equal(await activeVideo.getAttribute('controls'),null);assert.equal(await activeVideo.evaluate(v=>v.muted),true);
+  await page.getByRole('button',{name:'Turn sound on for Hero training video',exact:true}).click();
+  assert.equal(await activeVideo.evaluate(v=>v.muted),false,'first sound-button tap turns sound on instead of immediately muting again');
   await page.waitForTimeout(3400);assert.ok(await activeVideo.evaluate(v=>v.currentTime>3 && !v.paused),'video plays beyond photo interval');
   await page.waitForFunction(()=>{const v=document.querySelector('.hero-video video');return v && v.paused;},null,{timeout:8000});
   assert.equal(await page.locator('.hero-photo-slide').first().getAttribute('aria-hidden'),'false','advance after video ends');
