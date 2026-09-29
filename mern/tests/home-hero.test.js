@@ -111,3 +111,19 @@ test('Vercel homepage uses the dynamic snapshot and includes its production HTML
   assert.match(source, /className="home-hero-image"[^>]*loading="lazy" fetchPriority="low"/);
   assert.match(source, /data-site-image-original=\{HOME_HERO_SOURCE\}/);
 });
+
+
+test('homepage uses a persistent site soundtrack and no public hero playback controls', async () => {
+  const [main, film, soundtrack, audio] = await Promise.all([
+    readFile(new URL('../client/src/main.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../client/src/CinematicFilm.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../client/src/SiteSoundtrack.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../client/public/audio/built-for-the-real-world.m4a', import.meta.url)),
+  ]);
+  assert.match(main, /<SiteSoundtrack\/>/);
+  assert.match(soundtrack, /autoPlay loop/);
+  assert.match(soundtrack, /pathname === '\/'/);
+  assert.doesNotMatch(film, /cinema-film-controls|Pause training film|Turn hero video sound on|Next hero video/);
+  assert.equal(audio.subarray(4, 8).toString(), 'ftyp');
+  assert.ok(audio.length > 100000 && audio.length < 3 * 1024 * 1024, 'web soundtrack is optimized instead of shipping the source WAV');
+});
