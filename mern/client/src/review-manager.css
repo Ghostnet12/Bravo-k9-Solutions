@@ -1,0 +1,9 @@
+.owner-review-manager .section-label{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.review-editor fieldset{border:0;padding:0;margin:0;min-width:0}
+.review-editor textarea{width:100%;resize:vertical}
+.review-manager-filters{display:flex;align-items:end;gap:1rem;flex-wrap:wrap;margin-block:1.5rem}
+.review-manager-filters>label:first-child{flex:1;min-width:min(100%,240px)}
+.managed-review{overflow-wrap:anywhere}
+.managed-review .record-actions,.review-editor .record-actions{display:flex;flex-wrap:wrap;gap:1rem}
+.managed-review button,.review-editor button{min-height:44px}
+.goal-early-review:empty,.facebook-recommendations:empty{display:none}

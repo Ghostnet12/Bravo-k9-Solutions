@@ -1,3 +1,5 @@
+import { reviewManagementRoutes } from './reviews.js';
+import { loadPublicRecommendations } from './review-store.js';
 import { discoveryRoutes } from './discovery.js';
 import { groupPeopleFilter, selectableGroupMembers } from './group-privacy.js';
 import { publicTrainerProfile } from '../shared/trainer-profile.js';
@@ -196,21 +198,21 @@ app.post('/api/billing/portal', requireUser, rateLimit('billing-portal', 10, 360
   res.json({ url: portal.url });
 });
 app.get('/api/reviews', async (_req, res) => {
-  const reviews = await Review.aggregate([
+  const [reviews, recommendations] = await Promise.all([Review.aggregate([
     { $match: { hidden: false } },
     { $lookup: { from: User.collection.name, localField: 'userId', foreignField: '_id', as: 'author' } },
     { $match: { 'author.0.role': 'member', 'author.0.removedAt': null } },
     { $sort: { createdAt: -1 } }, { $limit: 100 },
-    { $project: { authorName: 1, rating: 1, body: 1, createdAt: 1, updatedAt: 1 } },
-  ]);
+    { $project: { authorName: 1, rating: 1, body: 1, editedByOwner: 1, createdAt: 1, updatedAt: 1 } },
+  ]), loadPublicRecommendations()]);
   const average = reviews.length ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length : 0;
-  res.json({ reviews, average: Number(average.toFixed(1)), count: reviews.length });
+  res.json({ reviews, average: Number(average.toFixed(1)), count: reviews.length, recommendations });
 });
 app.get('/api/reviews/mine', requireUser, async (req, res) => res.json({ review: await Review.findOne({ userId: req.user._id }).select('rating body hidden createdAt updatedAt').lean() }));
 app.put('/api/reviews/mine', requireUser, rateLimit('review', 6, 3600000), async (req, res) => {
   if (req.user.role !== 'member') return res.status(403).json({ error: 'Customer reviews are reserved for client accounts. Team accounts cannot contribute to customer ratings.' });
   const data = z.object({ rating: z.number().int().min(1).max(5), body: z.string().trim().min(10).max(1200) }).parse(req.body);
-  const review = await Review.findOneAndUpdate({ userId: req.user._id }, { $set: { ...data, authorName: req.user.name }, $setOnInsert: { hidden: false } }, { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true });
+  const review = await Review.findOneAndUpdate({ userId: req.user._id }, { $set: { ...data, authorName: req.user.name, editedByOwner: false }, $inc: { revision: 1 }, $setOnInsert: { hidden: false } }, { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true });
   res.json({ review });
 });
 app.post('/api/chat/reset', requireUser, rateLimit('chat-reset', 30, 60000), resetChat);
@@ -339,17 +341,10 @@ app.patch('/api/admin/users/:id', requireUser, requireOwner, rateLimit('admin-us
   });
   res.json({ user: publicUser(updated) });
 });
-app.get('/api/admin/reviews', requireUser, requireOwner, async (_req, res) => res.json({ reviews: await Review.find().sort({ createdAt: -1 }).limit(200).lean() }));
+reviewManagementRoutes(app);
 app.get('/api/admin/services', requireUser, requireOwner, async (_req, res) => res.json({ services: await effectiveServices({ includeDisabled: true }) }));
 app.patch('/api/admin/services/:id', requireUser, requireOwner, rateLimit('admin-service-edit', 60, 3600000), editWebsiteService);
 app.patch('/api/admin/team/:id', requireUser, requireOwner, rateLimit('admin-team-edit', 60, 3600000), editWebsiteTrainer);
-app.patch('/api/admin/reviews/:id', requireUser, requireOwner, async (req, res) => {
-  const { hidden } = z.object({ hidden: z.boolean() }).parse(req.body);
-  const review = await Review.findByIdAndUpdate(objectId.parse(req.params.id), { $set: { hidden, moderatedAt: new Date(), moderatedBy: req.user._id } }, { returnDocument: 'after' });
-  if (!review) return res.status(404).json({ error: 'Review not found.' });
-  await AuditEvent.create({ actorId: req.user._id, action: hidden ? 'review.hidden' : 'review.restored', targetType: 'review', targetId: String(review._id) });
-  res.json({ ok: true });
-});
 app.post('/api/admin/bookings/:id/refund', requireUser, requireOwner, rateLimit('refund', 8, 3600000), async (req, res) => {
   const stripe = stripeClient(); if (!stripe) return paymentsUnavailable(res);
   const booking = await ownedBooking(req);

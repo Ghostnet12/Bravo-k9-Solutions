@@ -1,5 +1,5 @@
 import CatalogPrice from './CatalogPrice';
-import { recommendations } from './FacebookRecommendations';
+import { reviewExcerpt } from '../../shared/review-markup';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useBravo } from './context';
@@ -10,7 +10,7 @@ import { trackVisit } from './telemetry';
 import ProgramMedia from './ProgramMedia';
 import { Editable, useSiteContent } from './SiteContent';
 
-export default function GoalFinder() {
+export default function GoalFinder({ review = null }) {
   const { config } = useBravo();
   const {entries}=useSiteContent();
   const [selected, setSelected] = useState('manners'), [clips, setClips] = useState([]);
@@ -40,6 +40,6 @@ export default function GoalFinder() {
       </Editable>
       <ProgramMedia key={goal.id} goal={goal} automaticClip={clip}/>
     </div>
-    <aside className="goal-early-review" aria-label="A Bravo client’s experience"><blockquote>“{recommendations[0].excerpt}”</blockquote><p>{recommendations[0].author} · {recommendations[0].source}</p><Editable as={Link} contentKey="copy-goalfinder-3" canEditText canEditLink to="/#reviews">Read client experiences →</Editable></aside>
+    <aside className="goal-early-review" data-review-highlight="" aria-label={review ? 'A Bravo client’s experience' : undefined}>{review && <><blockquote>“{reviewExcerpt(review)}”</blockquote><p>{review.authorName} · {review.source}</p><Link className="inline-link" to="/#reviews">Read client experiences →</Link></>}</aside>
   </Editable>;
 }

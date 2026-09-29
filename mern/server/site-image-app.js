@@ -1,3 +1,4 @@
+import { loadPublicRecommendations } from './review-store.js';
 import { loadPublicWorkshop } from './workshop-store.js';
 import { publicPageHandler, publicPagePaths } from './public-page.js';
 import siteContentRouter from './site-content.js';
@@ -38,7 +39,7 @@ const imageInput = framingInput.extend({ filename: z.string().trim().min(1).max(
 function publicImage(image) {
   return { revision: image.revision, src: image.current?.uploadId ? `/api/site-images/${image._id}/image?v=${image.revision}` : null, alt: image.current?.alt || '', x: image.current?.x ?? 50, y: image.current?.y ?? 50, zoom: image.current?.zoom ?? 1, fit: image.current?.fit || 'cover', framed: image.current?.framed ?? !!image.current?.uploadId, canUndo: !!image.previous };
 }
-export const homepageHandler = createHomepageHandler({ loadCatalog: async () => { await connectDb(); return effectiveServices({includeDisabled:true,readOnly:true}); }, loadWorkshop: loadPublicWorkshop, loadContent: loadSiteContent, loadFilm: async () => {
+export const homepageHandler = createHomepageHandler({ loadReviews: loadPublicRecommendations, loadCatalog: async () => { await connectDb(); return effectiveServices({includeDisabled:true,readOnly:true}); }, loadWorkshop: loadPublicWorkshop, loadContent: loadSiteContent, loadFilm: async () => {
   await connectDb();
   const rows = await HeroFilm.find({ $or: [{ deleted: false }, { _id: DEFAULT_HERO_FILM.id }] }).select('title description fit sound order revision uploadId hasPoster deleted').sort({ order: 1, _id: 1 }).maxTimeMS(2000).lean();
   const clips = rows.map(row => {
