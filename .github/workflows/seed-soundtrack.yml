@@ -11,7 +11,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
-      - name: Inspect firestorage download client
+      - name: Inspect firestorage client chunks
         shell: bash
         env:
           SHARE_URL: https://firestorage.ai/ja/f/B6N4AcCg8gE-
@@ -27,28 +27,21 @@ jobs:
           text=data.decode('utf-8','replace')
           print('PAGE',final,ctype,len(data))
           scripts=re.findall(r'<script[^>]+src="([^"]+)"',text)
-          targets=[s for s in scripts if '(files)' in s and '/ja/f/' in s]
-          print('SCRIPT_TARGETS',targets)
-          for src in targets:
+          print('SCRIPTS',scripts)
+          for src in scripts:
               script_url=urllib.parse.urljoin(url,src)
-              js,js_final,js_type=get(script_url)
-              print('SCRIPT',js_final,js_type,len(js))
+              try: js,js_final,js_type=get(script_url)
+              except Exception as exc:
+                  print('SCRIPT_ERROR',script_url,repr(exc)); continue
               source=js.decode('utf-8','replace')
-              print('SCRIPT_SOURCE_BEGIN')
-              print(source)
-              print('SCRIPT_SOURCE_END')
-              strings=set(re.findall(r'["\']([^"\']{1,500})["\']',source))
-              print('INTERESTING_BEGIN')
-              for value in sorted(strings):
+              interesting=[]
+              for value in re.findall(r'["\']([^"\']{1,700})["\']',source):
                   low=value.lower()
-                  if any(k in low for k in ['/api/','download','signed','share','public_id','publicid','file_id','fileid','presign','storage']):
-                      print(value)
-              print('INTERESTING_END')
-              open('/tmp/firestorage-page.js','wb').write(js)
-          open('/tmp/firestorage-share.html','wb').write(data)
+                  if any(k in low for k in ['/api/','download','signed','share','public_id','publicid','file_id','fileid','presign','storage','objectkey','blob']):
+                      interesting.append(value)
+              if interesting:
+                  print('SCRIPT',js_final,'SIZE',len(js))
+                  print('INTERESTING_BEGIN')
+                  for value in sorted(set(interesting)): print(value)
+                  print('INTERESTING_END')
           PY
-      - uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: firestorage-inspection
-          path: /tmp/firestorage-*
