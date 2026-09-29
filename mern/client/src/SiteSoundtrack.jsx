@@ -16,8 +16,10 @@ function musicEnabled() {
 export default function SiteSoundtrack() {
   const audio = useRef(null), enabled = useRef(true);
   const { pathname } = useLocation();
+  const publicHost = location.hostname === 'bravounleashed.com' || location.hostname === 'www.bravounleashed.com' || location.hostname.endsWith('.vercel.app');
 
   useEffect(() => {
+    if (!publicHost) return;
     const element = audio.current;
     if (!element) return;
     enabled.current = musicEnabled();
@@ -60,7 +62,7 @@ export default function SiteSoundtrack() {
       document.removeEventListener('visibilitychange', visibility);
       window.removeEventListener('bravo-site-music', preference);
     };
-  }, [pathname]);
+  }, [pathname, publicHost]);
 
   return <audio ref={audio} loop preload="none" aria-label={SITE_SOUNDTRACK_TITLE} data-site-soundtrack="" />;
 }
