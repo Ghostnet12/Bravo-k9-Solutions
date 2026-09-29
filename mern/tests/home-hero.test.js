@@ -121,7 +121,8 @@ test('homepage uses a persistent site soundtrack and no public hero playback con
     readFile(new URL('../client/public/audio/built-for-the-real-world.m4a', import.meta.url)),
   ]);
   assert.match(main, /<SiteSoundtrack\/>/);
-  assert.match(soundtrack, /autoPlay loop/);
+  assert.match(soundtrack, /loop preload="none"/);
+  assert.match(soundtrack, /window\.addEventListener\('load'/);
   assert.match(soundtrack, /pathname === '\/'/);
   assert.doesNotMatch(film, /cinema-film-controls|Pause training film|Turn hero video sound on|Next hero video/);
   assert.equal(audio.subarray(4, 8).toString(), 'ftyp');
