@@ -25,7 +25,6 @@ import { heroRendition, heroPosterRendition } from './hero-rendition.js';
 import { effectiveServices } from './services.js';
 import { SiteImage } from './site-image-store.js';
 import { backgroundDraftExpiry } from './background-images.js';
-import { SITE_SOUNDTRACK_UPLOAD_ID } from '../shared/site-soundtrack.js';
 export { SiteImage } from './site-image-store.js';
 
 // Existing collection and image URLs remain compatible with saved portraits.
@@ -147,7 +146,6 @@ router.use(mediaError);
 const app = express();
 app.disable('x-powered-by'); app.set('trust proxy', process.env.VERCEL ? 1 : false);
 app.get(['/', '/api/homepage'], securityHeaders(), homepageHandler);
-app.get('/api/site-soundtrack', securityHeaders(), connect, (req, res) => sendUploadedMedia(SITE_SOUNDTRACK_UPLOAD_ID, req, res, 'audio', { cacheControl: 'public, max-age=86400, stale-while-revalidate=604800' }));
 app.use('/api/site-images', router);
 app.use('/api/proof-videos', proofVideoRouter);
 app.use('/api/hero-film', createProofVideoRouter({ VideoModel: HeroFilm, defaults: [DEFAULT_HERO_FILM], apiPath: '/api/hero-film', mediaScope: 'hero-film', withSettings: false, withOrdering: true, protectedDeleteIds: [DEFAULT_HERO_FILM.id], allowFacebook: false, allowDelete: true }));
