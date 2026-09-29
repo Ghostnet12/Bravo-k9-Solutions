@@ -26,6 +26,10 @@ export default function SiteSoundtrack() {
     const shouldPlay = () => pathname === '/' && enabled.current && !document.hidden;
     const attempt = () => {
       if (!shouldPlay()) { element.pause(); return; }
+      if (!element.getAttribute('src')) {
+        element.src = SITE_SOUNDTRACK_SRC;
+        element.load();
+      }
       element.play().catch(() => {
         // iPhone/Safari and some Chrome settings block audible autoplay until
         // the visitor makes a real gesture. Retrying below is the browser-safe
@@ -56,5 +60,5 @@ export default function SiteSoundtrack() {
     };
   }, [pathname]);
 
-  return <audio ref={audio} src={SITE_SOUNDTRACK_SRC} loop preload="none" aria-label={SITE_SOUNDTRACK_TITLE} data-site-soundtrack="" />;
+  return <audio ref={audio} loop preload="none" aria-label={SITE_SOUNDTRACK_TITLE} data-site-soundtrack="" />;
 }
