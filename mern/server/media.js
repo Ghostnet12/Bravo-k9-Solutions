@@ -8,6 +8,9 @@ export function mediaBytes(value) {
   if (Buffer.isBuffer(value)) return value;
   if (value?._bsontype === 'Binary') return Buffer.from(value.value());
   if (ArrayBuffer.isView(value)) return Buffer.from(value.buffer, value.byteOffset, value.byteLength);
+  // The site soundtrack is seeded through Atlas as base64 text so it can be
+  // managed without placing a large binary in the application repository.
+  if (typeof value === 'string') return Buffer.from(value, 'base64');
   throw new Error('Invalid stored media.');
 }
 export function validMediaHeader(type, bytes) {
@@ -27,7 +30,7 @@ export function byteRange(header, size) {
   const end = match[1] && match[2] ? Math.min(Number(match[2]), size - 1) : size - 1;
   return Number.isSafeInteger(start) && Number.isSafeInteger(end) && start <= end && start < size ? { start, end, partial: true } : null;
 }
-export async function sendUploadedMedia(uploadId, req, res, expectedKind) {
+export async function sendUploadedMedia(uploadId, req, res, expectedKind, { cacheControl = 'private, no-store' } = {}) {
   const upload = await MediaUpload.findOne({ _id: uploadId, completed: true, kind: expectedKind }).lean();
   if (!upload) return res.status(404).json({ error: 'Media not found.' });
   const range = byteRange(req.headers.range, upload.size);
@@ -36,7 +39,7 @@ export async function sendUploadedMedia(uploadId, req, res, expectedKind) {
   res.status(partial ? 206 : 200).set({
     'Content-Type': expectedKind === 'captions' ? 'text/vtt; charset=utf-8' : upload.contentType,
     'Accept-Ranges': 'bytes', 'Content-Length': String(end - start + 1),
-    'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff',
+    'Cache-Control': cacheControl, 'X-Content-Type-Options': 'nosniff',
     ...(partial ? { 'Content-Range': `bytes ${start}-${end}/${upload.size}` } : {}),
   });
   if (req.method === 'HEAD') return res.end();
