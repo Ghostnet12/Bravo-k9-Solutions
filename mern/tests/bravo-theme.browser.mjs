@@ -75,6 +75,7 @@ try {
           await fits(page, `${route}/${width}`);
           if (route === '/') {
             await page.waitForFunction(() => { const film = document.querySelector('.cinema-film video'); return film?.autoplay && film.muted && film.playsInline && !film.paused && film.currentTime > 0; });
+            assert.equal(await page.locator('.cinema-film-controls').count(), 0, 'hero has no public playback buttons');
             for (const selector of ['.cinema-training-card', '.cinema-team', '.cinema-events', '.cinema-learning-caption', '.bravo-footer']) await darkSurface(page.locator(selector), selector);
             const headingColor = await page.locator('.cinema-program-copy h3').evaluate(el => getComputedStyle(el).color.match(/\d+/g).map(Number));
             assert.ok(Math.min(...headingColor) > 150, 'training headline remains readable on the dark card');
@@ -128,9 +129,7 @@ try {
       await page.waitForFunction(() => { const v = document.querySelector('.cinema-film video'); return v?.readyState >= 3 && v.paused; });
       await page.locator('h1').click();
       await page.waitForFunction(() => { const v = document.querySelector('.cinema-film video'); return !v.paused && v.currentTime > 0; });
-      await page.getByRole('button', { name: 'Pause training film', exact: true }).click();
-      await page.locator('h1').click(); await page.keyboard.press('Shift');
-      assert.equal(await page.locator('.cinema-film video').evaluate(v => v.paused), true, 'later interactions must preserve an explicit pause');
+      assert.equal(await page.locator('.cinema-film-controls').count(), 0, 'autoplay recovery does not reintroduce hero buttons');
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await page.reload({ waitUntil: 'networkidle' });
       assert.equal(await page.locator('.cinema-film video').evaluate(v => v.paused), true, 'reduced motion suppresses autoplay');
