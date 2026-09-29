@@ -2,7 +2,7 @@ import { renderSiteContent } from './content-html.js';
 import { readFile } from 'node:fs/promises';
 import { HOME_HERO_META, HOME_HERO_SOURCE, HOME_HERO_ALT, homeHeroSnapshot } from '../shared/home-hero.js';
 import { framingStyle } from '../shared/site-images.js';
-import { DEFAULT_HERO_FILM, HERO_FILM_META, heroFilmSnapshot } from '../shared/hero-film.js';
+import { DEFAULT_HERO_FILM, HERO_FILM_META, heroFilmPlaylistSnapshot } from '../shared/hero-film.js';
 
 const escapeAttribute = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 let template;
@@ -13,7 +13,7 @@ function readTemplate() {
 
 export function renderHomepage(html, value, filmValue) {
   const hero = homeHeroSnapshot(value);
-  const film = heroFilmSnapshot(filmValue);
+  const films = heroFilmPlaylistSnapshot(filmValue), film = films[0];
   // The saved photo now lives in the below-fold gallery. Prioritize the visible
   // film poster while preserving the gallery's initial source/framing snapshot.
   const preload = film.poster ? `<link rel="preload" as="image" href="${escapeAttribute(film.poster)}" fetchpriority="high"/>` : '';
@@ -37,7 +37,7 @@ export function renderHomepage(html, value, filmValue) {
   // Replace React's image preloads so below-fold uploads cannot compete with
   // the first visible poster for high-priority bandwidth.
   return html.replace(/<link\b(?=[^>]*\brel="preload")(?=[^>]*\bas="image")[^>]*>/g, '')
-    .replace('</head>', `${preload}<meta name="${HOME_HERO_META}" content="${escapeAttribute(JSON.stringify(hero))}"/><meta name="${HERO_FILM_META}" content="${escapeAttribute(JSON.stringify(film))}"/></head>`);
+    .replace('</head>', `${preload}<meta name="${HOME_HERO_META}" content="${escapeAttribute(JSON.stringify(hero))}"/><meta name="${HERO_FILM_META}" content="${escapeAttribute(JSON.stringify(films))}"/></head>`);
 }
 
 export function createHomepageHandler({ loadHero, loadTemplate = readTemplate, loadContent = async () => ({}), loadFilm = async () => null, loadWorkshop = async () => undefined, loadCatalog = async () => undefined }) {

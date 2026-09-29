@@ -87,7 +87,7 @@ mediaChunkSchema.index({ uploadId: 1, index: 1 }, { unique: true });
 export const MediaChunk = model('BravoMediaChunk', mediaChunkSchema);
 const proofVideoSchema = new Schema({
   _id: String, title: String, description: String, uploadId: String, facebookUrl: { type: String, maxlength: 2048 }, poster: { type: Buffer, select: false }, hasPoster: Boolean,
-  fit: { type: String, default: 'contain' }, order: { type: Number, index: true },
+  fit: { type: String, default: 'contain' }, sound: { type: Boolean, default: false }, order: { type: Number, index: true },
   revision: { type: Number, default: 0 }, deleted: { type: Boolean, default: false },
   updatedBy: id, lastMutation: String,
 }, { timestamps: true });

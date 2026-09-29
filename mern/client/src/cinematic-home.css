@@ -67,3 +67,24 @@
 @media(max-width:600px){.cinema-hero-baseline{padding-right:48px}.cinema-hero-baseline a{font-size:8px}}
 
 .cinema-home .cinema-film-edit{position:absolute;z-index:5;top:112px;right:clamp(20px,4vw,64px);display:flex;align-items:flex-end;flex-direction:column;gap:8px;max-width:calc(100% - 40px);font-size:12px;color:#f4e4c8}.cinema-home .cinema-film-edit button{min-height:44px;padding:10px 18px;border:1px solid #ba9a64;border-radius:24px;background:#090a0bed;color:#f4e4c8;font:600 12px Montserrat,sans-serif;cursor:pointer}.cinema-film-edit [role=alert]{max-width:280px;padding:8px;background:#090a0b}.cinema-film-edit button:focus-visible{outline:2px solid #f4e4c8;outline-offset:4px}
+
+
+/* Hero video playlist */
+.cinema-film-controls{position:absolute;right:clamp(20px,4vw,40px);bottom:clamp(88px,8vw,103px);z-index:4;display:flex;align-items:center;gap:8px}
+.cinema-film-controls .cinema-film-control{position:static;right:auto;bottom:auto}
+.cinema-film-sound>span:first-child,.cinema-film-next>span:first-child{min-width:18px;text-align:center}
+.hero-film-manager{width:min(760px,calc(100vw - 28px));max-height:min(82vh,760px)}
+.hero-film-manager-list{display:grid;gap:10px;margin-top:18px}
+.hero-film-manager-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px;border:1px solid #ba9a6466;border-radius:14px;background:#101010}
+.hero-film-manager-edit{min-width:0;text-align:left;border:0;background:transparent;color:inherit;cursor:pointer}
+.hero-film-manager-edit strong,.hero-film-manager-edit small{display:block}
+.hero-film-manager-edit strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hero-film-manager-edit small{margin-top:4px;color:#d8c8ad;font-size:11px}
+.hero-film-manager-row label{display:grid;gap:4px;font-size:11px;color:#d8c8ad}
+.hero-film-manager-row select{min-width:72px;min-height:40px;border:1px solid #ba9a64;border-radius:10px;background:#0b0b0b;color:#f4e4c8;padding:6px 10px}
+@media(max-width:620px){
+  .cinema-film-controls{gap:6px}
+  .cinema-film-controls .cinema-film-control{min-width:44px;padding:7px 10px}
+  .hero-film-manager-row{grid-template-columns:auto minmax(0,1fr)}
+  .hero-film-manager-row label{grid-column:1/-1;grid-template-columns:auto 82px;align-items:center;justify-content:end}
+}
