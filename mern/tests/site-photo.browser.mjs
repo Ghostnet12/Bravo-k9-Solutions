@@ -51,7 +51,7 @@ try { for (const [name, engine] of Object.entries({ chromium, webkit })) {
     });
     try {
       await page.goto(origin); await page.waitForLoadState('networkidle');
-      const photo = page.locator(`[data-site-image-key="${key}"]`), dialog = page.getByRole('dialog', { name: 'Edit this photo', exact: true });
+      const photo = page.locator(`.home-team-grid [data-site-image-key="${key}"]`), dialog = page.getByRole('dialog', { name: 'Edit this photo', exact: true });
       await photo.scrollIntoViewIfNeeded(); await photo.press('F2'); await dialog.waitFor();
       const png = await page.evaluate(async () => {
         const image = new Image(); image.src = '/images/bravo-client-training.jpeg'; await image.decode();
@@ -64,21 +64,21 @@ try { for (const [name, engine] of Object.entries({ chromium, webkit })) {
       assert.equal(submitted.contentType, 'image/jpeg', 'opaque photos use JPEG when Safari cannot encode WebP');
       assert.ok(Buffer.from(submitted.data, 'base64').length <= 512 * 1024);
       assert.match(submitted.filename, /\.jpg$/); assert.equal(confirmations, 1, 'a lost response is confirmed instead of reporting a false failure');
-      await page.waitForFunction(key => { const image = document.querySelector(`[data-site-image-key="${key}"]`); return image?.getAttribute('src').startsWith('/api/site-images/') && image.complete && image.naturalWidth > 0; }, key);
+      await page.waitForFunction(key => { const image = document.querySelector(`.home-team-grid [data-site-image-key="${key}"]`); return image?.getAttribute('src').startsWith('/api/site-images/') && image.complete && image.naturalWidth > 0; }, key);
       let releaseImage;
       imageGate = new Promise(resolve => { releaseImage = resolve; });
       const requested = new Promise(resolve => { imageRequested = resolve; });
       await page.reload({ waitUntil: 'domcontentloaded' }); await photo.scrollIntoViewIfNeeded(); await requested;
-      await page.waitForFunction(key => { const image = document.querySelector(`[data-site-image-key="${key}"]`); return image?.complete && image.naturalWidth > 0; }, key);
+      await page.waitForFunction(key => { const image = document.querySelector(`.home-team-grid [data-site-image-key="${key}"]`); return image?.complete && image.naturalWidth > 0; }, key);
       assert.equal(await photo.getAttribute('src'), '/images/ashley-northrop.webp', 'keep a visible photo while the saved upload loads');
       releaseImage(); imageGate = null; imageRequested = null;
-      await page.waitForFunction(key => { const image = document.querySelector(`[data-site-image-key="${key}"]`); return image?.getAttribute('src').includes('?v=1') && image.complete && image.naturalWidth > 0; }, key);
+      await page.waitForFunction(key => { const image = document.querySelector(`.home-team-grid [data-site-image-key="${key}"]`); return image?.getAttribute('src').includes('?v=1') && image.complete && image.naturalWidth > 0; }, key);
       await photo.press('F2'); await dialog.waitFor();
       const transparent = await page.evaluate(() => { const canvas = document.createElement('canvas'); canvas.width = 32; canvas.height = 32; canvas.getContext('2d').fillRect(0, 0, 16, 16); return canvas.toDataURL('image/png').split(',')[1]; });
       await dialog.getByLabel('Choose a replacement from files').setInputFiles({ name: 'transparent.png', mimeType: 'image/png', buffer: Buffer.from(transparent, 'base64') });
       await dialog.getByRole('button', { name: 'Publish changes', exact: true }).click(); await dialog.waitFor({ state: 'hidden' });
       assert.equal(submitted.contentType, 'image/png', 'transparent images retain alpha');
-      await page.waitForFunction(key => document.querySelector(`[data-site-image-key="${key}"]`)?.getAttribute('src').includes('?v=2'), key);
+      await page.waitForFunction(key => document.querySelector(`.home-team-grid [data-site-image-key="${key}"]`)?.getAttribute('src').includes('?v=2'), key);
       assert.equal(await photo.evaluate(async image => { await image.decode(); const canvas = document.createElement('canvas'); canvas.width = 32; canvas.height = 32; const ctx = canvas.getContext('2d'); ctx.drawImage(image, 0, 0); return ctx.getImageData(31, 31, 1, 1).data[3]; }), 0);
       console.log(`PASS ${name}/${width}: Safari photo compression, lost-save confirmation, delayed reload and preserved transparency`);
     } catch (error) { await page.screenshot({ path: `test-results/site-photo-failure-${name}-${width}.png`, fullPage: true }); throw error; }
