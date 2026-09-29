@@ -77,7 +77,6 @@ export default function SiteSoundtrack() {
     document.addEventListener('keydown', gesture, true);
     document.addEventListener('visibilitychange', visibility);
     window.addEventListener('pagehide', remember);
-    window.addEventListener('beforeunload', remember);
     window.addEventListener('bravo-site-music', preference);
     return () => {
       remember();
@@ -87,7 +86,6 @@ export default function SiteSoundtrack() {
       document.removeEventListener('keydown', gesture, true);
       document.removeEventListener('visibilitychange', visibility);
       window.removeEventListener('pagehide', remember);
-      window.removeEventListener('beforeunload', remember);
       window.removeEventListener('bravo-site-music', preference);
     };
   }, [publicHost]);
