@@ -40,12 +40,15 @@ export default function SiteSoundtrack() {
       else element.pause();
     };
 
-    attempt();
+    const loaded = () => attempt();
+    if (document.readyState === 'complete') attempt();
+    else window.addEventListener('load', loaded, { once: true });
     document.addEventListener('pointerdown', gesture, true);
     document.addEventListener('keydown', gesture, true);
     document.addEventListener('visibilitychange', visibility);
     window.addEventListener('bravo-site-music', preference);
     return () => {
+      window.removeEventListener('load', loaded);
       document.removeEventListener('pointerdown', gesture, true);
       document.removeEventListener('keydown', gesture, true);
       document.removeEventListener('visibilitychange', visibility);
@@ -53,5 +56,5 @@ export default function SiteSoundtrack() {
     };
   }, [pathname]);
 
-  return <audio ref={audio} src={SITE_SOUNDTRACK_SRC} autoPlay loop preload="auto" aria-label={SITE_SOUNDTRACK_TITLE} data-site-soundtrack="" />;
+  return <audio ref={audio} src={SITE_SOUNDTRACK_SRC} autoPlay loop preload="none" aria-label={SITE_SOUNDTRACK_TITLE} data-site-soundtrack="" />;
 }
