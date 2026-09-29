@@ -1,3 +1,4 @@
+import { DEFAULT_REVIEWS } from '../shared/reviews.js';
 import assert from 'node:assert/strict';
 import express from 'express';
 import {once} from 'node:events';
@@ -12,7 +13,7 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){const br
  await page.addInitScript(()=>{window.__renderErrors=[];window.addEventListener('error',event=>window.__renderErrors.push({message:event.message,stack:event.error?.stack,cause:event.error?.cause?.message,causeStack:event.error?.cause?.stack,url:location.href}));window.addEventListener('error',event=>console.error('Render cause:',event.error?.cause?.message,event.error?.cause?.stack||event.error?.stack));});
  page.on('pageerror',e=>errors.push(e.message));
  const consoleErrors=[];page.on('console',message=>{if(message.type()==='error')consoleErrors.push(message.text());});
- await page.route('**/api/**',async route=>{const path=new URL(route.request().url()).pathname;let json={services:[],images:{},entries:{},team:[],schedules:[],reviews:[],count:0,clips:[],bookings:[],terms:[],messages:[],notifications:[],alerts:[],revision:0};
+ await page.route('**/api/**',async route=>{const path=new URL(route.request().url()).pathname;let json={services:[],images:{},entries:{},team:[],schedules:[],reviews:[],recommendations:DEFAULT_REVIEWS,count:0,clips:[],bookings:[],terms:[],messages:[],notifications:[],alerts:[],revision:0};
   if(path==='/api/config')json={connected:true,paymentsReady:false,services:SERVICES.map(item=>item.id==='training'?{...item,enabled:!trainingDisabled}:item),schedule:{enabled:true,weekdays:[1,2,3,4,5],hours:['09:00','10:00']}};
   if(path==='/api/auth/me')json={user:signedIn?{id:'fixture',name:'Fixture Client',role:actor,phone:'6055550100',address:'Fixture address'}:null,services:[],subscriptions:[],membership:{active:false}};
   if(path==='/api/auth/login'){signedIn=true;json={user:{id:'fixture',name:'Fixture Client',role:'member'}};}

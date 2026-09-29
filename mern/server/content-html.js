@@ -1,9 +1,10 @@
+import { recommendationMarkup, reviewHighlightMarkup } from '../shared/review-markup.js';
 import { workshopMarkup } from '../shared/workshops.js';
 import { parse, parseFragment, serialize } from 'parse5';
 import { CONTENT_KEYS } from '../shared/site-content-keys.js';
 import { styleString, themeCss } from '../shared/site-content.js';
 import { publicCatalogSnapshot, money } from '../shared/catalog.js';
-export function renderSiteContent(html, entries = {}, workshop, serviceCatalog) {
+export function renderSiteContent(html, entries = {}, workshop, serviceCatalog, recommendations) {
   const catalog = publicCatalogSnapshot(serviceCatalog);
   const tree=parse(html);
   const attr=(node,name)=>node.attrs?.find(item=>item.name===name)?.value;
@@ -14,6 +15,11 @@ export function renderSiteContent(html, entries = {}, workshop, serviceCatalog) 
     const priceField = attr(node,'data-site-price-field');
     if(service && ['cents','additionalDogCents','bundleCents'].includes(priceField) && Number.isInteger(service[priceField])) node.childNodes=[{nodeName:'#text',value:money(service[priceField]),parentNode:node}];
     if (workshop !== undefined && attr(node,'data-workshop-content')) { node.childNodes = parseFragment(workshopMarkup(workshop, attr(node,'data-workshop-content') === 'compact')).childNodes; for (const child of node.childNodes) child.parentNode = node; }
+    if (recommendations !== undefined && (attr(node, 'data-public-reviews') !== undefined || attr(node, 'data-review-highlight') !== undefined)) {
+      node.childNodes = parseFragment(attr(node, 'data-public-reviews') !== undefined ? recommendationMarkup(recommendations) : reviewHighlightMarkup(recommendations)).childNodes;
+      for (const child of node.childNodes) { child.parentNode = node; visit(child); }
+      if (recommendations.length && attr(node, 'data-public-reviews') !== undefined) setAttr(node, 'aria-labelledby', 'facebook-recommendations-title');
+    }
     const key=attr(node,'data-site-content-key'), value=entries[key]?.value;
     if(value && Object.hasOwn(CONTENT_KEYS,key)){
       if(CONTENT_KEYS[key].link && value.link)setAttr(node,'href',value.link);
@@ -27,6 +33,7 @@ export function renderSiteContent(html, entries = {}, workshop, serviceCatalog) 
       }
     }
     if(node.tagName==='head'){
+      if (recommendations !== undefined) node.childNodes.push({nodeName:'meta',tagName:'meta',namespaceURI:'http://www.w3.org/1999/xhtml',attrs:[{name:'name',value:'bravo-reviews'},{name:'content',value:JSON.stringify(recommendations).replaceAll('<','\\u003c')}],childNodes:[],parentNode:node});
       if(catalog) node.childNodes.push({nodeName:'meta',tagName:'meta',namespaceURI:'http://www.w3.org/1999/xhtml',attrs:[{name:'name',value:'bravo-catalog'},{name:'content',value:JSON.stringify(catalog).replaceAll('<','\\u003c')}],childNodes:[],parentNode:node});
       const snapshot={nodeName:'meta',tagName:'meta',namespaceURI:'http://www.w3.org/1999/xhtml',attrs:[{name:'name',value:'bravo-site-content'},{name:'content',value:JSON.stringify(entries).replaceAll('<','\\u003c')}],childNodes:[],parentNode:node};
       const style={nodeName:'style',tagName:'style',namespaceURI:'http://www.w3.org/1999/xhtml',attrs:[{name:'id',value:'bravo-published-theme'}],childNodes:[],parentNode:node};

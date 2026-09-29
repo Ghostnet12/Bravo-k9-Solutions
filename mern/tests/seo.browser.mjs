@@ -1,3 +1,6 @@
+import { readFile } from 'node:fs/promises';
+import { renderSiteContent } from '../server/content-html.js';
+import { DEFAULT_REVIEWS } from '../shared/reviews.js';
 import assert from 'node:assert/strict';
 import express from 'express';
 import { once } from 'node:events';
@@ -6,7 +9,8 @@ import { chromium, webkit } from 'playwright';
 import app from '../server/app.js';
 import { PAGE_METADATA, publicRoutes, canonicalUrl } from '../shared/page-metadata.js';
 import { SERVICES } from '../shared/catalog.js';
-const server = express().use(app).listen(0, '127.0.0.1');
+const home = renderSiteContent(await readFile(new URL('../client/dist/bravo-shell.html',import.meta.url),'utf8'), {}, undefined, undefined, DEFAULT_REVIEWS);
+const server = express().get('/',(_req,res)=>res.type('html').send(home)).use(app).listen(0, '127.0.0.1');
 await once(server, 'listening');
 const origin = `http://127.0.0.1:${server.address().port}`;
 await mkdir('test-results', { recursive: true });
@@ -40,13 +44,13 @@ try {
           const fixtures = {
             '/api/config': { connected: true, services: SERVICES }, '/api/auth/me': { user: null, services: [] }, '/api/team': { team: [] },
             '/api/proof-videos': { clips: [], nextCursor: null }, '/api/hero-videos': { clips: [], nextCursor: null },
-            '/api/reviews': { reviews: [], average: 0, count: 0 }, '/api/site-images': { images: {} }, '/api/team/schedules': { schedules: [] }, '/api/lessons': { lessons: [] },
+            '/api/reviews': { reviews: [], average: 0, count: 0, recommendations: DEFAULT_REVIEWS }, '/api/site-images': { images: {} }, '/api/team/schedules': { schedules: [] }, '/api/lessons': { lessons: [] },
           };
           return route.fulfill({ json: fixtures[path] || {} });
         });
         await page.goto(origin);
         const cards = page.locator('.facebook-recommendations article');
-        assert.equal(await cards.count(), 6);
+        assert.equal(await cards.count(), 7);
         await page.locator('.facebook-recommendations-more > summary').click();
         const justine = cards.filter({ hasText: 'Justine Harty West' });
         assert.equal(await justine.count(), 1);

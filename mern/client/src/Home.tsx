@@ -1,3 +1,4 @@
+import { initialRecommendations } from './review-state';
 import CatalogPrice from './CatalogPrice';
 import { publicTrainerName } from '../../shared/discovery';
 import GoalFinder from './GoalFinder';
@@ -40,15 +41,18 @@ export default function Home() {
   const { config, user } = useBravo();
   const catalog = config?.services?.length ? config.services : SERVICES;
   const training = catalog.find(service => service.id === 'training');
+  const [recommendations, setRecommendations] = useState(initialRecommendations);
   const [team, setTeam] = useState<Trainer[]>([]);
   const [teamVisible, setTeamVisible] = useState(false);
   const liveSchedules = useLiveTrainerSchedules(teamVisible);
-  const [reviews, setReviews] = useState<{reviews: Array<{_id: string; authorName: string; rating: number; body: string}>; average: number; count: number}>({ reviews: [], average: 0, count: 0 });
+  const [reviews, setReviews] = useState<{reviews: Array<{_id: string; authorName: string; rating: number; body: string; editedByOwner?: boolean}>; average: number; count: number}>({ reviews: [], average: 0, count: 0 });
   const lessonsOpen = lessonLibraryVisible(config, user);
   useEffect(() => {
     let live = true;
+    // The server snapshot seeds only this visit; later navigation reads fresh reviews.
+    document.querySelector('meta[name="bravo-reviews"]')?.remove();
     api('/team').then(data => { if (live) setTeam(Array.isArray(data.team) ? [...data.team].sort((a, b) => Number(b.role === 'owner') - Number(a.role === 'owner')) : []); }).catch(() => { if (live) setTeam([]); });
-    api('/reviews').then(data => { if (live) setReviews(data); }).catch(() => {});
+    api('/reviews').then(data => { if (live) { setReviews(data); if (Array.isArray(data.recommendations)) setRecommendations(data.recommendations); } }).catch(() => {});
     const published = event => setTeam(people => people.map(person => person.id === event.detail.id ? event.detail : person));
     window.addEventListener('bravo-team-published', published);
     const observer = new IntersectionObserver(([entry]) => setTeamVisible(entry.isIntersecting), { rootMargin: '300px' });
@@ -72,7 +76,7 @@ export default function Home() {
       <div data-site-service="training" className="home-service-strip cinema-service-strip"><span><Editable as="span" contentKey="copy-home-6" canEditText>Private training · </Editable><CatalogPrice/><Editable as="span" contentKey="copy-home-7" canEditText>/month · one dog · We come to you.</Editable></span><Editable as="a" contentKey="copy-home-8" canEditText canEditLink href="tel:+16058242767">Let’s talk <span>(605) 824-2767</span></Editable></div>
       <div className="cinema-shell site-media-tools-slot site-media-tools-slot--home" data-site-media-tools=""/>
 
-      <GoalFinder/>
+      <GoalFinder review={recommendations[0] || null}/>
       <Editable as="section" contentKey="copy-home-9" id="method" className="cinema-intro cinema-shell" aria-labelledby="method-title" data-reveal="">
         <Editable as="p" contentKey="copy-home-10" canEditText className="cinema-eyebrow">THE BRAVO APPROACH</Editable>
         <Editable as="h2" contentKey="cinema-method-title" canEditText id="method-title">Understand the dog.<br/><span>Build from there.</span></Editable>
@@ -118,8 +122,8 @@ export default function Home() {
       <Editable as="section" contentKey="copy-home-42" id="reviews" className="cinema-proof" aria-labelledby="reviews-title"><div className="cinema-shell">
         <div className="cinema-proof-intro" data-reveal=""><img src="/images/bravo-logo-small.webp" width="64" height="72" alt="" data-site-image-ignore=""/><Editable as="p" contentKey="copy-home-43" canEditText className="cinema-eyebrow">PROOF IN THE WORK</Editable><Editable as="h2" contentKey="cinema-proof-title" canEditText id="reviews-title">Don’t take<br/><span>our word for it.</span></Editable><Editable as="p" contentKey="copy-home-44" canEditText>Watch real sessions. Read what clients noticed at home.</Editable></div>
         <ProofVideoCarousel/>
-        <FacebookRecommendations/>
-        {reviews.reviews.length > 0 && <div className="cinema-account-reviews"><p>{reviews.average}<Editable as="span" contentKey="copy-home-45" canEditText> out of 5 · </Editable>{reviews.count}<Editable as="span" contentKey="copy-home-46" canEditText> verified Bravo account </Editable>{reviews.count === 1 ? 'review' : 'reviews'}</p><div className="review-grid home-proof-reviews">{reviews.reviews.slice(0, 3).map(review => <Editable as="article" contentKey="copy-home-47" className="panel" key={review._id}><ReviewStars rating={review.rating}/><ReviewPreview body={review.body} author={review.authorName}/><strong>{review.authorName}</strong><Editable as="small" contentKey="copy-home-48" canEditText>Verified Bravo account</Editable></Editable>)}</div></div>}
+        <FacebookRecommendations reviews={recommendations}/>
+        {reviews.reviews.length > 0 && <div className="cinema-account-reviews"><p>{reviews.average}<Editable as="span" contentKey="copy-home-45" canEditText> out of 5 · </Editable>{reviews.count}<Editable as="span" contentKey="copy-home-46" canEditText> verified Bravo account </Editable>{reviews.count === 1 ? 'review' : 'reviews'}</p><div className="review-grid home-proof-reviews">{reviews.reviews.slice(0, 3).map(review => <Editable as="article" contentKey="copy-home-47" className="panel" key={review._id}><ReviewStars rating={review.rating}/><ReviewPreview body={review.body} author={review.authorName}/><strong>{review.authorName}</strong><Editable as="small" contentKey="copy-home-48" >{review.editedByOwner ? 'Bravo account review · edited by owner' : 'Verified Bravo account'}</Editable></Editable>)}</div></div>}
         <Editable as={Link} contentKey="copy-home-49" canEditText canEditLink className="cinema-link" href="/account#your-review">Share your experience <span aria-hidden="true">↗</span></Editable>
       </div></Editable>
 

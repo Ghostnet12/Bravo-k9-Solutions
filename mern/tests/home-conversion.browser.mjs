@@ -1,3 +1,4 @@
+import { DEFAULT_REVIEWS } from '../shared/reviews.js';
 import assert from 'node:assert/strict';
 import express from 'express';
 import { once } from 'node:events';
@@ -27,7 +28,7 @@ app.get('/api/auth/me', (_req, res) => res.json({ user: null, services: [], memb
 app.get('/api/site-images', (_req, res) => res.json({ images: {} }));
 app.get('/api/team', (_req, res) => publicTeam === null ? res.status(503).json({ error: 'Fixture team unavailable' }) : res.json({ team: publicTeam }));
 app.get('/api/team/schedules', (_req, res) => res.json({ schedules: [], checkedAt: new Date().toISOString() }));
-app.get('/api/reviews', (_req, res) => res.json({ reviews, average: 5, count: reviews.length }));
+app.get('/api/reviews', (_req, res) => res.json({ reviews, average: 5, count: reviews.length, recommendations: DEFAULT_REVIEWS }));
 app.use(express.static(dist));
 app.get('/{*path}', (req, res) => req.path.startsWith('/api/') ? res.status(404).json({ error: 'Fixture endpoint missing.' }) : res.type('html').send(html));
 const server = app.listen(0, '127.0.0.1'); await once(server, 'listening');
@@ -72,7 +73,7 @@ try {
         const accountReviews = page.locator('.home-proof-reviews article').filter({ hasText: 'Verified Bravo account' });
         assert.equal(await accountReviews.count(), reviews.length);
         for (const review of reviews) await accountReviews.getByText(review.authorName, { exact: true }).waitFor();
-        assert.equal(await page.locator('.facebook-recommendations article').count(), 6);
+        assert.equal(await page.locator('.facebook-recommendations article').count(), 7);
         assert.equal(await page.locator('.facebook-recommendations-more[open]').count(), 0, 'additional reviews start collapsed');
         assert.equal((await page.locator('.goal-choice').filter({ hasText: 'Specialized training' }).innerText()).includes('$200'), false, 'specialist goals do not inherit the standard monthly price');
         for (const author of ['Tamyra Borg', 'Waneta Malsom']) {
