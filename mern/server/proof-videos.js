@@ -22,7 +22,7 @@ const editInput = z.object({
 }).strict().refine(input => !(input.uploadId && input.facebookUrl) && !(input.facebookUrl && input.posterData));
 const uploadInput = z.object({ filename: z.string().trim().min(1).max(160), contentType: z.enum(PROOF_VIDEO_TYPES), size: z.number().int().min(1).max(MEDIA_LIMITS.video), chunks: z.number().int().min(1).max(Math.ceil(MEDIA_LIMITS.video / CHUNK_SIZE)) }).strict();
 const chunkInput = z.object({ data: z.string().min(4).max(Math.ceil(CHUNK_SIZE / 3) * 4).regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/) }).strict();
-export function createProofVideoRouter({ VideoModel = ProofVideo, defaults = DEFAULT_PROOF_VIDEOS, apiPath = '/api/proof-videos', mediaScope = 'proof', withSettings = true, withOrdering = false, editableIds = null, protectedDeleteIds = [], allowFacebook = true, allowDelete = true } = {}) {
+export function createProofVideoRouter({ VideoModel = ProofVideo, defaults = DEFAULT_PROOF_VIDEOS, apiPath = '/api/proof-videos', mediaScope = 'proof', withSettings = true, withOrdering = false, editableIds = null, protectedDeleteIds = [], keepOneVideo = false, allowFacebook = true, allowDelete = true } = {}) {
 const defaultFor = id => defaults.find(clip => clip.id === id);
 const scope = id => `${mediaScope}:${id}`;
 const publicClip = row => {
@@ -200,6 +200,14 @@ router.delete('/:id', rateLimit('proof-video-edit', 240, 3600000), express.json(
     const original = defaultFor(id);
     if (!row && !original) throw fail('Video not found.', 404);
     if ((row?.revision || 0) !== input.expectedRevision) throw fail('This video changed. Close and reopen the editor.', 409);
+    if (keepOneVideo) {
+      // Serialize removals so two simultaneous requests cannot empty the playlist.
+      await ProofCarousel.updateOne({ _id: `${mediaScope}-playlist` }, { $inc: { revision: 1 } }, { upsert: true, session });
+      const rows = await VideoModel.find({}).select('_id deleted').session(session).lean();
+      const ids = new Set(rows.map(item => String(item._id)));
+      const count = rows.filter(item => !item.deleted).length + defaults.filter(item => !ids.has(item.id)).length;
+      if (count < 2) throw fail('Keep at least one hero video. Add another video before removing this one.', 405);
+    }
     row ||= new VideoModel({ _id: id, order: original.order });
     row.deleted = true; row.revision = input.expectedRevision + 1; row.updatedBy = req.user._id; row.lastMutation = undefined;
     if (row.uploadId) {

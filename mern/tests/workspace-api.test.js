@@ -11,7 +11,7 @@ const origin = 'http://localhost:5173';
 const ids = { owner: '6aa290cbd066f8feb3c1964f', staff: '111111111111111111111111', member: '222222222222222222222222', other: '333333333333333333333333' };
 function query(value) {
   const chain = { then: (resolve, reject) => Promise.resolve(value).then(resolve, reject) };
-  for (const key of ['select', 'lean', 'sort', 'limit', 'skip', 'session', 'populate']) chain[key] = () => chain;
+  for (const key of ['select', 'lean', 'sort', 'limit', 'skip', 'session', 'populate', 'batchSize']) chain[key] = () => chain;
   return chain;
 }
 test('owner/staff workspace contracts over HTTP with isolated model mocks', async t => {

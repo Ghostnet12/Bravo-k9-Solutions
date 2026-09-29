@@ -8,11 +8,11 @@ for (let attempt = 0; attempt < 18; attempt++) {
   try {
     const response = await fetch(origin, { cache: 'no-store', signal: AbortSignal.timeout(15000) });
     const html = await response.text();
-    if (response.ok && /name="bravo-hero-film" content="\{/.test(html)) { ready = true; break; }
+    if (response.ok && /name="bravo-hero-film" content="[\[{]/.test(html)) { ready = true; break; }
   } catch { /* Deployment may still be switching; retry within the bounded window. */ }
   if (attempt < 17) await new Promise(resolve => setTimeout(resolve, 10000));
 }
-assert.ok(ready, 'Production HTML includes the published video hero');
+assert.ok(ready, 'Production HTML includes the published hero video or playlist');
 await mkdir('test-results', { recursive: true });
 const results = [];
 for (const [name, engine, width] of [['webkit', webkit, 390], ['chromium', chromium, 390], ['chromium', chromium, 1440]]) {
@@ -40,9 +40,12 @@ for (const [name, engine, width] of [['webkit', webkit, 390], ['chromium', chrom
       const state = await page.evaluate(() => {
         window.stopHeroSamples = true;
         const v = document.querySelector('video[data-hero-film]');
-        return { hero: JSON.parse(document.querySelector('meta[name="bravo-hero-film"]').content), samples: window.heroSamples, playback: { src: v.currentSrc, muted: v.muted, inline: v.playsInline, paused: v.paused, time: v.currentTime } };
+        const published = JSON.parse(document.querySelector('meta[name="bravo-hero-film"]').content);
+        const playlist = Array.isArray(published) ? published : [published];
+        return { hero: playlist[0], playlist, samples: window.heroSamples, playback: { src: v.currentSrc, muted: v.muted, inline: v.playsInline, paused: v.paused, time: v.currentTime } };
       });
       assert.equal(await page.locator('video[data-hero-film]').count(), 1);
+      assert.ok(state.playlist.length > 0, 'The published hero playlist has an opening video');
       assert.ok(state.samples.length > 5);
       assert.deepEqual([...new Set(state.samples.map(row => row.source))], [state.hero.src]);
       assert.equal(new URL(state.playback.src).pathname, new URL(state.hero.src, origin).pathname);

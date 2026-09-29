@@ -9,6 +9,13 @@ export const DEFAULT_HERO_FILM = {
 export const HERO_FILM_META = 'bravo-hero-film';
 export const OPTIMIZED_HERO_FILM_SRC = '/assets/bravo-opening-565c14182176.mp4';
 export const OPTIMIZED_HERO_POSTER = '/assets/bravo-opening-78f72cb21c5c.jpg';
+// Published delivery copies are pinned to an upload hash and playlist entry.
+// Replacing an upload automatically falls back to that new upload's own route.
+export const HERO_FILM_RENDITIONS = {
+  '334a6c2f3498baf10cb661d33651e0c9842b9c9d942881024a1f6ebe7134146e': { id: 'opening', src: OPTIMIZED_HERO_FILM_SRC },
+  'c7879f4931fa1475d2fbbd6fa1ba4160be5012cf22301e17070fe6aaa7da2cba': { id: 'opening', src: '/assets/bravo-film-c7879f4931fa.mp4' },
+  '0be42591ff57b1db021b3af7935059f980c310b58b39f89a411013251ee06f45': { id: '10c92a42-82a7-40cc-a1f1-91d29e490598', src: '/assets/bravo-film-0be42591ff57.mp4' },
+};
 const HERO_FILM_ID = /^[a-z0-9][a-z0-9-]{0,80}$/;
 
 function clipSnapshot(value) {
@@ -19,7 +26,7 @@ function clipSnapshot(value) {
   const isOpening = id === DEFAULT_HERO_FILM.id;
   const validSource = value.src === routeSource
     || (isOpening && value.src === DEFAULT_HERO_FILM.src)
-    || (isOpening && revision > 0 && value.src === OPTIMIZED_HERO_FILM_SRC);
+    || (revision > 0 && Object.values(HERO_FILM_RENDITIONS).some(rendition => rendition.id === id && rendition.src === value.src));
   if (!validSource) return null;
   const routePoster = `/api/hero-film/${id}/poster?v=${revision}`;
   const poster = isOpening && value.src === DEFAULT_HERO_FILM.src
