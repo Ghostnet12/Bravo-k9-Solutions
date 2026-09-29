@@ -116,6 +116,26 @@ try {
           assert.match(await visitor.locator('.cinema-film video source').first().getAttribute('src'), /^\/api\/hero-film\/opening\/video\?v=2$/);
           assert.equal(await visitor.locator('.cinema-hero-intro').innerText(), 'Administrator saved homepage copy.');
         } finally { await noScript.close(); }
+        const paginationRows = Array.from({ length: 30 }, (_, i) => ({
+          _id: `page-fixture-${String(i).padStart(2, '0')}`,
+          title: `Paged hero ${i + 1}`, description: 'Pagination fixture', fit: 'cover', sound: false,
+          order: 100 + i, revision: 1, uploadId: `page-upload-${i}`, hasPoster: false, deleted: false,
+        }));
+        await HeroFilm.insertMany(paginationRows);
+        const pagedHeroRequests = [];
+        const recordHeroPage = request => {
+          const url = new URL(request.url());
+          if (url.pathname === '/api/hero-film' && url.searchParams.has('after')) pagedHeroRequests.push(url.href);
+        };
+        page.on('request', recordHeroPage);
+        await page.reload(); await page.waitForLoadState('networkidle');
+        const position = page.locator('.cinema-film .sr-only');
+        await position.waitFor({ state: 'attached' });
+        assert.match(await position.innerText(), /^Hero video 1 of 31:/, 'client hydration keeps the complete paginated hero playlist');
+        assert.ok(pagedHeroRequests.length >= 1, 'initial hero refresh follows nextCursor instead of truncating at 24 clips');
+        page.off('request', recordHeroPage);
+        await HeroFilm.deleteMany({ _id: { $regex: '^page-fixture-' } });
+        await page.reload(); await page.waitForLoadState('networkidle');
         await page.screenshot({ path: `test-results/hero-editor-published-${engineName}-${width}.png` });
         await signIn('staff'); await page.reload(); await page.waitForLoadState('networkidle');
         assert.equal(await page.getByRole('button', { name: 'Manage hero videos', exact: true }).count(), 0);
