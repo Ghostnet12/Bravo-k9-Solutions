@@ -40,6 +40,6 @@ export default function GoalFinder({ review = null }) {
       </Editable>
       <ProgramMedia key={goal.id} goal={goal} automaticClip={clip}/>
     </div>
-    <aside className="goal-early-review" data-review-highlight="" aria-label={review ? 'A Bravo client’s experience' : undefined}>{review && <><blockquote>“{reviewExcerpt(review)}”</blockquote><p>{review.authorName} · {review.source}</p><Link className="inline-link" to="/#reviews">Read client experiences →</Link></>}</aside>
+    <aside className="goal-early-review" data-review-highlight="" aria-label={review ? 'A Bravo client’s experience' : undefined}>{review && <><blockquote>“{reviewExcerpt(review)}”</blockquote><p>{review.authorName} · {review.source}</p><Editable as={Link} contentKey="copy-goalfinder-3" canEditText canEditLink className="inline-link" to="/#reviews">Read client experiences →</Editable></>}</aside>
   </Editable>;
 }
