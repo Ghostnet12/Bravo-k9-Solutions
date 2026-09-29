@@ -144,17 +144,6 @@ router.post('/:key/undo', async (req, res) => {
 router.use((_req, res) => res.status(404).json({ error: 'Media endpoint not found.' }));
 router.use(mediaError);
 const app = express();
-if (process.env.VERCEL_ENV !== 'production') app.get('/api/internal/firestorage-inspect', async (_req, res) => {
-  try {
-    const response = await fetch('https://firestorage.ai/ja/f/B6N4AcCg8gE-');
-    const body = await response.text();
-    const links = [...body.matchAll(/(?:href|src)=["']([^"']+)["']/gi)].map(match => match[1]).filter(value => /download|file|api|storage|built-for|m4a|mp3|audio/i.test(value)).slice(0, 100);
-    const urls = [...body.matchAll(/https?:\\?\/\\?\/[^"'<>\\s]+/gi)].map(match => match[0].replaceAll('\\/','/')).filter(value => /download|file|api|storage|built-for|m4a|mp3|audio/i.test(value)).slice(0, 100);
-    res.json({ status: response.status, url: response.url, contentType: response.headers.get('content-type'), length: body.length, links, urls, sample: body.slice(0, 12000) });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
 app.disable('x-powered-by'); app.set('trust proxy', process.env.VERCEL ? 1 : false);
 app.get(['/', '/api/homepage'], securityHeaders(), homepageHandler);
 app.use('/api/site-images', router);
