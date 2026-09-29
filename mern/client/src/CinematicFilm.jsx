@@ -110,10 +110,10 @@ export default function CinematicFilm({ children }) {
     };
     const interacted = () => {
       gestureSeen.current = true;
-      if (visitorSound === null && clip.sound === true && !paused && !editing && !managerOpen) {
-        element.muted = false; setMuted(false);
-        element.play().catch(() => { element.muted = true; if (!disposed) setMuted(true); });
-      }
+      // Browsers may block the parser/observer autoplay attempt until the
+      // visitor interacts. Retry every clip here; update() still preserves an
+      // explicit Pause and reduced-motion preference.
+      update();
     };
     const observer = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; update(); });
     observer.observe(root.current);
