@@ -29,10 +29,9 @@ export default function HeroVideo({ clip, active, paused, onEnded }) {
       // button click toggles it straight back to muted.
       if (event.type === 'pointerdown' && event.target?.closest?.('.hero-video-sound')) return;
       gestureSeen.current = true;
-      if (active && !paused && clip?.sound === true) {
-        element.muted = false; setMuted(false);
-        element.play().catch(() => { element.muted = true; if (!disposed) setMuted(true); });
-      }
+      // Retry a browser-blocked autoplay after any normal interaction.
+      // update() still applies this clip's saved sound preference.
+      update();
     };
     if (!active) element.currentTime = 0;
     update(); document.addEventListener('visibilitychange', update);
