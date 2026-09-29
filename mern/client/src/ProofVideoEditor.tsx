@@ -30,7 +30,7 @@ export default function ProofVideoEditor({ clip, onClose, onSaved, onRemoved, al
   const saving = useRef(false), mutation = useRef(crypto.randomUUID());
   const upload = useRef<{ id: string; next: number } | null>(null);
   const isHeroFilm = apiBase === '/hero-film';
-  const supportsSoundPreference = isHeroFilm || apiBase === '/hero-videos';
+  const supportsSoundPreference = apiBase === '/hero-videos';
   const canRemoveVideo = allowRemove ?? (!isHeroFilm && apiBase !== '/program-videos');
   const isNew = !clip.src && !clip.facebookUrl;
   const isFacebook = sourceType === 'facebook', reelUrl = normalizeFacebookReelUrl(facebookUrl);
@@ -105,7 +105,7 @@ export default function ProofVideoEditor({ clip, onClose, onSaved, onRemoved, al
   return <dialog ref={dialog} className="site-photo-dialog proof-video-dialog" data-site-image-editor="" aria-labelledby="proof-editor-title" aria-busy={busy} onCancel={event => { event.preventDefault(); if (!saving.current) onClose(); }}>
     <form onSubmit={publish}>
       <div className="site-photo-heading"><div><p>BRAVO · VIDEO EDITOR</p><h2 id="proof-editor-title">{isHeroFilm ? isNew ? 'Add hero video' : 'Edit hero video' : isNew ? 'Add a video' : 'Edit this video'}</h2></div><button type="button" disabled={busy} onClick={onClose} aria-label="Close video editor">×</button></div>
-      <p className="site-photo-intro">{isHeroFilm ? 'Upload or replace this hero clip, choose its sound preference, preview it, then publish. Hero clips play in order and advance when each video ends.' : 'Upload a video or link a Facebook Reel, add its story, then publish it to the homepage.'}</p>
+      <p className="site-photo-intro">{isHeroFilm ? 'Upload or replace this hero clip, preview it, then publish. Hero clips play silently in order while the site soundtrack continues.' : 'Upload a video or link a Facebook Reel, add its story, then publish it to the homepage.'}</p>
       <fieldset disabled={busy} className="proof-editor-fields">
         {!isHeroFilm && <fieldset className="proof-source-picker"><legend>Video source</legend><label><input type="radio" name="proof-video-source" value="upload" checked={!isFacebook} onChange={() => changeSource('upload')}/>Upload video</label><label><input type="radio" name="proof-video-source" value="facebook" checked={isFacebook} onChange={() => changeSource('facebook')}/>Facebook Reel URL</label></fieldset>}
         {isFacebook ? <div className="site-photo-description"><label htmlFor="proof-facebook-url">Facebook Reel URL</label><input id="proof-facebook-url" type="text" inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} maxLength={2048} value={facebookUrl} placeholder="https://www.facebook.com/reel/…" aria-describedby="proof-facebook-help" onChange={event => { dirty(); setFacebookUrl(event.target.value); }}/><p id="proof-facebook-help" className="site-photo-note">Paste a public Reel link or a facebook.com/share/r/ link. Tapping the card opens Facebook in this tab; use Back to return to Bravo.</p>{facebookUrl.trim() && !reelUrl && <p className="site-photo-error" role="alert">Enter a Facebook Reel URL, such as facebook.com/reel/123456789/.</p>}</div> : <>

@@ -55,10 +55,10 @@ try {
         assert.ok(await film.evaluate(video => video.muted && video.playsInline));
         const heroBooking = await page.locator('.cinema-hero').getByRole('link', { name: /Book training/ }).boundingBox();
         assert.ok(heroBooking && heroBooking.y > 0 && heroBooking.y + heroBooking.height <= (width === 390 ? 844 : 1000), 'hero booking is immediately visible');
-        await page.getByRole('button', { name: 'Pause training film', exact: true }).click();
-        await page.waitForFunction(() => document.querySelector('.cinema-film video').paused);
-        await page.getByRole('button', { name: 'Play training film', exact: true }).click();
-        await page.waitForFunction(() => !document.querySelector('.cinema-film video').paused);
+        assert.equal(await page.locator('.cinema-film-controls').count(), 0, 'hero playback controls are intentionally hidden');
+        assert.equal(await page.getByRole('button', { name: 'Pause training film', exact: true }).count(), 0);
+        assert.equal(await page.getByRole('button', { name: 'Turn hero video sound on', exact: true }).count(), 0);
+        assert.equal(await page.getByRole('button', { name: 'Next hero video', exact: true }).count(), 0);
         await page.emulateMedia({ reducedMotion: 'reduce' });
         await page.waitForFunction(() => document.querySelector('.cinema-film video').paused && document.querySelector('.cinema-home').dataset.motion === 'off');
         await page.emulateMedia({ reducedMotion: 'no-preference' });
