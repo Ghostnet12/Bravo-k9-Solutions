@@ -15,5 +15,5 @@ export function recommendationMarkup(reviews) {
 }
 export function reviewHighlightMarkup(reviews) {
   const review = reviews?.[0];
-  return review ? `<blockquote>“${escape(reviewExcerpt(review))}”</blockquote><p>${escape(review.authorName)} · ${escape(review.source)}</p><a class="inline-link" href="/#reviews">Read client experiences →</a>` : '';
+  return review ? `<blockquote>“${escape(reviewExcerpt(review))}”</blockquote><p>${escape(review.authorName)} · ${escape(review.source)}</p><a class="inline-link" href="/#reviews" data-site-content-key="copy-goalfinder-3" data-site-content-text="true" data-site-original-text="Read client experiences →" data-site-original-link="/#reviews">Read client experiences →</a>` : '';
 }
