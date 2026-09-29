@@ -8,12 +8,14 @@ type Preferences = {
   largeText: boolean;
   highContrast: boolean;
   reducedMotion: boolean;
+  siteMusic: boolean;
 };
 
 const defaultPreferences: Preferences = {
   largeText: false,
   highContrast: false,
   reducedMotion: false,
+  siteMusic: true,
 };
 
 const storageKey = "bravo-accessibility-preferences";
@@ -57,6 +59,11 @@ export default function AccessibilityTools() {
   useEffect(() => {
     setOpen(false);
   }, [location.pathname, location.search, location.hash]);
+
+  useEffect(() => {
+    if (!ready) return;
+    window.dispatchEvent(new CustomEvent("bravo-site-music", { detail: { enabled: preferences.siteMusic } }));
+  }, [preferences.siteMusic, ready]);
 
   useEffect(() => {
     if (!open) return;
@@ -103,6 +110,7 @@ export default function AccessibilityTools() {
         <button type="button" aria-pressed={preferences.largeText} onClick={() => toggle("largeText", "Larger text")}>Larger text <span>{preferences.largeText ? "On" : "Off"}</span></button>
         <button type="button" aria-pressed={preferences.highContrast} onClick={() => toggle("highContrast", "High contrast")}>High contrast <span>{preferences.highContrast ? "On" : "Off"}</span></button>
         <button type="button" aria-pressed={preferences.reducedMotion} onClick={() => toggle("reducedMotion", "Reduced motion")}>Reduce motion <span>{preferences.reducedMotion ? "On" : "Off"}</span></button>
+        <button type="button" aria-pressed={preferences.siteMusic} onClick={() => toggle("siteMusic", "Site music")}>Site music <span>{preferences.siteMusic ? "On" : "Off"}</span></button>
         <Link href="/accessibility">Accessibility statement</Link>
         <Link href="/learn#accessible-media">Captions & transcripts</Link>
         <small>These settings stay on this device.</small>
