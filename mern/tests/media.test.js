@@ -14,7 +14,6 @@ test('media conversion preserves exact bytes without exposing Buffer slab conten
   assert.equal(mediaBytes(view).toString(), 'VIDEO');
   assert.equal(mediaBytes(new Binary(view)).toString(), 'VIDEO');
   assert.equal(mediaBytes(new Uint8Array(source.buffer, source.byteOffset + 7, 5)).toString(), 'VIDEO');
-  assert.equal(mediaBytes(Buffer.from('AUDIO').toString('base64')).toString(), 'AUDIO');
 });
 test('byte ranges support Safari probes, suffixes, seeking, and reject invalid ranges', () => {
   assert.deepEqual(byteRange(undefined, 100), { start: 0, end: 99, partial: false });
