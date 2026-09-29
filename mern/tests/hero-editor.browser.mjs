@@ -85,6 +85,7 @@ try {
         assert.equal(await videoDialog.getByLabel('Facebook Reel URL', { exact: true }).count(), 0);
         await videoDialog.getByLabel('Choose video from files').setInputFiles(fixture);
         await videoDialog.getByLabel('Description', { exact: true }).fill('Owner uploaded opening film.');
+        await videoDialog.getByRole('checkbox', { name: /Prefer sound for this video/ }).check();
         const publish = videoDialog.getByRole('button', { name: 'Publish changes', exact: true });
         await publish.click(); await videoDialog.waitFor({ state: 'hidden', timeout: 30000 }); await closePlaylist();
         assert.equal((await HeroFilm.findById('opening').lean()).description, 'Owner uploaded opening film.');
@@ -105,6 +106,9 @@ try {
         assert.equal(await page.locator('.cinema-hero-intro').innerText(), 'Administrator saved homepage copy.');
         assert.equal(await film.getAttribute('aria-label'), 'Administrator updated opening film.');
         await page.waitForFunction(() => { const video = document.querySelector('.cinema-film video'); return video.muted && video.playsInline && !video.paused && video.currentTime > 0; });
+        await page.getByRole('button', { name: 'Turn hero video sound on', exact: true }).click();
+        await page.waitForFunction(() => { const video = document.querySelector('.cinema-film video'); return !video.muted && !video.paused; });
+        assert.equal(await page.getByRole('button', { name: 'Mute hero video', exact: true }).count(), 1);
         assert.equal(await page.getByRole('button', { name: 'Manage hero videos', exact: true }).count(), 0);
         const noScript = await browser.newContext({ javaScriptEnabled: false, viewport: { width, height: 900 } });
         try {
