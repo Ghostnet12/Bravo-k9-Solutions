@@ -13,11 +13,24 @@ export async function optimizeSitePhoto(file) {
   if (!image.naturalWidth || image.naturalWidth * image.naturalHeight > 80000000) throw new Error('Choose a smaller copy of this photo.');
   const canvas = document.createElement('canvas'), scale = Math.min(1, 2400 / Math.max(image.naturalWidth, image.naturalHeight));
   canvas.width = Math.max(1, Math.round(image.naturalWidth * scale)); canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-  for (let attempt = 0; attempt < 6; attempt++) {
+  let hasTransparency;
+  for (let attempt = 0; attempt < 8; attempt++) {
     const context = canvas.getContext('2d'); if (!context) throw new Error('Photo processing is unavailable.');
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    const dataURL = canvas.toDataURL('image/webp', Math.max(0.65, 0.88 - attempt * 0.04)), data = dataURL.split(',')[1];
-    if (data.length * 3 / 4 <= SITE_IMAGE_MAX_BYTES) return { dataURL, data, contentType: dataURL.slice(5, dataURL.indexOf(';')), filename: `${(file.name.replace(/\.[^.]*$/, '') || 'photo').slice(0, 140)}.${dataURL.startsWith('data:image/webp;') ? 'webp' : 'png'}` };
+    const quality = Math.max(0.7, 0.88 - attempt * 0.03);
+    let dataURL = canvas.toDataURL('image/webp', quality);
+    if (!dataURL.startsWith('data:image/webp;')) {
+      // Safari can silently return PNG when WebP encoding is unavailable.
+      // Compress opaque photos as JPEG while retaining real transparency.
+      if (hasTransparency === undefined) {
+        const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+        hasTransparency = false;
+        for (let i = 3; i < pixels.length; i += 4) if (pixels[i] !== 255) { hasTransparency = true; break; }
+      }
+      if (!hasTransparency) dataURL = canvas.toDataURL('image/jpeg', quality);
+    }
+    const data = dataURL.split(',')[1], contentType = dataURL.slice(5, dataURL.indexOf(';'));
+    if (data.length * 3 / 4 <= Math.min(SITE_IMAGE_MAX_BYTES, 512 * 1024)) return { dataURL, data, contentType, filename: `${(file.name.replace(/\.[^.]*$/, '') || 'photo').slice(0, 140)}.${contentType === 'image/webp' ? 'webp' : contentType === 'image/jpeg' ? 'jpg' : 'png'}` };
     canvas.width = Math.max(1, Math.round(canvas.width * 0.8)); canvas.height = Math.max(1, Math.round(canvas.height * 0.8));
   }
   throw new Error('Choose a smaller photo.');
@@ -27,7 +40,7 @@ const styleKeys = ['objectFit', 'objectPosition', 'transform', 'transformOrigin'
 export function mountSiteImages({ canEdit = false } = {}) {
   let allowed = canEdit, disposed = false, images = getSiteImages(), ready = false, loading = null, frame = 0, gesture, suppressUntil = 0, editMode = false;
   let selected = null, pending = null, busy = false, preparing = false, generation = 0, previewCleanup = null, blobURL = null;
-  const abort = new AbortController(), records = new Map();
+  const abort = new AbortController(), records = new Map(), photoLoads = new Map();
   let dialog, toolbar, fields, status, statusTimer;
   const on = (target, type, fn, options = {}) => target.addEventListener(type, fn, { ...options, signal: abort.signal });
   const sourceOf = element => element.getAttribute('src') || element.querySelector('source')?.getAttribute('src') || '';
@@ -73,7 +86,17 @@ export function mountSiteImages({ canEdit = false } = {}) {
       }
       const saved = images[key], custom = framed(saved);
       const fallback = key === 'team-ashley-northrop' ? '/images/ashley-northrop.webp' : defaultSiteImage(record.original);
-      const next = !record.isVideo && saved?.src ? saved.src : fallback;
+      let next = !record.isVideo && saved?.src ? saved.src : fallback;
+      if (!record.isVideo && saved?.src && source !== next) {
+        if (!photoLoads.has(next)) {
+          const preview = new Image(), load = { ready: false, preview };
+          photoLoads.set(next, load);
+          preview.onload = () => { load.ready = true; schedule(); };
+          preview.onerror = () => { /* Keep the last visible photo if delivery fails. */ };
+          preview.src = next;
+        }
+        if (!photoLoads.get(next).ready) next = source || fallback;
+      }
       if (source !== next) element.setAttribute('src', next);
       record.applied = next;
       if (!record.isVideo) {
@@ -207,8 +230,17 @@ export function mountSiteImages({ canEdit = false } = {}) {
         for (const [element, record] of records) if (record.key === target.key) { element.load(); }
         window.dispatchEvent(new CustomEvent('bravo-media-updated', { detail: { lessonId } }));
       }
-      const body = undo ? { expectedRevision: target.revision } : { ...settings, expectedRevision: target.revision, ...(!target.isVideo && replacement ? { data: replacement.data, contentType: replacement.contentType, filename: replacement.filename } : {}) };
-      const result = await api(`/site-images/${target.key}${undo ? '/undo' : ''}`, { method: undo ? 'POST' : !target.isVideo && replacement ? 'PUT' : 'PATCH', body });
+      const mutationId = undo ? undefined : crypto.randomUUID();
+      const body = undo ? { expectedRevision: target.revision } : { ...settings, expectedRevision: target.revision, mutationId, ...(!target.isVideo && replacement ? { data: replacement.data, contentType: replacement.contentType, filename: replacement.filename } : {}) };
+      let result;
+      try {
+        result = await api(`/site-images/${target.key}${undo ? '/undo' : ''}`, { method: undo ? 'POST' : !target.isVideo && replacement ? 'PUT' : 'PATCH', body, timeoutMs: 55000 });
+      } catch (error) {
+        if (!mutationId || (error.code !== 'request_timeout' && !(error instanceof TypeError))) throw error;
+        fields.filename.textContent = 'Checking whether your changes were saved…';
+        result = await api(`/site-images/${target.key}/mutations/${mutationId}`);
+        if (!result.image) throw new Error('The save could not be confirmed. Your preview is still here. Refresh to check before retrying.');
+      }
       if (disposed) return;
       images[target.key] = result.image; setSiteImages(images); scan(); setBusy(false); close();
       clearTimeout(statusTimer);
@@ -270,6 +302,7 @@ export function mountSiteImages({ canEdit = false } = {}) {
   const interval = setInterval(() => { if (!document.hidden && !selected) refresh(); }, 60000);
   return () => {
     disposed = true; generation++; cancelGesture(); abort.abort(); observer.disconnect(); clearInterval(interval); cancelAnimationFrame(frame); clearPreview();
+    for (const { preview } of photoLoads.values()) { preview.onload = null; preview.onerror = null; }
     clearTimeout(statusTimer); status?.remove(); dialog?.remove(); toolbar?.remove(); document.documentElement.classList.remove('site-photo-edit-mode');
     window.dispatchEvent(new CustomEvent('bravo-media-edit-mode', { detail: { active: false } }));
     for (const [element, record] of records) { record.cleanup?.(); element.removeAttribute('data-site-image-editable'); element.removeAttribute('aria-keyshortcuts'); if (record.tabIndex == null) element.removeAttribute('tabindex'); else element.setAttribute('tabindex', record.tabIndex); }

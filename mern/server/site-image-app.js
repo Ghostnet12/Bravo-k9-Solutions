@@ -33,7 +33,7 @@ export { SiteImage } from './site-image-store.js';
 const emptySnapshot = () => ({ uploadId: null, alt: '', x: 50, y: 50, zoom: 1, fit: 'cover', framed: false });
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const revisionInput = z.object({ expectedRevision: z.number().int().min(0) });
-const framingInput = revisionInput.extend({ alt: z.string().trim().max(240), x: z.number().min(0).max(100), y: z.number().min(0).max(100), zoom: z.number().min(1).max(3).default(1), fit: z.enum(['cover', 'contain']) });
+const framingInput = revisionInput.extend({ mutationId: z.string().uuid().optional(), alt: z.string().trim().max(240), x: z.number().min(0).max(100), y: z.number().min(0).max(100), zoom: z.number().min(1).max(3).default(1), fit: z.enum(['cover', 'contain']) });
 const imageInput = framingInput.extend({ filename: z.string().trim().min(1).max(160), contentType: z.enum(['image/jpeg', 'image/png', 'image/webp']), data: z.string().min(4).max(Math.ceil(SITE_IMAGE_MAX_BYTES / 3) * 4).regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/) });
 function publicImage(image) {
   return { revision: image.revision, src: image.current?.uploadId ? `/api/site-images/${image._id}/image?v=${image.revision}` : null, alt: image.current?.alt || '', x: image.current?.x ?? 50, y: image.current?.y ?? 50, zoom: image.current?.zoom ?? 1, fit: image.current?.fit || 'cover', framed: image.current?.framed ?? !!image.current?.uploadId, canUndo: !!image.previous };
@@ -81,17 +81,25 @@ router.get('/:key/image', connect, async (req, res) => {
   if (req.params.key.startsWith('video-')) return res.status(404).end();
   const image = await SiteImage.findById(req.params.key).lean();
   if (!image?.current?.uploadId || image.expiresAt <= new Date()) return res.status(404).end();
-  return sendUploadedMedia(image.current.uploadId, req, res, 'image');
+  const publicPhoto = !req.params.key.startsWith('background-') && !req.params.key.startsWith('lesson-');
+  if (publicPhoto && req.query.v && req.query.v !== String(image.revision)) return res.redirect(307, `/api/site-images/${req.params.key}/image?v=${image.revision}`);
+  return sendUploadedMedia(image.current.uploadId, req, res, 'image', publicPhoto && req.query.v === String(image.revision) ? { cacheControl: 'public, max-age=86400, s-maxage=86400' } : {});
 });
 // Administrator accounts carry role=owner; ordinary staff are explicitly denied.
 // Authenticate before allocating memory to large JSON/base64 bodies.
 router.use(sameOrigin, cookieParser(), connect, identify, requireUser, requireOwner, rateLimit('site-image-write', 120, 3600000), express.json({ limit: '4200kb' }));
+router.get('/:key/mutations/:mutationId', async (req, res) => {
+  const mutationId = z.string().uuid().parse(req.params.mutationId);
+  const image = await SiteImage.findOne({ _id: req.params.key, lastMutation: mutationId, updatedBy: req.user._id }).lean();
+  res.json({ image: image ? publicImage(image) : null });
+});
 async function saveEdit(req, input, bytes = null) {
   await SiteImage.init();
   const key = req.params.key, newUploadId = bytes ? randomUUID() : null;
   let result;
   await transaction(async session => {
     const existing = await SiteImage.findById(key).session(session);
+    if (input.mutationId && existing?.lastMutation === input.mutationId && String(existing.updatedBy) === String(req.user._id)) { result = publicImage(existing); return; }
     if (key.startsWith('background-') && (existing || !bytes)) throw fail('Choose a new background photo in the section editor.', 409);
     const expiresAt = key.startsWith('background-') ? backgroundDraftExpiry() : undefined;
     if ((existing?.revision || 0) !== input.expectedRevision) throw fail('Another administrator changed this media.', 409);
@@ -108,7 +116,7 @@ async function saveEdit(req, input, bytes = null) {
     const image = existing || new SiteImage({ _id: key });
     if (expiresAt) image.expiresAt = expiresAt;
     image.current = { uploadId: newUploadId || previous.uploadId, alt: input.alt, x: input.x, y: input.y, zoom: input.zoom, fit: input.fit, framed: true };
-    image.previous = previous; image.revision = input.expectedRevision + 1; image.updatedBy = req.user._id;
+    image.previous = previous; image.revision = input.expectedRevision + 1; image.updatedBy = req.user._id; image.lastMutation = input.mutationId;
     await image.save({ session });
     await AuditEvent.create([{ actorId: req.user._id, action: bytes ? 'site-image.replaced' : 'site-media.reframed', targetType: 'site-image', targetId: key, details: { revision: image.revision, uploadId: image.current.uploadId } }], { session });
     if (retiredId && ![image.current.uploadId, previous.uploadId].includes(retiredId)) {
@@ -136,7 +144,7 @@ router.post('/:key/undo', async (req, res) => {
     if (!image || image.revision !== expectedRevision) throw fail('This media changed.', 409);
     if (!image.previous) throw fail('There is no previous edit to restore.');
     const current = image.current.toObject(); image.current = image.previous.toObject(); image.previous = current;
-    image.revision += 1; image.updatedBy = req.user._id; await image.save({ session });
+    image.revision += 1; image.updatedBy = req.user._id; image.lastMutation = undefined; await image.save({ session });
     await AuditEvent.create([{ actorId: req.user._id, action: 'site-media.restored', targetType: 'site-image', targetId: req.params.key, details: { revision: image.revision } }], { session });
     result = publicImage(image);
   });
