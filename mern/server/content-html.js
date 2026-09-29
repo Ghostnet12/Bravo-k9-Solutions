@@ -17,7 +17,7 @@ export function renderSiteContent(html, entries = {}, workshop, serviceCatalog, 
     if (workshop !== undefined && attr(node,'data-workshop-content')) { node.childNodes = parseFragment(workshopMarkup(workshop, attr(node,'data-workshop-content') === 'compact')).childNodes; for (const child of node.childNodes) child.parentNode = node; }
     if (recommendations !== undefined && (attr(node, 'data-public-reviews') !== undefined || attr(node, 'data-review-highlight') !== undefined)) {
       node.childNodes = parseFragment(attr(node, 'data-public-reviews') !== undefined ? recommendationMarkup(recommendations) : reviewHighlightMarkup(recommendations)).childNodes;
-      for (const child of node.childNodes) child.parentNode = node;
+      for (const child of node.childNodes) { child.parentNode = node; visit(child); }
       if (recommendations.length && attr(node, 'data-public-reviews') !== undefined) setAttr(node, 'aria-labelledby', 'facebook-recommendations-title');
     }
     const key=attr(node,'data-site-content-key'), value=entries[key]?.value;
