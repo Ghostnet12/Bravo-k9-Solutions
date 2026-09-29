@@ -178,6 +178,7 @@ export default function CinematicFilm({ children }) {
         <source src={clip.src} type={clip.revision === 0 && clip.id === DEFAULT_HERO_FILM.id ? 'video/mp4' : undefined}/>
         {clip.src === DEFAULT_HERO_FILM.src && <source src="/videos/bravo-real-world.webm" type="video/webm"/>}
       </video>
+      <span className="sr-only" aria-live="polite">Hero video {index + 1} of {clips.length}: {clip.title}</span>
       <div className="cinema-hero-shade" aria-hidden="true"/>
       {!failed && <div className="cinema-film-controls">
         <button className="cinema-film-control" type="button" aria-label={playing ? 'Pause training film' : 'Play training film'} onClick={() => { if (playing) setPaused(true); else { setPaused(false); video.current?.play().catch(() => setPlaying(false)); } }}><span aria-hidden="true">{playing ? 'Ⅱ' : '▷'}</span><span>{playing ? 'Pause film' : 'Play film'}</span></button>
