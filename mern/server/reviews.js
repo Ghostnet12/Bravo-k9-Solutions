@@ -14,7 +14,7 @@ const reviewInput = z.object({
   source: z.enum(['Google review', 'Facebook recommendation', 'Facebook comment', 'Client review']),
 });
 const editInput = reviewInput.partial().extend({ expectedRevision: revision, hidden: z.boolean().optional() }).strict();
-const managedCustomer = row => ({ id: `customer-${row._id}`, authorName: row.authorName, body: row.body, rating: row.rating, source: 'Verified Bravo account', kind: 'customer', hidden: !!row.hidden, revision: row.revision || 0 });
+const managedCustomer = row => ({ id: `customer-${row._id}`, authorName: row.authorName, body: row.body, rating: row.rating, source: 'Bravo account review', kind: 'customer', hidden: !!row.hidden, revision: row.revision || 0 });
 const managedWebsite = row => ({ ...row, kind: 'website' });
 function ownerOnly(req, _res, next) {
   if (req.user?.role !== 'owner' || !isPrimaryOwner(req.user)) throw fail('Only the Owner can manage website reviews.', 403);

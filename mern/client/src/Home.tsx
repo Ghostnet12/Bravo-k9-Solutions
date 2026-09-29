@@ -49,6 +49,8 @@ export default function Home() {
   const lessonsOpen = lessonLibraryVisible(config, user);
   useEffect(() => {
     let live = true;
+    // The server snapshot seeds only this visit; later navigation reads fresh reviews.
+    document.querySelector('meta[name="bravo-reviews"]')?.remove();
     api('/team').then(data => { if (live) setTeam(Array.isArray(data.team) ? [...data.team].sort((a, b) => Number(b.role === 'owner') - Number(a.role === 'owner')) : []); }).catch(() => { if (live) setTeam([]); });
     api('/reviews').then(data => { if (live) { setReviews(data); if (Array.isArray(data.recommendations)) setRecommendations(data.recommendations); } }).catch(() => {});
     const published = event => setTeam(people => people.map(person => person.id === event.detail.id ? event.detail : person));
