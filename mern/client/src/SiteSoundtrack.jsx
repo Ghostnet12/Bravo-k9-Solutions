@@ -44,8 +44,9 @@ export default function SiteSoundtrack() {
       else element.pause();
     };
 
-    const loaded = () => attempt();
-    if (document.readyState === 'complete') attempt();
+    let startTimer = 0;
+    const loaded = () => { startTimer = window.setTimeout(attempt, 0); };
+    if (document.readyState === 'complete') loaded();
     else window.addEventListener('load', loaded, { once: true });
     document.addEventListener('pointerdown', gesture, true);
     document.addEventListener('keydown', gesture, true);
@@ -53,6 +54,7 @@ export default function SiteSoundtrack() {
     window.addEventListener('bravo-site-music', preference);
     return () => {
       window.removeEventListener('load', loaded);
+      window.clearTimeout(startTimer);
       document.removeEventListener('pointerdown', gesture, true);
       document.removeEventListener('keydown', gesture, true);
       document.removeEventListener('visibilitychange', visibility);
