@@ -23,7 +23,11 @@ export default function HeroVideo({ clip, active, paused, onEnded }) {
         } else if (!disposed) setBlocked(true);
       }
     };
-    const interacted = () => {
+    const interacted = event => {
+      // The Sound button handles its own first gesture. Skipping the global
+      // auto-unmute here prevents pointerdown from unmuting just before the
+      // button click toggles it straight back to muted.
+      if (event.type === 'pointerdown' && event.target?.closest?.('.hero-video-sound')) return;
       gestureSeen.current = true;
       if (active && !paused && clip?.sound === true) {
         element.muted = false; setMuted(false);
