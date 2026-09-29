@@ -1,0 +1,56 @@
+import { useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
+import { SITE_SOUNDTRACK_SRC, SITE_SOUNDTRACK_TITLE, SITE_SOUNDTRACK_VOLUME } from '../../shared/site-soundtrack.js';
+
+const storageKey = 'bravo-accessibility-preferences';
+
+function musicEnabled() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
+    return saved.siteMusic !== false;
+  } catch {
+    return true;
+  }
+}
+
+export default function SiteSoundtrack() {
+  const audio = useRef(null), enabled = useRef(true);
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    const element = audio.current;
+    if (!element) return;
+    enabled.current = musicEnabled();
+    element.volume = SITE_SOUNDTRACK_VOLUME;
+
+    const shouldPlay = () => pathname === '/' && enabled.current && !document.hidden;
+    const attempt = () => {
+      if (!shouldPlay()) { element.pause(); return; }
+      element.play().catch(() => {
+        // Safari/iOS and some Chrome settings require a real user gesture
+        // before audible media may start. The gesture listeners below retry.
+      });
+    };
+    const gesture = () => attempt();
+    const visibility = () => attempt();
+    const preference = event => {
+      enabled.current = event.detail?.enabled !== false;
+      if (enabled.current) attempt();
+      else element.pause();
+    };
+
+    attempt();
+    document.addEventListener('pointerdown', gesture, true);
+    document.addEventListener('keydown', gesture, true);
+    document.addEventListener('visibilitychange', visibility);
+    window.addEventListener('bravo-site-music', preference);
+    return () => {
+      document.removeEventListener('pointerdown', gesture, true);
+      document.removeEventListener('keydown', gesture, true);
+      document.removeEventListener('visibilitychange', visibility);
+      window.removeEventListener('bravo-site-music', preference);
+    };
+  }, [pathname]);
+
+  return <audio ref={audio} src={SITE_SOUNDTRACK_SRC} autoPlay loop preload="auto" aria-label={SITE_SOUNDTRACK_TITLE} data-site-soundtrack="" />;
+}
