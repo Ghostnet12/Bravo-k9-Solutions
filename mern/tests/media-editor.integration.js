@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import mongoose from 'mongoose';
 import request from 'supertest';
-import { randomBytes, createHash } from 'node:crypto';
+import { randomBytes, randomUUID, createHash } from 'node:crypto';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 
 test('media editor persistence and server authorization (isolated MongoDB)', { timeout: 180000 }, async t => {
@@ -65,6 +65,34 @@ test('media editor persistence and server authorization (isolated MongoDB)', { t
         const saved=(await request(app).get('/api/site-images').expect(200)).body.images[key];
         assert.equal(saved.alt,`Updated ${id}`);assert.equal(saved.revision,2);
         const publicImage=await request(app).get(saved.src).expect(200);assert.deepEqual(publicImage.body,Buffer.from(png,'base64'));
+      }
+    });
+    await t.test('photo saves can be confirmed after a lost response without duplicate uploads', async () => {
+      const key = 'team-ashley-northrop', mutationId = randomUUID();
+      const data = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aU1cAAAAASUVORK5CYII=';
+      const body = { ...edit, mutationId, data, filename: 'portrait.png', contentType: 'image/png' };
+      const saved = (await call('owner', 'put', `/api/site-images/${key}`, body).expect(200)).body.image;
+      const uploads = await MediaUpload.countDocuments(), audit = await AuditEvent.countDocuments();
+      assert.deepEqual((await call('owner', 'put', `/api/site-images/${key}`, body).expect(200)).body.image, saved);
+      assert.equal(await MediaUpload.countDocuments(), uploads); assert.equal(await AuditEvent.countDocuments(), audit);
+      const statusPath = `/api/site-images/${key}/mutations/${mutationId}`;
+      for (const who of [null, 'staff', 'client']) await call(who, 'get', statusPath).expect(who ? 403 : 401);
+      assert.equal((await call('administrator', 'get', statusPath).expect(200)).body.image, null);
+      assert.deepEqual((await call('owner', 'get', statusPath).expect(200)).body.image, saved);
+      assert.equal((await call('owner', 'get', `/api/site-images/${key}/mutations/${randomUUID()}`).expect(200)).body.image, null);
+      const publicImage = await request(app).get(saved.src).expect(200);
+      assert.match(publicImage.headers['cache-control'], /public.*max-age=86400/);
+      assert.deepEqual(publicImage.body, Buffer.from(data, 'base64'));
+      await call('owner', 'patch', `/api/site-images/${key}`, { ...edit, expectedRevision: 1, mutationId: randomUUID(), x: 51 }).expect(200);
+      const stale = await request(app).get(saved.src).expect(307);
+      assert.equal(stale.headers.location, `/api/site-images/${key}/image?v=2`);
+      assert.match(stale.headers['cache-control'], /no-store/);
+      assert.equal((await call('owner', 'get', statusPath).expect(200)).body.image, null, 'later edits do not confirm an old mutation');
+      const unversioned = await request(app).get(`/api/site-images/${key}/image`).expect(200);
+      assert.match(unversioned.headers['cache-control'], /private.*no-store/);
+      for (const privateKey of [`background-${randomUUID()}`, 'lesson-private-photo']) {
+        const photo = (await call('owner', 'put', `/api/site-images/${privateKey}`, { ...body, mutationId: randomUUID() }).expect(200)).body.image;
+        assert.match((await request(app).get(photo.src).expect(200)).headers['cache-control'], /private.*no-store/);
       }
     });
     await Lesson.create({ _id: 'sample', title: 'Sample', category: 'Test', instructor: 'Owner', image: '/images/training-education.webp', published: true });
