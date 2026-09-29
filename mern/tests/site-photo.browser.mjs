@@ -42,7 +42,7 @@ try { for (const [name, engine] of Object.entries({ chromium, webkit })) {
         saved = { ...submitted, data: undefined, revision: submitted.expectedRevision + 1, src: `/api/site-images/${key}/image?v=${submitted.expectedRevision + 1}`, framed: true };
         json = { image: saved };
       }
-      if (path.startsWith(`/api/site-images/${key}/mutations/`)) { confirmations++; json = { image: path.endsWith(submitted.mutationId) ? saved : null }; }
+      if (path.startsWith(`/api/site-images/${key}/mutations/`)) { confirmations++; json = { image: confirmations >= 3 && path.endsWith(submitted.mutationId) ? saved : null }; }
       if (path === `/api/site-images/${key}/image`) {
         imageRequested?.(); if (imageGate) await imageGate;
         return route.fulfill({ contentType: submitted.contentType, body: Buffer.from(submitted.data, 'base64') });
@@ -63,7 +63,7 @@ try { for (const [name, engine] of Object.entries({ chromium, webkit })) {
       await dialog.getByRole('button', { name: 'Publish changes', exact: true }).click(); await dialog.waitFor({ state: 'hidden' });
       assert.equal(submitted.contentType, 'image/jpeg', 'opaque photos use JPEG when Safari cannot encode WebP');
       assert.ok(Buffer.from(submitted.data, 'base64').length <= 512 * 1024);
-      assert.match(submitted.filename, /\.jpg$/); assert.equal(confirmations, 1, 'a lost response is confirmed instead of reporting a false failure');
+      assert.match(submitted.filename, /\.jpg$/); assert.equal(confirmations, 3, 'keep checking while the disconnected save is still committing');
       await page.waitForFunction(key => { const image = document.querySelector(`.home-team-grid [data-site-image-key="${key}"]`); return image?.getAttribute('src').startsWith('/api/site-images/') && image.complete && image.naturalWidth > 0; }, key);
       let releaseImage;
       imageGate = new Promise(resolve => { releaseImage = resolve; });

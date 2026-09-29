@@ -238,8 +238,20 @@ export function mountSiteImages({ canEdit = false } = {}) {
       } catch (error) {
         if (!mutationId || (error.code !== 'request_timeout' && !(error instanceof TypeError))) throw error;
         fields.filename.textContent = 'Checking whether your changes were saved…';
-        result = await api(`/site-images/${target.key}/mutations/${mutationId}`);
-        if (!result.image) throw new Error('The save could not be confirmed. Your preview is still here. Refresh to check before retrying.');
+        const deadline = Date.now() + 30000;
+        do {
+          if (disposed) return;
+          try {
+            result = await api(`/site-images/${target.key}/mutations/${mutationId}`, { timeoutMs: Math.min(10000, deadline - Date.now()) });
+          } catch (confirmationError) {
+            if (confirmationError.code !== 'request_timeout' && !(confirmationError instanceof TypeError)) throw confirmationError;
+          }
+          if (result?.image) break;
+          const remaining = deadline - Date.now();
+          if (remaining <= 0) break;
+          await new Promise(resolve => setTimeout(resolve, Math.min(2000, remaining)));
+        } while (Date.now() < deadline);
+        if (!result?.image) throw new Error('The save could not be confirmed. Your preview is still here. Refresh to check before retrying.');
       }
       if (disposed) return;
       images[target.key] = result.image; setSiteImages(images); scan(); setBusy(false); close();
