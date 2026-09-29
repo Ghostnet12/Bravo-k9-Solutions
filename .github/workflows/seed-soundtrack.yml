@@ -1,0 +1,52 @@
+name: Seed Bravo soundtrack
+on:
+  push:
+    branches: [feature/site-soundtrack-clean-hero-20260928]
+    paths: ['.github/workflows/seed-soundtrack.yml']
+permissions:
+  contents: write
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Inspect temporary soundtrack transfer
+        shell: bash
+        env:
+          SHARE_URL: https://firestorage.ai/ja/f/B6N4AcCg8gE-
+        run: |
+          python - <<'PY'
+          import os,re,urllib.request,urllib.parse
+          url=os.environ['SHARE_URL']
+          req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0'})
+          with urllib.request.urlopen(req,timeout=30) as r:
+              data=r.read()
+              print('FINAL_URL',r.geturl())
+              print('CONTENT_TYPE',r.headers.get('content-type'))
+              print('SIZE',len(data))
+          open('/tmp/share-response.bin','wb').write(data)
+          if len(data)>8 and data[4:8]==b'ftyp':
+              print('DIRECT_MEDIA yes')
+          else:
+              text=data.decode('utf-8','replace')
+              candidates=set()
+              for pattern in [
+                  r'https?://[^"\'<> ]+',
+                  r'(?:"|\')([^"\']*(?:download|file|asset|storage|m4a|mp4)[^"\']*)(?:"|\')',
+              ]:
+                  for match in re.findall(pattern,text,re.I):
+                      value=match if isinstance(match,str) else match[0]
+                      if any(k in value.lower() for k in ['download','file','asset','storage','m4a','mp4','01a0eb01','jgjusk','b6n4']):
+                          candidates.add(value[:1000])
+              print('CANDIDATES_BEGIN')
+              for candidate in sorted(candidates):
+                  print(candidate)
+              print('CANDIDATES_END')
+              open('/tmp/share.html','w',encoding='utf-8').write(text)
+          PY
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: firestorage-inspection
+          path: /tmp/share*
