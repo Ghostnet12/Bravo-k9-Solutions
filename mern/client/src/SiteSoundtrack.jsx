@@ -56,5 +56,5 @@ export default function SiteSoundtrack() {
     };
   }, [pathname]);
 
-  return <audio ref={audio} src={SITE_SOUNDTRACK_SRC} autoPlay loop preload="none" aria-label={SITE_SOUNDTRACK_TITLE} data-site-soundtrack="" />;
+  return <audio ref={audio} src={SITE_SOUNDTRACK_SRC} loop preload="none" aria-label={SITE_SOUNDTRACK_TITLE} data-site-soundtrack="" />;
 }
