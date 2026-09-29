@@ -40,8 +40,9 @@ export async function sendUploadedMedia(uploadId, req, res, expectedKind) {
     ...(partial ? { 'Content-Range': `bytes ${start}-${end}/${upload.size}` } : {}),
   });
   if (req.method === 'HEAD') return res.end();
-  // Fetch only the requested chunks and stream with backpressure; never buffer a video.
-  const cursor = MediaChunk.find({ uploadId, index: { $gte: Math.floor(start / CHUNK_SIZE), $lte: Math.floor(end / CHUNK_SIZE) } }).sort({ index: 1 }).select('index data').lean().cursor();
+  // Keep database batches small so a large upload starts streaming immediately,
+  // instead of waiting for the driver's default batch of large binary chunks.
+  const cursor = MediaChunk.find({ uploadId, index: { $gte: Math.floor(start / CHUNK_SIZE), $lte: Math.floor(end / CHUNK_SIZE) } }).sort({ index: 1 }).select('index data').batchSize(4).lean().cursor();
   async function* content() {
     try {
       let sent = 0;
