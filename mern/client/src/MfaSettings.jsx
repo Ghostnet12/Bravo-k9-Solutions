@@ -9,9 +9,13 @@ export default function MfaSettings() {
   const feedbackRef = useRef(null), setupRef = useRef(null), recoveryRef = useRef(null);
   useEffect(() => { let active = true; api('/auth/mfa').then(value => { if (active) setStatus(value); }).catch(e => { if (active) setError({ message: e.message }); }); return () => { active = false; }; }, []);
   useEffect(() => {
-    const target = error || notice ? feedbackRef.current : codes ? recoveryRef.current : setup ? setupRef.current : null;
+    const target = error ? feedbackRef.current : codes ? recoveryRef.current : notice ? feedbackRef.current : setup ? setupRef.current : null;
     if (target) { target.focus(); target.scrollIntoView({ block: 'center', behavior: 'auto' }); }
   }, [error, notice, codes, setup]);
+  async function refreshAccount() {
+    try { await refreshUser(); }
+    catch { setNotice('Your security change was saved, but account details could not refresh. Save any recovery codes shown before reloading this page.'); }
+  }
   function invalid(event) {
     event.preventDefault();
     const field = [...event.currentTarget.elements].find(input => input.willValidate && !input.validity.valid) || event.target;
@@ -27,10 +31,10 @@ export default function MfaSettings() {
     try {
       if (status.enabled) {
         await api('/auth/mfa/disable', { method: 'POST', body: fields });
-        setStatus(value => ({ ...value, enabled: false })); setNotice('Two-step verification disabled. Other sessions were signed out.'); await refreshUser();
+        setStatus(value => ({ ...value, enabled: false })); setNotice('Two-step verification disabled. Other sessions were signed out.'); await refreshAccount();
       } else if (setup) {
         const result = await api('/auth/mfa/confirm', { method: 'POST', body: { ...fields, token: setup.token } });
-        setSetup(null); setCodes(result.recoveryCodes); setStatus(value => ({ ...value, enabled: true })); await refreshUser();
+        setSetup(null); setCodes(result.recoveryCodes); setStatus(value => ({ ...value, enabled: true })); await refreshAccount();
       } else setSetup(await api('/auth/mfa/enroll', { method: 'POST', body: fields }));
     } catch (e) { setError({ message: `${e.message || 'Verification could not finish.'} Enter your current password again before retrying.` }); } finally { setBusy(false); }
   }

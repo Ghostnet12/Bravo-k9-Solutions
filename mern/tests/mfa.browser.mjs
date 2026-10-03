@@ -15,12 +15,15 @@ try {
     try { for (const width of [390, 1440]) {
       const context = await browser.newContext({ viewport: { width, height: 844 } }), page = await context.newPage();
       const user = { id: 'aaaaaaaaaaaaaaaaaaaaaaaa', name: 'Fixture Owner', email: 'owner@example.test', role: 'owner', mfaEnabled: false };
-      let active = true, enabled = false, enrollRequests = 0, confirmRequests = 0; const errors = [], secret = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', recovery = '11111111-22222222-33333333-44444444';
+      let active = true, enabled = false, failAccountRefresh = true, enrollRequests = 0, confirmRequests = 0; const errors = [], secret = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', recovery = '11111111-22222222-33333333-44444444';
       page.on('pageerror', e => errors.push(e.message));
       await page.route('**/api/**', async route => {
         const path = new URL(route.request().url()).pathname; let status = 200, json = {};
         if (path === '/api/config') json = { connected: true, services: SERVICES, paymentsReady: false };
-        else if (path === '/api/auth/me') json = { user: active ? { ...user, mfaEnabled: enabled } : null, services: [], subscriptions: [], membership: { active: false } };
+        else if (path === '/api/auth/me') {
+          if (enabled && failAccountRefresh) { failAccountRefresh = false; status = 503; json = { error: 'Account refresh temporarily unavailable.' }; }
+          else json = { user: active ? { ...user, mfaEnabled: enabled } : null, services: [], subscriptions: [], membership: { active: false } };
+        }
         else if (path === '/api/membership-terms') json = { terms: [] };
         else if (path === '/api/bookings') json = { bookings: [] };
         else if (path === '/api/notifications') json = { items: [] };
@@ -73,6 +76,9 @@ try {
         await panel.getByLabel('Current password', { exact: true }).fill('Fixture-owner-password!'); await panel.getByLabel('Authenticator code', { exact: true }).fill('123456'); await panel.getByRole('button', { name: 'Confirm and enable' }).click();
         await panel.getByRole('heading', { name: 'Save your recovery codes' }).waitFor(); await panel.getByText(recovery, { exact: true }).waitFor(); assert.equal(await panel.getByText(secret, { exact: true }).count(), 0);
         await page.waitForFunction(() => document.activeElement?.textContent === 'Save your recovery codes');
+        await panel.getByRole('status').filter({ hasText: 'Your security change was saved' }).waitFor();
+        assert.equal(await panel.getByRole('alert').count(), 0, 'A failed account refresh must not report failed MFA enrollment');
+        assert.equal(await panel.getByText(recovery, { exact: true }).count(), 1, 'Keep recovery codes available after account refresh fails');
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)); await page.screenshot({ path: `test-results/mfa-recovery-${engineName}-${width}.png`, fullPage: true });
         await panel.getByRole('button', { name: 'I saved my recovery codes' }).click(); assert.equal(await panel.getByText(recovery, { exact: true }).count(), 0);
         await page.waitForLoadState('networkidle'); active = false; await page.reload(); await page.waitForLoadState('networkidle');
