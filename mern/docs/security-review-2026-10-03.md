@@ -11,7 +11,7 @@ Baseline: production branch `bravo-mern`, commit `2e7adc419ac3de3c8e16ed007f8bcb
 - Release testing also exposed a trainer-selection state race during assignment refresh. The form now follows the saved assignment when that assignment changes. Browser fixtures wait for refreshed records before interacting, and ordinary scheduling fixtures select weekdays; separate weekend opt-in coverage remains.
 - An accessible password dialog supports cancellation, keyboard submission and error recovery. Its password input is cleared on submission and closure; passwords are not stored in React state or browser storage.
 - Every reusable action in Bravo's workflow files is pinned to a full commit SHA. Remaining checkout steps disable credential persistence. Pins for checkout, setup-node and upload-artifact were verified against official upstream repository tags.
-- Vercel installs from the lockfile using `npm ci --ignore-scripts`. Test workflows also disable dependency install scripts; intentional build, browser setup and test commands remain explicit. The local production build succeeded with dependencies installed this way.
+- Vercel installs from the lockfile using `npm ci --include=dev --ignore-scripts`. Build tools such as Vite must be included even when npm uses production defaults; dependency install scripts stay disabled. Test workflows also disable dependency install scripts; intentional build, browser setup and test commands remain explicit.
 - The application declares Node 24.x, matching Vercel's project setting and every existing CI workflow. Vercel manages minor/security patch rollout; the exact runtime patch must be verified from provider deployment evidence when needed. This release does not claim to pin a patch version.
 
 ## Research and applicability
@@ -30,6 +30,7 @@ Primary sources checked during this review:
 ## Verification
 
 - Local lint and production build passed.
+- The first production deployment of PR #77 failed with build exit 127 and did not replace the healthy live deployment. A clean local `NODE_ENV=production` install reproduced the missing Vite build command. Explicit `--include=dev` corrected the production-mode install/build; the security workflow now exercises this install condition. Provider build logs were unavailable through the connector, so the diagnosis uses deployment metadata and the local reproduction.
 - Local unit/HTTP suite: 171 passed, zero failures/skips.
 - Local isolated MongoDB suites (`access-reauth`, `security-hardening`, `security-audit`): 29 tests passed, including both actor and target revocation races. No Atlas client data was used.
 - npm audit of the locked application dependencies returned zero known vulnerabilities at review time (341 dependency records). This is a point-in-time advisory result, not a guarantee of absence of unknown vulnerabilities.

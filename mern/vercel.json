@@ -239,5 +239,5 @@
     }
   ],
   "trailingSlash": false,
-  "installCommand": "npm ci --ignore-scripts"
+  "installCommand": "npm ci --include=dev --ignore-scripts"
 }
