@@ -1,1 +1,1 @@
-{"name":"bravo-cinematic-concept-preview","version":"0.1.0","private":true,"type":"module","engines":{"node":"22.x"},"scripts":{"build":"node scripts/build.mjs","check":"node --check public/app.js && node --check api/concept.js && node --check scripts/build.mjs"},"dependencies":{"mongodb":"6.20.0"}}
+{"name":"bravo-staging-02","version":"2.0.0","private":true,"type":"module","engines":{"node":"22.x"},"scripts":{"build":"node scripts/build.mjs","preview":"node scripts/serve.mjs","test":"node --test tests/*.test.mjs"}}
