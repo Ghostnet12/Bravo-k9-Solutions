@@ -1,4 +1,6 @@
 import { updateUserAccess } from './user-access.js';
+import { assertTrainingAllowance } from './training-allowance.js';
+import { termActive } from '../shared/membership-terms.js';
 import { reviewManagementRoutes } from './reviews.js';
 import { loadPublicRecommendations } from './review-store.js';
 import { discoveryRoutes } from './discovery.js';
@@ -167,6 +169,7 @@ app.patch('/api/bookings/:id/visits', requireUser, async (req, res) => {
   if (dates.some(d => dateTime(d).diff(dateTime(new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })), 'days').days > 92)) throw new Error('Book within the next 92 days.');
   await transaction(async session => {
     const settings = await Settings.findOneAndUpdate({ _id: 'schedule' }, { $inc: { revision: 1 } }, { returnDocument: 'after', session }).lean();
+    if (req.user.role === 'member') await assertTrainingAllowance({ userId: booking.userId, bookingId: booking._id, previousVisits: booking.visits, visits, session });
     await checkTrainerVisits(bookingTrainerIds(booking), visits, settings, session);
     const open = dates.length ? availability({ from: dates[0], to: dates.at(-1), settings }) : [];
     if (visits.some(v => !open.find(d => d.date === v.date)?.slots.includes(v.time))) throw new Error('Selected dates are outside current availability.');
@@ -175,7 +178,7 @@ app.patch('/api/bookings/:id/visits', requireUser, async (req, res) => {
       const terms = await Subscription.find({ userId: booking.userId, serviceIds: { $in: trainingIds }, status: { $in: ['active','trialing','canceled'] }, dogCount: { $gte: booking.dogCount || 1 } }).session(session).lean();
       for (const visit of visits.filter(v => v.service === 'training')) {
         const at = dateTime(visit.date, visit.time).toJSDate();
-        if ((booking.termStartsAt && at < booking.termStartsAt) || (booking.termEndsAt && at >= booking.termEndsAt) || !terms.some(t => t.validFrom && at >= t.validFrom && at < t.validUntil)) throw Object.assign(new Error('Choose training visits within this request’s covered membership dates.'), { status: 400 });
+        if ((booking.termStartsAt && at < booking.termStartsAt) || (booking.termEndsAt && at >= booking.termEndsAt) || !terms.some(t => t.validFrom && termActive(t, at))) throw Object.assign(new Error('Choose training visits within this request’s covered membership dates.'), { status: 400 });
       }
     }
     await Slot.deleteMany({ bookingId: booking._id }, { session });

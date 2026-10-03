@@ -1,4 +1,6 @@
 import { reserveVisits, releaseVisit } from './reservations.js';
+import { assertTrainingAllowance } from './training-allowance.js';
+import { termActive } from '../shared/membership-terms.js';
 import { randomUUID } from 'node:crypto';
 import { trainerSelectionInput, resolveTrainerIds } from './trainer-selection.js';
 import { assignedTrainerIds, bookingTrainerIds } from '../shared/trainers.js';
@@ -39,6 +41,7 @@ export async function saveScheduleChanges(req,res) {
       if(!booking.visits.some(old=>old.service==='training' && key(old)===key(v))) throw fail('A selected visit changed. Reload your calendar.',409);
     }
     const remaining=booking.visits.filter(v=>v.service!=='training' || !removeKeys.has(key(v)));
+    if (!isStaff) await assertTrainingAllowance({ userId: booking.userId, bookingId: booking._id, previousVisits: booking.visits, visits: [...remaining, ...data.additions.map(v => ({ ...v, service: 'training' }))], session });
     if(remaining.length+data.additions.length>62) throw fail('A request can contain up to 62 visits.');
     const currentTrainers=bookingTrainerIds(booking);
     const selectedTrainers=data.staffId?await resolveTrainerIds(data.staffId,session):[];
@@ -49,7 +52,7 @@ export async function saveScheduleChanges(req,res) {
       const at=when(v);
       if(at<=DateTime.now() || at.diff(DateTime.now(),'days').days>92) throw fail('Choose a future session within 92 days.');
       if((booking.termStartsAt && at.toJSDate()<booking.termStartsAt) || (booking.termEndsAt && at.toJSDate()>=booking.termEndsAt)) throw fail('Every added session must be within this request’s training membership period.');
-      if(!terms.some(t=>t.validFrom && at.toJSDate()>=t.validFrom && at.toJSDate()<t.validUntil)) throw fail('Every added session must be within the client’s paid training month.');
+      if(!terms.some(t=>t.validFrom && termActive(t, at.toJSDate()))) throw fail('Every added session must be within the client’s paid training month.');
       if(remaining.some(old=>key(old)===key(v))) throw fail('This visit is already on the schedule.',409);
     }
     const weekends=data.additions.filter(v=>when(v).weekday>=6);
