@@ -26,7 +26,8 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: mern/package-lock.json
-      - run: npm ci --ignore-scripts
+      - name: Install build dependencies even with production npm defaults
+        run: NODE_ENV=production npm ci --include=dev --ignore-scripts
       - run: npm run lint
       - run: npm run build
       - run: npm test
