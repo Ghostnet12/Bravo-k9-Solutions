@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from './api';
 import { Notice } from './ui';
 import { accessLabel } from '../../shared/access';
@@ -15,25 +16,51 @@ function PersonCard({ person, currentUserId, onSaved, onRemoved }) {
   const [draft, setDraft] = useState(person), [busy, setBusy] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState('');
   useEffect(() => { setDraft(person); }, [person]);
   const update = (name, next) => setDraft(current => ({ ...current, [name]: next }));
-  async function save(extra = {}) {
-    const grantsOwnerAccess = draft.role === 'owner' && person.role !== 'owner';
-    if (grantsOwnerAccess && !window.confirm(`Give ${person.name} full owner-level privileges? They can manage people, change access and pricing, moderate content, and issue refunds. They will appear publicly as staff, not an owner.`)) return;
+  const confirmation = useRef(null);
+  const [pendingAccess, setPendingAccess] = useState(null);
+  useEffect(() => { if (pendingAccess) confirmation.current?.showModal(); }, [pendingAccess]);
+  async function submitSave(body, currentPassword) {
+    if (busy) return;
     setBusy(true); setError(''); setNotice('');
     try {
-      await api(`/admin/users/${person._id}`, { method: 'PATCH', body: { role: draft.role === person.role ? undefined : draft.role, confirmOwnerAccess: grantsOwnerAccess || undefined, name: draft.name, phone: draft.phone || '', ...(person.role === 'member' ? { dogName: draft.dogName || '', address: draft.address || '', ...(!person.email && draft.email?.trim() ? { email: draft.email.trim() } : {}) } : {}), title: draft.title || '', bio: draft.bio || '', showPhone: !!draft.showPhone, ...extra } });
+      await api(`/admin/users/${person._id}`, { method: 'PATCH', body: { ...body, ...(currentPassword ? { currentPassword } : {}) } });
+      confirmation.current?.close(); setPendingAccess(null);
       await onSaved();
-      setNotice('Profile and access saved. New permissions apply on the next request; refresh their page to see updated controls.');
+      setNotice('Profile and access saved. Permission changes sign out existing sessions and require a fresh sign-in.');
     } catch (e) { setError(e.message); } finally { setBusy(false); }
+  }
+  function save(extra = {}) {
+    const changesRole = draft.role !== person.role;
+    const grantsOwnerAccess = draft.role === 'owner' && changesRole;
+    const body = { role: changesRole ? draft.role : undefined, confirmOwnerAccess: grantsOwnerAccess || undefined, name: draft.name, phone: draft.phone || '', ...(person.role === 'member' ? { dogName: draft.dogName || '', address: draft.address || '', ...(!person.email && draft.email?.trim() ? { email: draft.email.trim() } : {}) } : {}), title: draft.title || '', bio: draft.bio || '', showPhone: !!draft.showPhone, ...extra };
+    if (changesRole || (extra.blocked !== undefined && extra.blocked !== person.blocked)) {
+      setError(''); setNotice(''); setPendingAccess(body);
+    } else submitSave(body);
+  }
+  function confirmAccess(event) {
+    event.preventDefault();
+    const password = new FormData(event.currentTarget).get('currentPassword');
+    event.currentTarget.reset();
+    if (pendingAccess) submitSave(pendingAccess, password);
   }
   const isSelf = person._id === currentUserId, protectedAccess = person.isPrimaryOwner || isSelf;
   const label = person.role === 'member' && (person.membership?.manual || person.membership?.paidMembership) ? 'Member' : accessLabel(person);
-  return <details className="panel owner-person"><summary>{person.name}<RemoveClientButton client={person} onRemoved={onRemoved} disabled={busy}/> <span className="badge">{label}</span>{person.blocked ? ' · Blocked' : ''}</summary><div className="record-top"><span className={`badge ${draft.role}`}>{accessLabel(person, draft.role)}</span>{draft.blocked && <span className="badge cancelled">BLOCKED</span>}{draft.mutedUntil && new Date(draft.mutedUntil) > new Date() && <span className="badge">MUTED</span>}</div><Notice error>{error}</Notice><Notice>{notice}</Notice>
+  return <details className="panel owner-person"><summary>{person.name}<RemoveClientButton client={person} onRemoved={onRemoved} disabled={busy}/> <span className="badge">{label}</span>{person.blocked ? ' · Blocked' : ''}</summary><div className="record-top"><span className={`badge ${draft.role}`}>{accessLabel(person, draft.role)}</span>{draft.blocked && <span className="badge cancelled">BLOCKED</span>}{draft.mutedUntil && new Date(draft.mutedUntil) > new Date() && <span className="badge">MUTED</span>}</div><Notice error>{!pendingAccess && error}</Notice><Notice>{notice}</Notice>
     <Link className="button button-small" to={`/schedule?client=${person._id}`}>Schedule & PDF</Link><TemporaryPasswordControl person={person}/><RecoveryControl person={person}/><MemberAccessControl person={person} onSaved={onSaved}/>
     {['staff','owner'].includes(person.role)&&!person.blocked&&<TrainerClients staffId={person._id}/>}
     <div className="form-grid"><label>Name<input value={draft.name} onChange={e => update('name', e.target.value)}/></label><label>Email<input type="email" value={draft.email || ''} disabled={!!person.email || person.role !== 'member' || busy} maxLength="254" placeholder="Optional — add for client sign-in" onChange={e => update('email', e.target.value)}/></label>{person.role === 'member' && <><label>Dog’s name<input value={draft.dogName || ''} maxLength="80" onChange={e => update('dogName', e.target.value)}/></label><label>Visit address<input value={draft.address || ''} maxLength="300" onChange={e => update('address', e.target.value)}/></label></>}<label>Work permissions<select value={draft.role} disabled={protectedAccess || busy} onChange={e => update('role', e.target.value)}><option value="member">Client — no staff permissions</option><option value="staff">Staff</option>{person.isPrimaryOwner ? <option value="owner">Owner</option> : ['staff', 'owner'].includes(person.role) && <option value="owner" disabled={person.blocked}>Administrator — owner privileges</option>}</select></label><label>Phone<input type="tel" value={draft.phone || ''} onChange={e => update('phone', e.target.value)}/></label><label>Public title<input value={draft.title || ''} onChange={e => update('title', e.target.value)} placeholder="Trainer · Behavior specialist"/></label><label className="check-label owner-phone"><input type="checkbox" checked={!!draft.showPhone} onChange={e => update('showPhone', e.target.checked)}/>Show phone under Call a trainer</label></div>
     <p className="helper">{person.isPrimaryOwner ? 'The primary owner’s access is protected.' : isSelf ? 'You cannot remove your own administrator access.' : person.role === 'member' ? 'Use Make Member above for existing customers. Work permissions are separate: save as Staff first only when granting employee access, then choose Administrator for full management privileges.' : 'Administrator grants owner-level controls without changing the public title or listing this person as an owner. Choose Staff or Client to remove those privileges.'}</p>
     <label>Profile details<textarea rows="3" value={draft.bio || ''} onChange={e => update('bio', e.target.value)} placeholder="Specialties and a short introduction"/></label>
     <div className="record-actions"><button type="button" className="quiet-button" disabled={busy} onClick={() => { setDraft(person); setError(''); setNotice('Unsaved profile changes discarded. Saved profile and permissions are unchanged.'); }}>Reset profile edits</button><button className="button button-small" disabled={busy} onClick={() => save()}>{busy ? 'Saving…' : 'Save profile & access'}</button>{!protectedAccess && <button className="quiet-button" disabled={busy} onClick={() => { const muted = draft.mutedUntil && new Date(draft.mutedUntil) > new Date(); save({ mutedUntil: muted ? null : new Date(Date.now() + 24 * 3600000).toISOString() }); }}>{draft.mutedUntil && new Date(draft.mutedUntil) > new Date() ? 'Restore messaging' : 'Silence for 24 hours'}</button>}{!protectedAccess && <button className="quiet-button danger-link" disabled={busy} onClick={() => { if (window.confirm(draft.blocked ? 'Restore this account?' : 'Block this account and sign it out?')) save({ blocked: !draft.blocked }); }}>{draft.blocked ? 'Restore account' : 'Block account'}</button>}</div>
+    {createPortal(<dialog ref={confirmation} className="owner-confirm-dialog" aria-label={`Confirm access change: ${person.name}`} onCancel={event => { if (busy) event.preventDefault(); }} onClose={() => { confirmation.current?.querySelector('form')?.reset(); setPendingAccess(null); setError(''); }}>
+      <form onSubmit={confirmAccess}>
+        <h2>Confirm access change for {person.name}</h2>
+        <p>{pendingAccess?.role === 'owner' ? 'Administrator access allows this person to manage accounts, pricing, content and refunds.' : pendingAccess?.role ? `Work permissions will change to ${pendingAccess.role === 'member' ? 'Client' : 'Staff'}.` : ''} {pendingAccess?.blocked === true ? 'This account will be blocked.' : pendingAccess?.blocked === false ? 'This account will be restored.' : ''} Existing sessions and recovery links will be revoked.</p>
+        <label>Your current owner password<input name="currentPassword" type="password" autoComplete="current-password" required maxLength={128} autoFocus disabled={busy}/></label>
+        {error && <p role="alert" className="client-removal-error">{error}</p>}
+        <div className="owner-confirm-actions"><button type="button" className="button button-ghost" disabled={busy} onClick={() => confirmation.current.close()}>Cancel</button><button type="submit" className="button" disabled={busy}>{busy ? 'Saving…' : 'Confirm access change'}</button></div>
+      </form>
+    </dialog>, document.body)}
   </details>;
 }
 

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import express from 'express';
 import {once} from 'node:events';
-import {readFile,mkdir} from 'node:fs/promises';
+import {readFile,mkdir,writeFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import {chromium,webkit} from 'playwright';
 const dist=fileURLToPath(new URL('../client/dist/',import.meta.url));
@@ -22,7 +22,7 @@ try{for(const [name,engine] of Object.entries({chromium,webkit})){
  if(path==='/api/program-videos')json={clips};
  if(path==='/api/program-videos/manners'){const body=route.request().postDataJSON();clips=[{...clips[0],title:body.title,description:body.description,revision:2}];json={clip:clips[0]};}
  await route.fulfill({json});});
- for(const administrator of [false,true]){
+ try{for(const administrator of [false,true]){
  primary=!administrator;await page.goto(origin);await page.getByRole('button',{name:'Edit program video',exact:true}).waitFor();
  await page.getByLabel('Program photo or video',{exact:true}).selectOption('photo');await page.getByRole('button',{name:'Edit program photo',exact:true}).click();
  await page.locator('.site-photo-dialog[open]').waitFor();assert.equal(await page.getByLabel('Choose a replacement from files').count(),1);await page.getByRole('button',{name:'Close media editor'}).click();
@@ -37,6 +37,7 @@ try{for(const [name,engine] of Object.entries({chromium,webkit})){
  await page.screenshot({path:`test-results/program-editor-${name}-${width}-${administrator?'admin':'owner'}.png`,fullPage:false});
  }
  for(const visitor of ['staff','member',null]){role=visitor;await page.reload();await page.locator('#goal-title').waitFor();await page.waitForLoadState('networkidle');assert.equal(await page.locator('.program-media-tools').count(),0);assert.equal(await page.getByRole('button',{name:'Edit photos & videos',exact:true}).count(),0);}
- await context.close();console.log(`PASS ${name}/${width}: owner/admin media, photo picker, video editor, independent program choice, failed-save retry and reload`);
+ console.log(`PASS ${name}/${width}: owner/admin media, photo picker, video editor, independent program choice, failed-save retry and reload`);
+ }catch(error){await page.screenshot({path:`test-results/program-editor-failure-${name}-${width}.png`,fullPage:true});await writeFile(`test-results/program-editor-failure-${name}-${width}.txt`,await page.locator('body').innerText());throw error;}finally{await context.close();}
  }}finally{await browser.close();}
 }}finally{server.close();}

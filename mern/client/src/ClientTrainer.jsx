@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useBravo } from './context';
 import { api } from './api';
 import { Notice } from './ui';
@@ -8,6 +8,8 @@ export default function ClientTrainer({ bookings, onSaved, initiallyOpen = false
   const { user } = useBravo();
   const [bookingId, setBookingId] = useState(bookings[0]?._id || ''), [trainer, setTrainer] = useState(trainerChoice(bookings[0]) || user.id), [team, setTeam] = useState(null), [error, setError] = useState(''), [busy, setBusy] = useState(false);
   const booking = bookings.find(b => b._id === bookingId), assigned = trainerChoice(booking);
+  // Saved assignments can arrive after the form mounts during a refresh.
+  useEffect(() => { setTrainer(assigned || user.id); }, [bookingId, assigned, user.id]);
   const mine = bookingTrainerIds(booking).includes(user.id), selected = team?.find(t => t.id === trainer);
   const alreadyAccepted = user.role === 'owner' ? !!booking?.trainerAcceptedAt && !booking?.trainerAcceptanceRequired : acceptedTrainerIds(booking).includes(user.id);
   async function load() { try { const r = await api('/team'); setTeam(trainerOptions(r.team)); } catch (e) { setError(e.message); } }

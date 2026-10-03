@@ -56,6 +56,8 @@ try{for(const [engineName,engine]of Object.entries({chromium,webkit})){
    await move.getByLabel('Move credit to',{exact:true}).fill('2026-09-21');await move.getByRole('button',{name:'Save credit',exact:true}).click();
    await page.getByText('Credit moved to 2026-09-21.',{exact:true}).waitFor();
    assert.equal(lastMove.note,'');assert.equal(lastMove.includeWeekends,false);assert.equal(booking.visits.length,2);assert.equal(term.creditedDays,1);
+   // The success notice precedes the asynchronous calendar refresh.
+   await grid.getByRole('button',{name:name('2026-09-21')}).locator('.credit-day-label').waitFor();
    assert.equal(await grid.getByRole('button',{name:name('2026-09-20')}).locator('.credit-day-label').count(),0);
    assert.equal(await grid.getByRole('button',{name:name('2026-09-21')}).getAttribute('aria-pressed'),'true');
    await page.getByRole('button',{name:'Add or Cancel Date',exact:true}).click();const editor=page.getByRole('region',{name:'Add or Cancel Date',exact:true});

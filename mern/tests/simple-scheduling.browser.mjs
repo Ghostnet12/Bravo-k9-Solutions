@@ -10,7 +10,8 @@ const dist=fileURLToPath(new URL('../client/dist/',import.meta.url)),html=await 
 const app=express();app.use(express.static(dist));app.get('/{*path}',(_req,res)=>res.type('html').send(html));
 const server=app.listen(0,'127.0.0.1');await once(server,'listening');const origin=`http://127.0.0.1:${server.address().port}`;
 const id='aaaaaaaaaaaaaaaaaaaaaaaa',bookingId='bbbbbbbbbbbbbbbbbbbbbbbb',start=DateTime.now().setZone('America/Chicago').plus({months:1}).startOf('month');
-const dates=[start.toISODate(),start.plus({days:1}).toISODate()],month=start.toFormat('yyyy-MM');
+// This suite exercises ordinary scheduling. Weekend opt-in has its own coverage.
+const dates=Array.from({length:7},(_,i)=>start.plus({days:i})).filter(day=>day.weekday<6).slice(0,2).map(day=>day.toISODate()),month=start.toFormat('yyyy-MM');
 await mkdir('test-results',{recursive:true});
 try {for(const [engineName,engine] of Object.entries({chromium,webkit})){
  if(process.env.BRAVO_BROWSER_ENGINES&&!process.env.BRAVO_BROWSER_ENGINES.split(',').includes(engineName))continue;
