@@ -1,0 +1,10 @@
+import { cp, mkdir, rm, readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+const root=fileURLToPath(new URL('../',import.meta.url));
+if(process.env.VERCEL_ENV==='production') throw new Error('Preview-only branch: production deployment is intentionally blocked. Do not promote or merge this prototype.');
+const html=await readFile(root+'public/index.html','utf8');
+if(!html.includes('noindex,nofollow,noarchive')) throw new Error('Missing preview noindex guard.');
+await rm(root+'dist',{recursive:true,force:true});
+await mkdir(root+'dist',{recursive:true});
+await cp(root+'public',root+'dist',{recursive:true});
+console.log('Built isolated Bravo concept preview. No production APIs or customer data included.');
