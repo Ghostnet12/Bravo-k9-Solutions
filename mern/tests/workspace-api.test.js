@@ -5,8 +5,8 @@ import assert from 'node:assert/strict';
 import mongoose from 'mongoose';
 import request from 'supertest';
 import app from '../server/app.js';
-import { digest } from '../server/auth.js';
-import { ALL_MODELS, MemberAccess, TrainerSchedule, ChatReset, User, Session, RateBucket, Settings, LessonLibrary, ServiceSetting, Subscription, CommunityGroup, GroupMessage, DirectMessage, Message, Lesson, MediaUpload, MediaChunk, Booking, Review, AuditEvent } from '../server/models.js';
+import { digest, hashPassword } from '../server/auth.js';
+import { ALL_MODELS, PasswordReset, MemberAccess, TrainerSchedule, ChatReset, User, Session, RateBucket, Settings, LessonLibrary, ServiceSetting, Subscription, CommunityGroup, GroupMessage, DirectMessage, Message, Lesson, MediaUpload, MediaChunk, Booking, Review, AuditEvent } from '../server/models.js';
 const origin = 'http://localhost:5173';
 const ids = { owner: '6aa290cbd066f8feb3c1964f', staff: '111111111111111111111111', member: '222222222222222222222222', other: '333333333333333333333333' };
 function query(value) {
@@ -21,7 +21,11 @@ test('owner/staff workspace contracts over HTTP with isolated model mocks', asyn
   t.mock.method(mongoose, 'connect', async () => mongoose);
   t.mock.method(mongoose.connection, 'transaction', async work => work({}));
   for (const model of ALL_MODELS) t.mock.method(model, 'init', async () => model);
-  const users = Object.fromEntries(Object.entries(ids).map(([role, id]) => [id, { _id: id, role: role === 'other' ? 'member' : role, name: role, email: `${role}@example.test`, blocked: false, save: async function() { return this; } }]));
+  const password = 'Workspace-fixture-password-2026!';
+  const passwordHash = await hashPassword(password);
+  t.mock.method(User, 'updateOne', async () => ({ matchedCount: 1 }));
+  t.mock.method(PasswordReset, 'deleteMany', async () => ({ deletedCount: 0 }));
+  const users = Object.fromEntries(Object.entries(ids).map(([role, id]) => [id, { _id: id, role: role === 'other' ? 'member' : role, name: role, email: `${role}@example.test`, blocked: false, passwordHash, save: async function() { return this; } }]));
   t.mock.method(User, 'findById', id => query(users[String(id)] || null));
   t.mock.method(User, 'findByIdAndUpdate', (id, change) => { Object.assign(users[id], change.$set); return query(users[id]); });
   t.mock.method(User, 'findOneAndUpdate', (filter, change) => {
@@ -54,7 +58,7 @@ test('owner/staff workspace contracts over HTTP with isolated model mocks', asyn
   const call = (role, method, path, body) => {
     const req = request(app)[method](path).set('Origin', origin);
     if (role) req.set('Cookie', `bravo_session=${digest(role)}`);
-    return body === undefined ? req : req.send(body);
+    return body === undefined ? req : req.send(method === 'patch' && path.startsWith('/api/admin/users/') ? { currentPassword: password, ...body } : body);
   };
   await t.test('owner can promote/demote, staff and clients cannot grant access', async () => {
     for (const role of ['member', 'staff']) await call(role, 'patch', `/api/admin/users/${ids.other}`, { role: 'staff' }).expect(403);

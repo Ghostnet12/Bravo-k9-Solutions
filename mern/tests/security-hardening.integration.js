@@ -59,7 +59,7 @@ test('security boundaries through the production application stack', { timeout: 
       await RateBucket.deleteMany({});
     });
     await t.test('role changes revoke old and delayed sessions; fresh sign-in still works', async () => {
-      await call('owner', 'patch', `/api/admin/users/${users.member._id}`, { role: 'staff' }).expect(200);
+      await call('owner', 'patch', `/api/admin/users/${users.member._id}`, { role: 'staff', currentPassword: password }).expect(200);
       await call('member', 'get', '/api/admin').expect(401);
       cookies.delayed = await sessionFor(users.member, 0);
       await call('delayed', 'get', '/api/admin').expect(401);
@@ -67,13 +67,13 @@ test('security boundaries through the production application stack', { timeout: 
       cookies.member = login.headers['set-cookie'];
       assert.equal(login.body.user.role, 'staff');
       await call('member', 'get', '/api/admin').expect(200);
-      await call('owner', 'patch', `/api/admin/users/${users.member._id}`, { role: 'member' }).expect(200);
+      await call('owner', 'patch', `/api/admin/users/${users.member._id}`, { role: 'member', currentPassword: password }).expect(200);
       await call('member', 'get', '/api/admin').expect(401);
     });
     await t.test('blocked and removed accounts cannot keep sessions', async () => {
-      await call('owner', 'patch', `/api/admin/users/${users.staff._id}`, { blocked: true }).expect(200);
+      await call('owner', 'patch', `/api/admin/users/${users.staff._id}`, { blocked: true, currentPassword: password }).expect(200);
       cookies.delayed = await sessionFor(users.staff, 0);
-      await call('owner', 'patch', `/api/admin/users/${users.staff._id}`, { blocked: false }).expect(200);
+      await call('owner', 'patch', `/api/admin/users/${users.staff._id}`, { blocked: false, currentPassword: password }).expect(200);
       await call('delayed', 'get', '/api/admin').expect(401);
       await User.updateOne({ _id: users.other._id }, { $set: { removedAt: new Date() } });
       assert.equal((await call('other', 'get', '/api/auth/me').expect(200)).body.user, null);
@@ -120,8 +120,8 @@ test('security boundaries through the production application stack', { timeout: 
       for (const changes of [[{ role: 'staff' }, { role: 'member' }], [{ blocked: true }, { blocked: false }]]) {
         const recovery = await call('owner', 'post', `/api/admin/recovery/${users.other._id}`, { currentPassword: password }).expect(200);
         const token = new URL(recovery.body.url).hash.slice(1);
-        for (const change of changes) await call('owner', 'patch', `/api/admin/users/${users.other._id}`, change).expect(200);
-        await call(null, 'post', '/api/auth/recover', { token, password: 'Replacement-fixture-password-123!' }).expect(403);
+        for (const change of changes) await call('owner', 'patch', `/api/admin/users/${users.other._id}`, { ...change, currentPassword: password }).expect(200);
+        await call(null, 'post', '/api/auth/recover', { token, password: 'Replacement-fixture-password-123!' }).expect(400);
         await RateBucket.deleteMany({});
       }
       const recovery = await call('owner', 'post', `/api/admin/recovery/${users.other._id}`, { currentPassword: password }).expect(200);

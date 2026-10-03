@@ -238,5 +238,6 @@
       ]
     }
   ],
-  "trailingSlash": false
+  "trailingSlash": false,
+  "installCommand": "npm ci --ignore-scripts"
 }

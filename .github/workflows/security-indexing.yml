@@ -26,16 +26,17 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: mern/package-lock.json
-      - run: npm ci
+      - run: npm ci --ignore-scripts
       - run: npm run lint
       - run: npm run build
       - run: npm test
       - name: Isolated authentication, authorization, media and client regressions
-        run: node --test --test-concurrency=1 tests/security-audit.integration.js tests/mfa.integration.js tests/security-hardening.integration.js tests/client-login.integration.js tests/client-services.integration.js tests/member-access.integration.js tests/media-editor.integration.js tests/proof-videos.integration.js tests/administrator-removal.integration.js tests/client-removal.integration.js tests/site-operations.integration.js tests/discovery.integration.js tests/lesson-library.integration.js tests/membership-trainers.integration.js tests/customer-reviews.integration.js
-      - run: npm install --no-save --package-lock=false playwright@1.55.1
+        run: node --test --test-concurrency=1 tests/access-reauth.integration.js tests/security-audit.integration.js tests/mfa.integration.js tests/security-hardening.integration.js tests/client-login.integration.js tests/client-services.integration.js tests/member-access.integration.js tests/media-editor.integration.js tests/proof-videos.integration.js tests/administrator-removal.integration.js tests/client-removal.integration.js tests/site-operations.integration.js tests/discovery.integration.js tests/lesson-library.integration.js tests/membership-trainers.integration.js tests/customer-reviews.integration.js
+      - run: npm install --ignore-scripts --no-save --package-lock=false playwright@1.55.1
       - run: npx playwright install --with-deps chromium webkit
       - name: Public pages without JavaScript and client sign-in on mobile
         run: |
+          node tests/access-reauth.browser.mjs
           node tests/owner-reviews.browser.mjs
           node tests/site-photo.browser.mjs
           node tests/program-editor.browser.mjs
@@ -56,7 +57,7 @@ jobs:
             if [ "$attempt" -lt 3 ]; then sleep 15; fi
           done
           exit 1
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         if: always()
         with:
           name: security-indexing-evidence
