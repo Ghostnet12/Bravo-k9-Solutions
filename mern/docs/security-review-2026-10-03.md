@@ -32,7 +32,8 @@ Primary sources checked during this review:
 - Local isolated MongoDB suites (`access-reauth`, `security-hardening`, `security-audit`): 29 tests passed, including both actor and target revocation races. No Atlas client data was used.
 - npm audit of the locked application dependencies returned zero known vulnerabilities at review time (341 dependency records). This is a point-in-time advisory result, not a guarantee of absence of unknown vulnerabilities.
 - Production baseline: homepage, health, database readiness and unauthenticated denial of MFA/groups/bookings/cron passed the existing read-only security-header checks.
-- New browser regression covers mobile/desktop Chromium and WebKit. The pull request's hosted checks are authoritative for release; pending checks are not predeclared passed in this document.
+- Local Chromium browser regression passed at 390px and 1440px. WebKit depends on the hosted runner because local system libraries are missing. The new browser regression covers mobile/desktop Chromium and WebKit. The pull request's hosted checks are authoritative for release; pending checks are not predeclared passed in this document.
+- Vercel preview build and public health check passed. Preview reports `missing_configuration` for the database, so authenticated preview verification is unavailable; isolated database suites cover these flows. Production readiness must be checked after release.
 - Active production ruleset still requires a PR, current `verify` and `Bravo release gate`, resolved review threads, and prohibits force pushes/deletion without bypass actors. Preview SSO protection is enabled.
 
 ## Remaining operational work

@@ -18,7 +18,7 @@ try {
     try {
       for (const width of [390, 1440]) {
         const context = await browser.newContext({ viewport: { width, height: 844 } });
-        const page = await context.newPage(); const errors = [], writes = [];
+        const page = await context.newPage(); page.setDefaultTimeout(10000); const errors = [], writes = [];
         page.on('pageerror', error => errors.push(error.message));
         const user = { id: 'aaaaaaaaaaaaaaaaaaaaaaaa', name: 'Fixture Owner', role: 'owner', isPrimaryOwner: true };
         let client = { _id: 'cccccccccccccccccccccccc', name: 'Fixture Client', email: 'client@example.test', role: 'member', blocked: false };
@@ -44,12 +44,12 @@ try {
         try {
           await page.goto(`${origin}/admin?tab=people`);
           const card = page.locator('.owner-person').filter({ hasText: 'Fixture Client' });
-          await card.locator('summary').click();
+          await card.locator(':scope > summary').focus(); await page.keyboard.press('Enter');
           await card.getByLabel('Phone', { exact: true }).fill('6055550100');
           await card.getByRole('button', { name: 'Save profile & access', exact: true }).click();
           await card.getByText(/Profile and access saved/).waitFor();
           assert.equal(writes.length, 1); assert.equal(writes[0].currentPassword, undefined);
-          await card.getByLabel('Work permissions', { exact: true }).selectOption('staff');
+          await card.getByLabel(/^Work permissions/).selectOption('staff');
           await card.getByRole('button', { name: 'Save profile & access', exact: true }).click();
           const dialog = page.getByRole('dialog', { name: 'Confirm access change: Fixture Client', exact: true });
           await dialog.waitFor(); assert.equal(writes.length, 1);
@@ -67,10 +67,10 @@ try {
           await dialog.waitFor({ state: 'hidden' });
           await card.getByText(/Profile and access saved/).waitFor();
           assert.equal(client.role, 'staff'); assert.equal(writes.length, 3);
-          assert.equal(await input.inputValue(), '');
+          assert.equal(await page.locator('dialog[aria-label="Confirm access change: Fixture Client"] input[name="currentPassword"]').inputValue(), '');
           assert.deepEqual(errors, []);
           console.log(`${engineName}/${width}: profile edit, cancellation, denied confirmation, cleared password and successful promotion passed`);
-        } finally { await context.close(); }
+        } catch (error) { await page.screenshot({path:'test-results/access-debug.png',fullPage:true}); throw error; } finally { await context.close(); }
       }
     } finally { await browser.close(); }
   }
