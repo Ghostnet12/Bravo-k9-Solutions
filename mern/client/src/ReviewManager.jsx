@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { api } from './api';
 import ActionFeedback from './ActionFeedback';
 import ReviewPreview from './ReviewPreview';
@@ -18,9 +18,16 @@ export default function ReviewManager() {
     finally { setLoading(false); }
   }, []);
   useEffect(() => { load(); }, [load]);
+  const editorIdentity = editing ? editing.id || 'new' : null;
+  useLayoutEffect(() => {
+    // Focus as the editor mounts, before input can start. A delayed animation
+    // frame can otherwise steal focus while someone types in another field.
+    if (!editorIdentity) return;
+    form.current?.scrollIntoView({ block: 'center', behavior: 'instant' });
+    form.current?.querySelector('input')?.focus({ preventScroll: true });
+  }, [editorIdentity]);
   function edit(review) {
     setEditing(review ? { ...review } : emptyReview()); setError(''); setNotice('');
-    requestAnimationFrame(() => { form.current?.scrollIntoView({ block: 'center', behavior: 'instant' }); form.current?.querySelector('input')?.focus({ preventScroll: true }); });
   }
   async function save(event) {
     event.preventDefault(); setBusy(true); setError(''); setNotice('');
