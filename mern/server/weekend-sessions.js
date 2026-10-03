@@ -9,6 +9,7 @@ import { dateTime, HOURS, availability } from './scheduling.js';
 import { personalHours } from '../shared/trainer-schedule.js';
 import { checkTrainerVisits } from './trainer-schedules.js';
 import { ALL_SERVICES } from '../shared/catalog.js';
+import { activeTermQuery } from '../shared/membership-terms.js';
 const id=z.string().regex(/^[a-f\d]{24}$/i);
 const fail=(message,status=400)=>Object.assign(new Error(message),{status});
 function future(date,time='21:00') { const d=dateTime(date,time); if(d<=DateTime.now() || d.diff(DateTime.now(),'days').days>92) throw fail('Choose a future date within 92 days.');return d; }
@@ -52,7 +53,7 @@ export async function addTrainingVisit(req,res) {
     if(!b || !['paid','covered'].includes(b.paymentStatus) || !['requested','confirmed'].includes(b.status) || !b.serviceIds.some(s=>trainingIds.includes(s))) throw fail('Choose a paid active training request.',409);
     if(b.visits.length>=62) throw fail('This request already has 62 visits.');
     if((b.termStartsAt && when.toJSDate()<b.termStartsAt) || (b.termEndsAt && when.toJSDate()>=b.termEndsAt)) throw fail('This session must fall within this request’s training membership period.');
-    if(!await Subscription.exists({userId:b.userId,serviceIds:{$in:trainingIds},status:{$in:['active','trialing','canceled']},validFrom:{$lte:when.toJSDate()},validUntil:{$gt:when.toJSDate()},dogCount:{$gte:b.dogCount||1}}).session(session)) throw fail('This session must fall within the client’s paid training month.');
+    if(!await Subscription.exists({userId:b.userId,serviceIds:{$in:trainingIds},...activeTermQuery(when.toJSDate()),validFrom:{$lte:when.toJSDate()},dogCount:{$gte:b.dogCount||1}}).session(session)) throw fail('This session must fall within the client’s paid training month.');
     if(!availability({from:date,to:date,settings:team})[0].slots.includes(time)) throw fail('Open these days and times before adding a visit.');
     await checkTrainerVisits(bookingTrainerIds(b),[{date,time,service:'training'}],team,session);
     await reserveVisits(b._id,[{date,time}],bookingTrainerIds(b),session);

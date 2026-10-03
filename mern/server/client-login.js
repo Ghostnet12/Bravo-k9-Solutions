@@ -1,4 +1,5 @@
 import { verifyLoginFactor } from './mfa-service.js';
+import { lockStaffAuthorization } from './staff-authorization.js';
 import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import { User, Session, PasswordReset, AuditEvent } from './models.js';
@@ -58,15 +59,14 @@ export async function replaceTemporaryPassword(req, res) {
   const credential = await temporaryCredential();
   let user;
   await transaction(async session => {
-    const actor = await User.findById(req.user._id).select('role blocked').session(session);
-    if (!actor || actor.blocked || !['staff', 'owner'].includes(actor.role)) throw fail('Bravo staff access required.', 403);
+    await lockStaffAuthorization(req.user, session);
     user = await User.findOneAndUpdate({ _id: id, role: 'member', blocked: false, removedAt: null, mustChangePassword: true }, {
       $set: { passwordHash: credential.passwordHash, temporaryPasswordExpiresAt: credential.temporaryPasswordExpiresAt }, $inc: { credentialVersion: 1 },
     }, { returnDocument: 'after', session });
     if (!user) throw fail('This client no longer needs a temporary password. Refresh People & access or ask an administrator for account recovery.', 409);
     await Session.deleteMany({ userId: user._id }, { session });
     await PasswordReset.deleteMany({ userId: user._id }, { session });
-    await AuditEvent.create([{ actorId: actor._id, action: 'password.temporary-replaced', targetType: 'user', targetId: String(user._id) }], { session });
+    await AuditEvent.create([{ actorId: req.user._id, action: 'password.temporary-replaced', targetType: 'user', targetId: String(user._id) }], { session });
   });
   res.json({ user: publicUser(user), temporaryPassword: credential.temporaryPassword, temporaryPasswordExpiresAt: credential.temporaryPasswordExpiresAt });
 }

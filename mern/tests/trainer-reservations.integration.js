@@ -58,8 +58,9 @@ test('manual members and independent trainer reservations share one consistent c
       await assign('clientA', String(users.ashley._id)).expect(200);
       assert.equal((await batch('david','clientA',[{date,time:'10:00'}])).status,200);
       assert.equal(await Slot.countDocuments({date,time:'10:00'}),2);
-      assert.equal((await batch('clientA','clientA',[{date,time:'11:00'}])).status,200);
-      assert.equal((await batch('clientA','clientA',[],[{date,time:'11:00'}])).status,200);
+      assert.equal((await batch('clientA','clientA',[{date,time:'11:00'}])).status,409);
+      assert.equal((await batch('clientA','clientA',[{date:nextDate,time:'11:00'}])).status,200);
+      assert.equal((await batch('clientA','clientA',[],[{date:nextDate,time:'11:00'}])).status,200);
       const own = await call('clientA','get',`/api/client-schedule?month=${date.slice(0,7)}`).expect(200);
       assert.ok(own.body.visits.some(v=>v.date===date&&v.time==='10:00'&&v.status!=='cancelled'));
       const unrelated = await batch('clientD','clientA',[{date,time:'12:00'}]); assert.equal(unrelated.status,404);

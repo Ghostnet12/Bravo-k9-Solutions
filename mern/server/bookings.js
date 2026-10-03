@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { assertTrainingAllowance } from './training-allowance.js';
 import { occupiedTimes, reserveVisits, assertVisitsFree } from './reservations.js';
 import { randomUUID } from 'node:crypto';
 import { trainerSelectionInput, resolveTrainerIds } from './trainer-selection.js';
@@ -89,7 +90,12 @@ export async function createBooking(userId, payload, assignment = {}) {
     await transaction(async session => {
       // Schedule updates and reservations share a write lock; closures cannot race a booking.
       const settings = await Settings.findOneAndUpdate({ _id: 'schedule' }, { $inc: { revision: 1 } }, { returnDocument: 'after', session }).lean();
+      // A concurrent retry may have committed while this transaction waited.
+      // Return that request before applying the cross-booking daily allowance.
+      const repeated = await Booking.findOne({ userId, requestKey: data.requestKey }).session(session);
+      if (repeated) { booking = repeated; return; }
       if (!await User.exists({ _id: userId, blocked: { $ne: true }, removedAt: null }).session(session)) throw Object.assign(new Error('This client account is no longer active.'), { status: 409 });
+      if (!assignment.createdBy) await assertTrainingAllowance({ userId, visits: data.visits, session });
       await resolveTrainerIds(chosenTrainerIds, session);
       await checkTrainerVisits(chosenTrainerIds, data.visits, settings, session);
       const capacities = [];
