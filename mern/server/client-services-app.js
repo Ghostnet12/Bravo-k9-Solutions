@@ -4,6 +4,7 @@ import siteAdsRouter from './site-ads.js';
 import { monitorRequests, ingestVisit, ingestError, ingestVital, monitoringSummary, pingDatabase } from './monitoring.js';
 import { reserveVisits, releaseVisit } from './reservations.js';
 import express from 'express';
+import { assertTrainingAllowance } from './training-allowance.js';
 import { requestError } from './errors.js';
 import { bookingTrainerIds, trainerChoice, scheduledTrainerLabel } from '../shared/trainers.js';
 import { sessionMiddleware } from './session-middleware.js';
@@ -19,7 +20,7 @@ import { quote, serviceSelection, ALL_SERVICES } from '../shared/catalog.js';
 import { effectiveServices } from './services.js';
 import { membershipNotifications } from './membership-notifications.js';
 import { chatFilter } from './chat-state.js';
-import { MEMBERSHIP_ZONE, monthTerm } from '../shared/membership-terms.js';
+import { MEMBERSHIP_ZONE, monthTerm, termActive } from '../shared/membership-terms.js';
 import { availability, dateTime, HOURS } from './scheduling.js';
 import { checkTrainerVisits } from './trainer-schedules.js';
 import { openWeekend, addTrainingVisit } from './weekend-sessions.js';
@@ -116,9 +117,10 @@ app.post('/api/client-schedule/visit', ...session, requireUser, ...write, rateLi
         if (next.service === 'training') {
           if ((booking.termStartsAt && when.toJSDate() < booking.termStartsAt) || (booking.termEndsAt && when.toJSDate() >= booking.termEndsAt)) throw fail('Choose a date within this request’s training membership period.');
           const terms = await Subscription.find({ userId: booking.userId, status: { $in: ['active', 'trialing', 'canceled'] }, dogCount: { $gte: booking.dogCount || 1 }, serviceIds: { $in: ALL_SERVICES.filter(s => s.includes.includes('training')).map(s => s.id) } }).session(session).lean();
-          if (!terms.some(t => t.validFrom && when.toJSDate() >= t.validFrom && when.toJSDate() < t.validUntil)) throw fail('Choose a date within your paid membership month.', 400);
+          if (!terms.some(t => t.validFrom && termActive(t, when.toJSDate()))) throw fail('Choose a date within your paid membership month.', 400);
         }
         if (booking.visits.some(v => v.date === next.date && v.time === next.time)) throw fail('You already have a visit at that time.', 409);
+        if (!staff(req.user)) await assertTrainingAllowance({ userId: booking.userId, bookingId: booking._id, previousVisits: booking.visits, visits: booking.visits.map(v => same(v) ? next : v), session });
         await reserveVisits(booking._id, [next], bookingTrainerIds(booking), session);
         booking.visits = booking.visits.map(v => same(v) ? next : v);
         booking.status = 'requested';

@@ -42,6 +42,9 @@ export async function signOut(req, res) {
   res.clearCookie(cookieName(), cookieOptions());
 }
 export async function identify(req, res, next) {
+  // Nested application wrappers must never reuse a previously identified user
+  // when a later lookup finds that session revoked, expired or absent.
+  req.user = null;
   const token = sessionToken(req);
   if (token) {
     const session = await Session.findOne({ tokenHash: digest(token), expiresAt: { $gt: new Date() } });

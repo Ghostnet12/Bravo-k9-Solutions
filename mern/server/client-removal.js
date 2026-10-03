@@ -2,12 +2,14 @@ import { z } from 'zod';
 import { User, Booking, Slot, Session, PasswordReset, Settings, Subscription, AuditEvent } from './models.js';
 import { transaction } from './db.js';
 import { isPrimaryOwner } from './auth.js';
+import { lockStaffAuthorization } from './staff-authorization.js';
 
 const fail = (message, status = 409) => Object.assign(new Error(message), { status });
 export async function removeClient(req, res) {
   const clientId = z.string().regex(/^[a-f\d]{24}$/i).parse(req.params.id);
   z.object({ confirmRemoval: z.literal(true) }).strict().parse(req.body);
   await transaction(async session => {
+    await lockStaffAuthorization(req.user, session);
     // Use the same transaction lock as reservations and trainer assignments.
     await Settings.updateOne({ _id: 'schedule' }, { $inc: { revision: 1 } }, { session });
     const client = await User.findById(clientId).session(session);

@@ -124,6 +124,9 @@ test('September 27 security audit: client privacy, recovery revocation and dated
       const additional = await call('member', 'post', '/api/bookings', payload).expect(201);
       assert.equal(additional.body.booking.paymentStatus, 'unpaid');
       assert.equal(additional.body.booking.quote.monthlyCents, 30000);
+      // Release the first request before testing another dog-count quote for
+      // the same day; self-service now correctly permits one training session.
+      await call('member', 'post', `/api/bookings/${additional.body.booking._id}/cancel`, {}).expect(200);
       const covered = await call('member', 'post', '/api/bookings', { ...payload, requestKey: randomUUID(), dogCount: 1, visits: [{ date: visitDate, time: '11:00', service: 'training' }] }).expect(201);
       assert.equal(covered.body.booking.paymentStatus, 'covered');
       const oldVisit = { date: today.plus({ days: 1 }).toISODate(), time: '10:00', service: 'training' };
