@@ -60,9 +60,17 @@ try{
    assert.ok((await choices.locator('option').nth(3).textContent()).startsWith('David and Ashley'));
    await Promise.all([page.waitForResponse(r=>r.url().includes('/api/availability?')&&r.url().includes(JOINT_TRAINER_ID)),choices.selectOption(JOINT_TRAINER_ID)]);assert.equal(availabilityTrainer,JOINT_TRAINER_ID);
    await page.goto(`${origin}/schedule?client=${clientId}&month=2026-09`);await page.getByText('Assign trainer & accept client',{exact:true}).click();
-   const assignedChoice=page.getByLabel('Assigned trainer',{exact:true});await assignedChoice.locator(`option[value="${JOINT_TRAINER_ID}"]`).waitFor({state:'attached'});await assignedChoice.selectOption(JOINT_TRAINER_ID);
+   const assignedChoice=page.getByLabel('Assigned trainer',{exact:true});await assignedChoice.locator(`option[value="${JOINT_TRAINER_ID}"]`).waitFor({state:'attached'});
+   // An assignment changed in another session must update this open form too.
+   assigned=[david.id,ashley.id];await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+   await page.waitForFunction(id=>document.querySelector('select[aria-label="Assigned trainer"]')?.value===id,JOINT_TRAINER_ID);
+   assigned=[];await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+   await page.waitForFunction(id=>document.querySelector('select[aria-label="Assigned trainer"]')?.value===id,david.id);
+   await assignedChoice.selectOption(JOINT_TRAINER_ID);
    await page.getByRole('button',{name:'Assign trainer',exact:true}).click();await page.getByText('Trainer assigned. Each assigned trainer can now accept from their staff profile.',{exact:true}).waitFor();
    assert.equal(assignment.staffId,JOINT_TRAINER_ID);
+   // The success notice is rendered before the updated booking is fetched.
+   await page.getByText('Each assigned trainer can accept from their staff area. Administrators and owners can accept on their behalf.',{exact:true}).waitFor({state:'attached'});
    await page.getByText('Assign trainer & accept client',{exact:true}).click();await page.getByRole('button',{name:'Accept for both trainers',exact:true}).click();
    await page.getByText('Client accepted by both trainers.',{exact:true}).waitFor();assert.equal(acceptance.staffId,JOINT_TRAINER_ID);
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));assert.deepEqual(errors,[]);
