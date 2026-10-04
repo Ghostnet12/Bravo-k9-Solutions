@@ -22,7 +22,7 @@ export function useLiveSessions() {
     const load = async () => {
       try {
         const result = await api('/live');
-        if (active) setData({ sessions: result.sessions, loading: false, error: '', offset: new Date(result.serverTime).getTime() - Date.now() });
+        if (active) setData({ sessions: Array.isArray(result.sessions) ? result.sessions : [], loading: false, error: '', offset: result.serverTime ? new Date(result.serverTime).getTime() - Date.now() : 0 });
       } catch {
         if (active) setData(old => ({ ...old, sessions: [], loading: false, error: 'Live sessions could not refresh. Check your connection and try again.' }));
       } finally { if (active) timer = setTimeout(load, 15000); }

@@ -57,7 +57,7 @@ export default function LivePage() {
   const selected = sessions.find(session => session.id === search.get('session')) || sessions[0];
   return <><Header/><main id="main-content" tabIndex={-1} className="bravo-live-page">
     <section className="live-hero"><div className="live-shell"><p className="live-eyebrow">TRUST. TRAIN. DEPLOY.</p><h1>BRAVO <em>LIVE</em></h1><h2>REAL TRAINING. RIGHT NOW.</h2><p>Watch our trainers in live sessions.<br/>See the Bravo difference as it happens.</p><div className="live-hero-actions">{['staff', 'owner'].includes(user?.role) ? <Link className="button" to="/live/studio">Go live ↗</Link> : !user && <Link className="live-text-link" to="/account">Client sign in →</Link>}</div></div></section>
-    <div className="live-shell live-content"><div className="live-section-heading"><h2>LIVE SESSIONS</h2><span>REAL DOGS. REAL PROGRESS.</span></div>
+    <noscript><p className="live-shell live-noscript">Live video requires JavaScript and an internet connection. Enable JavaScript to see the current sessions and watch public training. Client-only sessions require you to sign in with the account linked to your dog. You can also call Bravo at (605) 824-2767 for help with your training session.</p></noscript><div className="live-shell live-content"><div className="live-section-heading"><h2>LIVE SESSIONS</h2><span>REAL DOGS. REAL PROGRESS.</span></div>
       {error && <p className="notice notice-error" role="alert">{error}</p>}
       {loading ? <p className="live-empty" role="status">Checking live sessions…</p> : sessions.length ? <>
         <div className="live-session-list"><div className="live-session-header"><span>TRAINER</span><span>LIVE</span><span>DOG</span><span>STARTED · CT</span><span>LIVE FOR</span><span/></div>

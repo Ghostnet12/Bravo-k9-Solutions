@@ -44,6 +44,7 @@ try {
         await page.screenshot({ path: `test-results/live-${engineName}-${width}.png`, fullPage: true });
         await page.goto(origin);
         await page.getByRole('link', { name: /TRAINING NOW.*WATCH BRAVO LIVE/ }).waitFor();
+        await page.locator('.live-promo').scrollIntoViewIfNeeded();
         await page.screenshot({ path: `test-results/live-banner-${engineName}-${width}.png`, fullPage: false });
         await LiveSession.updateOne({ _id: row._id }, { $set: { audience: 'client' } });
         await Promise.all([page.waitForResponse(r => r.url().endsWith('/api/live')), page.reload()]);
@@ -74,9 +75,11 @@ try {
         await page.getByRole('checkbox', { name: /I have permission/ }).check();
         assert.equal(await page.getByRole('button', { name: '● Start live' }).isDisabled(), true);
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${engineName} ${width} studio overflow`);
+        await page.evaluate(() => window.scrollTo(0, 0));
         await page.screenshot({ path: `test-results/live-studio-${engineName}-${width}.png`, fullPage: true });
         await page.getByRole('link', { name: 'Open the live viewing page →' }).click();
-        if (engineName === 'chromium') assert.equal(await page.evaluate(() => window.__previewStream.getTracks().every(track => track.readyState === 'ended')), true);
+        await page.locator('.bravo-live-page').waitFor();
+        if (engineName === 'chromium') await page.waitForFunction(() => window.__previewStream.getTracks().every(track => track.readyState === 'ended'));
         assert.deepEqual(errors, []);
         console.log(`PASS ${engineName} ${width}: live rows, private isolation, banner, studio, preview cleanup`);
       } finally { await context.close(); }
