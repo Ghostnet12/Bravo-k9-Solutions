@@ -9,7 +9,7 @@ import { liveConfigured, validateDescription } from '../server/live-media.js';
 const sdp = direction => `v=0\r\nm=video 9 UDP/TLS/RTP/SAVPF 96\r\na=${direction}\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\na=${direction}\r\n`;
 const offer = { type: 'offer', sdp: sdp('recvonly') }, answer = { type: 'answer', sdp: sdp('sendonly') };
 
-test('direct WebRTC isolates private signaling, caps admission and expires credentials', { timeout: 180000 }, async t => {
+test('direct WebRTC isolates private signaling, admits concurrent viewers without a cap and expires credentials', { timeout: 180000 }, async t => {
   const replica = await MongoMemoryReplSet.create({ replSet: { count: 1 }, binary: { version: '7.0.14' } });
   Object.assign(process.env, { NODE_ENV: 'test', MONGODB_URI: replica.getUri(), MONGODB_DB: 'live_tests', APP_ORIGIN: 'http://localhost:5173' });
   delete process.env.BRAVO_LIVE_ENABLED; delete process.env.STRIPE_SECRET_KEY;
@@ -47,7 +47,7 @@ test('direct WebRTC isolates private signaling, caps admission and expires crede
       await call('trainer', 'post', '/live', { audience: 'public', dogName: 'Gunner' }).expect(400);
       await request(app).post('/api/live').set('Cookie', cookies.trainer).set('Origin', 'https://attacker.test').send(body).expect(403);
       const studio = (await call('trainer', 'get', '/live/studio')).body;
-      assert.equal(studio.viewerLimit, 3); assert.equal(studio.bookings[0].dogName, 'Gunner');
+      assert.equal(studio.viewerLimit, null); assert.equal(studio.bookings[0].dogName, 'Gunner');
       assert.equal((await call('otherTrainer', 'get', '/live/studio')).body.bookings.length, 0);
     });
     await t.test('only an authenticated phone reporting a ready camera starts discovery', async () => {
@@ -92,22 +92,27 @@ test('direct WebRTC isolates private signaling, caps admission and expires crede
       }
       assert.equal(validateDescription(offer, 'offer'), true);
     });
-    await t.test('three slots remain atomic under concurrent joins, leases release capacity and old tokens cannot reuse slots', async () => {
+    await t.test('concurrent joins exceed three viewers, including existing sessions; expired credentials cannot be reused', async () => {
       await RateBucket.deleteMany({});
+      // A session started before the cap removal used zero-based slots.
+      await LivePeer.updateOne({ _id: clientPeer.peerId }, { $set: { slot: 0 } });
       const results = await Promise.all(Array.from({ length: 5 }, () => watch('client', session)));
-      assert.deepEqual(results.map(r => r.status).sort(), [200, 200, 409, 409, 409]);
-      assert.equal(await LivePeer.countDocuments({ sessionId: session.id }), 3);
+      assert.deepEqual(results.map(r => r.status).sort(), [200, 200, 200, 200, 200]);
+      assert.equal(await LivePeer.countDocuments({ sessionId: session.id }), 6);
+      const peers = await LivePeer.find({ sessionId: session.id }).lean();
+      assert.equal(new Set(peers.map(peer => peer.slot)).size, 6);
+      assert.equal((await beat('trainer', session)).body.peers.length, 6);
       await LivePeer.updateOne({ _id: clientPeer.peerId }, { $set: { expiresAt: new Date(0) } });
       await call('client', 'post', peerPath(session, clientPeer, 'poll'), { token: clientPeer.token }).expect(410);
       const replacement = (await watch('client', session).expect(200)).body;
       assert.notEqual(replacement.peerId, clientPeer.peerId);
       await call('client', 'post', peerPath(session, clientPeer, 'leave'), { token: clientPeer.token }).expect(200);
-      assert.equal(await LivePeer.countDocuments({ sessionId: session.id }), 3);
+      assert.equal(await LivePeer.countDocuments({ sessionId: session.id }), 6);
       await call('client', 'post', peerPath(session, replacement, 'leave'), { token: replacement.token }).expect(200);
-      assert.equal(await LivePeer.countDocuments({ sessionId: session.id }), 2);
+      assert.equal(await LivePeer.countDocuments({ sessionId: session.id }), 5);
       const failedPeer = results.find(r => r.status === 200).body;
       await call('trainer', 'post', peerPath(session, failedPeer, 'reject')).expect(200);
-      assert.equal(await LivePeer.countDocuments({ sessionId: session.id }), 1);
+      assert.equal(await LivePeer.countDocuments({ sessionId: session.id }), 4);
     });
     await t.test('viewer revocation removes peers from the trainer and stale broadcaster sessions fail closed', async () => {
       await User.updateOne({ _id: users.client._id }, { $inc: { credentialVersion: 1 } });

@@ -5,7 +5,7 @@ import { transaction } from './db.js';
 import { lockStaffAuthorization } from './staff-authorization.js';
 import { requireUser, requireStaff, rateLimit } from './auth.js';
 import { assignedTrainerIds } from '../shared/trainers.js';
-import { liveConfigured, LIVE_VIEWER_LIMIT, LIVE_PEER_LEASE_MS, LIVE_ICE_SERVERS, validateDescription } from './live-media.js';
+import { liveConfigured, LIVE_PEER_LEASE_MS, LIVE_ICE_SERVERS, validateDescription } from './live-media.js';
 
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const id = z.string().uuid();
@@ -38,15 +38,14 @@ const viewerBinding = req => req.user ? { viewerId: req.user._id, credentialVers
 const lease = () => new Date(Date.now() + LIVE_PEER_LEASE_MS);
 async function peersForTrainer(session) {
   const peers = await LivePeer.find({ sessionId: session._id, expiresAt: { $gt: new Date() } }).lean();
-  const allowed = [];
-  for (const peer of peers) {
-    if (peer.viewerId && !await User.exists({ _id: peer.viewerId, blocked: false, removedAt: null,
-      credentialVersion: peer.credentialVersion || { $in: [0, null] } })) {
-      await LivePeer.deleteOne({ _id: peer._id }); continue;
-    }
-    allowed.push({ id: peer._id, offer: peer.offer });
-  }
-  return allowed;
+  const viewerIds = [...new Set(peers.filter(peer => peer.viewerId).map(peer => String(peer.viewerId)))];
+  const viewers = viewerIds.length ? await User.find({ _id: { $in: viewerIds }, blocked: false, removedAt: null })
+    .select('_id credentialVersion').lean() : [];
+  const versions = new Map(viewers.map(viewer => [String(viewer._id), viewer.credentialVersion || 0]));
+  const revoked = peers.filter(peer => peer.viewerId && versions.get(String(peer.viewerId)) !== (peer.credentialVersion || 0));
+  if (revoked.length) await LivePeer.deleteMany({ _id: { $in: revoked.map(peer => peer._id) } });
+  const revokedIds = new Set(revoked.map(peer => peer._id));
+  return peers.filter(peer => !revokedIds.has(peer._id)).map(peer => ({ id: peer._id, offer: peer.offer }));
 }
 
 export function liveRoutes(app) {
@@ -61,7 +60,7 @@ export function liveRoutes(app) {
       ...(req.user.role === 'owner' ? {} : { $or: [{ staffId: req.user._id }, { staffIds: req.user._id }] }),
     }).select('dogName userId visits staffId staffIds').populate({ path: 'userId', model: User, select: 'name blocked removedAt' }).sort({ updatedAt: -1 }).limit(150).lean();
     const sessions = await LiveSession.find({ open: true, ...(req.user.role === 'owner' ? {} : { trainerId: req.user._id }) }).sort({ createdAt: -1 }).limit(20).lean();
-    res.json({ configured: liveConfigured(), transport: 'direct', viewerLimit: LIVE_VIEWER_LIMIT, serverTime: new Date(),
+    res.json({ configured: liveConfigured(), transport: 'direct', viewerLimit: null, serverTime: new Date(),
       bookings: bookings.filter(b => b.userId && !b.userId.blocked && !b.userId.removedAt).map(b => ({ id: String(b._id), dogName: b.dogName,
         clientName: b.userId.name, visits: b.visits })), sessions: sessions.map(s => ({ ...liveSummary(s), mine: String(s.trainerId) === String(req.user._id) })) });
   });
@@ -93,7 +92,7 @@ export function liveRoutes(app) {
       }], { session: dbSession });
       await AuditEvent.create([{ actorId: req.user._id, action: 'live.created', targetType: 'live', targetId: sessionId, details: { audience: data.audience } }], { session: dbSession });
     });
-    res.status(201).json({ session: liveSummary(session), transport: 'direct', iceServers: LIVE_ICE_SERVERS, viewerLimit: LIVE_VIEWER_LIMIT });
+    res.status(201).json({ session: liveSummary(session), transport: 'direct', iceServers: LIVE_ICE_SERVERS, viewerLimit: null });
   });
   app.post('/api/live/:id/heartbeat', requireUser, requireStaff, ready, rateLimit('live-heartbeat', 20, 60000), async (req, res) => {
     const session = await accessible(req, { publishing: true });
@@ -119,13 +118,13 @@ export function liveRoutes(app) {
     if (session.status !== 'live' || !await activeTrainer(session)) throw fail('This session is not broadcasting right now.', 410);
     const token = randomBytes(32).toString('hex'), peerId = randomUUID();
     await transaction(async dbSession => {
-      // Serialize admission with other joins and session closure; never oversubscribe.
-      const locked = await LiveSession.updateOne({ _id: session._id, open: true, status: 'live', lastSeenAt: { $gt: cutoff() } }, { $inc: { signalingRevision: 1 } }, { session: dbSession });
-      if (!locked.matchedCount) throw fail('This session has ended.', 410);
+      // Serialize joins with session closure. A growing sequence preserves the
+      // existing unique slot index without imposing a concurrent viewer cap.
+      const locked = await LiveSession.findOneAndUpdate({ _id: session._id, open: true, status: 'live', lastSeenAt: { $gt: cutoff() } },
+        { $inc: { signalingRevision: 1 } }, { session: dbSession, returnDocument: 'after' });
+      if (!locked) throw fail('This session has ended.', 410);
       await LivePeer.deleteMany({ sessionId: session._id, expiresAt: { $lte: new Date() } }).session(dbSession);
-      const peers = await LivePeer.find({ sessionId: session._id }).select('slot').session(dbSession).lean();
-      const slot = Array.from({ length: LIVE_VIEWER_LIMIT }, (_, i) => i).find(i => !peers.some(peer => peer.slot === i));
-      if (slot === undefined) throw fail('All three viewing spots are in use. Try again shortly.', 409);
+      const slot = locked.signalingRevision;
       await LivePeer.create([{ _id: peerId, sessionId: session._id, slot, tokenHash: hash(token), ...viewerBinding(req), offer, expiresAt: lease() }], { session: dbSession });
     });
     res.json({ session: liveSummary(session), peerId, token });
