@@ -129,4 +129,5 @@ if (publicPageLoaders[initialPath]) {
   }).catch(() => { reportBrowserError('page_crash'); });
 } else start();
 
-if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/live-sw.js').catch(() => {}));
+// Register on the live entry point so ordinary account workflows are unchanged.
+if ('serviceWorker' in navigator && window.location.pathname.startsWith('/live')) window.addEventListener('load', () => navigator.serviceWorker.register('/live-sw.js', { scope: '/live/' }).catch(() => {}));

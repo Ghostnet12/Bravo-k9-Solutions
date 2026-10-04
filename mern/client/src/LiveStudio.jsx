@@ -21,8 +21,10 @@ export default function LiveStudio() {
   const load = () => api('/live/studio').then(result => { if (mounted.current) setData(result); });
   useEffect(() => {
     mounted.current = true;
-    if (allowed) load().catch(e => setError(e.message));
+    let timer;
+    if (allowed) { load().catch(e => setError(e.message)); timer = setInterval(() => load().catch(() => {}), 15000); }
     return () => {
+      clearInterval(timer);
       mounted.current = false; stopTracks(tracks.current); tracks.current = []; room.current?.disconnect(); wakeLock.current?.release();
       if (current.current) fetch(`/api/live/${current.current.id}/end`, { method: 'POST', credentials: 'same-origin', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {});
       current.current = null;
@@ -112,10 +114,10 @@ export default function LiveStudio() {
       <Notice error>{error}</Notice>
       {data && !data.configured && <Notice>Camera preview is available. Broadcasting will unlock when Bravo’s media server is connected.</Notice>}
       <div className="live-studio-grid"><section className="live-setup panel"><p className="live-eyebrow">01 / SET THE SESSION</p>
-        <fieldset disabled={busy || !!session}><label>Dog / scheduled client<select value={bookingId} onChange={event => { setBookingId(event.target.value); setConsent(false); }}><option value="">Choose a saved training request…</option>{data?.bookings.map(item => <option value={item.id} key={item.id}>{item.dogName} · {item.clientName}</option>)}</select></label>
+        <fieldset disabled={busy || !!session}><legend className="sr-only">Session details</legend><label>Dog / scheduled client<select value={bookingId} onChange={event => { setBookingId(event.target.value); setConsent(false); }}><option value="">Choose a saved training request…</option>{data?.bookings.map(item => <option value={item.id} key={item.id}>{item.dogName} · {item.clientName}</option>)}</select></label>
           {!bookingId && <label>Dog’s name<input value={dogName} maxLength={80} placeholder="e.g. Gunner" onChange={e => setDogName(e.target.value)}/></label>}
           {booking && <p className="live-client-note">Client: {booking.clientName}{booking.visits?.length ? ` · ${booking.visits.length} scheduled visit${booking.visits.length === 1 ? '' : 's'}` : ''}</p>}
-          <legend className="sr-only">Session details</legend><div className="live-audiences"><label className={audience === 'client' ? 'is-selected' : ''}><input type="radio" name="audience" value="client" checked={audience === 'client'} onChange={() => { setAudience('client'); setConsent(false); }}/><strong>CLIENT ONLY</strong><span>Private access for this dog’s owner.</span></label><label className={audience === 'public' ? 'is-selected' : ''}><input type="radio" name="audience" value="public" checked={audience === 'public'} onChange={() => setAudience('public')}/><strong>PUBLIC LIVE</strong><span>Watchable from the Bravo homepage.</span></label></div>
+          <div className="live-audiences"><label className={audience === 'client' ? 'is-selected' : ''}><input type="radio" name="audience" value="client" checked={audience === 'client'} onChange={() => { setAudience('client'); setConsent(false); }}/><strong>CLIENT ONLY</strong><span>Private access for this dog’s owner.</span></label><label className={audience === 'public' ? 'is-selected' : ''}><input type="radio" name="audience" value="public" checked={audience === 'public'} onChange={() => setAudience('public')}/><strong>PUBLIC LIVE</strong><span>Watchable from the Bravo homepage.</span></label></div>
           {audience === 'public' && <label className="live-consent"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)}/>I have permission to show everyone in this session publicly.</label>}
           {audience === 'client' && !bookingId && <p className="helper">Select a saved client request to enable private viewing.</p>}
         </fieldset><p className="live-install">Add Bravo to your Home Screen for quick access. On iPhone: Share → Add to Home Screen.</p>
