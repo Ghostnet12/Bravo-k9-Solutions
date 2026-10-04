@@ -2,14 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import mongoose from 'mongoose';
 import request from 'supertest';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { liveConfigured, validateDescription } from '../server/live-media.js';
 
 const sdp = direction => `v=0\r\nm=video 9 UDP/TLS/RTP/SAVPF 96\r\na=${direction}\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\na=${direction}\r\n`;
 const offer = { type: 'offer', sdp: sdp('recvonly') }, answer = { type: 'answer', sdp: sdp('sendonly') };
 
-test('direct WebRTC isolates private signaling, caps admission and expires credentials', { timeout: 180000 }, async t => {
+test('direct WebRTC isolates private signaling, admits concurrent viewers without a cap and expires credentials', { timeout: 180000 }, async t => {
   const replica = await MongoMemoryReplSet.create({ replSet: { count: 1 }, binary: { version: '7.0.14' } });
   Object.assign(process.env, { NODE_ENV: 'test', MONGODB_URI: replica.getUri(), MONGODB_DB: 'live_tests', APP_ORIGIN: 'http://localhost:5173' });
   delete process.env.BRAVO_LIVE_ENABLED; delete process.env.STRIPE_SECRET_KEY;
@@ -47,7 +47,7 @@ test('direct WebRTC isolates private signaling, caps admission and expires crede
       await call('trainer', 'post', '/live', { audience: 'public', dogName: 'Gunner' }).expect(400);
       await request(app).post('/api/live').set('Cookie', cookies.trainer).set('Origin', 'https://attacker.test').send(body).expect(403);
       const studio = (await call('trainer', 'get', '/live/studio')).body;
-      assert.equal(studio.viewerLimit, 3); assert.equal(studio.bookings[0].dogName, 'Gunner');
+      assert.equal(studio.viewerLimit, null); assert.equal(studio.bookings[0].dogName, 'Gunner');
       assert.equal((await call('otherTrainer', 'get', '/live/studio')).body.bookings.length, 0);
     });
     await t.test('only an authenticated phone reporting a ready camera starts discovery', async () => {
@@ -92,22 +92,27 @@ test('direct WebRTC isolates private signaling, caps admission and expires crede
       }
       assert.equal(validateDescription(offer, 'offer'), true);
     });
-    await t.test('three slots remain atomic under concurrent joins, leases release capacity and old tokens cannot reuse slots', async () => {
+    await t.test('concurrent joins exceed three viewers, including existing sessions; expired credentials cannot be reused', async () => {
       await RateBucket.deleteMany({});
+      // A session started before the cap removal used zero-based slots.
+      await LivePeer.updateOne({ _id: clientPeer.peerId }, { $set: { slot: 0 } });
       const results = await Promise.all(Array.from({ length: 5 }, () => watch('client', session)));
-      assert.deepEqual(results.map(r => r.status).sort(), [200, 200, 409, 409, 409]);
-      assert.equal(await LivePeer.countDocuments({ sessionId: session.id }), 3);
+      assert.deepEqual(results.map(r => r.status).sort(), [200, 200, 200, 200, 200]);
+      assert.equal(await LivePeer.countDocuments({ sessionId: session.id }), 6);
+      const peers = await LivePeer.find({ sessionId: session.id }).lean();
+      assert.equal(new Set(peers.map(peer => peer.slot)).size, 6);
+      assert.equal((await beat('trainer', session)).body.peers.length, 6);
       await LivePeer.updateOne({ _id: clientPeer.peerId }, { $set: { expiresAt: new Date(0) } });
       await call('client', 'post', peerPath(session, clientPeer, 'poll'), { token: clientPeer.token }).expect(410);
       const replacement = (await watch('client', session).expect(200)).body;
       assert.notEqual(replacement.peerId, clientPeer.peerId);
       await call('client', 'post', peerPath(session, clientPeer, 'leave'), { token: clientPeer.token }).expect(200);
-      assert.equal(await LivePeer.countDocuments({ sessionId: session.id }), 3);
+      assert.equal(await LivePeer.countDocuments({ sessionId: session.id }), 6);
       await call('client', 'post', peerPath(session, replacement, 'leave'), { token: replacement.token }).expect(200);
-      assert.equal(await LivePeer.countDocuments({ sessionId: session.id }), 2);
+      assert.equal(await LivePeer.countDocuments({ sessionId: session.id }), 5);
       const failedPeer = results.find(r => r.status === 200).body;
       await call('trainer', 'post', peerPath(session, failedPeer, 'reject')).expect(200);
-      assert.equal(await LivePeer.countDocuments({ sessionId: session.id }), 1);
+      assert.equal(await LivePeer.countDocuments({ sessionId: session.id }), 4);
     });
     await t.test('viewer revocation removes peers from the trainer and stale broadcaster sessions fail closed', async () => {
       await User.updateOne({ _id: users.client._id }, { $inc: { credentialVersion: 1 } });
@@ -132,6 +137,34 @@ test('direct WebRTC isolates private signaling, caps admission and expires crede
       assert.equal(await LivePeer.countDocuments({ sessionId: publicSession.id }), 0);
       await watch(null, publicSession).expect(410);
       await call(null, 'post', peerPath(publicSession, peer, 'poll'), { token: peer.token }).expect(410);
+    });
+    await t.test('broadcaster answers and rejections have per-peer budgets; invalid requests keep aggregate abuse protection', async () => {
+      await RateBucket.deleteMany({});
+      const broadcast = (await call('owner', 'post', '/live', { dogName: 'Gunner', audience: 'public', publicConsent: true }).expect(201)).body.session;
+      await beat('owner', broadcast).expect(200);
+      // Seed admitted connections to isolate broadcaster budgets from admission's
+      // separate per-viewer/IP anti-abuse policy. No actual media is sent here.
+      const peers = Array.from({ length: 40 }, (_, slot) => ({ _id: randomUUID(), sessionId: broadcast.id,
+        slot: slot + 1, tokenHash: digest(randomBytes(32).toString('hex')), offer, expiresAt: new Date(Date.now() + 45000) }));
+      await LivePeer.insertMany(peers);
+      await LiveSession.updateOne({ _id: broadcast.id }, { $set: { signalingRevision: peers.length } });
+      const fillBudget = async (scope, identity, count) => {
+        const window = Math.floor(Date.now() / 60000);
+        for (const bucket of [window, window + 1]) await RateBucket.updateOne({ _id: digest(`${scope}:${identity}:${bucket}`) },
+          { $set: { count, expiresAt: new Date((bucket + 1) * 60000) } }, { upsert: true });
+      };
+      // Exhaust the general account bucket as well as exceeding the old 30/min
+      // answer ceiling, without imposing a replacement aggregate audience cap.
+      await fillBudget('api', String(users.owner._id), 240);
+      for (const peer of peers) await call('owner', 'post', peerPath(broadcast, { peerId: peer._id }, 'answer'), { answer }).expect(200);
+      await fillBudget('live-peer-answer', `${users.owner._id}:${broadcast.id}:${peers[0]._id}`, 30);
+      await call('owner', 'post', peerPath(broadcast, { peerId: peers[0]._id }, 'answer'), { answer }).expect(429);
+      await call('owner', 'post', peerPath(broadcast, { peerId: peers[1]._id }, 'answer'), { answer }).expect(200);
+      await call('owner', 'post', peerPath(broadcast, { peerId: randomUUID() }, 'answer'), { answer }).expect(429);
+      for (const peer of peers) await call('owner', 'post', peerPath(broadcast, { peerId: peer._id }, 'reject')).expect(200);
+      assert.equal(await LivePeer.countDocuments({ sessionId: broadcast.id }), 0);
+      await RateBucket.deleteMany({});
+      await call('owner', 'post', `/live/${broadcast.id}/end`).expect(200);
     });
     await t.test('concurrent start is singular and emergency disable is explicit', async () => {
       await RateBucket.deleteMany({});

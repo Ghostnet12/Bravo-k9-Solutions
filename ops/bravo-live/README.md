@@ -14,10 +14,11 @@ requires the account attached to the selected booking; the broadcasting trainer
 and owner also have authorized access. Public sessions appear in the homepage ad.
 Camera and microphone permission are requested only by the trainer. Audio starts
 off. Front/rear camera switching and microphone changes work during a session.
-Keep the phone unlocked and this screen open. Three concurrent viewing spots are
-available per session, enforced atomically on the server. The phone sends one copy
-per viewer, targeting 540p/20fps and up to 700 kbps video per connection where the
-browser supports bitrate control. Connection quality depends on the phone/network.
+Keep the phone unlocked and this screen open. There is no fixed concurrent viewer cap.
+The phone sends one copy per viewer, targeting 540p/20fps and up to 700 kbps video per connection where the
+browser supports bitrate control. More viewers increase phone upload, CPU and
+battery use; removing the cap does not guarantee unlimited capacity or unchanged
+quality. Existing API abuse protection and hosting/database quotas still apply.
 
 ## Network and cost boundary
 
@@ -40,6 +41,9 @@ https://webrtc.org/getting-started/turn-server.
 - Viewer SDP must be receive-only, audio/video only, and at most 40 KB. Only the
   original broadcasting trainer can answer. An owner may end another trainer's
   session but cannot impersonate that trainer's phone to answer offers.
+- Broadcaster answers/rejections use per-peer request budgets for existing,
+  authorized connections. Invalid or unauthorized requests retain the shared API
+  limit. A burst of viewers does not exhaust the trainer’s general API budget.
 - Each viewer receives a random in-memory capability; only its SHA-256 hash is
   stored. Logged-in viewer capabilities are bound to that user and credential
   version. Private access and trainer authorization are rechecked when polling.
@@ -68,9 +72,10 @@ withdrawn; do not deploy it.
 ## Verification
 
 `tests/live.integration.js` checks client isolation, token binding, receive-only
-signaling, concurrent viewer limits, expiry, account revocation and shutdown with
+signaling, concurrent admission beyond the former three-viewer cap, expiry, account
+revocation and shutdown with
 an isolated MongoDB replica set. `tests/live-direct.browser.mjs` sends actual test
-video/audio from a Chromium broadcaster to separate Chromium and WebKit viewers,
+video/audio from a Chromium broadcaster to four simultaneous Chromium and WebKit viewers,
 including camera switching and teardown. `tests/live.browser.mjs` checks mobile
 and desktop presentation, the public banner and camera cleanup. These automated
 same-host tests do not prove cellular NAT traversal. Finish acceptance on a real

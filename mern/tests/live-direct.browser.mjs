@@ -46,7 +46,7 @@ try {
   await phone.getByRole('button', { name: '■ End live session' }).waitFor();
   const record = await LiveSession.findOne({ open: true }); assert.equal(record.transport, 'direct'); assert.equal(record.status, 'live');
   const viewers = [];
-  for (const [name, engine] of [['chromium', chrome], ['webkit', safari]]) {
+  for (const [name, engine] of [['chromium', chrome], ['webkit', safari], ['chromium-third', chrome], ['chromium-fourth', chrome]]) {
     const context = await engine.newContext({ viewport: { width: 390, height: 900 } });
     const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message));
     await page.addInitScript(() => { window.__cameraRequests = 0; navigator.mediaDevices.getUserMedia = async () => { window.__cameraRequests++; throw new Error('Viewers must not request camera access'); }; });
@@ -59,7 +59,13 @@ try {
     viewers.push(page);
     console.log(`PASS real direct video frames: Chromium phone to ${name}, no viewer camera permission`);
   }
-  await phone.getByText('2/3 viewers', { exact: false }).waitFor();
+  await phone.getByText('4 viewers', { exact: false }).waitFor();
+  assert.equal(await LivePeer.countDocuments({ sessionId: record._id }), 4);
+  for (const page of viewers) {
+    const before = await page.locator('.live-video-stage video').evaluate(video => video.currentTime);
+    await page.waitForFunction(time => document.querySelector('.live-video-stage video').currentTime > time + 0.5, before);
+  }
+  console.log('PASS four simultaneous viewers receive advancing video beyond the former cap');
   await phone.getByRole('button', { name: 'Microphone off' }).click();
   for (const page of viewers) {
     await page.waitForFunction(() => window.__remoteStream.getAudioTracks().some(t => t.readyState === 'live' && !t.muted), null, { timeout: 20000 });

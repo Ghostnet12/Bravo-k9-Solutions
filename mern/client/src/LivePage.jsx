@@ -48,7 +48,7 @@ function LivePlayer({ session }) {
     </div>
     <div className="live-player-caption"><div><h2>{session.trainerName} <span> / </span> {session.dogName}</h2><p>Started {liveTime(session.startedAt)} CT · {session.audience === 'client' ? 'Client only' : 'Public session'}</p></div>
       <div className="live-controls"><button onClick={() => toggleSound().catch(() => setError('Tap again to enable sound.'))} disabled={state !== 'watching'} aria-pressed={sound}>{sound ? 'Mute audio' : 'Enable audio'}</button><button onClick={() => { const element = video.current; if (element?.webkitEnterFullscreen) element.webkitEnterFullscreen(); else element?.requestFullscreen?.().catch(() => {}); }} disabled={state !== 'watching'}>Full screen</button></div>
-    </div><p className="live-caption-note">Direct phone stream · 3 viewing spots. If this network cannot connect, try Wi-Fi. Automatic captions and replays are not available.</p>
+    </div><p className="live-caption-note">Direct phone stream. Quality depends on the trainer’s connection and audience size. If this network cannot connect, try Wi-Fi. Automatic captions and replays are not available.</p>
   </section>;
 }
 
