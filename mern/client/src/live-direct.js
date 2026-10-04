@@ -37,7 +37,16 @@ export function createBroadcaster(sessionId, getStream, onCount) {
       await pc.setLocalDescription(await pc.createAnswer());
       const description = await gatherDescription(pc);
       if (closed) return;
-      await api(`/live/${sessionId}/peers/${item.id}/answer`, { method: 'POST', body: { answer: description }, timeoutMs: 10000 });
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (closed || pc.signalingState === 'closed') throw new Error('Connection cancelled.');
+        try {
+          await api(`/live/${sessionId}/peers/${item.id}/answer`, { method: 'POST', body: { answer: description }, timeoutMs: 8000 });
+          break;
+        } catch (error) {
+          if (attempt === 2 || [400, 401, 403, 404, 410].includes(error.status)) throw error;
+          await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
+        }
+      }
       for (const sender of pc.getSenders()) {
         if (!sender.track) continue;
         const parameters = sender.getParameters();
@@ -46,7 +55,12 @@ export function createBroadcaster(sessionId, getStream, onCount) {
           await sender.setParameters(parameters).catch(() => {});
         }
       }
-    } catch { pc.close(); count(); }
+    } catch {
+      clearTimeout(peer.timeout); pc.close(); count();
+      // Release a failed slot; retain the local tombstone until the next sync so
+      // a stale heartbeat cannot recreate a connection with an obsolete answer.
+      if (!closed) await api(`/live/${sessionId}/peers/${item.id}/reject`, { method: 'POST', body: {}, timeoutMs: 5000 }).catch(() => {});
+    }
   }
   return {
     sync(items) {

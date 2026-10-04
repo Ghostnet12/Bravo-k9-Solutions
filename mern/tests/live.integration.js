@@ -73,6 +73,10 @@ test('direct WebRTC isolates private signaling, caps admission and expires crede
       await call('otherTrainer', 'post', peerPath(session, clientPeer, 'answer'), { answer }).expect(404);
       await call('owner', 'post', peerPath(session, clientPeer, 'answer'), { answer }).expect(403);
       await call('trainer', 'post', peerPath(session, clientPeer, 'answer'), { answer }).expect(200);
+      await call('trainer', 'post', peerPath(session, clientPeer, 'answer'), { answer }).expect(200);
+      await call('trainer', 'post', peerPath(session, clientPeer, 'answer'), { answer: { ...answer, sdp: answer.sdp + 'a=x-changed\r\n' } }).expect(410);
+      await call('owner', 'post', peerPath(session, clientPeer, 'reject')).expect(403);
+      await call('otherTrainer', 'post', peerPath(session, clientPeer, 'reject')).expect(404);
       for (const who of [null, 'stranger', 'otherTrainer']) await call(who, 'post', peerPath(session, clientPeer, 'poll'), { token: clientPeer.token }).expect(404);
       await call('owner', 'post', peerPath(session, clientPeer, 'poll'), { token: clientPeer.token }).expect(410);
       await call('client', 'post', peerPath(session, clientPeer, 'poll'), { token: '0'.repeat(64) }).expect(410);
@@ -101,6 +105,9 @@ test('direct WebRTC isolates private signaling, caps admission and expires crede
       assert.equal(await LivePeer.countDocuments({ sessionId: session.id }), 3);
       await call('client', 'post', peerPath(session, replacement, 'leave'), { token: replacement.token }).expect(200);
       assert.equal(await LivePeer.countDocuments({ sessionId: session.id }), 2);
+      const failedPeer = results.find(r => r.status === 200).body;
+      await call('trainer', 'post', peerPath(session, failedPeer, 'reject')).expect(200);
+      assert.equal(await LivePeer.countDocuments({ sessionId: session.id }), 1);
     });
     await t.test('viewer revocation removes peers from the trainer and stale broadcaster sessions fail closed', async () => {
       await User.updateOne({ _id: users.client._id }, { $inc: { credentialVersion: 1 } });

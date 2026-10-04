@@ -28,6 +28,14 @@ try {
   await trainerContext.addCookies([{ name: 'bravo_session', value: token, domain: '127.0.0.1', path: '/' }]);
   const phone = await trainerContext.newPage(), errors = [];
   phone.on('pageerror', e => errors.push(e.message));
+  let lostAnswerResponse = false;
+  await phone.route('**/api/live/*/peers/*/answer', async route => {
+    if (!lostAnswerResponse) {
+      lostAnswerResponse = true;
+      const delivered = await route.fetch(); assert.equal(delivered.status(), 200);
+      await route.abort('failed'); // Answer persisted, but the phone sees a network failure.
+    } else await route.continue();
+  });
   await phone.goto(`${origin}/live/studio`);
   await phone.getByLabel('Dog’s name').fill('Gunner');
   await phone.getByRole('radio', { name: /PUBLIC LIVE/ }).check();
@@ -69,8 +77,9 @@ try {
   for (const page of viewers) await page.waitForFunction(() => window.__remoteStream.getTracks().every(t => t.readyState === 'ended'), null, { timeout: 30000 });
   assert.equal(await LivePeer.countDocuments({ sessionId: record._id }), 0);
   assert.equal((await LiveSession.findById(record._id)).status, 'ended');
+  assert.equal(lostAnswerResponse, true);
   assert.deepEqual(errors, []);
-  console.log('PASS microphone enable/disable, live camera switch, viewer count, local track cleanup, peer cleanup and remote shutdown');
+  console.log('PASS lost-answer response recovery, microphone enable/disable, live camera switch, viewer count, local track cleanup, peer cleanup and remote shutdown');
 } finally {
   await chrome?.close(); await safari?.close();
   if (server) await new Promise(resolve => server.close(resolve));

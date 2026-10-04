@@ -143,9 +143,17 @@ export function liveRoutes(app) {
     const { answer } = z.object({ answer: description('answer') }).strict().parse(req.body);
     const session = await accessible(req, { publishing: true });
     if (String(session.trainerId) !== String(req.user._id) || !await activeTrainer(session)) throw fail('Only the broadcasting trainer may answer.', 403);
-    const updated = await LivePeer.updateOne({ _id: id.parse(req.params.peerId), sessionId: session._id,
-      expiresAt: { $gt: new Date() }, 'answer.sdp': { $exists: false } }, { $set: { answer } });
-    if (!updated.matchedCount) throw fail('This viewing connection is no longer waiting.', 410);
+    const filter = { _id: id.parse(req.params.peerId), sessionId: session._id, expiresAt: { $gt: new Date() } };
+    const updated = await LivePeer.updateOne({ ...filter, 'answer.sdp': { $exists: false } }, { $set: { answer } });
+    // Retrying the same answer is safe after a lost response. Never replace a
+    // negotiated fingerprint/description under an existing viewer capability.
+    if (!updated.matchedCount && !await LivePeer.exists({ ...filter, 'answer.type': answer.type, 'answer.sdp': answer.sdp })) throw fail('This viewing connection is no longer waiting.', 410);
+    res.json({ ok: true });
+  });
+  app.post('/api/live/:id/peers/:peerId/reject', requireUser, requireStaff, ready, rateLimit('live-peer-reject', 30, 60000), async (req, res) => {
+    const session = await accessible(req, { publishing: true });
+    if (String(session.trainerId) !== String(req.user._id) || !await activeTrainer(session)) throw fail('Only the broadcasting trainer may close this connection.', 403);
+    await LivePeer.deleteOne({ _id: id.parse(req.params.peerId), sessionId: session._id });
     res.json({ ok: true });
   });
   app.post('/api/live/:id/peers/:peerId/leave', ready, rateLimit('live-peer-leave', 30, 60000), async (req, res) => {
