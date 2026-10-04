@@ -28,6 +28,7 @@ import './discovery.css';
 // Keep the server-rendered public page readable until its interactive module
 // is ready. A failed chunk must not replace useful HTML with a loading/error shell.
 const publicPageLoaders = {
+  '/live': () => import('./LivePage'),
   '/workshops': () => import('./WorkshopPage'),
   '/dog-training': () => import('./DogTrainingPage'),
   '/behavior-assessment': () => import('./BehaviorAssessmentPage'),
@@ -55,7 +56,7 @@ const AccountPage = lazy(() => import('./AccountPage'));
 const LearnPage = publicPage('/learn');
 const CommunityPage = lazy(() => import('./CommunityPage'));
 const ContactPage = publicPage('/contact');
-const LivePage = lazy(() => import('./LivePage'));
+const LivePage = publicPage('/live');
 const LiveStudio = lazy(() => import('./LiveStudio'));
 const AdminPage = lazy(() => import('./AdminPage'));
 const DogWalkingPage = publicPage('/dog-walking');
