@@ -1,0 +1,9 @@
+The Caddy and LiveKit configuration structure in prepare-server.py is adapted
+from LiveKit's deployment generator:
+https://github.com/livekit/deploy
+Source revision: 1a7b369f94e3a2f890d366fceeb4f273bf9fb3f6
+Licensed under the Apache License, Version 2.0; see LICENSE.livekit-deploy.
+
+Bravo changes: fixed hostnames and signed webhook destination, pinned image
+digests, private credential generation, UDP multiplexing, explicit room creation,
+restricted Redis binding, log rotation, and startup health dependency.

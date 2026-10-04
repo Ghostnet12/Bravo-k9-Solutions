@@ -6,6 +6,7 @@ rtc:
   udp_port: 7882
   use_external_ip: true
 room:
+  auto_create: false
   empty_timeout: 90
   departure_timeout: 20
   max_participants: 100

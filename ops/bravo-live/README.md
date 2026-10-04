@@ -5,31 +5,94 @@ LiveKit server carries WebRTC video/audio; Vercel never proxies the video. The c
 ships disabled until this service exists. No paid infrastructure is provisioned by
 this change. There is no automatic recording.
 
-## Deployment prerequisites
+## Server choice and status
 
-Use a maintained Linux VM with a public IP and sufficient outbound bandwidth.
-Create DNS records `live.bravounleashed.com` and `turn.bravounleashed.com` pointing
-to that service. These records must permit direct WebRTC traffic; an ordinary
-HTTP-only reverse proxy cannot carry all media transports.
+Proposed starting host: one DigitalOcean CPU-Optimized Droplet, 2 dedicated vCPUs,
+4 GiB RAM, 25 GiB SSD, Ubuntu 24.04 LTS amd64, in a region close to the trainers.
+The published regular plan costs **$42/month** before tax with 4,000 GiB of monthly
+outbound transfer. Allowances accrue with runtime; outbound overage is $0.01/GiB.
+This is a starting configuration to test, not a promise of 100 simultaneous viewers
+or a hard monthly spending limit. No backups, extra disks or paid add-ons are included.
+Pricing checked 2026-10-04:
 
-Use LiveKit's official VM deployment generator, which generates Docker Compose,
-Caddy TLS routing, TURN, and optional Redis configuration:
-https://docs.livekit.io/transport/self-hosting/vm/
+- https://www.digitalocean.com/pricing/droplets
+- https://docs.digitalocean.com/platform/billing/bandwidth/
 
-Follow the current generated deployment rather than deploying a bare coturn
-container: coturn alone is not the signaling server or an SFU. Review and pin the
-generated container versions. Keep generated keys/configuration off GitHub.
+**Hosting has not been purchased or provisioned by this change.** The generator's
+credential isolation and refusal cases have been tested locally. The generated
+containers still require runtime, DNS, TLS and phone/network verification on a VM.
 
-Apply `livekit.example.yaml` settings to the generated configuration. Retain its
-TLS certificate locations and TCP 443 routing: HTTPS and TURN/TLS share an IP only
-when the generated layer-4 routing handles both hostnames. Do not expose port
-7880 publicly without the HTTPS proxy or expose Redis publicly.
+## Deploy on the approved VM
 
-Allow the generator's required ports, typically TCP 80/443/7881, UDP 443/7882.
-If its configuration uses a UDP port range instead of the UDP mux port, allow that
-range instead. See https://docs.livekit.io/transport/self-hosting/ports-firewall/.
-Set the signed webhook URL to `https://bravounleashed.com/api/live/webhook` using
-the same LiveKit API key. Verify signed events reach the handler before enabling.
+The included generator adapts LiveKit's official VM layout: Caddy terminates TLS,
+LiveKit supplies the SFU and authenticated TURN, and Redis remains host-local.
+Separate coturn is unnecessary. Source attribution is in `NOTICE` and
+`LICENSE.livekit-deploy`. Images are fixed by digest in `images.lock.json`.
+
+1. Provision the approved persistent Linux VM with a public IPv4 address and SSH
+   key authentication. Install Docker Engine and its Compose v2 plugin using
+   https://docs.docker.com/engine/install/ubuntu/. Enable Docker at boot. Do not
+   use an ephemeral development workspace as the production media server.
+2. Attach a default-deny cloud firewall **before starting containers**. Mirror
+   these rules in the host firewall. Keep existing SSH access until its allowed
+   administrator source addresses have been verified.
+
+   | Inbound traffic | Source | Purpose |
+   | --- | --- | --- |
+   | TCP 22 | Administrator IP/CIDR only | SSH management |
+   | TCP 80 | Internet | Automatic certificate issuance |
+   | TCP 443 | Internet | Secure signaling and TURN/TLS |
+   | TCP 7881 | Internet | WebRTC TCP fallback |
+   | UDP 443 | Internet | Authenticated TURN/UDP |
+   | UDP 7882 | Internet | WebRTC UDP multiplexing |
+
+   Do not expose TCP 7880, 5349, 6379 or 2019. Allow outbound traffic and established
+   replies. This configuration uses UDP multiplexing, not a 50000–60000 media range.
+3. Point both `live.bravounleashed.com` and `turn.bravounleashed.com` A records
+   directly to the VM's public IPv4. Remove conflicting records for these two names
+   only; this IPv4 deployment should not advertise AAAA records. Disable ordinary
+   HTTP/CDN proxying for these names. The main website's DNS stays on Vercel.
+4. Copy this directory to the server. As root, run the generator with an IPv4
+   address actually assigned to a VM interface. Inspect `ip -4 addr` to obtain it;
+   do not use loopback. Generate into a new private directory outside Git:
+
+   ```sh
+   python3 prepare-server.py --bind-ip VM_INTERFACE_IPV4 --output /opt/bravo-live
+   cd /opt/bravo-live
+   docker compose config --quiet
+   docker compose pull
+   docker compose run --rm --no-deps caddy validate --config /etc/caddy.json
+   docker compose up -d
+   docker compose ps
+   ```
+
+   JSON-formatted YAML is intentional. The generator refuses existing output
+   directories and symlink paths. Files are private to root. The LiveKit secret is
+   generated on the VM, not placed in cloud-init, source control, logs or chat.
+   If generation fails partway, inspect the private directory before any retry;
+   do not replace keys for an existing deployment.
+5. Wait for Caddy to obtain trusted certificates for both names. From the directory
+   containing the verification script, run:
+
+   ```sh
+   python3 verify-server.py --config /opt/bravo-live/livekit.yaml --expected-ip VM_PUBLIC_IPV4
+   ```
+
+   This checks DNS, both TLS handshakes and the authenticated LiveKit room API.
+   It never prints credentials or room contents. It does not test media or TURN
+   allocations; complete the acceptance checks below before public broadcasts.
+
+The non-loopback Caddy TURN upstream follows the official generator's Firefox
+compatibility fix. Caddy listens on TCP 443 while TURN/UDP uses UDP 443. LiveKit's
+internal TURN/TLS listener is 5349, with external TLS termination; LiveKit 1.13.7
+advertises the public TURN/TLS candidate on port 443. Ports 7880/5349 remain
+reachable only locally/within the trusted host because of the firewall.
+
+References:
+
+- https://docs.livekit.io/transport/self-hosting/vm/
+- https://docs.livekit.io/transport/self-hosting/ports-firewall/
+- https://github.com/livekit/livekit/blob/v1.13.7/pkg/service/roommanager.go
 
 ## Connect the website
 
@@ -39,6 +102,13 @@ Set encrypted production Vercel environment variables on **bravo-k9-mern**:
 - `LIVEKIT_API_KEY`: the server's API key
 - `LIVEKIT_API_SECRET`: the matching secret, at least 32 characters
 - `BRAVO_LIVE_ENABLED=true`: set only after the media server is ready
+
+The generated private `vercel.env` supplies the matching values but deliberately
+sets `BRAVO_LIVE_ENABLED=false`. Transfer values through authenticated secret
+management; do not attach the file to a PR or paste it into chat. After the VM
+passes the API check, enable the flag for the controlled private-session acceptance
+test. Verify signed events reach `/api/live/webhook` and end the session correctly
+before any public broadcast.
 
 Redeploy after changing the variables. Never put keys in `VITE_*` variables,
 client code, logs, browser storage, or a URL. The fixed media hostname is included
@@ -74,3 +144,27 @@ Studio Stop immediately stops local tracks even if its request fails. An `ending
 record remains locked and can be retried until the SFU confirms room deletion.
 After a crash a trainer can close the old session from the studio and start anew.
 The PWA is network-only: it never caches private API data, tokens or video.
+
+## Operations and rollback
+
+- Set DigitalOcean billing and resource alerts. Watch outbound transfer, CPU,
+  memory, disk and packet loss during a representative broadcast. A billing alert
+  does not cap spending. Set a suitable initial viewer limit after load testing.
+- Preserve `/opt/bravo-live` securely, including Caddy certificate state, for
+  recovery. Redis stores ephemeral routing state; application session records
+  remain in the existing MongoDB deployment. There is no video recording storage.
+- Reboot the VM during acceptance and confirm containers restart and a new session
+  works. Leave automatic OS security updates enabled; schedule disruptive reboots
+  and container upgrades outside live sessions.
+- For an upgrade, review and update the image digests, retain the old configuration,
+  and test a private session. Do not regenerate credentials just to update images.
+- To disable new admissions, set `BRAVO_LIVE_ENABLED=false` on Vercel and redeploy.
+  This alone does not terminate already connected media. To stop all media during
+  an incident, run `docker compose down` from `/opt/bravo-live`; it disconnects all
+  participants. Restart only after resolving the incident and verifying access.
+
+Run the generator checks from the repository root:
+
+```sh
+python3 -m unittest discover -s ops/bravo-live -p 'test_*.py' -v
+```
