@@ -44,7 +44,7 @@ try {
     await page.addInitScript(() => { window.__cameraRequests = 0; navigator.mediaDevices.getUserMedia = async () => { window.__cameraRequests++; throw new Error('Viewers must not request camera access'); }; });
     await page.goto(`${origin}/live?session=${record._id}`);
     await page.getByRole('button', { name: /Watch live/ }).click();
-    await page.waitForFunction(() => { const video = document.querySelector('.live-video-stage video'); return video?.videoWidth > 0 && video.currentTime > 0.5; }, { timeout: 60000 });
+    await page.waitForFunction(() => { const video = document.querySelector('.live-video-stage video'); return video?.videoWidth > 0 && video.currentTime > 0.5; }, null, { timeout: 60000 });
     assert.equal(await page.evaluate(() => window.__cameraRequests), 0);
     await page.evaluate(() => { window.__remoteStream = document.querySelector('.live-video-stage video').srcObject; });
     await page.screenshot({ path: `test-results/direct-live-${name}.png`, fullPage: true });
@@ -54,7 +54,7 @@ try {
   await phone.getByText('2/3 viewers', { exact: false }).waitFor();
   await phone.getByRole('button', { name: 'Microphone off' }).click();
   for (const page of viewers) {
-    await page.waitForFunction(() => window.__remoteStream.getAudioTracks().some(t => t.readyState === 'live' && !t.muted), { timeout: 20000 });
+    await page.waitForFunction(() => window.__remoteStream.getAudioTracks().some(t => t.readyState === 'live' && !t.muted), null, { timeout: 20000 });
     await page.getByRole('button', { name: 'Enable audio' }).click();
     await page.getByRole('button', { name: 'Mute audio' }).waitFor();
   }
@@ -66,7 +66,7 @@ try {
   await phone.evaluate(() => { window.__phoneStream = document.querySelector('.live-camera-preview video').srcObject; });
   await phone.getByRole('button', { name: '■ End live session' }).click();
   await phone.waitForFunction(() => window.__phoneStream.getTracks().every(t => t.readyState === 'ended'));
-  for (const page of viewers) await page.waitForFunction(() => window.__remoteStream.getTracks().every(t => t.readyState === 'ended'), { timeout: 30000 });
+  for (const page of viewers) await page.waitForFunction(() => window.__remoteStream.getTracks().every(t => t.readyState === 'ended'), null, { timeout: 30000 });
   assert.equal(await LivePeer.countDocuments({ sessionId: record._id }), 0);
   assert.equal((await LiveSession.findById(record._id)).status, 'ended');
   assert.deepEqual(errors, []);

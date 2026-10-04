@@ -17,7 +17,7 @@ export default function LiveStudio() {
   const [audioOn, setAudioOn] = useState(false), [preview, setPreview] = useState(false), [busy, setBusy] = useState(false);
   const [viewerCount, setViewerCount] = useState(0);
   const [session, setSession] = useState(null), [status, setStatus] = useState('idle'), [error, setError] = useState('');
-  const video = useRef(null), stream = useRef(null), room = useRef(null), current = useRef(null), wakeLock = useRef(null), mounted = useRef(false), operation = useRef(false);
+  const video = useRef(null), stream = useRef(null), room = useRef(null), current = useRef(null), wakeLock = useRef(null), mounted = useRef(false), operation = useRef(false), cameraSwitch = useRef(0);
   const now = useLiveClock(); const booking = data?.bookings.find(item => item.id === bookingId);
   const load = () => api('/live/studio').then(result => { if (mounted.current) setData(result); });
   useEffect(() => {
@@ -35,11 +35,13 @@ export default function LiveStudio() {
     if (!session) return;
     let active = true, timer;
     const beat = async () => {
-      if (operation.current) { if (active) timer = setTimeout(beat, 5000); return; }
+      if (!active || current.current?.id !== session.id) return;
+      if (cameraSwitch.current && Date.now() - cameraSwitch.current < 10000) { timer = setTimeout(beat, 5000); return; }
       try {
         const result = await api(`/live/${session.id}/heartbeat`, { method: 'POST', body: { cameraReady: cameraReady(stream.current) }, timeoutMs: 10000 });
-        if (active) { room.current?.sync(result.peers); setSession(result.session); current.current = result.session; setStatus('live'); setError(''); }
+        if (active && current.current?.id === session.id) { room.current?.sync(result.peers); setSession(result.session); current.current = result.session; setStatus('live'); setError(''); }
       } catch (e) {
+        if (!active || current.current?.id !== session.id) return;
         room.current?.disconnect(); stopStream(stream.current); stream.current = null;
         if (active) { setPreview(false); setStatus('interrupted'); setError(`${e.message} End this session, then start again.`); }
         return;
@@ -74,7 +76,7 @@ export default function LiveStudio() {
     current.current = credentials.session;
     try {
       if (!mounted.current) throw new Error('Broadcast cancelled.');
-      room.current = createBroadcaster(credentials.session.id, () => stream.current, count => { if (mounted.current) setViewerCount(count); });
+      room.current = createBroadcaster(credentials.session.id, () => stream.current, count => { if (mounted.current && current.current?.id === credentials.session.id) setViewerCount(count); });
       const result = await api(`/live/${credentials.session.id}/heartbeat`, { method: 'POST', body: { cameraReady: cameraReady(stream.current) } });
       if (!mounted.current) throw new Error('Broadcast cancelled.');
       current.current = result.session; setSession(result.session); setStatus('live'); await load();
@@ -87,21 +89,24 @@ export default function LiveStudio() {
     }
   }
   async function end(id = session?.id) {
-    if (id === current.current?.id) { current.current = null; stopStream(stream.current); stream.current = null; await room.current?.disconnect(); setPreview(false); setSession(null); setStatus('idle'); }
+    if (id === current.current?.id) { current.current = null; stopStream(stream.current); stream.current = null; await room.current?.disconnect(); setPreview(false); setSession(null); setViewerCount(0); setStatus('idle'); }
     try { await api(`/live/${id}/end`, { method: 'POST', body: {} }); }
     finally { await load(); }
   }
   async function flip() {
     const nextFacing = facing === 'environment' ? 'user' : 'environment';
     if (session) {
-      const previous = stream.current.getVideoTracks()[0];
-      previous.stop();
-      const next = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: nextFacing }, width: { ideal: 960 }, height: { ideal: 540 }, frameRate: { ideal: 20, max: 24 } } });
-      if (!mounted.current || !current.current) { stopStream(next); return; }
-      const track = next.getVideoTracks()[0];
-      stream.current.removeTrack(previous); stream.current.addTrack(track);
-      await room.current.replaceTrack('video', track);
-      video.current.srcObject = stream.current; await video.current.play().catch(() => {});
+      const source = stream.current, broadcastId = current.current?.id;
+      const previous = source.getVideoTracks()[0];
+      cameraSwitch.current = Date.now(); previous.stop();
+      try {
+        const next = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: nextFacing }, width: { ideal: 960 }, height: { ideal: 540 }, frameRate: { ideal: 20, max: 24 } } });
+        if (!mounted.current || current.current?.id !== broadcastId || stream.current !== source) { stopStream(next); return; }
+        const track = next.getVideoTracks()[0];
+        source.removeTrack(previous); source.addTrack(track);
+        await room.current.replaceTrack('video', track);
+        video.current.srcObject = source; await video.current.play().catch(() => {});
+      } finally { cameraSwitch.current = 0; }
     } else if (preview) await openCamera(nextFacing, audioOn);
     setFacing(nextFacing);
   }
@@ -112,8 +117,9 @@ export default function LiveStudio() {
         await room.current.replaceTrack('audio', null);
         if (existing) { existing.stop(); stream.current.removeTrack(existing); }
       } else {
+        const source = stream.current, broadcastId = current.current?.id;
         const next = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        if (!mounted.current || !current.current) { stopStream(next); return; }
+        if (!mounted.current || current.current?.id !== broadcastId || stream.current !== source) { stopStream(next); return; }
         const track = next.getAudioTracks()[0]; stream.current.addTrack(track);
         await room.current.replaceTrack('audio', track);
       }

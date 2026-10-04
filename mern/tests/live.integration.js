@@ -83,7 +83,7 @@ test('direct WebRTC isolates private signaling, caps admission and expires crede
       assert.ok(!JSON.stringify((await call('client', 'get', '/live')).body).includes('sdp'));
     });
     await t.test('viewer publication/data-channel offers and oversized signaling are refused', async () => {
-      for (const bad of [sdp('sendrecv'), sdp('sendonly'), offer.sdp + 'm=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\n', 'x'.repeat(40001)]) {
+      for (const bad of [sdp('sendrecv'), sdp('sendonly'), offer.sdp.replace('a=recvonly', 'a=recvonly\r\na=sendrecv'), offer.sdp + 'm=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\n', 'x'.repeat(40001)]) {
         await call('client', 'post', `/live/${session.id}/watch`, { offer: { type: 'offer', sdp: bad } }).expect(400);
       }
       assert.equal(validateDescription(offer, 'offer'), true);

@@ -12,7 +12,8 @@ export function validateDescription(description, type) {
   if (!sections.length || sections.length > 2 || !sections.some(s => s.startsWith('video '))) return false;
   const kinds = sections.map(s => s.split(' ')[0]);
   if (new Set(kinds).size !== kinds.length || kinds.some(kind => !['video', 'audio'].includes(kind))) return false;
-  return sections.every(section => type === 'offer'
-    ? /(?:^|\r?\n)a=recvonly(?:\r?\n|$)/.test(section)
-    : /(?:^|\r?\n)a=(?:sendonly|inactive)(?:\r?\n|$)/.test(section));
+  return sections.every(section => {
+    const directions = [...section.matchAll(/(?:^|\r?\n)a=(sendrecv|sendonly|recvonly|inactive)(?=\r?\n|$)/g)].map(match => match[1]);
+    return directions.length === 1 && (type === 'offer' ? directions[0] === 'recvonly' : ['sendonly', 'inactive'].includes(directions[0]));
+  });
 }

@@ -10,7 +10,12 @@ function LivePlayer({ session }) {
   const video = useRef(null), audio = useRef(null), roomRef = useRef(null), generation = useRef(0);
   const [state, setState] = useState('idle'), [error, setError] = useState(''), [sound, setSound] = useState(false);
   const now = useLiveClock();
-  useEffect(() => () => { generation.current++; roomRef.current?.disconnect(); }, [session.id]);
+  useEffect(() => {
+    const stop = () => { generation.current++; roomRef.current?.disconnect(); };
+    const hide = () => { stop(); setState('ended'); };
+    window.addEventListener('pagehide', hide);
+    return () => { stop(); window.removeEventListener('pagehide', hide); };
+  }, [session.id]);
   async function watch() {
     const current = ++generation.current; setState('connecting'); setError('');
     try {
