@@ -1,76 +1,78 @@
-# Bravo Live media service
+# Bravo Live — direct phone streaming
 
-The website controls authentication, client access and session records. A separate
-LiveKit server carries WebRTC video/audio; Vercel never proxies the video. The code
-ships disabled until this service exists. No paid infrastructure is provisioned by
-this change. There is no automatic recording.
+Bravo uses native browser WebRTC. The trainer's phone sends encrypted video/audio
+straight to each viewer; Vercel and MongoDB handle authentication, session records
+and short-lived connection setup only. No media server, LiveKit account, TURN
+subscription, paid infrastructure or new service keys are required. No video is
+recorded. Existing site/database quotas and ordinary phone data usage still apply.
 
-## Deployment prerequisites
+## Use
 
-Use a maintained Linux VM with a public IP and sufficient outbound bandwidth.
-Create DNS records `live.bravounleashed.com` and `turn.bravounleashed.com` pointing
-to that service. These records must permit direct WebRTC traffic; an ordinary
-HTTP-only reverse proxy cannot carry all media transports.
+Open `/live/studio` as a trainer, select the dog/client, choose Public or Client
+Only, preview the camera, and press Start live. Viewers use `/live`. Client Only
+requires the account attached to the selected booking; the broadcasting trainer
+and owner also have authorized access. Public sessions appear in the homepage ad.
+Camera and microphone permission are requested only by the trainer. Audio starts
+off. Front/rear camera switching and microphone changes work during a session.
+Keep the phone unlocked and this screen open. Three concurrent viewing spots are
+available per session, enforced atomically on the server. The phone sends one copy
+per viewer, targeting 540p/20fps and up to 700 kbps video per connection where the
+browser supports bitrate control. Connection quality depends on the phone/network.
 
-Use LiveKit's official VM deployment generator, which generates Docker Compose,
-Caddy TLS routing, TURN, and optional Redis configuration:
-https://docs.livekit.io/transport/self-hosting/vm/
+## Network and cost boundary
 
-Follow the current generated deployment rather than deploying a bare coturn
-container: coturn alone is not the signaling server or an SFU. Review and pin the
-generated container versions. Keep generated keys/configuration off GitHub.
+The only ICE service is Cloudflare's public, free, unlimited STUN endpoint:
+`stun:stun.cloudflare.com:3478`. STUN discovers reachable addresses; it does not
+relay video. No TURN URL or credentials are configured. Some cellular networks,
+VPNs or firewalls prevent a direct connection. Connection timeout explains this
+and suggests Wi-Fi or another network. This deliberately cannot promise universal
+connectivity or large public audiences. Direct peers can see each other's network
+addresses. See https://developers.cloudflare.com/realtime/turn/faq/ and
+https://webrtc.org/getting-started/turn-server.
 
-Apply `livekit.example.yaml` settings to the generated configuration. Retain its
-TLS certificate locations and TCP 443 routing: HTTPS and TURN/TLS share an IP only
-when the generated layer-4 routing handles both hostnames. Do not expose port
-7880 publicly without the HTTPS proxy or expose Redis publicly.
+## Access and lifecycle
 
-Allow the generator's required ports, typically TCP 80/443/7881, UDP 443/7882.
-If its configuration uses a UDP port range instead of the UDP mux port, allow that
-range instead. See https://docs.livekit.io/transport/self-hosting/ports-firewall/.
-Set the signed webhook URL to `https://bravounleashed.com/api/live/webhook` using
-the same LiveKit API key. Verify signed events reach the handler before enabling.
+- Existing staff authorization, assignment checks, CSRF protection, public consent,
+  and one-open-session-per-trainer database index remain enforced.
+- The trainer's browser reports local camera readiness every five seconds. There
+  is no SFU to independently verify publication. LIVE means the authenticated
+  trainer reports a ready camera; the viewer count reflects connected peers.
+- Viewer SDP must be receive-only, audio/video only, and at most 40 KB. Only the
+  original broadcasting trainer can answer. An owner may end another trainer's
+  session but cannot impersonate that trainer's phone to answer offers.
+- Each viewer receives a random in-memory capability; only its SHA-256 hash is
+  stored. Logged-in viewer capabilities are bound to that user and credential
+  version. Private access and trainer authorization are rechecked when polling.
+- Offers/answers are never in public lists. Expiring LivePeer records use a TTL
+  index; every API checks expiry directly rather than waiting for MongoDB cleanup.
+  The 45-second lease is renewed while watching. End removes all peer records.
+- Stopping ends local tracks and all local peers immediately. A remote owner stop
+  or credential revocation reaches cooperative browsers on their next checks
+  (trainer around 5 seconds, connected viewers around 15 seconds). Signaling loss
+  closes the trainer's peer connections; viewers also fail closed on expired
+  authorization. A stopped/frozen phone expires from discovery after 75 seconds.
+  No server can forcibly revoke an already established direct connection between
+  modified/non-cooperating clients; clients must implement these lease checks.
+- Audience is immutable. Stop and start again to change Public/Client Only.
+- The PWA is network-only and does not cache streams, private API data or tokens.
 
-## Connect the website
+## Configuration and rollback
 
-Set encrypted production Vercel environment variables on **bravo-k9-mern**:
+Direct mode is available by default on the existing deployment. No new environment
+variables, DNS, hosting account or provisioning is needed. Set
+`BRAVO_LIVE_ENABLED=false` and redeploy to disable discovery/admission. Existing
+cooperative browsers close when their next control request is refused. Removed
+LiveKit environment variables are no longer read. The paid host proposal was
+withdrawn; do not deploy it.
 
-- `LIVEKIT_URL=wss://live.bravounleashed.com`
-- `LIVEKIT_API_KEY`: the server's API key
-- `LIVEKIT_API_SECRET`: the matching secret, at least 32 characters
-- `BRAVO_LIVE_ENABLED=true`: set only after the media server is ready
+## Verification
 
-Redeploy after changing the variables. Never put keys in `VITE_*` variables,
-client code, logs, browser storage, or a URL. The fixed media hostname is included
-in both the Vercel and Express CSP. Camera/microphone permission is same-origin.
-
-## Acceptance checks before launch
-
-1. Sign in as a trainer. Open `/live/studio`, choose an assigned dog/client, and
-   preview the camera. Switch front/rear cameras and enable/disable the microphone.
-2. Start a **client-only** session. The session appears only after the SFU confirms
-   an unmuted camera track. Sign in as the client on another device to watch it.
-3. A signed-out viewer, another client, and an unrelated staff member must not
-   discover the private session or obtain a watch token for its UUID.
-4. End the session: viewers disconnect and new watch tokens are refused. Existing
-   media credentials are short-lived bearer tokens; self-hosted LiveKit does not
-   provide instant revocation of every already-issued token. Rooms are unique and
-   never reused. Restart to change audience; never relabel an existing room.
-5. Start a public session with permission from everyone filmed. Its homepage
-   banner appears within about 15 seconds. Verify sound, fullscreen and timers.
-6. Test iPhone Safari/PWA and Android Chrome over cellular, plus Wi-Fi viewers.
-   Force TURN/TLS in a network test. Local tests do not prove cellular reachability.
-7. Test lock-screen, incoming calls, tab close and airplane mode. Signed publisher
-   departure events end rooms; absent heartbeats expire discovery/admission after
-   75 seconds. Trainers must leave the broadcast screen open and phone unlocked.
-8. Disable/rotate a test trainer's credentials during a broadcast. New admission
-   must fail; the next authorized control request detects the change. Remember
-   that this is not an instant global kill switch for a transport already open.
-9. Verify actual server bandwidth, viewer capacity and monitoring before promoting
-   public events. Each room currently caps participants at 100. There are no
-   guarantees about frame delay or viewer capacity without a load/network test.
-
-Studio Stop immediately stops local tracks even if its request fails. An `ending`
-record remains locked and can be retried until the SFU confirms room deletion.
-After a crash a trainer can close the old session from the studio and start anew.
-The PWA is network-only: it never caches private API data, tokens or video.
+`tests/live.integration.js` checks client isolation, token binding, receive-only
+signaling, concurrent viewer limits, expiry, account revocation and shutdown with
+an isolated MongoDB replica set. `tests/live-direct.browser.mjs` sends actual test
+video/audio from a Chromium broadcaster to separate Chromium and WebKit viewers,
+including camera switching and teardown. `tests/live.browser.mjs` checks mobile
+and desktop presentation, the public banner and camera cleanup. These automated
+same-host tests do not prove cellular NAT traversal. Finish acceptance on a real
+iPhone and Android plus a viewer on a different network; unsupported networks must
+show the direct-connection failure message, never silently enable a paid relay.

@@ -1,44 +1,19 @@
-import { AccessToken, RoomServiceClient, TrackSource, TrackType, WebhookReceiver } from 'livekit-server-sdk';
-import { randomUUID } from 'node:crypto';
-
-// A fixed first-party origin keeps both the static Vercel CSP and Express CSP
-// narrow. Point this DNS name at the separately hosted media service.
-export const LIVE_ORIGIN = 'wss://live.bravounleashed.com';
-export function liveConfigured() {
-  return process.env.BRAVO_LIVE_ENABLED === 'true' && process.env.LIVEKIT_URL === LIVE_ORIGIN &&
-    !!process.env.LIVEKIT_API_KEY && (process.env.LIVEKIT_API_SECRET?.length || 0) >= 32;
-}
-const unavailable = () => Object.assign(new Error('Bravo Live is not connected yet.'), { status: 503 });
-export function liveRoomService() {
-  if (!liveConfigured()) throw unavailable();
-  return new RoomServiceClient(LIVE_ORIGIN.replace('wss:', 'https:'), process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET, { requestTimeout: 8 });
-}
-export async function liveToken(session, publish = false) {
-  if (!liveConfigured()) throw unavailable();
-  const token = new AccessToken(process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET, {
-    identity: publish ? session.publisherIdentity : `viewer-${randomUUID()}`,
-    name: publish ? session.trainerName : 'Viewer', ttl: '60s',
+// Direct WebRTC uses the existing authenticated API only for signaling.
+// There is deliberately no TURN relay, media host, account key or paid service.
+export const LIVE_VIEWER_LIMIT = 3;
+export const LIVE_PEER_LEASE_MS = 45000;
+export const LIVE_ICE_SERVERS = [{ urls: 'stun:stun.cloudflare.com:3478' }];
+export function liveConfigured() { return process.env.BRAVO_LIVE_ENABLED !== 'false'; }
+export function validateDescription(description, type) {
+  if (!description || description.type !== type || typeof description.sdp !== 'string' || description.sdp.length > 40000 || !description.sdp.startsWith('v=0') || description.sdp.includes('\0')) return false;
+  const sections = description.sdp.split(/(?:\r?\n)m=/).slice(1);
+  // Receive-only offers: viewers never ask for camera/microphone access, publish,
+  // or open data channels. The browser performs full SDP validation as well.
+  if (!sections.length || sections.length > 2 || !sections.some(s => s.startsWith('video '))) return false;
+  const kinds = sections.map(s => s.split(' ')[0]);
+  if (new Set(kinds).size !== kinds.length || kinds.some(kind => !['video', 'audio'].includes(kind))) return false;
+  return sections.every(section => {
+    const directions = [...section.matchAll(/(?:^|\r?\n)a=(sendrecv|sendonly|recvonly|inactive)(?=\r?\n|$)/g)].map(match => match[1]);
+    return directions.length === 1 && (type === 'offer' ? directions[0] === 'recvonly' : ['sendonly', 'inactive'].includes(directions[0]));
   });
-  token.addGrant({ room: session.roomName, roomJoin: true, canSubscribe: !publish,
-    canPublish: publish, canPublishData: false, canUpdateOwnMetadata: false,
-    ...(publish ? { canPublishSources: [TrackSource.CAMERA, TrackSource.MICROPHONE] } : {}),
-  });
-  return { token: await token.toJwt(), url: LIVE_ORIGIN };
-}
-export async function cameraIsPublishing(session) {
-  try {
-    const participant = await liveRoomService().getParticipant(session.roomName, session.publisherIdentity);
-    return participant.tracks.some(track => track.type === TrackType.VIDEO && track.source === TrackSource.CAMERA && !track.muted);
-  } catch (error) {
-    if (error.code === 'not_found' || error.status === 404) return false;
-    throw unavailable();
-  }
-}
-export async function deleteLiveRoom(session) {
-  try { await liveRoomService().deleteRoom(session.roomName); }
-  catch (error) { if (error.code !== 'not_found' && error.status !== 404) throw unavailable(); }
-}
-export async function receiveLiveEvent(body, authorization) {
-  if (!liveConfigured()) throw unavailable();
-  return new WebhookReceiver(process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET).receive(body, authorization);
 }
