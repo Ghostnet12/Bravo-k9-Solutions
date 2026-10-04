@@ -32,7 +32,7 @@ try { for (const [name, engine] of Object.entries({ chromium, webkit })) {
   });
   try {
   const gallery=page.getByRole('region',{name:'Trainer photos'}),track=page.locator('.hero-photo-window');
-  await page.goto(origin); await gallery.scrollIntoViewIfNeeded(); await page.waitForTimeout(800);
+  await page.goto(origin); await page.waitForLoadState('networkidle'); await gallery.scrollIntoViewIfNeeded(); await page.waitForTimeout(800);
   assert.equal(await page.getByRole('button',{name:'Add photos',exact:true}).count(),0);
   const start=await track.evaluate(el=>el.scrollLeft);await page.waitForTimeout(2200);
   assert.notEqual(await track.evaluate(el=>el.scrollLeft),start,'automatically moves left');

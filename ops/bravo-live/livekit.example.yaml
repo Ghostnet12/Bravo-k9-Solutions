@@ -1,0 +1,20 @@
+# Merge into the official VM generator output; NOT a complete TLS deployment.
+# Replace placeholders locally. Never commit real keys.
+port: 7880
+rtc:
+  tcp_port: 7881
+  udp_port: 7882
+  use_external_ip: true
+room:
+  empty_timeout: 90
+  departure_timeout: 20
+  max_participants: 100
+keys:
+  REPLACE_WITH_API_KEY: REPLACE_WITH_AT_LEAST_32_RANDOM_CHARACTERS
+webhook:
+  api_key: REPLACE_WITH_API_KEY
+  urls:
+    - https://bravounleashed.com/api/live/webhook
+# Preserve the generator's Redis, TLS and TURN settings. In particular, TURN/TLS
+# should be reachable on TCP 443 on turn.bravounleashed.com through its generated
+# TLS routing. Do not replace that setup with an unauthenticated public relay.

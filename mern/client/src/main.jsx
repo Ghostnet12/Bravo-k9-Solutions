@@ -28,6 +28,7 @@ import './discovery.css';
 // Keep the server-rendered public page readable until its interactive module
 // is ready. A failed chunk must not replace useful HTML with a loading/error shell.
 const publicPageLoaders = {
+  '/live': () => import('./LivePage'),
   '/workshops': () => import('./WorkshopPage'),
   '/dog-training': () => import('./DogTrainingPage'),
   '/behavior-assessment': () => import('./BehaviorAssessmentPage'),
@@ -55,6 +56,8 @@ const AccountPage = lazy(() => import('./AccountPage'));
 const LearnPage = publicPage('/learn');
 const CommunityPage = lazy(() => import('./CommunityPage'));
 const ContactPage = publicPage('/contact');
+const LivePage = publicPage('/live');
+const LiveStudio = lazy(() => import('./LiveStudio'));
 const AdminPage = lazy(() => import('./AdminPage'));
 const DogWalkingPage = publicPage('/dog-walking');
 function SiteImageTools() {
@@ -117,7 +120,7 @@ class ErrorBoundary extends React.Component {
   render() { return this.state.error ? <Page title="Let’s get you back on track."><p>The page couldn’t load. Your saved bookings are not affected.</p><a className="button" href="/">Reload Bravo</a></Page> : this.props.children; }
 }
 function BookingRoute() { const location = useLocation(); return <BookingPage key={location.search}/>; }
-function App() { return <BrowserRouter><AppProvider><SiteContentProvider><a className="skip-link" href="#main-content">Skip to main content</a><RouteBehavior/><SiteTelemetry/><SiteSoundtrack/><ErrorBoundary><Suspense fallback={<Page title="Opening Bravo…"><p role="status">Loading your page.</p></Page>}><PasswordSetupGate><Routes><Route path="/schedule" element={<SchedulePage/>}/><Route path="/reset-password" element={<ResetPasswordPage/>}/><Route path="/" element={<Home/>}/><Route path="/workshops" element={<WorkshopPage/>}/><Route path="/dog-training" element={<DogTrainingPage/>}/><Route path="/behavior-assessment" element={<BehaviorAssessmentPage/>}/><Route path="/dog-walking" element={<DogWalkingPage/>}/><Route path="/portal" element={<BookingRoute/>}/><Route path="/account" element={<AccountPage/>}/><Route path="/learn" element={<LearnPage/>}/><Route path="/community" element={<CommunityPage/>}/><Route path="/contact" element={<ContactPage/>}/><Route path="/admin" element={<AdminPage/>}/><Route path="/accessibility" element={<AccessibilityPage/>}/><Route path="/media-rights" element={<MediaRightsPage/>}/><Route path="*" element={<NotFoundPage/>}/></Routes></PasswordSetupGate></Suspense></ErrorBoundary><Accessibility/><SiteImageTools/></SiteContentProvider></AppProvider></BrowserRouter>; }
+function App() { return <BrowserRouter><AppProvider><SiteContentProvider><a className="skip-link" href="#main-content">Skip to main content</a><RouteBehavior/><SiteTelemetry/><SiteSoundtrack/><ErrorBoundary><Suspense fallback={<Page title="Opening Bravo…"><p role="status">Loading your page.</p></Page>}><PasswordSetupGate><Routes><Route path="/live" element={<LivePage/>}/><Route path="/live/studio" element={<LiveStudio/>}/><Route path="/schedule" element={<SchedulePage/>}/><Route path="/reset-password" element={<ResetPasswordPage/>}/><Route path="/" element={<Home/>}/><Route path="/workshops" element={<WorkshopPage/>}/><Route path="/dog-training" element={<DogTrainingPage/>}/><Route path="/behavior-assessment" element={<BehaviorAssessmentPage/>}/><Route path="/dog-walking" element={<DogWalkingPage/>}/><Route path="/portal" element={<BookingRoute/>}/><Route path="/account" element={<AccountPage/>}/><Route path="/learn" element={<LearnPage/>}/><Route path="/community" element={<CommunityPage/>}/><Route path="/contact" element={<ContactPage/>}/><Route path="/admin" element={<AdminPage/>}/><Route path="/accessibility" element={<AccessibilityPage/>}/><Route path="/media-rights" element={<MediaRightsPage/>}/><Route path="*" element={<NotFoundPage/>}/></Routes></PasswordSetupGate></Suspense></ErrorBoundary><Accessibility/><SiteImageTools/></SiteContentProvider></AppProvider></BrowserRouter>; }
 const start = () => createRoot(document.getElementById('root')).render(<React.StrictMode><App/></React.StrictMode>);
 const initialPath = window.location.pathname;
 if (publicPageLoaders[initialPath]) {
@@ -126,3 +129,6 @@ if (publicPageLoaders[initialPath]) {
     start();
   }).catch(() => { reportBrowserError('page_crash'); });
 } else start();
+
+// Register on the live entry point so ordinary account workflows are unchanged.
+if ('serviceWorker' in navigator && window.location.pathname.startsWith('/live')) window.addEventListener('load', () => navigator.serviceWorker.register('/live-sw.js', { scope: '/live/' }).catch(() => {}));

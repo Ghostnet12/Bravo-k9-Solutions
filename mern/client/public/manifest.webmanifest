@@ -1,0 +1,33 @@
+{
+  "id": "/",
+  "name": "Bravo K9 Solutions",
+  "short_name": "Bravo",
+  "start_url": "/live/studio",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#101010",
+  "theme_color": "#101010",
+  "icons": [
+    {
+      "src": "/bravo-shield-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/bravo-app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Go live",
+      "url": "/live/studio"
+    },
+    {
+      "name": "Watch Bravo Live",
+      "url": "/live"
+    }
+  ]
+}

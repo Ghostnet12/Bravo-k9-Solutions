@@ -1,3 +1,4 @@
+import { useLocation } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 import { SITE_SOUNDTRACK_SRC, SITE_SOUNDTRACK_TITLE, SITE_SOUNDTRACK_VOLUME } from '../../shared/site-soundtrack.js';
 
@@ -23,7 +24,10 @@ function rememberedPosition() {
 }
 
 export default function SiteSoundtrack() {
-  const audio = useRef(null), enabled = useRef(true);
+  const audio = useRef(null), enabled = useRef(true), liveRoute = useRef(false);
+  const { pathname } = useLocation();
+  liveRoute.current = pathname === '/live' || pathname.startsWith('/live/');
+  useEffect(() => { window.dispatchEvent(new Event('bravo-live-audio-focus')); }, [pathname]);
   const publicHost = location.hostname === 'bravounleashed.com' || location.hostname === 'www.bravounleashed.com' || location.hostname.endsWith('.vercel.app');
 
   useEffect(() => {
@@ -46,7 +50,7 @@ export default function SiteSoundtrack() {
       if (Number.isFinite(element.duration) && element.duration > 0) element.currentTime = position % element.duration;
       else element.currentTime = position;
     };
-    const shouldPlay = () => enabled.current && !document.hidden;
+    const shouldPlay = () => enabled.current && !document.hidden && !liveRoute.current;
     const attempt = () => {
       if (!shouldPlay()) { element.pause(); return; }
       if (!element.getAttribute('src')) {
@@ -78,6 +82,7 @@ export default function SiteSoundtrack() {
     document.addEventListener('visibilitychange', visibility);
     window.addEventListener('pagehide', remember);
     window.addEventListener('bravo-site-music', preference);
+    window.addEventListener('bravo-live-audio-focus', attempt);
     return () => {
       remember();
       window.removeEventListener('load', loaded);
@@ -87,6 +92,7 @@ export default function SiteSoundtrack() {
       document.removeEventListener('visibilitychange', visibility);
       window.removeEventListener('pagehide', remember);
       window.removeEventListener('bravo-site-music', preference);
+      window.removeEventListener('bravo-live-audio-focus', attempt);
     };
   }, [publicHost]);
 
