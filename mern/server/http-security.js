@@ -8,7 +8,7 @@ export function securityHeaders() {
     contentSecurityPolicy: { directives: {
       defaultSrc: ["'self'"], scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"], imgSrc: ["'self'", 'data:'],
-      fontSrc: ["'self'"], mediaSrc: ["'self'", 'blob:'], connectSrc: ["'self'", 'wss://live.bravounleashed.com', 'https://live.bravounleashed.com'],
+      fontSrc: ["'self'"], mediaSrc: ["'self'", 'blob:'], connectSrc: ["'self'"],
       frameSrc: ['https://www.facebook.com'], frameAncestors: ["'none'"],
       objectSrc: ["'none'"], baseUri: ["'self'"], formAction: ["'self'"],
       upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,

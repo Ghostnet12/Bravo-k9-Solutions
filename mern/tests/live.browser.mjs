@@ -7,7 +7,7 @@ import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { chromium, webkit } from 'playwright';
 
 const replica = await MongoMemoryReplSet.create({ replSet: { count: 1 }, binary: { version: '7.0.14' } });
-Object.assign(process.env, { NODE_ENV: 'test', MONGODB_URI: replica.getUri(), MONGODB_DB: 'live_browser', BRAVO_LIVE_ENABLED: 'true', LIVEKIT_URL: 'wss://live.bravounleashed.com', LIVEKIT_API_KEY: 'test-only-key', LIVEKIT_API_SECRET: randomBytes(32).toString('hex') });
+Object.assign(process.env, { NODE_ENV: 'test', MONGODB_URI: replica.getUri(), MONGODB_DB: 'live_browser', BRAVO_LIVE_ENABLED: 'true' });
 delete process.env.STRIPE_SECRET_KEY;
 let server;
 await mkdir('test-results', { recursive: true });
@@ -22,7 +22,7 @@ try {
   await Booking.create({ userId: client._id, staffId: trainer._id, dogName: 'Gunner', status: 'confirmed', visits: [] });
   const token = randomBytes(32).toString('hex');
   await Session.create({ userId: trainer._id, tokenHash: createHash('sha256').update(token).digest('hex'), issuedAt: new Date(), lastSeenAt: new Date(), expiresAt: new Date(Date.now() + 3600000) });
-  const row = { _id: 'f49a2019-e01f-4db7-b15a-508fd74e2bea', trainerId: trainer._id, trainerName: 'David', credentialVersion: 0, clientId: client._id, dogName: 'Gunner', audience: 'public', roomName: 'browser-fixture', publisherIdentity: 'test-publisher', open: true, status: 'live', startedAt: new Date(Date.now() - 123000), lastSeenAt: new Date() };
+  const row = { _id: 'f49a2019-e01f-4db7-b15a-508fd74e2bea', trainerId: trainer._id, trainerName: 'David', credentialVersion: 0, clientId: client._id, dogName: 'Gunner', audience: 'public', transport: 'direct', roomName: 'browser-fixture', publisherIdentity: 'test-publisher', open: true, status: 'live', startedAt: new Date(Date.now() - 123000), lastSeenAt: new Date() };
   server = app.listen(0, '127.0.0.1'); await once(server, 'listening');
   const origin = `http://127.0.0.1:${server.address().port}`; process.env.APP_ORIGIN = origin;
   for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
@@ -55,7 +55,7 @@ try {
         await page.goto(`${origin}/live/studio`);
         await page.getByRole('heading', { name: 'Trainer sign in required.' }).waitFor();
         await context.addCookies([{ name: 'bravo_session', value: token, domain: '127.0.0.1', path: '/' }]);
-        delete process.env.BRAVO_LIVE_ENABLED;
+        process.env.BRAVO_LIVE_ENABLED = 'false';
         await page.reload();
         await page.getByText('Camera preview is available.', { exact: false }).waitFor();
         const selection = page.getByLabel('Dog / scheduled client');

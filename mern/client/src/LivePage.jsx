@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Header, Footer } from './ui';
 import { useBravo } from './context';
-import { api } from './api';
 import { useLiveSessions, useLiveClock, liveTime, liveDuration } from './live-state';
+import { createViewer } from './live-direct';
 import './live.css';
 
 function LivePlayer({ session }) {
@@ -14,24 +14,20 @@ function LivePlayer({ session }) {
   async function watch() {
     const current = ++generation.current; setState('connecting'); setError('');
     try {
-      const [{ Room, RoomEvent, Track }, credentials] = await Promise.all([import('livekit-client'), api(`/live/${session.id}/watch`, { method: 'POST', body: {} })]);
+      await roomRef.current?.disconnect();
       if (current !== generation.current) return;
-      const room = new Room({ adaptiveStream: true }); roomRef.current = room;
-      room.on(RoomEvent.TrackSubscribed, track => {
-        if (track.kind === Track.Kind.Video && video.current) { track.attach(video.current); setState('watching'); }
-        if (track.kind === Track.Kind.Audio && audio.current) track.attach(audio.current);
-      });
-      room.on(RoomEvent.TrackUnsubscribed, track => { track.detach(); if (track.kind === Track.Kind.Video) setState('waiting'); });
-      room.on(RoomEvent.Reconnecting, () => setState('reconnecting'));
-      room.on(RoomEvent.Reconnected, () => setState('watching'));
-      room.on(RoomEvent.Disconnected, () => { if (current === generation.current) setState('ended'); });
-      await room.connect(credentials.url, credentials.token);
-      if (current !== generation.current) { await room.disconnect(); return; }
+      const room = createViewer(session.id,
+        stream => { if (current === generation.current) { video.current.srcObject = stream; audio.current.srcObject = stream; video.current.play().catch(() => {}); } },
+        state => { if (current === generation.current) setState(state); },
+        message => { if (current === generation.current) setError(message); });
+      roomRef.current = room;
+      await room.connect();
+      if (current !== generation.current) { room.disconnect(); return; }
       setState(old => old === 'connecting' ? 'waiting' : old);
-    } catch { if (current === generation.current) { await roomRef.current?.disconnect(); setState('idle'); setError('The stream could not connect. Try again in a moment.'); } }
+    } catch (error) { if (current === generation.current) { roomRef.current?.disconnect(); setState('idle'); setError(error.message || 'The stream could not connect. Try another network.'); } }
   }
   async function toggleSound() {
-    if (!sound) await roomRef.current?.startAudio();
+    if (!sound && audio.current) { audio.current.muted = false; await audio.current.play(); }
     setSound(!sound);
   }
   return <section className="live-player" aria-label={`${session.trainerName} training ${session.dogName}`}>
@@ -47,7 +43,7 @@ function LivePlayer({ session }) {
     </div>
     <div className="live-player-caption"><div><h2>{session.trainerName} <span> / </span> {session.dogName}</h2><p>Started {liveTime(session.startedAt)} CT · {session.audience === 'client' ? 'Client only' : 'Public session'}</p></div>
       <div className="live-controls"><button onClick={() => toggleSound().catch(() => setError('Tap again to enable sound.'))} disabled={state !== 'watching'} aria-pressed={sound}>{sound ? 'Mute audio' : 'Enable audio'}</button><button onClick={() => { const element = video.current; if (element?.webkitEnterFullscreen) element.webkitEnterFullscreen(); else element?.requestFullscreen?.().catch(() => {}); }} disabled={state !== 'watching'}>Full screen</button></div>
-    </div><p className="live-caption-note">Live video. Automatic captions and replays are not available.</p>
+    </div><p className="live-caption-note">Direct phone stream · 3 viewing spots. If this network cannot connect, try Wi-Fi. Automatic captions and replays are not available.</p>
   </section>;
 }
 

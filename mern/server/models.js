@@ -107,8 +107,17 @@ const liveSessionSchema = new Schema({
   roomName: { type: String, required: true, unique: true }, publisherIdentity: String,
   open: { type: Boolean, default: true }, status: { type: String, enum: ['starting', 'live', 'ending', 'ended'] },
   startedAt: Date, lastSeenAt: Date, endedAt: Date, publicConsentAt: Date,
+  transport: String, signalingRevision: { type: Number, default: 0 },
 }, { timestamps: true });
 liveSessionSchema.index({ trainerId: 1 }, { unique: true, partialFilterExpression: { open: true } });
 liveSessionSchema.index({ open: 1, status: 1, lastSeenAt: 1 });
 export const LiveSession = model('BravoLiveSession', liveSessionSchema);
-export const ALL_MODELS = [LiveSession, ProgramVideo, HeroFilm, HeroVideo, HeroCarousel, ProofCarousel, ProofVideo, FunnelVisit, SiteError, MembershipCredit, MemberAccess, Notification, NotificationRead, PasswordReset, TrainerSchedule, ChatReset, User, Session, RateBucket, Booking, Slot, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Subscription, StripeEvent, Lesson, LessonLibrary, LessonSection, BillingLock, MediaUpload, MediaChunk];
+const livePeerSchema = new Schema({
+  _id: String, sessionId: { type: String, required: true }, slot: Number,
+  tokenHash: String, viewerId: id, credentialVersion: Number,
+  offer: { type: { type: String }, sdp: String }, answer: { type: { type: String }, sdp: String },
+  expiresAt: { type: Date, expires: 0 },
+}, { timestamps: true });
+livePeerSchema.index({ sessionId: 1, slot: 1 }, { unique: true });
+export const LivePeer = model('BravoLivePeer', livePeerSchema);
+export const ALL_MODELS = [LivePeer, LiveSession, ProgramVideo, HeroFilm, HeroVideo, HeroCarousel, ProofCarousel, ProofVideo, FunnelVisit, SiteError, MembershipCredit, MemberAccess, Notification, NotificationRead, PasswordReset, TrainerSchedule, ChatReset, User, Session, RateBucket, Booking, Slot, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Subscription, StripeEvent, Lesson, LessonLibrary, LessonSection, BillingLock, MediaUpload, MediaChunk];
