@@ -36,6 +36,21 @@ const peerSecret = z.string().regex(/^[a-f0-9]{64}$/);
 const hash = value => createHash('sha256').update(value).digest('hex');
 const viewerBinding = req => req.user ? { viewerId: req.user._id, credentialVersion: req.user.credentialVersion || 0 } : { viewerId: null };
 const lease = () => new Date(Date.now() + LIVE_PEER_LEASE_MS);
+const peerRateIdentity = req => `${req.user?._id || req.ip}:${req.params.id}:${req.params.peerId}`;
+const apiLimit = rateLimit('api', 240, 60000, req => req.liveControlRateIdentity || (req.user ? String(req.user._id) : req.ip));
+export async function liveApiRateLimit(req, res, next) {
+  // Valid broadcaster answers scale with the audience. Give each existing peer
+  // its own budget; guessed IDs and unauthorized requests retain the shared cap.
+  const match = req.method === 'POST' && req.path.match(/^\/live\/([a-f0-9-]{36})\/peers\/([a-f0-9-]{36})\/(answer|reject)\/?$/i);
+  if (match && ['staff', 'owner'].includes(req.user?.role)) {
+    const session = await LiveSession.findOne({ _id: match[1], trainerId: req.user._id, transport: 'direct',
+      open: true, status: 'live', lastSeenAt: { $gt: cutoff() } }).lean();
+    if (session && await activeTrainer(session) && await LivePeer.exists({ _id: match[2], sessionId: match[1], expiresAt: { $gt: new Date() } })) {
+      req.liveControlRateIdentity = `live-control:${req.user._id}:${match[1]}:${match[2]}`;
+    }
+  }
+  return apiLimit(req, res, next);
+}
 async function peersForTrainer(session) {
   const peers = await LivePeer.find({ sessionId: session._id, expiresAt: { $gt: new Date() } }).lean();
   const viewerIds = [...new Set(peers.filter(peer => peer.viewerId).map(peer => String(peer.viewerId)))];
@@ -138,7 +153,7 @@ export function liveRoutes(app) {
     if (!peer) throw fail('This viewing connection has ended. Reconnect to watch.', 410);
     res.json({ answer: peer.answer?.sdp ? { type: peer.answer.type, sdp: peer.answer.sdp } : null });
   });
-  app.post('/api/live/:id/peers/:peerId/answer', requireUser, requireStaff, ready, rateLimit('live-peer-answer', 30, 60000), async (req, res) => {
+  app.post('/api/live/:id/peers/:peerId/answer', requireUser, requireStaff, ready, rateLimit('live-peer-answer', 30, 60000, peerRateIdentity), async (req, res) => {
     const { answer } = z.object({ answer: description('answer') }).strict().parse(req.body);
     const session = await accessible(req, { publishing: true });
     if (String(session.trainerId) !== String(req.user._id) || !await activeTrainer(session)) throw fail('Only the broadcasting trainer may answer.', 403);
@@ -149,7 +164,7 @@ export function liveRoutes(app) {
     if (!updated.matchedCount && !await LivePeer.exists({ ...filter, 'answer.type': answer.type, 'answer.sdp': answer.sdp })) throw fail('This viewing connection is no longer waiting.', 410);
     res.json({ ok: true });
   });
-  app.post('/api/live/:id/peers/:peerId/reject', requireUser, requireStaff, ready, rateLimit('live-peer-reject', 30, 60000), async (req, res) => {
+  app.post('/api/live/:id/peers/:peerId/reject', requireUser, requireStaff, ready, rateLimit('live-peer-reject', 30, 60000, peerRateIdentity), async (req, res) => {
     const session = await accessible(req, { publishing: true });
     if (String(session.trainerId) !== String(req.user._id) || !await activeTrainer(session)) throw fail('Only the broadcasting trainer may close this connection.', 403);
     await LivePeer.deleteOne({ _id: id.parse(req.params.peerId), sessionId: session._id });

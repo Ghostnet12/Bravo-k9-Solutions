@@ -1,4 +1,4 @@
-import { liveRoutes } from './live-sessions.js';
+import { liveRoutes, liveApiRateLimit } from './live-sessions.js';
 import { updateUserAccess } from './user-access.js';
 import { assertTrainingAllowance } from './training-allowance.js';
 import { termActive } from '../shared/membership-terms.js';
@@ -76,7 +76,7 @@ app.get('/api/team', async (_req, res) => {
   res.json({ team: team.map(user => publicTrainerProfile(user, publicRole(user))) });
 });
 app.use('/api', sameOrigin, async (_req, _res, next) => { await connectDb(); next(); }, identify);
-app.use('/api', rateLimit('api', 240, 60000));
+app.use('/api', liveApiRateLimit);
 discoveryRoutes(app);
 lessonLibraryRoutes(app);
 mfaRoutes(app);

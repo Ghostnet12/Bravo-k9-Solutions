@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import mongoose from 'mongoose';
 import request from 'supertest';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { liveConfigured, validateDescription } from '../server/live-media.js';
 
@@ -137,6 +137,34 @@ test('direct WebRTC isolates private signaling, admits concurrent viewers withou
       assert.equal(await LivePeer.countDocuments({ sessionId: publicSession.id }), 0);
       await watch(null, publicSession).expect(410);
       await call(null, 'post', peerPath(publicSession, peer, 'poll'), { token: peer.token }).expect(410);
+    });
+    await t.test('broadcaster answers and rejections have per-peer budgets; invalid requests keep aggregate abuse protection', async () => {
+      await RateBucket.deleteMany({});
+      const broadcast = (await call('owner', 'post', '/live', { dogName: 'Gunner', audience: 'public', publicConsent: true }).expect(201)).body.session;
+      await beat('owner', broadcast).expect(200);
+      // Seed admitted connections to isolate broadcaster budgets from admission's
+      // separate per-viewer/IP anti-abuse policy. No actual media is sent here.
+      const peers = Array.from({ length: 40 }, (_, slot) => ({ _id: randomUUID(), sessionId: broadcast.id,
+        slot: slot + 1, tokenHash: digest(randomBytes(32).toString('hex')), offer, expiresAt: new Date(Date.now() + 45000) }));
+      await LivePeer.insertMany(peers);
+      await LiveSession.updateOne({ _id: broadcast.id }, { $set: { signalingRevision: peers.length } });
+      const fillBudget = async (scope, identity, count) => {
+        const window = Math.floor(Date.now() / 60000);
+        for (const bucket of [window, window + 1]) await RateBucket.updateOne({ _id: digest(`${scope}:${identity}:${bucket}`) },
+          { $set: { count, expiresAt: new Date((bucket + 1) * 60000) } }, { upsert: true });
+      };
+      // Exhaust the general account bucket as well as exceeding the old 30/min
+      // answer ceiling, without imposing a replacement aggregate audience cap.
+      await fillBudget('api', String(users.owner._id), 240);
+      for (const peer of peers) await call('owner', 'post', peerPath(broadcast, { peerId: peer._id }, 'answer'), { answer }).expect(200);
+      await fillBudget('live-peer-answer', `${users.owner._id}:${broadcast.id}:${peers[0]._id}`, 30);
+      await call('owner', 'post', peerPath(broadcast, { peerId: peers[0]._id }, 'answer'), { answer }).expect(429);
+      await call('owner', 'post', peerPath(broadcast, { peerId: peers[1]._id }, 'answer'), { answer }).expect(200);
+      await call('owner', 'post', peerPath(broadcast, { peerId: randomUUID() }, 'answer'), { answer }).expect(429);
+      for (const peer of peers) await call('owner', 'post', peerPath(broadcast, { peerId: peer._id }, 'reject')).expect(200);
+      assert.equal(await LivePeer.countDocuments({ sessionId: broadcast.id }), 0);
+      await RateBucket.deleteMany({});
+      await call('owner', 'post', `/live/${broadcast.id}/end`).expect(200);
     });
     await t.test('concurrent start is singular and emergency disable is explicit', async () => {
       await RateBucket.deleteMany({});

@@ -41,6 +41,9 @@ https://webrtc.org/getting-started/turn-server.
 - Viewer SDP must be receive-only, audio/video only, and at most 40 KB. Only the
   original broadcasting trainer can answer. An owner may end another trainer's
   session but cannot impersonate that trainer's phone to answer offers.
+- Broadcaster answers/rejections use per-peer request budgets for existing,
+  authorized connections. Invalid or unauthorized requests retain the shared API
+  limit. A burst of viewers does not exhaust the trainer’s general API budget.
 - Each viewer receives a random in-memory capability; only its SHA-256 hash is
   stored. Logged-in viewer capabilities are bound to that user and credential
   version. Private access and trainer authorization are rechecked when polling.
