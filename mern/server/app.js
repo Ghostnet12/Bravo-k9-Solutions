@@ -1,3 +1,4 @@
+import { liveRoutes, liveWebhook } from './live-sessions.js';
 import { updateUserAccess } from './user-access.js';
 import { assertTrainingAllowance } from './training-allowance.js';
 import { termActive } from '../shared/membership-terms.js';
@@ -48,6 +49,7 @@ app.set('trust proxy', process.env.VERCEL ? 1 : false);
 app.use(securityHeaders());
 app.use('/api', (_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
 app.post('/api/stripe/webhook', express.raw({ type: 'application/json', limit: '1mb' }), stripeWebhook);
+app.post('/api/live/webhook', express.raw({ type: ['application/webhook+json', 'application/json'], limit: '64kb' }), liveWebhook);
 app.use('/api', sameOrigin);
 app.use(express.json({ limit: '700kb' }), cookieParser());
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
@@ -79,6 +81,7 @@ app.use('/api', rateLimit('api', 240, 60000));
 discoveryRoutes(app);
 lessonLibraryRoutes(app);
 mfaRoutes(app);
+liveRoutes(app);
 app.get('/api/lessons', async (req, res) => {
   await requireOpenLibrary(req.user);
   const editor = req.user?.role === 'owner';

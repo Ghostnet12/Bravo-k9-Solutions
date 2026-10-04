@@ -101,4 +101,14 @@ export const FunnelVisit = model('BravoFunnelVisit', new Schema({ _id: String, c
 export const SiteError = model('BravoSiteError', new Schema({ _id: String, source: String, area: String, kind: String, status: Number, count: Number, firstSeen: Date, lastSeen: { type: Date, index: true }, requestId: String, expiresAt: { type: Date, expires: 0 } }, { bufferCommands: false }));
 export const ProofCarousel = model('BravoProofCarousel', new Schema({ _id: String, intervalSeconds: { type: Number, default: 8 }, revision: { type: Number, default: 0 }, updatedBy: id }, { timestamps: true }));
 export const HeroCarousel = model('BravoHeroCarousel', new Schema({ _id: String, photos: [String], intervalSeconds: { type: Number, default: 5 }, revision: { type: Number, default: 0 }, updatedBy: id }, { timestamps: true }));
-export const ALL_MODELS = [ProgramVideo, HeroFilm, HeroVideo, HeroCarousel, ProofCarousel, ProofVideo, FunnelVisit, SiteError, MembershipCredit, MemberAccess, Notification, NotificationRead, PasswordReset, TrainerSchedule, ChatReset, User, Session, RateBucket, Booking, Slot, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Subscription, StripeEvent, Lesson, LessonLibrary, LessonSection, BillingLock, MediaUpload, MediaChunk];
+const liveSessionSchema = new Schema({
+  _id: String, trainerId: { type: id, required: true }, trainerName: String, credentialVersion: Number,
+  dogName: String, clientId: id, bookingId: id, audience: { type: String, enum: ['public', 'client'], required: true },
+  roomName: { type: String, required: true, unique: true }, publisherIdentity: String,
+  open: { type: Boolean, default: true }, status: { type: String, enum: ['starting', 'live', 'ending', 'ended'] },
+  startedAt: Date, lastSeenAt: Date, endedAt: Date, publicConsentAt: Date,
+}, { timestamps: true });
+liveSessionSchema.index({ trainerId: 1 }, { unique: true, partialFilterExpression: { open: true } });
+liveSessionSchema.index({ open: 1, status: 1, lastSeenAt: 1 });
+export const LiveSession = model('BravoLiveSession', liveSessionSchema);
+export const ALL_MODELS = [LiveSession, ProgramVideo, HeroFilm, HeroVideo, HeroCarousel, ProofCarousel, ProofVideo, FunnelVisit, SiteError, MembershipCredit, MemberAccess, Notification, NotificationRead, PasswordReset, TrainerSchedule, ChatReset, User, Session, RateBucket, Booking, Slot, Settings, ServiceSetting, Message, Review, AuditEvent, DirectMessage, CommunityGroup, GroupMessage, Subscription, StripeEvent, Lesson, LessonLibrary, LessonSection, BillingLock, MediaUpload, MediaChunk];

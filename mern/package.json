@@ -20,6 +20,8 @@
     "cookie-parser": "^1.4.7",
     "express": "^5.1.0",
     "helmet": "^8.1.0",
+    "livekit-client": "2.22.3",
+    "livekit-server-sdk": "2.19.1",
     "luxon": "^3.7.2",
     "mongoose": "^9.0.0",
     "parse5": "7.3.0",

@@ -1,3 +1,4 @@
+import LiveBanner from './LiveBanner';
 import { initialRecommendations } from './review-state';
 import CatalogPrice from './CatalogPrice';
 import { publicTrainerName } from '../../shared/discovery';
@@ -73,6 +74,7 @@ export default function Home() {
         <div className="cinema-hero-baseline cinema-shell"><Editable as="span" contentKey="copy-home-4" canEditText>REAL DOGS. REAL LIFE. BRAVO.</Editable><Editable as="a" contentKey="copy-home-5" canEditText canEditLink href="#method" aria-label="Discover the Bravo approach">SCROLL TO DISCOVER <span aria-hidden="true">↓</span></Editable></div>
       </CinematicFilm>
       <HomeBanner/>
+      <LiveBanner/>
       <div data-site-service="training" className="home-service-strip cinema-service-strip"><span><Editable as="span" contentKey="copy-home-6" canEditText>Private training · </Editable><CatalogPrice/><Editable as="span" contentKey="copy-home-7" canEditText>/month · one dog · We come to you.</Editable></span><Editable as="a" contentKey="copy-home-8" canEditText canEditLink href="tel:+16058242767">Let’s talk <span>(605) 824-2767</span></Editable></div>
       <div className="cinema-shell site-media-tools-slot site-media-tools-slot--home" data-site-media-tools=""/>
 

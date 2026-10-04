@@ -1,5 +1,7 @@
 export const SITE_ORIGIN = 'https://bravounleashed.com';
 export const PAGE_METADATA = {
+  '/live': { title: 'Bravo Live | Real Dog Training, Right Now', description: 'Watch live dog training with Bravo K9 Solutions. Real dogs, real sessions, real progress.', label: 'Live cams' },
+  '/live/studio': { title: 'Go Live | Bravo Trainer Studio', description: 'Start a public or client-only Bravo training session from your phone.', private: true },
   '/': { title: 'Mobile Dog Training in Aberdeen, SD | Bravo K9 Solutions', description: 'Private, in-home dog training and professional dog walking in Aberdeen, South Dakota. Build everyday skills with Bravo K9 Solutions. We come to you.', label: 'Home' },
   '/dog-training': { title: 'In-Home Dog Training in Aberdeen, SD | Bravo K9 Solutions', description: 'Private mobile dog training in Aberdeen, SD, for puppy foundations, obedience and everyday behavior. Explore how Bravo works and request your first visit.', label: 'Dog training', service: 'Private mobile dog training', image: '/images/obedience-real-world.webp', imageAlt: 'Trainer and dog owner working together outdoors' },
   '/behavior-assessment': { title: 'Dog Behavior Assessment in Aberdeen, SD | Bravo K9 Solutions', description: 'Start with a two-trainer assessment for aggressive-dog behavior in Aberdeen, SD. Discuss handling concerns, your dog’s history and next steps with Bravo.', label: 'Behavior assessment', service: 'Aggressive-dog intake and behavior assessment' },
