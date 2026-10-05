@@ -147,6 +147,10 @@ export default function HomeAdCarousel() {
   const slides = [...collection.ads.filter(ad => ad.enabled !== false && (ad.src || ad.videoSrc)), ...promotions];
   const current = slides.find(ad => ad.id === activeId) || slides[0];
   const currentId = current?.id;
+  const activeIndex = slides.findIndex(ad => ad.id === currentId);
+  // Keep the fading previous slide and preload the next, without mounting the
+  // whole collection. Stable IDs preserve the current video across routes/polls.
+  const visibleSlides = slides.filter((_ad, index) => index === activeIndex || index === (activeIndex + 1) % slides.length || index === (activeIndex + slides.length - 1) % slides.length);
   useEffect(() => { if (currentId && currentId !== activeId) setActiveId(currentId); }, [currentId, activeId]);
   const rotationKey = slides.map(ad => ad.id).join('|');
   const stopped = paused || reduced || editing || !!expanded || focused || obscured || keyboard;
@@ -184,7 +188,7 @@ export default function HomeAdCarousel() {
         onContextMenu={event => { if (canEdit) event.preventDefault(); }}
         onFocusCapture={() => setFocused(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}
         onClickCapture={event => { if (Date.now() < suppressUntil.current) { event.preventDefault(); event.stopPropagation(); } }}>
-        <div className="home-ad-frame"><div className="home-ad-track">{slides.map(ad => {
+        <div className="home-ad-frame"><div className="home-ad-track">{visibleSlides.map(ad => {
           const selected = ad.id === current.id;
           const art = ad.live ? <span className="ad-live-creative"><span className="live-badge"><i aria-hidden="true"/>LIVE</span><strong>BRAVO LIVE</strong><span className="ad-live-trainer">{ad.title}</span><small>{ad.audience === 'client' ? 'Client session' : 'Real training. Right now.'}</small></span> : <AdMedia ad={ad} playing={selected && !stopped}/>;
           return <article className={`home-ad-slide${selected ? ' is-active' : ''}`} key={ad.id} aria-hidden={!selected || undefined} inert={!selected}>

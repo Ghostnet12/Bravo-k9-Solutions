@@ -84,3 +84,12 @@ body:has(.home-ad-dock) .media-rights-toast{bottom:calc(var(--ad-dock-height) + 
   .home-ad-dock .home-ad-carousel{height:72px}
   .ad-live-creative>small,.ad-live-creative>strong{display:none}
 }
+
+/* Existing mobile booking actions stay reachable above the site-wide ads. */
+@media(max-width:700px){
+  body:has(.home-ad-dock) .mobile-booking-bar{bottom:var(--ad-dock-height)}
+  body:has(.home-ad-dock):has(.booking-page) .accessibility-tools{bottom:calc(var(--ad-dock-height) + 92px + env(safe-area-inset-bottom))!important}
+  body:has(.home-ad-dock):has(.booking-page) .accessibility-panel{max-height:calc(100dvh - var(--ad-dock-height) - 171px - env(safe-area-inset-bottom))!important}
+  body:has(.home-ad-dock):has(.booking-page) .content-edit-launcher{bottom:calc(var(--ad-dock-height) + 96px + env(safe-area-inset-bottom))}
+  body:has(.home-ad-dock):has(.booking-page) .action-feedback{bottom:calc(var(--ad-dock-height) + 92px + env(safe-area-inset-bottom))}
+}

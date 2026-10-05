@@ -56,8 +56,8 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
    await page.waitForURL(`${origin}${path}`);
    await page.waitForFunction(()=>document.querySelector('.home-ad-dock video')===window.__ad && !window.__ad.paused);
    assert.equal(await page.locator('.home-ad-dock').count(),1,'one dock survives route changes');
-   const before=await ad.evaluate(el=>el.currentTime);await page.waitForTimeout(350);
-   assert.ok(await ad.evaluate((el,time)=>el.currentTime>time,before),'ad playback advances after route navigation');
+   const before=await ad.evaluate(el=>el.currentTime);
+   await page.waitForFunction(time=>document.querySelector('.home-ad-dock video').currentTime>time+0.2,before,{timeout:10000});
    await page.evaluate(()=>window.scrollTo({top:document.body.scrollHeight,behavior:'instant'}));
    assert.ok(await page.evaluate(()=>document.querySelector('footer').getBoundingClientRect().bottom<=document.querySelector('.home-ad-dock').getBoundingClientRect().top+2),'route footer clears dock');
   }
@@ -109,6 +109,11 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
    await page.screenshot({path:`test-results/bravo-live-framing-TEST-${name}-${width}.png`});
   }
   sessions=[];await refresh();await page.getByRole('heading',{name:'OUT IN THE FIELD.'}).waitFor();await page.getByRole('region',{name:'Recorded Bravo training'}).waitFor();
+  await page.setViewportSize({width:390,height:900});
+  await page.goto(`${origin}/portal?program=walking`);await page.locator('.mobile-booking-bar').waitFor();await page.locator('.home-ad-dock').waitFor();
+  assert.ok(await page.evaluate(()=>{const bar=document.querySelector('.mobile-booking-bar').getBoundingClientRect(),dock=document.querySelector('.home-ad-dock').getBoundingClientRect(),access=document.querySelector('.accessibility-tools').getBoundingClientRect();return bar.bottom<=dock.top+1 && access.bottom<bar.top;}),'booking action and accessibility control clear the dock');
+  await page.locator('.mobile-booking-bar a').click();
+  assert.equal(new URL(page.url()).hash,'#choose-dates','mobile booking action remains usable');
   await page.goto(origin);await page.locator('.home-ad-dock').waitFor();await page.emulateMedia({reducedMotion:'reduce'});await page.getByRole('button',{name:'Accessibility',exact:true}).click();await page.getByRole('button',{name:'Resume advertisements',exact:true}).waitFor();
   assert.equal(await page.locator('.home-ad-dock video').evaluate(el=>el.paused),true);
   const resume=page.getByRole('button',{name:'Resume advertisements',exact:true});await page.keyboard.press('Tab');await resume.focus();assert.ok(await resume.evaluate(el=>getComputedStyle(el).outlineStyle!=='none'));
