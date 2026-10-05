@@ -6,19 +6,19 @@ import { readFile, mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { chromium, webkit } from 'playwright';
 const dist=fileURLToPath(new URL('../client/dist/',import.meta.url));
-const html=await readFile(`${dist}/bravo-shell.html`,'utf8');
+const html=await readFile(`${dist}/bravo-shell.html`,'utf8'),liveHtml=await readFile(`${dist}/live.html`,'utf8');
 let handleApi;
-const app=express();app.use('/api',(req,res)=>handleApi(req,res));app.use(express.static(dist,{redirect:false}));app.get('/{*path}',(_req,res)=>res.type('html').send(html));
+const app=express();app.use('/api',(req,res)=>handleApi(req,res));app.get('/live',(_req,res)=>res.type('html').send(liveHtml));app.use(express.static(dist,{redirect:false}));app.get('/{*path}',(_req,res)=>res.type('html').send(html));
 const server=app.listen(0,'127.0.0.1');await once(server,'listening');const origin=`http://127.0.0.1:${server.address().port}`;
 await mkdir('test-results',{recursive:true});
 const startedAt=new Date(Date.now()-14*60000).toISOString();
 const makeSession=(id,trainerName,audience='public')=>({id,trainerId:id,trainerName,dogName:`Test dog ${id}`,trainingFocus:'Test field obedience',audience,status:'live',startedAt});
 try {for(const [name,engine] of Object.entries({chromium,webkit})) {
  const browser=await engine.launch(name==='chromium'?{channel:'chrome'}:{});
- let evidencePage;
+ let evidencePage;const pendingRequests=new Set(),failedRequests=[];
  try {
   const context=await browser.newContext({viewport:{width:390,height:900}}),page=await context.newPage();
-  evidencePage=page;const errors=[];page.on('pageerror',error=>errors.push(error.message));
+  evidencePage=page;page.on('request',r=>pendingRequests.add(r.url()));page.on('requestfinished',r=>pendingRequests.delete(r.url()));page.on('requestfailed',r=>{pendingRequests.delete(r.url());failedRequests.push({url:r.url(),error:r.failure()?.errorText});});const errors=[];page.on('pageerror',error=>errors.push(error.message));
   let sessions=[],failure=false,ads=[{id:'fixture-video',title:'Recorded Bravo training — test ad placement',alt:'Existing Bravo footage used as a test advertisement',enabled:true,link:'/dog-training',src:'/images/training-education.webp',videoSrc:'/assets/bravo-opening-565c14182176.mp4'}];
   handleApi=(req,res)=>{
    const path=new URL(req.originalUrl,origin).pathname;
@@ -122,7 +122,8 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
   assert.deepEqual(errors,[]);console.log(`PASS ${name}: offline/one/two/rename/stop/private/unavailable, persistent elapsed, 320–1440px framing, dock media continuity/footer/floating controls/dialogs, pause, keyboard focus, reduced motion, hidden collection`);
   await context.close();
  }catch(error){
-  if(evidencePage){await evidencePage.screenshot({path:`test-results/FAILED-live-experience-${name}.png`}).catch(()=>{});console.log('Failure diagnostics',await evidencePage.evaluate(()=>({visibility:document.visibilityState,url:location.href,videos:[...document.querySelectorAll('video')].map(v=>({src:v.currentSrc,paused:v.paused,muted:v.muted,ready:v.readyState,error:v.error?.message,time:v.currentTime})),dock:document.querySelector('.home-ad-dock')?.outerHTML,dialogs:document.querySelectorAll('dialog[open]').length})).catch(()=>({})));}
+  console.log('Request diagnostics',{pending:[...pendingRequests],failed:failedRequests});
+  if(evidencePage){await evidencePage.screenshot({path:`test-results/FAILED-live-experience-${name}.png`}).catch(()=>{});console.log('Failure diagnostics',await evidencePage.evaluate(()=>({ready:document.readyState,body:document.body.innerText.slice(0,2500),visibility:document.visibilityState,url:location.href,videos:[...document.querySelectorAll('video')].map(v=>({src:v.currentSrc,paused:v.paused,muted:v.muted,ready:v.readyState,error:v.error?.message,time:v.currentTime})),dock:document.querySelector('.home-ad-dock')?.outerHTML,dialogs:document.querySelectorAll('dialog[open]').length})).catch(()=>({})));}
   throw error;
  }finally{await browser.close();}
 }}finally{server.close();}
