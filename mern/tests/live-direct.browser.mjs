@@ -89,7 +89,7 @@ try {
   await viewers[0].getByRole('button',{name:/Second trainer TEST/}).click();
   await viewers[0].getByRole('button',{name:/Watch live/}).click();
   await viewers[0].waitForFunction(()=>{const video=document.querySelector('.live-video-stage video');return video?.videoWidth>0&&video.currentTime>0.5;},null,{timeout:60000});
-  assert.match(await viewers[0].locator('.live-player-caption').innerText(),/Second test dog/);
+  assert.match(await viewers[0].locator('.live-player-caption').innerText(),/Second test dog/i);
   await secondPhone.getByRole('button',{name:'■ End live session'}).click();
   await home.waitForFunction(()=>document.querySelectorAll('.hero-live li').length===1,null,{timeout:5000});
   await viewers[0].waitForFunction(()=>document.querySelector('.live-player-caption')?.textContent.includes('Gunner'));

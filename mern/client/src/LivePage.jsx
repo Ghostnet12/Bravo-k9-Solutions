@@ -36,7 +36,7 @@ function LivePlayer({ session, offset }) {
     else { video.current.muted = true; releaseLiveAudio(); }
     setSound(!sound);
   }
-  const connection = session.status === 'unavailable' ? 'Status unavailable' : !active ? 'Reconnecting' : state === 'watching' ? 'Connected' : state === 'ended' ? 'Connection ended' : state === 'idle' ? 'Ready to watch' : 'Connecting';
+  const connection = session.status === 'unavailable' ? 'Status unavailable' : !active ? 'Reconnecting' : state === 'watching' ? 'Connected' : state === 'reconnecting' ? 'Reconnecting' : state === 'ended' ? 'Connection ended' : state === 'idle' ? 'Ready to watch' : 'Connecting';
   return <section id="live-player" className="live-player" aria-label={`${session.trainerName} training ${session.dogName}`}>
     <div className="live-video-stage">
       <video ref={video} autoPlay playsInline muted={!sound} aria-label="Live training video"/>
