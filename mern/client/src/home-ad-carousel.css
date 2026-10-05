@@ -67,6 +67,7 @@
 .ad-dock-controls{position:absolute;z-index:3;right:max(6px,env(safe-area-inset-right));top:6px;display:flex;gap:4px;align-items:center;padding:3px;border-radius:6px;background:#101010d9}.ad-dock-controls button{border:1px solid #ba9a6466;color:#f2d5a5;background:#101010d9;width:36px;height:36px;min-height:36px;padding:0;border-radius:4px;font-size:17px;cursor:pointer}
 .home-ad-dock :is(a,button):focus-visible{outline:3px solid #ffe4b5;outline-offset:-3px}
 .ad-live-creative{height:100%;display:flex;gap:5px;align-items:center;justify-content:center;flex-direction:column;background:radial-gradient(ellipse at center,#302319,#101010);border:1px solid #ba9a6444}
+.ad-live-trainer{max-width:90%;font-size:12px;line-height:1.3;text-align:center;overflow-wrap:anywhere;color:#fff}
 .ad-live-creative>strong{font-family:'Bebas Neue',sans-serif;font-size:24px;color:#ead3aa;line-height:1}.ad-live-creative>small{font-size:9px;color:#ddd}.ad-live-creative .live-badge{min-height:24px;font-size:10px;padding:3px 8px}
 .ad-expanded{padding:18px;width:min(1100px,calc(100vw - 24px));max-height:90dvh;overflow:auto;background:#101010;color:#fff;border:1px solid #ba9a64}.ad-expanded::backdrop{background:#000d}.ad-expanded :is(img,video){width:100%;height:auto;max-height:65dvh;object-fit:contain;background:#000}.ad-expanded-close{display:block;margin:0 0 16px auto;min-height:44px;background:#101010;color:#e1c798;border:1px solid #ba9a64;padding:8px 14px}.ad-expanded h2{font-size:20px}
 body:has(.home-ad-dock) .accessibility-tools{bottom:calc(var(--ad-dock-height) + 16px)!important}body:has(.home-ad-dock) .accessibility-panel{max-height:calc(100dvh - var(--ad-dock-height) - 95px)!important;overflow:auto}
@@ -84,5 +85,5 @@ body:has(.home-ad-dock) .media-rights-toast{bottom:calc(var(--ad-dock-height) + 
 @media(max-height:500px) and (orientation:landscape){
   .home-ad-dock .home-ad-carousel{height:72px}
   .ad-dock-controls{top:4px}
-  .ad-live-creative>small{display:none}.ad-live-creative>strong{font-size:19px}
+  .ad-live-creative>small,.ad-live-creative>strong{display:none}
 }
