@@ -42,6 +42,7 @@ try{
    assert.equal(await page.locator('.home-status-banner').evaluate(el=>el.previousElementSibling.classList.contains('home-hero')),true);
    await page.getByRole('button',{name:'Edit information banner',exact:true}).waitFor();
    await page.getByRole('button',{name:'Manage advertisements',exact:true}).waitFor();
+   assert.ok(await page.locator('.content-edit-launcher').evaluate(el=>el.getBoundingClientRect().bottom<document.querySelector('.home-ad-dock').getBoundingClientRect().top),'owner page-edit control is above the dock');
    assert.equal(await carousel.getByRole('img',{name:'Workshop banner'}).count(),1);
    const workshopImage=page.locator('.home-ad-slide img[alt="Workshop banner"]');await workshopImage.waitFor();assert.equal(await workshopImage.getAttribute('src'),'/images/saturday-workshop-october-3.webp');
    await page.waitForFunction(()=>{const image=document.querySelector('.home-ad-slide img[alt="Workshop banner"]');return image?.complete&&image.naturalWidth>0;},null,{timeout:15000});
