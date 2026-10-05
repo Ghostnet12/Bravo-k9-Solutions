@@ -18,7 +18,7 @@ try{
    const context=await browser.newContext({viewport:{width:390,height:900}}),page=await context.newPage();
    let role='owner', collection={revision:0,settings:{autoplaySeconds:3},ads:[
     {id:'saturday-workshop-october-3',title:'Saturday Dog Training Workshop',alt:'Workshop banner',link:'/contact',enabled:true,src:'/images/saturday-workshop-october-3.webp'},
-    {id:'fixture-second',title:'Second promotion',alt:'Second promotion',link:'/contact',enabled:true,src:'/images/training-education.webp'}
+    {id:'fixture-second',title:'Second promotion',alt:'Second promotion',link:'',enabled:true,src:'/images/training-education.webp'}
    ]};
    const errors=[];page.on('pageerror',e=>errors.push(e.message));
    await page.route('**/api/**',async route=>{

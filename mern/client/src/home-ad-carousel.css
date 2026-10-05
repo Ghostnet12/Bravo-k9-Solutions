@@ -79,3 +79,11 @@ body:has(.home-ad-dock) .accessibility-tools{bottom:calc(var(--ad-dock-height) +
 .ad-dock-copy>a{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
 .ad-editor-card>video{width:100%;aspect-ratio:1320/510;object-fit:contain;background:#000}
+@media(max-height:500px) and (orientation:landscape){
+  .home-ad-dock{padding-top:4px;padding-bottom:calc(4px + env(safe-area-inset-bottom))}
+  .home-ad-dock .home-ad-carousel{height:60px;gap:12px}
+  .home-ad-dock .home-ad-frame{height:60px;width:156px;flex-basis:156px}
+  .ad-dock-copy{gap:3px}.ad-dock-copy>a{font-size:12px}.ad-dock-copy>span{font-size:7px}
+  .ad-dock-controls{flex-direction:row;gap:5px}.ad-dock-controls button{height:44px;min-height:44px}
+  .ad-live-creative>small{display:none}.ad-live-creative>strong{font-size:19px}
+}

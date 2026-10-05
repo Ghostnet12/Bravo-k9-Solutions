@@ -49,6 +49,13 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
   assert.equal(await ad.evaluate(el=>el===window.__ad && el.muted && getComputedStyle(el).objectFit==='contain'),true);
   const layout=await page.evaluate(()=>{const dock=document.querySelector('.home-ad-dock').getBoundingClientRect(),footer=document.querySelector('footer').getBoundingClientRect(),floating=document.querySelector('.accessibility-tools')?.getBoundingClientRect();return {bottom:dock.bottom,height:dock.height,footer:footer.bottom,top:dock.top,floating:floating?.bottom,reserved:parseFloat(getComputedStyle(document.querySelector('.bravo-home')).paddingBottom),screen:innerHeight};});
   assert.ok(Math.abs(layout.bottom-layout.screen)<2);assert.ok(layout.reserved>=layout.height);assert.ok(layout.footer<=layout.top+2);if(layout.floating)assert.ok(layout.floating<layout.top);
+  await page.setViewportSize({width:844,height:390});
+  await page.evaluate(()=>window.scrollTo({top:document.body.scrollHeight,behavior:'instant'}));
+  await page.waitForFunction(()=>parseFloat(getComputedStyle(document.querySelector('.bravo-home')).paddingBottom)===Math.ceil(document.querySelector('.home-ad-dock').getBoundingClientRect().height));
+  const landscape=await page.evaluate(()=>{const dock=document.querySelector('.home-ad-dock').getBoundingClientRect();return {height:dock.height,top:dock.top,footer:document.querySelector('footer').getBoundingClientRect().bottom,floating:document.querySelector('.accessibility-tools').getBoundingClientRect().bottom,overflow:document.documentElement.scrollWidth>innerWidth+1};});
+  assert.ok(landscape.height<=75 && landscape.footer<=landscape.top+2 && landscape.floating<landscape.top && !landscape.overflow,'landscape dock leaves reading space and reachable footer/controls');
+  assert.equal(await ad.evaluate(el=>el===window.__ad),true,'orientation preserves the video element');
+  await page.setViewportSize({width:390,height:900});
   await page.getByRole('button',{name:'Pause advertisements',exact:true}).click();assert.equal(await ad.evaluate(el=>el.paused),true);
   await page.getByRole('button',{name:'Resume advertisements',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('.home-ad-dock video').paused);
   await page.getByRole('button',{name:'Expand advertisement'}).click();await page.locator('.ad-expanded[open]').waitFor();

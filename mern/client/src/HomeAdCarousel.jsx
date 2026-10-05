@@ -172,7 +172,7 @@ export default function HomeAdCarousel() {
     {canEdit && <button type="button" className="section-edit-button ad-management-entry" onClick={openEditor}>Manage advertisements</button>}
     {current && createPortal(<aside ref={dock} className="home-ad-dock" data-keyboard={keyboard || undefined} data-obscured={obscured || undefined} aria-label="Bravo announcements and promotions">
       <section className="home-ad-carousel" data-site-image-ignore="" data-ad-editable={canEdit || undefined}
-        onPointerDown={event => { if (!canEdit || event.button !== 0 || event.isPrimary === false || event.target.closest('button')) return; origin.current = { x: event.clientX, y: event.clientY }; cancelHold(); hold.current = setTimeout(openEditor, 650); }}
+        onPointerDown={event => { if (!canEdit || event.button !== 0 || event.isPrimary === false || event.target.closest('.ad-dock-controls')) return; origin.current = { x: event.clientX, y: event.clientY }; cancelHold(); hold.current = setTimeout(openEditor, 650); }}
         onPointerMove={event => { if (origin.current && Math.hypot(event.clientX - origin.current.x, event.clientY - origin.current.y) > 12) cancelHold(); }}
         onPointerUp={cancelHold} onPointerCancel={cancelHold} onPointerLeave={cancelHold}
         onContextMenu={event => { if (canEdit) event.preventDefault(); }}
