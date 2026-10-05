@@ -9,7 +9,7 @@ import { chromium, webkit } from 'playwright';
 const replica = await MongoMemoryReplSet.create({ replSet: { count: 1 }, binary: { version: '7.0.14' } });
 Object.assign(process.env, { NODE_ENV: 'test', MONGODB_URI: replica.getUri(), MONGODB_DB: 'live_browser', BRAVO_LIVE_ENABLED: 'true' });
 delete process.env.STRIPE_SECRET_KEY;
-let server;
+let server, healthTimer;
 await mkdir('test-results', { recursive: true });
 try {
   const { default: app } = await import('../server/client-services-app.js');
@@ -23,7 +23,7 @@ try {
   const token = randomBytes(32).toString('hex');
   await Session.create({ userId: trainer._id, tokenHash: createHash('sha256').update(token).digest('hex'), issuedAt: new Date(), lastSeenAt: new Date(), expiresAt: new Date(Date.now() + 3600000) });
   const row = { _id: 'f49a2019-e01f-4db7-b15a-508fd74e2bea', trainerId: trainer._id, trainerName: 'David', credentialVersion: 0, clientId: client._id, dogName: 'Gunner', audience: 'public', transport: 'direct', roomName: 'browser-fixture', publisherIdentity: 'test-publisher', open: true, status: 'live', startedAt: new Date(Date.now() - 123000), lastSeenAt: new Date(), lastPublishedAt: new Date() };
-  const healthTimer = setInterval(() => LiveSession.updateMany({ open: true }, { $set: { lastSeenAt: new Date(), lastPublishedAt: new Date() } }).catch(() => {}), 1500);
+  healthTimer = setInterval(() => LiveSession.updateMany({ open: true }, { $set: { lastSeenAt: new Date(), lastPublishedAt: new Date() } }).catch(() => {}), 1500);
   healthTimer.unref();
   server = app.listen(0, '127.0.0.1'); await once(server, 'listening');
   const origin = `http://127.0.0.1:${server.address().port}`; process.env.APP_ORIGIN = origin;
@@ -31,7 +31,7 @@ try {
     const browser = await engine.launch(engineName === 'chromium' ? { args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] } : {});
     try { for (const width of [390, 1440]) {
       process.env.BRAVO_LIVE_ENABLED = 'true';
-      await LiveSession.deleteMany({}); await LiveSession.create({ ...row, lastSeenAt: new Date() });
+      await LiveSession.deleteMany({}); await LiveSession.create({ ...row, lastSeenAt: new Date(), lastPublishedAt: new Date() });
       const context = await browser.newContext({ viewport: { width, height: 1000 } });
       const page = await context.newPage(), errors = []; page.on('pageerror', e => errors.push(e.message));
       try {
@@ -88,4 +88,4 @@ try {
       } finally { await context.close(); }
     } } finally { await browser.close(); }
   }
-} finally { if (server) await new Promise(resolve => server.close(resolve)); await mongoose.disconnect(); await replica.stop(); }
+} finally { clearInterval(healthTimer); if (server) await new Promise(resolve => server.close(resolve)); await mongoose.disconnect(); await replica.stop(); }

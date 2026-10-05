@@ -102,10 +102,18 @@ try {
   const abandoned = await LiveSession.findOne({ trainerId:secondTrainer._id, open:true });
   await home.waitForFunction(()=>document.querySelectorAll('.hero-live li').length===2,null,{timeout:5000});
   await secondPhone.route('**/api/live/*/end',route=>route.abort('failed'));
+  const tabClosedAt = Date.now();
   await secondPhone.close();
   await home.waitForFunction(()=>document.querySelectorAll('.hero-live li').length===1,null,{timeout:11000});
-  await home.waitForFunction(async id=>{const data=await fetch('/api/live').then(r=>r.json());return !data.announcements.some(a=>a.trainerId===id);},String(secondTrainer._id),{timeout:15000,polling:2000});
-  assert.equal((await LiveSession.findById(abandoned._id)).open,false);
+  let expired, lastSnapshot;
+  do {
+    lastSnapshot = await fetch(`${origin}/api/live`).then(r=>r.json());
+    expired = await LiveSession.findById(abandoned._id);
+    if (!expired.open) break;
+    await new Promise(resolve=>setTimeout(resolve,500));
+  } while(Date.now()-tabClosedAt<23000);
+  assert.equal(expired.open,false,JSON.stringify({lastSnapshot,session:expired.toObject(),elapsed:Date.now()-tabClosedAt}));
+  assert.ok(!lastSnapshot.announcements.some(item=>item.trainerId===String(secondTrainer._id)));
   await secondContext.close();
   console.log('PASS closed publisher tab with failed end request loses LIVE badge in eight seconds and expires at twenty seconds');
   console.log('PASS two real synthetic publishers, automatic staff name, working stream selection, independent stop within five seconds');
@@ -115,6 +123,9 @@ try {
     await page.getByRole('button', { name: 'Enable audio' }).click();
     await page.getByRole('button', { name: 'Mute audio' }).waitFor();
   }
+  await viewers[0].getByRole('button', { name: 'Full screen' }).click();
+  await viewers[0].waitForFunction(() => !!document.fullscreenElement);
+  await viewers[0].evaluate(() => document.exitFullscreen());
   await phone.getByRole('button', { name: 'Flip camera' }).click();
   await phone.locator('.live-camera-preview video.is-mirrored').waitFor();
   await phone.getByRole('button', { name: 'Microphone on' }).click();
