@@ -53,8 +53,16 @@ try{
    await page.waitForFunction(()=>document.querySelector('.home-ad-slide.is-active img')?.getAttribute('alt')==='Second promotion',null,{timeout:5000});
 
    await carousel.scrollIntoViewIfNeeded();
-   const box=await carousel.boundingBox();await page.mouse.move(box.x+60,box.y+35);await page.mouse.down();await page.waitForTimeout(750);await page.mouse.up();
-   await page.getByRole('dialog',{name:/Manage homepage ads/i}).waitFor();
+   // Let the automatic fade settle, then hold the visible artwork until the
+   // editor actually opens. The compact dock is smaller than the old placement.
+   await page.waitForTimeout(700);
+   const artwork=page.locator('.home-ad-slide.is-active img'),box=await artwork.boundingBox();
+   const point={x:box.x+box.width/2,y:box.y+box.height/2};
+   assert.equal(await page.evaluate(p=>!!document.elementFromPoint(p.x,p.y)?.closest('.home-ad-slide.is-active'),point),true,'hold target is the visible advertisement');
+   await page.mouse.move(point.x,point.y);await page.mouse.down();
+   try { await page.getByRole('dialog',{name:/Manage homepage ads/i}).waitFor({timeout:8000}); }
+   catch(error){await page.screenshot({path:`test-results/FAILED-ad-hold-${engineName}.png`});console.log('Ad hold diagnostics',await page.evaluate(()=>({target:document.elementFromPoint(innerWidth/2,innerHeight-50)?.outerHTML,dock:document.querySelector('.home-ad-dock')?.outerHTML,dialogs:[...document.querySelectorAll('dialog')].map(d=>({open:d.open,text:d.textContent?.slice(0,80)}))})));throw error;}
+   finally {await page.mouse.up();}
    assert.equal(await page.locator('dialog[open]').count(),1,'ad holds open only the ad manager');
    assert.equal(await page.locator('.ad-editor-card').first().getByLabel('Ad name').inputValue(),'Saturday Dog Training Workshop');
    const addPanel=page.locator('.ad-editor-add');await addPanel.getByRole('heading',{name:'Add advertisement'}).scrollIntoViewIfNeeded();

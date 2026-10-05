@@ -25,22 +25,27 @@ export function LiveStatusProvider({ children }) {
   const [data, setData] = useState(initial), now = useLiveClock(data.offset);
   useEffect(() => {
     if (!authReady || !relevant) return;
-    let active = true, busy = false;
+    let active = true, busy = false, suspended = false, request;
     const load = async () => {
-      if (!active || busy || document.hidden) return;
+      if (!active || busy || suspended || document.hidden) return;
       busy = true; const sent = Date.now();
+      const controller = new AbortController(); request = controller;
       try {
-        const result = await api('/live', { timeoutMs: 4000 });
+        const result = await api('/live', { timeoutMs: 4000, signal: controller.signal });
         if (!Array.isArray(result.sessions) || !Array.isArray(result.announcements)) throw new Error('Invalid live status');
         if (active) setData({ ...result, identity, loading: false, error: '', offset: new Date(result.serverTime).getTime() - (sent + Date.now()) / 2 });
       } catch {
-        if (active) setData(old => ({ ...old, identity, loading: false, availability: 'unavailable', error: 'Live status is temporarily unavailable. Reconnecting…' }));
+        if (active && !controller.signal.aborted) setData(old => ({ ...old, identity, loading: false, availability: 'unavailable', error: 'Live status is temporarily unavailable. Reconnecting…' }));
       } finally { busy = false; }
     };
     setData(initial); void load();
     const timer = setInterval(load, LIVE_POLL_MS);
-    window.addEventListener('bravo-live-changed', load); window.addEventListener('online', load); document.addEventListener('visibilitychange', load);
-    return () => { active = false; clearInterval(timer); window.removeEventListener('bravo-live-changed', load); window.removeEventListener('online', load); document.removeEventListener('visibilitychange', load); };
+    const hide = () => { suspended = true; request?.abort(); };
+    const show = () => { suspended = false; void load(); };
+    const visibility = () => document.hidden ? hide() : show();
+    window.addEventListener('pagehide', hide); window.addEventListener('pageshow', show);
+    window.addEventListener('bravo-live-changed', load); window.addEventListener('online', load); document.addEventListener('visibilitychange', visibility);
+    return () => { active = false; request?.abort(); clearInterval(timer); window.removeEventListener('pagehide', hide); window.removeEventListener('pageshow', show); window.removeEventListener('bravo-live-changed', load); window.removeEventListener('online', load); document.removeEventListener('visibilitychange', visibility); };
   }, [identity, authReady, relevant]);
   const snapshot = data.identity === identity ? data : initial;
   const state = item => snapshot.availability !== 'available' ? 'unavailable' : item.status === 'live' && (!item.liveUntil || new Date(item.liveUntil).getTime() <= now) ? 'reconnecting' : item.status;
