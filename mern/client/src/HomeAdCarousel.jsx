@@ -110,8 +110,22 @@ function AdEditor({ collection, publish, close }) {
 }
 
 function AdMedia({ ad, playing }) {
-  const video = useRef(null);
-  useEffect(() => { const element = video.current; if (!element) return; if (playing) element.play().catch(() => {}); else element.pause(); }, [playing, ad.videoSrc]);
+  const video = useRef(null), shouldPlay = useRef(playing);
+  useEffect(() => {
+    const element = video.current;
+    if (!element) return;
+    const resume = () => {
+      if (element.getAttribute('src') !== ad.videoSrc) element.setAttribute('src', ad.videoSrc);
+      if (shouldPlay.current) element.play().catch(() => {});
+    };
+    const release = () => { element.pause(); element.removeAttribute('src'); element.load(); };
+    resume();
+    // SPA navigation keeps this element mounted. A document departure must
+    // release the old media loader; a back/forward-cache restore reopens it.
+    window.addEventListener('pagehide', release); window.addEventListener('pageshow', resume);
+    return () => { window.removeEventListener('pagehide', release); window.removeEventListener('pageshow', resume); release(); };
+  }, [ad.videoSrc]);
+  useEffect(() => { shouldPlay.current = playing; const element = video.current; if (!element) return; if (playing) element.play().catch(() => {}); else element.pause(); }, [playing, ad.videoSrc]);
   return ad.videoSrc ? <video ref={video} src={ad.videoSrc} poster={ad.src || undefined} muted loop playsInline preload="none" aria-label={ad.alt || ad.title}/> : <img src={ad.src} width="1320" height="510" loading="eager" draggable="false" alt={ad.alt || ad.title}/>;
 }
 function ExpandedAd({ ad, close }) {
