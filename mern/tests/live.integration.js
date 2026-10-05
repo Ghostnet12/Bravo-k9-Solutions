@@ -23,7 +23,13 @@ test('direct WebRTC isolates private signaling, admits concurrent viewers withou
     if (cookies[who]) r = r.set('Cookie', cookies[who]);
     return method === 'get' ? r : r.send(body);
   };
-  const beat = (who, session, cameraReady = true) => call(who, 'post', `/live/${session.id}/heartbeat`, { cameraReady });
+  const publications = new Map();
+  const beat = (who, session, cameraReady = true) => {
+    const previous = publications.get(session.id) || { id: randomUUID(), framesEncoded: 0, framesDecoded: 0 };
+    const publication = { ...previous, framesEncoded: previous.framesEncoded + 30, framesDecoded: previous.framesDecoded + 30 };
+    publications.set(session.id, publication);
+    return call(who, 'post', `/live/${session.id}/heartbeat`, { cameraReady, publication });
+  };
   const watch = (who, session) => call(who, 'post', `/live/${session.id}/watch`, { offer });
   const peerPath = (session, peer, action) => `/live/${session.id}/peers/${peer.peerId}/${action}`;
   let session, publicSession, clientPeer;
@@ -50,12 +56,13 @@ test('direct WebRTC isolates private signaling, admits concurrent viewers withou
       assert.equal(studio.viewerLimit, null); assert.equal(studio.bookings[0].dogName, 'Gunner');
       assert.equal((await call('otherTrainer', 'get', '/live/studio')).body.bookings.length, 0);
     });
-    await t.test('only an authenticated phone reporting a ready camera starts discovery', async () => {
+    await t.test('camera preview alone cannot publish; advancing encoded and decoded media starts discovery', async () => {
       session = (await call('trainer', 'post', '/live', body).expect(201)).body.session;
       assert.equal(session.dogName, 'Gunner'); assert.equal(session.status, 'starting');
       await call('trainer', 'post', '/live', body).expect(409);
-      assert.equal((await call('client', 'get', '/live')).body.sessions.length, 0);
-      await beat('trainer', session, false).expect(409);
+      assert.equal((await call('client', 'get', '/live')).body.sessions.filter(s => s.status === 'live').length, 0);
+      assert.equal((await call('trainer', 'post', `/live/${session.id}/heartbeat`, { cameraReady: true }).expect(200)).body.session.status, 'starting');
+      assert.equal((await beat('trainer', session, false).expect(200)).body.session.status, 'starting');
       assert.equal((await beat('trainer', session).expect(200)).body.session.status, 'live');
       assert.equal(await Notification.countDocuments({ _id: `live:${session.id}`, userId: users.client._id }), 1);
     });
@@ -85,6 +92,24 @@ test('direct WebRTC isolates private signaling, admits concurrent viewers withou
       assert.deepEqual(heartbeat.peers.map(p => p.id), [clientPeer.peerId]);
       assert.equal(heartbeat.peers[0].tokenHash, undefined);
       assert.ok(!JSON.stringify((await call('client', 'get', '/live')).body).includes('sdp'));
+    });
+    await t.test('one state drives current names, private announcements, interruptions and bounded expiry', async () => {
+      await User.updateOne({ _id: users.trainer._id }, { $set: { publicName: 'Renamed Trainer' } });
+      let snapshot = (await call(null, 'get', '/live').expect(200)).body;
+      assert.equal(snapshot.announcements[0].trainerName, 'Renamed Trainer');
+      assert.equal(snapshot.announcements[0].audience, 'client');
+      for (const secret of ['Gunner', String(users.client._id), clientPeer.token, 'sdp', 'roomName']) assert.ok(!JSON.stringify(snapshot).includes(secret));
+      assert.equal((await call('client', 'get', '/live')).body.sessions[0].trainerName, 'Renamed Trainer');
+      const started = (await LiveSession.findById(session.id)).startedAt.toISOString();
+      const stalled = publications.get(session.id);
+      assert.equal((await call('trainer', 'post', `/live/${session.id}/heartbeat`, { cameraReady: true, publication: stalled })).body.session.status, 'reconnecting');
+      snapshot = (await call(null, 'get', '/live')).body;
+      assert.equal(snapshot.announcements[0].status, 'reconnecting');
+      await beat('trainer', session).expect(200);
+      assert.equal((await LiveSession.findById(session.id)).startedAt.toISOString(), started);
+      await LiveSession.updateOne({ _id: session.id }, { $set: { lastPublishedAt: new Date(Date.now() - 9000) } });
+      assert.equal((await call(null, 'get', '/live')).body.announcements[0].status, 'reconnecting');
+      await beat('trainer', session).expect(200);
     });
     await t.test('viewer publication/data-channel offers and oversized signaling are refused', async () => {
       for (const bad of [sdp('sendrecv'), sdp('sendonly'), offer.sdp.replace('a=recvonly', 'a=recvonly\r\na=sendrecv'), offer.sdp + 'm=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\n', 'x'.repeat(40001)]) {
@@ -165,6 +190,32 @@ test('direct WebRTC isolates private signaling, admits concurrent viewers withou
       assert.equal(await LivePeer.countDocuments({ sessionId: broadcast.id }), 0);
       await RateBucket.deleteMany({});
       await call('owner', 'post', `/live/${broadcast.id}/end`).expect(200);
+    });
+    await t.test('new staff and two public trainers start/stop independently; publication expires at 20 seconds', async () => {
+      await RateBucket.deleteMany({});
+      const first = (await call('owner', 'post', '/live', { dogName: 'Alpha', audience: 'public', publicConsent: true }).expect(201)).body.session;
+      const second = (await call('otherTrainer', 'post', '/live', { dogName: 'Bravo', audience: 'public', publicConsent: true }).expect(201)).body.session;
+      assert.equal((await call(null, 'get', '/live')).body.announcements.length, 0);
+      await beat('owner', first).expect(200);
+      assert.deepEqual((await call(null, 'get', '/live')).body.announcements.map(a => a.trainerName), ['owner']);
+      await beat('otherTrainer', second).expect(200);
+      let snapshot = (await call(null, 'get', '/live')).body;
+      assert.equal(snapshot.announcements.length, 2);
+      assert.equal(new Set(snapshot.announcements.map(a => a.trainerId)).size, 2);
+      await User.updateOne({ _id: users.otherTrainer._id }, { $set: { publicName: 'New public display name' } });
+      assert.ok((await call(null, 'get', '/live')).body.announcements.some(a => a.trainerName === 'New public display name'));
+      await call('owner', 'post', `/live/${first.id}/end`).expect(200);
+      snapshot = (await call(null, 'get', '/live')).body;
+      assert.deepEqual(snapshot.sessions.map(s => s.id), [second.id]);
+      await LiveSession.updateOne({ _id: second.id }, { $set: { lastPublishedAt: new Date(Date.now() - 20001), lastSeenAt: new Date() } });
+      snapshot = (await call(null, 'get', '/live')).body;
+      assert.deepEqual(snapshot.announcements, []);
+      assert.deepEqual(snapshot.sessions, []);
+      assert.equal((await LiveSession.findById(second.id)).open, false);
+      const abandoned = (await call('otherTrainer', 'post', '/live', { dogName: 'Preview only', audience: 'public', publicConsent: true }).expect(201)).body.session;
+      await LiveSession.updateOne({ _id: abandoned.id }, { $set: { lastSeenAt: new Date(Date.now() - 20001) } });
+      assert.deepEqual((await call(null, 'get', '/live')).body.announcements, []);
+      assert.equal((await LiveSession.findById(abandoned.id)).open, false);
     });
     await t.test('concurrent start is singular and emergency disable is explicit', async () => {
       await RateBucket.deleteMany({});

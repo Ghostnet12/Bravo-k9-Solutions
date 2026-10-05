@@ -12,7 +12,7 @@ test('homepage ads are public but mutations are owner-only, durable and conflict
   try {
     const { default: app } = await import('../server/site-image-app.js');
     const { connectDb } = await import('../server/db.js');
-    const { User, Session, AuditEvent } = await import('../server/models.js');
+    const { User, Session, AuditEvent, ProofVideo } = await import('../server/models.js');
     await connectDb(); const cookies={};
     for (const name of ['owner','administrator','staff','member']) {
       const user=await User.create({name,role:name==='administrator'?'owner':name,passwordHash:'fixture'});
@@ -43,5 +43,12 @@ test('homepage ads are public but mutations are owner-only, durable and conflict
     const removed=await write('delete',`/api/site-ads/${dynamic.id}`,'owner',{expectedRevision:3}).expect(200);
     assert.equal(removed.body.ads.length,1);
     assert.ok(await AuditEvent.countDocuments({targetType:'site-ads'})>=4);
+    await write('post','/api/site-ads','owner',{expectedRevision:4,title:'Video ad',alt:'Recorded training',videoId:'missing'}).expect(400);
+    await ProofVideo.create({_id:'approved-video',title:'Recorded Bravo training',description:'Published footage',order:50,revision:1,uploadId:'approved-upload',deleted:false});
+    const videoAd=await write('post','/api/site-ads','administrator',{expectedRevision:4,title:'Video ad',alt:'Recorded training',videoId:'approved-video'}).expect(201);
+    assert.equal(videoAd.body.ads.at(-1).videoSrc,'/api/proof-videos/approved-video/video?v=1');
+    await ProofVideo.updateOne({_id:'approved-video'},{$set:{deleted:true}});
+    assert.equal((await request(app).get('/api/site-ads').expect(200)).body.ads.at(-1).videoSrc,'');
+
   } finally { await mongoose.disconnect(); await replica.stop(); }
 });

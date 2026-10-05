@@ -43,6 +43,8 @@ test('banner permissions, validation, durable updates and edit conflicts', { tim
     await SiteBanner.updateOne({ _id: 'home' }, { $set: { settings: customPalette } });
     const preservedCustom = await request(app).get('/api/site-banner').expect(200);
     assert.deepEqual(preservedCustom.body.settings, customPalette, 'Genuinely customized banner colors are preserved');
+    await SiteBanner.updateOne({ _id: 'home' }, { $set: { alerts: ['Bravo is live now under live cams in menu on upper right-hand corner.', 'Training workshop this Saturday.'] } });
+    assert.deepEqual((await request(app).get('/api/site-banner').expect(200)).body.alerts, ['Training workshop this Saturday.']);
     const blocked = await User.findOne({ role: 'owner' }); blocked.blocked = true; await blocked.save(); await put('owner', { expectedRevision: 2, alerts: ['blocked'] }).expect(401);
   } finally { await mongoose.disconnect(); await replica.stop(); }
 });

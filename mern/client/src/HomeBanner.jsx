@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useBravo } from './context';
 import { api } from './api';
+import { useLiveSessions } from './live-state';
+import { isLiveAnnouncement } from '../../shared/live-policy.js';
 import './home-banner.css';
 import { isImageEditor } from '../../shared/site-images.js';
 import { DEFAULT_BANNER, bannerDate } from '../../shared/site-banner.js';
@@ -27,7 +29,7 @@ function AlertEditor({ saved, publish, close }) {
   return <dialog ref={dialog} className="banner-editor" aria-labelledby="banner-editor-title" onCancel={event => { event.preventDefault(); if (!busy) close(); }}>
     <form onSubmit={save}>
       <div className="banner-editor-heading"><h2 id="banner-editor-title">Edit banner</h2><button type="button" onClick={close} disabled={busy} aria-label="Close banner editor">×</button></div>
-      <p>Publish short updates, weather-related closures, or appointment notices. These messages are public.</p>
+      <p>Publish short updates, weather-related closures, or appointment notices. These messages are public. Live announcements update automatically from active broadcasts; do not add a static “live now” notice.</p>
       <fieldset disabled={busy}>
         <details open><summary>Content &amp; automatic updates</summary><div className="banner-settings">
           {[['showLocation', 'Show location'], ['showTime', 'Show time'], ['showWeather', 'Show weather'], ['showAlerts', 'Show alerts']].map(([key, title]) => <label className="banner-check" key={key}><input type="checkbox" checked={settings[key]} onChange={event => change(key, event.target.checked)}/>{title}</label>)}
@@ -51,6 +53,7 @@ function AlertEditor({ saved, publish, close }) {
 }
 export default function HomeBanner() {
   const { user } = useBravo();
+  const live = useLiveSessions();
   const canEdit = isImageEditor(user) && !user?.mustChangePassword;
   const [now, setNow] = useState(() => new Date()), [weather, setWeather] = useState(null);
   const [saved, setSaved] = useState(null), [editError, setEditError] = useState(''), [editing, setEditing] = useState(false);
@@ -81,8 +84,12 @@ export default function HomeBanner() {
   const freshWeather = weather && now.getTime() - Date.parse(weather.observedAt) <= 7200000 ? weather : null;
   const settings = { ...DEFAULT_BANNER, ...saved?.settings };
   const weatherText = settings.weatherOverride || (freshWeather ? `${freshWeather.temperature}°F · ${freshWeather.description} · observed ${localTime(new Date(freshWeather.observedAt))}` : '');
+  const alerts = (saved?.alerts || []).filter(text => !isLiveAnnouncement(text));
+  const activeTrainers = live.announcements.filter(item => item.status === 'live');
   const items = [
-    ...(settings.showAlerts ? (saved?.alerts?.length ? saved.alerts.map(text => ({ label: settings.alertLabel, text })) : [{ label: settings.fallbackLabel, text: settings.fallback }]) : []),
+    ...(activeTrainers.length ? [{ label: 'LIVE', text: activeTrainers.map(item => `${item.trainerName}${item.audience === 'client' ? ' · Client session' : ''}`).join(' / ') }] : []),
+    ...(live.availability === 'unavailable' ? [{ label: 'LIVE', text: 'Status temporarily unavailable — check Live Cams.' }] : []),
+    ...(settings.showAlerts ? (alerts.length ? alerts.map(text => ({ label: settings.alertLabel, text })) : [{ label: settings.fallbackLabel, text: settings.fallback }]) : []),
     ...(settings.showLocation ? [{ label: settings.locationLabel, text: settings.location }] : []),
     ...(settings.showTime ? [{ label: settings.timeLabel, text: `${bannerDate(now)} · ${settings.timeOverride || localTime(now)}` }] : []),
     ...(settings.showWeather && weatherText ? [{ label: settings.weatherLabel, text: weatherText }] : []),

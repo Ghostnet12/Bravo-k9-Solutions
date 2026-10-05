@@ -22,7 +22,9 @@ try {
   await Booking.create({ userId: client._id, staffId: trainer._id, dogName: 'Gunner', status: 'confirmed', visits: [] });
   const token = randomBytes(32).toString('hex');
   await Session.create({ userId: trainer._id, tokenHash: createHash('sha256').update(token).digest('hex'), issuedAt: new Date(), lastSeenAt: new Date(), expiresAt: new Date(Date.now() + 3600000) });
-  const row = { _id: 'f49a2019-e01f-4db7-b15a-508fd74e2bea', trainerId: trainer._id, trainerName: 'David', credentialVersion: 0, clientId: client._id, dogName: 'Gunner', audience: 'public', transport: 'direct', roomName: 'browser-fixture', publisherIdentity: 'test-publisher', open: true, status: 'live', startedAt: new Date(Date.now() - 123000), lastSeenAt: new Date() };
+  const row = { _id: 'f49a2019-e01f-4db7-b15a-508fd74e2bea', trainerId: trainer._id, trainerName: 'David', credentialVersion: 0, clientId: client._id, dogName: 'Gunner', audience: 'public', transport: 'direct', roomName: 'browser-fixture', publisherIdentity: 'test-publisher', open: true, status: 'live', startedAt: new Date(Date.now() - 123000), lastSeenAt: new Date(), lastPublishedAt: new Date() };
+  const healthTimer = setInterval(() => LiveSession.updateMany({ open: true }, { $set: { lastSeenAt: new Date(), lastPublishedAt: new Date() } }).catch(() => {}), 1500);
+  healthTimer.unref();
   server = app.listen(0, '127.0.0.1'); await once(server, 'listening');
   const origin = `http://127.0.0.1:${server.address().port}`; process.env.APP_ORIGIN = origin;
   for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
@@ -43,12 +45,13 @@ try {
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${engineName} ${width} viewer overflow`);
         await page.screenshot({ path: `test-results/live-${engineName}-${width}.png`, fullPage: true });
         await page.goto(origin);
-        await page.getByRole('link', { name: /TRAINING NOW.*WATCH BRAVO LIVE/ }).waitFor();
-        await page.locator('.live-promo').scrollIntoViewIfNeeded();
+        await page.locator('.hero-live').waitFor();
+        await page.locator('.hero-live').scrollIntoViewIfNeeded();
         await page.screenshot({ path: `test-results/live-banner-${engineName}-${width}.png`, fullPage: false });
         await LiveSession.updateOne({ _id: row._id }, { $set: { audience: 'client' } });
         await Promise.all([page.waitForResponse(r => r.url().endsWith('/api/live')), page.reload()]);
-        assert.equal(await page.locator('.live-promo').count(), 0);
+        assert.equal(await page.locator('.hero-live').count(), 1);
+        assert.match(await page.locator('.hero-live').innerText(), /Client session/);
         await page.goto(`${origin}/live?session=${row._id}`);
         await page.getByRole('heading', { name: 'OUT IN THE FIELD.' }).waitFor();
         assert.equal(await page.locator('.live-session-row').count(), 0);
