@@ -75,7 +75,7 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
   await page.getByRole('button',{name:'Resume advertisements',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('.home-ad-dock video').paused);
   await page.getByRole('button',{name:'Expand advertisement'}).click();await page.locator('.ad-expanded[open]').waitFor();
   assert.equal(await page.locator('.home-ad-dock').isVisible(),false);await page.getByRole('button',{name:'Close advertisement ×'}).click();await page.locator('.home-ad-dock').waitFor({state:'visible'});
-  await page.getByRole('button',{name:'Close accessibility options'}).click();
+  assert.equal(await page.getByRole('button',{name:'Close accessibility options'}).isVisible(),false,'outside dialog interaction closes the options panel');
   await page.evaluate(()=>document.activeElement?.blur());
   sessions=[makeSession('one','David · TEST')];await refresh();await page.locator('.hero-live').waitFor();
   assert.equal(await page.locator('.hero-live li').count(),1);assert.equal(await page.locator('.hero-live li a').getAttribute('href'),'/live?session=one');
