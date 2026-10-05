@@ -20,7 +20,7 @@ await mkdir('test-results',{recursive:true});
 const startedAt=new Date(Date.now()-14*60000).toISOString();
 const makeSession=(id,trainerName,audience='public')=>({id,trainerId:id,trainerName,dogName:`Test dog ${id}`,trainingFocus:'Test field obedience',audience,status:'live',startedAt});
 try {for(const [name,engine] of Object.entries({chromium,webkit})) {
- const browser=await engine.launch(name==='chromium'?{channel:'chrome'}:{});
+ const browser=await engine.launch(name==='chromium'?{channel:'chrome'}:{headless:process.env.BRAVO_HEADED_WEBKIT !== '1'});
  let evidencePage;const pendingRequests=new Set(),failedRequests=[],errors=[];
  try {
   const context=await browser.newContext({viewport:{width:390,height:900}}),page=await context.newPage();
@@ -118,13 +118,9 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
   // A playing video can keep a media request open; UI and worker readiness,
   // not network idleness, determine when this live document can be refreshed.
   await page.waitForFunction(async()=>(await navigator.serviceWorker.getRegistration('/live/'))?.active?.state==='activated');
-  // Trigger the browser's real reload and verify a NEW document, not an
-  // automation navigation event (WebKit can omit that event on media pages).
   const previousDocument=await page.evaluate(()=>performance.timeOrigin);
-  await page.evaluate(()=>{setTimeout(()=>location.reload(),0);});
-  await page.bringToFront();
-  await page.screenshot({path:`test-results/bravo-live-reload-TEST-${name}.png`});
-  await page.waitForFunction(previous=>performance.timeOrigin!==previous && document.querySelector('.live-player-caption h2')?.textContent.includes('Ashley'),previousDocument,{polling:100});
+  await page.reload({waitUntil:'domcontentloaded'});
+  assert.notEqual(await page.evaluate(()=>performance.timeOrigin),previousDocument,'refresh creates a new document');
   assert.equal(await page.evaluate(()=>performance.getEntriesByType('navigation')[0].type),'reload');
   assert.equal(new URL(page.url()).searchParams.get('session'),'two');
   await page.waitForFunction(()=>document.querySelector('.live-player-caption h2')?.textContent.includes('Ashley'));assert.match(await page.locator('.live-player-caption h2').innerText(),/Ashley/i);assert.match(await page.locator('.live-video-top .live-timer').innerText(),/^00:1[4-9]:/);
