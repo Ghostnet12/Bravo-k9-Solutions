@@ -31,13 +31,18 @@ jobs:
       - run: npx playwright install --with-deps chromium webkit
       - run: npx playwright install chrome
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg gstreamer1.0-libav xvfb
-      - run: node tests/home-ad-carousel.browser.mjs
       # Linux's headless WPE media backend stalls on pause/reload. Exercise
       # real WebKit video decoding and navigation through its GTK display port.
       - run: xvfb-run -a node tests/media-lifecycle.browser.mjs
+        timeout-minutes: 2
+        if: ${{ !cancelled() }}
         env:
           BRAVO_HEADED_WEBKIT: '1'
+      - run: node tests/home-ad-carousel.browser.mjs
+        timeout-minutes: 2
+        if: ${{ !cancelled() }}
       - run: xvfb-run -a node tests/live-experience.browser.mjs
+        timeout-minutes: 3
         env:
           BRAVO_HEADED_WEBKIT: '1'
         if: ${{ !cancelled() }}
