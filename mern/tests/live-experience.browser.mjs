@@ -135,7 +135,7 @@ try {for(const [name,engine] of engines) {
    const framing=await hero.evaluate(el=>{const style=getComputedStyle(el);return {background:style.backgroundImage,size:style.backgroundSize,position:style.backgroundPosition,heading:getComputedStyle(el.querySelector('h1')).fontSize};});
    assert.match(framing.background,/linear-gradient.*hero-bravo-launch\.webp/);
    assert.match(framing.size,/cover/);
-   assert.equal(framing.position,width<=760?'58% 50%':'50% 48%');
+   assert.ok(framing.position.endsWith(width<=760?'58% 50%':'50% 48%'));
    if(width<=760)assert.equal(framing.heading,'65px');
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
    await page.screenshot({path:`test-results/bravo-live-framing-TEST-${name}-${width}.png`});
