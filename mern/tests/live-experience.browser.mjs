@@ -117,10 +117,13 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
   // A playing video can keep a media request open; UI and worker readiness,
   // not network idleness, determine when this live document can be refreshed.
   await page.waitForFunction(async()=>(await navigator.serviceWorker.getRegistration('/live/'))?.active?.state==='activated');
-  await page.reload({waitUntil:'domcontentloaded'});
+  // Verify the committed reload through the new document's live UI below.
+  // WebKit can omit the automation DOMContentLoaded signal on this media page.
+  await page.reload({waitUntil:'commit'});
   assert.equal(await page.evaluate(()=>performance.getEntriesByType('navigation')[0].type),'reload');
   assert.equal(new URL(page.url()).searchParams.get('session'),'two');
   await page.waitForFunction(()=>document.querySelector('.live-player-caption h2')?.textContent.includes('Ashley'));assert.match(await page.locator('.live-player-caption h2').innerText(),/Ashley/i);assert.match(await page.locator('.live-video-top .live-timer').innerText(),/^00:1[4-9]:/);
+  await page.locator('.home-ad-dock').waitFor();
   assert.match(await page.locator('.live-player-caption').innerText(),/Central Time/);
   for(const width of [390,768,1440]){
    await page.setViewportSize({width,height:1000});await page.evaluate(()=>window.scrollTo({top:0,behavior:"instant"}));
