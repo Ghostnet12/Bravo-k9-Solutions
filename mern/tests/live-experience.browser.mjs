@@ -8,7 +8,13 @@ import { chromium, webkit } from 'playwright';
 const dist=fileURLToPath(new URL('../client/dist/',import.meta.url));
 const html=await readFile(`${dist}/bravo-shell.html`,'utf8'),liveHtml=await readFile(`${dist}/live.html`,'utf8');
 let handleApi;
-const app=express();app.use('/api',(req,res)=>handleApi(req,res));app.get('/live',(_req,res)=>res.type('html').send(liveHtml));app.use(express.static(dist,{redirect:false}));app.get('/{*path}',(_req,res)=>res.type('html').send(html));
+const app=express();app.use('/api',(req,res)=>handleApi(req,res));
+// Match deployed response caching: private HTML is never stored; hashed build
+// assets are immutable. Express's default revalidation is not Vercel's delivery.
+app.get('/live',(_req,res)=>res.set('Cache-Control','private, no-store').type('html').send(liveHtml));
+app.use('/assets',express.static(`${dist}/assets`,{maxAge:'1y',immutable:true}));
+app.use(express.static(dist,{redirect:false}));
+app.get('/{*path}',(_req,res)=>res.set('Cache-Control','private, no-store').type('html').send(html));
 const server=app.listen(0,'127.0.0.1');await once(server,'listening');const origin=`http://127.0.0.1:${server.address().port}`;
 await mkdir('test-results',{recursive:true});
 const startedAt=new Date(Date.now()-14*60000).toISOString();
