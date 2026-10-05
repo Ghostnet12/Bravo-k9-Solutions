@@ -138,6 +138,7 @@ try {
         await page.getByRole('button',{name:'Edit workshop date',exact:true}).click();
         await workshopEditor.getByRole('radio',{name:'No date',exact:true}).check();
         await workshopEditor.getByRole('button',{name:'Save workshop',exact:true}).click();
+        await workshopEditor.waitFor({state:'hidden'});
         assert.equal(await page.locator('.workshop-details dt').filter({hasText:/^Date$|^Time$/}).count(),0);
         await reload();await page.getByRole('button',{name:'Edit workshop date',exact:true}).click();
         assert.equal(await workshopEditor.getByLabel('Start time (Central)',{exact:true}).inputValue(),'12:00');
