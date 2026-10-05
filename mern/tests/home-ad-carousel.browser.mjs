@@ -58,7 +58,9 @@ try{
    await page.waitForTimeout(700);
    const artwork=page.locator('.home-ad-slide.is-active img'),box=await artwork.boundingBox();
    const point={x:box.x+box.width/2,y:box.y+box.height/2};
-   assert.equal(await page.evaluate(p=>!!document.elementFromPoint(p.x,p.y)?.closest('.home-ad-slide.is-active'),point),true,'hold target is the visible advertisement');
+   const hit=await page.evaluate(p=>({matches:!!document.elementFromPoint(p.x,p.y)?.closest('.home-ad-slide.is-active'),target:document.elementFromPoint(p.x,p.y)?.outerHTML,point:p,viewport:{width:innerWidth,height:innerHeight},dock:document.querySelector('.home-ad-dock')?.outerHTML}),point);
+   if(!hit.matches){console.log('Ad hit diagnostics',hit);await page.screenshot({path:`test-results/FAILED-ad-hit-${engineName}.png`});}
+   assert.equal(hit.matches,true,'hold target is the visible advertisement');
    await page.mouse.move(point.x,point.y);await page.mouse.down();
    try { await page.getByRole('dialog',{name:/Manage homepage ads/i}).waitFor({timeout:8000}); }
    catch(error){await page.screenshot({path:`test-results/FAILED-ad-hold-${engineName}.png`});console.log('Ad hold diagnostics',await page.evaluate(()=>({target:document.elementFromPoint(innerWidth/2,innerHeight-50)?.outerHTML,dock:document.querySelector('.home-ad-dock')?.outerHTML,dialogs:[...document.querySelectorAll('dialog')].map(d=>({open:d.open,text:d.textContent?.slice(0,80)}))})));throw error;}
