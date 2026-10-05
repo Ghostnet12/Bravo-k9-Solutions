@@ -1,3 +1,5 @@
+import { loadPublicWorkshop } from './workshop-store.js';
+import { workshopDateLabel } from '../shared/workshop-schedule.js';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import mongoose from 'mongoose';
@@ -56,9 +58,19 @@ const publicAd = (ad, video) => ({
 });
 const publicCollection = async row => {
   const ads = storedAds(row).filter(ad => SITE_AD_ID.test(ad.id || ''));
+  const workshop = ads.some(ad => ad.id === 'saturday-workshop-october-3' || ad.link === '/workshops') ? await loadPublicWorkshop() : undefined;
   const videos = await ProofVideo.find({ _id: { $in: ads.map(ad => ad.videoId).filter(Boolean) }, deleted: false }).lean();
   return { revision: row?.revision || 0, settings: normalizeAdSettings(row?.settings || DEFAULT_AD_CAROUSEL),
-    ads: ads.map(ad => publicAd(ad, videos.find(video => video._id === ad.videoId))) };
+    ads: ads.map(ad => {
+      const result = publicAd(ad, videos.find(video => video._id === ad.videoId));
+      if (ad.id === 'saturday-workshop-october-3' || ad.link === '/workshops') {
+        result.workshop = workshop ? { date: workshop.date, dateLabel: workshopDateLabel(workshop.date), time: workshop.time, scheduleMode: workshop.scheduleMode } : null;
+        // Artwork with an October 3 date cannot truthfully advertise a different occurrence.
+        result.scheduleHidden = !workshop || !ad.uploadId && ad.image === '/images/saturday-workshop-october-3.webp' && workshop.date !== '2026-10-03';
+        if (workshop) result.alt = `${workshop.title}${workshop.date ? `, ${workshopDateLabel(workshop.date)}, ${workshop.time} Central` : ''}`;
+      }
+      return result;
+    }) };
 };
 async function approvedVideo(videoId, session) {
   if (videoId && !await ProofVideo.exists({ _id: videoId, deleted: false, uploadId: { $exists: true } }).session(session)) throw fail('Choose an available published Bravo training video.');

@@ -17,8 +17,8 @@ test('discovery publishing, consent, privacy and performance reporting persist',
   const { digest } = await import('../server/auth.js');
   await connectDb();
   const cookies = {};
-  for (const role of ['owner','staff','member']) {
-    const user = await User.create({ name: role, role, passwordHash: 'fixture-only' });
+  for (const role of ['owner','administrator','staff','member']) {
+    const user = await User.create({ name: role, role: role === 'administrator' ? 'owner' : role, passwordHash: 'fixture-only' });
     if (role === 'owner') process.env.OWNER_USER_ID = String(user._id);
     const token = randomBytes(32).toString('hex'); await Session.create({ userId: user._id, tokenHash: digest(token), expiresAt: new Date(Date.now() + 3600000) }); cookies[role] = `bravo_session=${token}`;
   }
@@ -28,7 +28,7 @@ test('discovery publishing, consent, privacy and performance reporting persist',
   await t.test('workshop owner publishing with stale-write protection and private drafts', async () => {
     const first = (await call(null,'get','/api/workshops').expect(200)).body.event;
     assert.equal(first.cents,10000); assert.equal(first.time,'12:00 PM–2:00 PM'); assert.equal(first.location,'Wylie Park, Aberdeen, SD');
-    const { revision, ...details } = first;
+    const { revision, occurrenceId, nextDate, ...details } = first; void occurrenceId; void nextDate;
     const update = { ...details, expectedRevision: revision, location: 'Fixture training location', time: '10:00 a.m.' };
     await call('staff','put','/api/workshops',update).expect(403);
     await call(null,'put','/api/workshops',update).expect(401);
@@ -43,6 +43,39 @@ test('discovery publishing, consent, privacy and performance reporting persist',
     const privateHtml = (await request(publicApp).get('/workshops').expect(200)).text;
     assert.doesNotMatch(privateHtml,/Fixture training location|10:00 a.m./); assert.match(privateHtml,/Ask about the next session/);
     assert.equal((await call('owner','get','/api/workshops')).body.event.revision,2);
+  });
+  await t.test('recurrence modes use owner permissions and preserve occurrence history', async () => {
+    const { WorkshopOccurrence } = await import('../server/workshop-store.js');
+    const { saturdayDate, addWorkshopDays } = await import('../shared/workshop-schedule.js');
+    const config = (await call('owner','get','/api/workshops')).body.configuration;
+    const weekly = { ...config, scheduleMode:'weekly', date:null, startTime:'12:00', endTime:'14:00', expectedRevision:2 };
+    for (const who of [null,'staff','member']) {
+      const status = who ? 403 : 401;
+      await call(who,'put','/api/workshops',weekly).expect(status);
+      await call(who,'get','/api/workshops/schedule-preview').expect(status);
+      await call(who,'get','/api/admin/workshop-occurrences').expect(status);
+    }
+    await call('administrator','put','/api/workshops',{...weekly,endTime:'11:00'}).expect(400);
+    const automatic = (await call('administrator','put','/api/workshops',weekly).expect(200)).body.event;
+    assert.equal(automatic.date,saturdayDate()); assert.equal(automatic.nextDate,addWorkshopDays(automatic.date,7));
+    assert.equal(automatic.time,'12:00 PM–2:00 PM'); assert.equal(automatic.published,false);
+    assert.equal((await call(null,'get','/api/workshops')).body.event,null,'recurrence does not publish a draft');
+    const preview=(await call('administrator','get','/api/workshops/schedule-preview').expect(200)).body.event;
+    assert.equal(preview.date,automatic.date);
+    const original = await WorkshopOccurrence.findById('featured:2026-10-03').lean();
+    assert.ok(original.snapshots.length); assert.equal(original.date,'2026-10-03');
+    const none=(await call('owner','put','/api/workshops',{...weekly,scheduleMode:'none',expectedRevision:3,published:true}).expect(200)).body.event;
+    assert.equal(none.date,null);assert.equal(none.time,'');assert.equal(none.occurrenceId,null);
+    const undatedHtml=(await request(publicApp).get('/workshops').expect(200)).text;
+    assert.doesNotMatch(undatedHtml,/<dt>Date<|<dt>Time</);
+    const again=(await call('administrator','put','/api/workshops',{...weekly,expectedRevision:4,published:true}).expect(200)).body.event;
+    assert.equal(again.date,automatic.date);assert.equal(again.startTime,'12:00');
+    const publicData=(await call(null,'get','/api/workshops')).body;
+    assert.equal(publicData.event.date,again.date);assert.equal(publicData.configuration,undefined);
+    assert.deepEqual((await WorkshopOccurrence.findById(original._id).lean()).snapshots,original.snapshots,'old date snapshots remain unchanged');
+    const history=(await call('administrator','get','/api/admin/workshop-occurrences').expect(200)).body.occurrences;
+    assert.ok(history.some(row=>row._id===again.occurrenceId));
+    assert.ok(history.some(row=>row._id===original._id));
   });
   await t.test('launch requests require consent, deduplicate and stay private', async () => {
     await call(null,'post','/api/course-interest',{ email:'visitor@example.test',consent:false }).expect(400);
