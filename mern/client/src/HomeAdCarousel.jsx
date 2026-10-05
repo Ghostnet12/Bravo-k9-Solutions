@@ -180,7 +180,7 @@ export default function HomeAdCarousel() {
         onClickCapture={event => { if (Date.now() < suppressUntil.current) { event.preventDefault(); event.stopPropagation(); } }}>
         <div className="home-ad-frame"><div className="home-ad-track">{slides.map(ad => {
           const selected = ad.id === current.id;
-          const art = ad.live ? <span className="ad-live-creative"><span className="live-badge"><i aria-hidden="true"/>LIVE</span><strong>BRAVO LIVE</strong><small>{ad.audience === 'client' ? 'Client session' : 'Real training. Right now.'}</small></span> : <AdMedia ad={ad} playing={selected && !stopped}/>;
+          const art = ad.live ? <span className="ad-live-creative"><span className="live-badge"><i aria-hidden="true"/>LIVE</span><strong>BRAVO LIVE</strong><span className="ad-live-trainer">{ad.title}</span><small>{ad.audience === 'client' ? 'Client session' : 'Real training. Right now.'}</small></span> : <AdMedia ad={ad} playing={selected && !stopped}/>;
           return <article className={`home-ad-slide${selected ? ' is-active' : ''}`} key={ad.id} aria-hidden={!selected || undefined} inert={!selected}>
             {ad.link ? <a href={ad.link} aria-label={ad.title}>{art}</a> : <button type="button" className="ad-art-button" onClick={() => setExpanded(ad)} aria-label={`View advertisement: ${ad.title}`}>{art}</button>}
           </article>;

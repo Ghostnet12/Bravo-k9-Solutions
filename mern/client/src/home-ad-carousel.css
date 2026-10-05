@@ -56,17 +56,18 @@
 /* One persistent viewport dock; measured height includes the device safe area. */
 :root{--ad-dock-height:0px}html{scroll-padding-bottom:calc(var(--ad-dock-height) + 20px)}
 .bravo-home{padding-bottom:var(--ad-dock-height)}
-.home-ad-dock{position:fixed;inset:auto 0 0;z-index:80;background:#101010f5;color:#fff;border-top:1px solid #ba9a64;box-shadow:0 -8px 35px #0005;padding:8px max(14px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));backdrop-filter:blur(12px)}
+.home-ad-dock{position:fixed;inset:auto 0 0;z-index:80;background:#101010f5;color:#fff;border-top:1px solid #ba9a64;box-shadow:0 -8px 35px #0005;padding:0 0 env(safe-area-inset-bottom);backdrop-filter:blur(12px)}
 .home-ad-dock[data-keyboard],.home-ad-dock[data-obscured]{visibility:hidden;pointer-events:none}
-.home-ad-dock .home-ad-carousel{width:min(1120px,100%);margin:0 auto;display:flex;align-items:center;gap:20px;min-width:0;height:96px}
-.home-ad-dock .home-ad-frame{height:96px;width:250px;flex:0 0 250px;aspect-ratio:auto;border:0;box-shadow:none;border-radius:4px}
+.home-ad-dock .home-ad-carousel{position:relative;width:100%;margin:0;min-width:0;height:clamp(120px,38.6364vw,240px)}
+.home-ad-dock .home-ad-frame{height:100%;width:100%;aspect-ratio:auto;border:0;box-shadow:none;border-radius:0}
 .home-ad-dock .home-ad-track,.home-ad-dock .home-ad-slide,.home-ad-dock .home-ad-slide>a,.home-ad-dock .ad-art-button{height:100%;width:100%}
 .home-ad-dock .home-ad-slide :is(img,video){display:block;width:100%;height:100%;aspect-ratio:auto;object-fit:contain;background:#101010}
 .ad-art-button{padding:0;border:0;background:#101010;cursor:pointer}
-.ad-dock-copy{flex:1;min-width:0;display:grid;gap:8px}.ad-dock-copy>span{color:#ba9a64;font-size:9px;letter-spacing:.15em;font-weight:700}.ad-dock-copy>a{color:#fff;font-size:15px;line-height:1.4;font-weight:600;text-decoration:none;overflow-wrap:anywhere}.ad-dock-copy>small{color:#d7c3a2;font-size:11px}
-.ad-dock-controls{display:flex;gap:5px;flex:none;align-items:center}.ad-dock-controls button{border:1px solid #ba9a6466;color:#f2d5a5;background:#101010;width:44px;height:44px;min-height:44px;padding:0;border-radius:5px;font-size:20px;cursor:pointer}
+.ad-dock-copy{display:none}
+.ad-dock-controls{position:absolute;z-index:3;right:max(6px,env(safe-area-inset-right));top:6px;display:flex;gap:4px;align-items:center;padding:3px;border-radius:6px;background:#101010d9}.ad-dock-controls button{border:1px solid #ba9a6466;color:#f2d5a5;background:#101010d9;width:36px;height:36px;min-height:36px;padding:0;border-radius:4px;font-size:17px;cursor:pointer}
 .home-ad-dock :is(a,button):focus-visible{outline:3px solid #ffe4b5;outline-offset:-3px}
 .ad-live-creative{height:100%;display:flex;gap:5px;align-items:center;justify-content:center;flex-direction:column;background:radial-gradient(ellipse at center,#302319,#101010);border:1px solid #ba9a6444}
+.ad-live-trainer{max-width:90%;font-size:12px;line-height:1.3;text-align:center;overflow-wrap:anywhere;color:#fff}
 .ad-live-creative>strong{font-family:'Bebas Neue',sans-serif;font-size:24px;color:#ead3aa;line-height:1}.ad-live-creative>small{font-size:9px;color:#ddd}.ad-live-creative .live-badge{min-height:24px;font-size:10px;padding:3px 8px}
 .ad-expanded{padding:18px;width:min(1100px,calc(100vw - 24px));max-height:90dvh;overflow:auto;background:#101010;color:#fff;border:1px solid #ba9a64}.ad-expanded::backdrop{background:#000d}.ad-expanded :is(img,video){width:100%;height:auto;max-height:65dvh;object-fit:contain;background:#000}.ad-expanded-close{display:block;margin:0 0 16px auto;min-height:44px;background:#101010;color:#e1c798;border:1px solid #ba9a64;padding:8px 14px}.ad-expanded h2{font-size:20px}
 body:has(.home-ad-dock) .accessibility-tools{bottom:calc(var(--ad-dock-height) + 16px)!important}body:has(.home-ad-dock) .accessibility-panel{max-height:calc(100dvh - var(--ad-dock-height) - 95px)!important;overflow:auto}
@@ -75,19 +76,14 @@ body:has(.home-ad-dock) .content-save-status{bottom:calc(var(--ad-dock-height) +
 body:has(.home-ad-dock) .action-feedback{bottom:calc(var(--ad-dock-height) + max(1rem,env(safe-area-inset-bottom)))}
 body:has(.home-ad-dock) .media-rights-toast{bottom:calc(var(--ad-dock-height) + 22px)}
 .ad-editor-fields select,.ad-editor-add select{width:100%;min-height:44px;background:#101010;color:white;border:1px solid #ba9a64}
-@media(max-width:600px){.home-ad-dock{padding-top:6px;padding-bottom:calc(6px + env(safe-area-inset-bottom));padding-inline:max(8px,env(safe-area-inset-left)) max(8px,env(safe-area-inset-right))}.home-ad-dock .home-ad-carousel{height:78px;gap:10px}.home-ad-dock .home-ad-frame{width:128px;flex-basis:128px;height:78px}.ad-dock-copy{gap:5px}.ad-dock-copy>a{font-size:11px;line-height:1.4}.ad-dock-copy>span{font-size:7px;letter-spacing:.07em}.ad-dock-copy>small{font-size:9px}.ad-dock-controls{gap:0;flex-direction:column}.ad-dock-controls button{width:44px;height:36px;min-height:36px;font-size:17px;border:0}.ad-dock-controls button[aria-label="Edit dock advertisements"]{display:none}.ad-live-creative>strong{font-size:19px}.ad-live-creative>small{font-size:8px}}
-@media(max-width:359px){.home-ad-dock .home-ad-frame{width:108px;flex-basis:108px}.ad-dock-copy>a{font-size:10px}}
 @media(prefers-reduced-motion:reduce){.home-ad-dock *{transition:none!important;animation:none!important}}
 .access-reduced-motion .home-ad-dock *{transition:none!important;animation:none!important}
 
-.ad-dock-copy>a{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
 .ad-editor-card>video{width:100%;aspect-ratio:1320/510;object-fit:contain;background:#000}
+/* Short landscape screens keep room for page controls; expand shows full artwork. */
 @media(max-height:500px) and (orientation:landscape){
-  .home-ad-dock{padding-top:4px;padding-bottom:calc(4px + env(safe-area-inset-bottom))}
-  .home-ad-dock .home-ad-carousel{height:60px;gap:12px}
-  .home-ad-dock .home-ad-frame{height:60px;width:156px;flex-basis:156px}
-  .ad-dock-copy{gap:3px}.ad-dock-copy>a{font-size:12px}.ad-dock-copy>span{font-size:7px}
-  .ad-dock-controls{flex-direction:row;gap:5px}.ad-dock-controls button{height:44px;min-height:44px}
-  .ad-live-creative>small{display:none}.ad-live-creative>strong{font-size:19px}
+  .home-ad-dock .home-ad-carousel{height:72px}
+  .ad-dock-controls{top:4px}
+  .ad-live-creative>small,.ad-live-creative>strong{display:none}
 }
