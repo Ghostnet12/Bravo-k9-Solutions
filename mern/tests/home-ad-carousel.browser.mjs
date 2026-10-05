@@ -47,11 +47,15 @@ try{
    assert.equal(await page.getByRole('button',{name:'Pause advertisements',exact:true}).count(),1);
    await page.getByRole('button',{name:'Close accessibility options'}).click();
    assert.ok(await page.locator('.content-edit-launcher').evaluate(el=>el.getBoundingClientRect().bottom<document.querySelector('.home-ad-dock').getBoundingClientRect().top),'owner page-edit control is above the dock');
+   // The initial artwork may have rotated while the accessibility controls
+   // were checked. Wait for its next turn before testing keyboard focus pause.
+   await page.waitForFunction(()=>document.querySelector('.home-ad-slide.is-active img')?.alt==='Workshop banner',null,{timeout:8000});
+   const activeLink=page.locator('.home-ad-slide.is-active').getByRole('link',{name:'Saturday Dog Training Workshop'});await activeLink.focus();
    assert.equal(await carousel.getByRole('img',{name:'Workshop banner'}).count(),1);
    const workshopImage=page.locator('.home-ad-slide img[alt="Workshop banner"]');await workshopImage.waitFor();assert.equal(await workshopImage.getAttribute('src'),'/images/saturday-workshop-october-3.webp');
    await page.waitForFunction(()=>{const image=document.querySelector('.home-ad-slide img[alt="Workshop banner"]');return image?.complete&&image.naturalWidth>0;},null,{timeout:15000});
    assert.equal(await page.locator('.home-ad-slide.is-active img').getAttribute('alt'),'Workshop banner');
-   const activeLink=page.locator('.home-ad-slide.is-active').getByRole('link',{name:'Saturday Dog Training Workshop'});await carousel.scrollIntoViewIfNeeded();await activeLink.focus();await page.waitForTimeout(3400);
+   await carousel.scrollIntoViewIfNeeded();await page.waitForTimeout(3400);
    assert.equal(await page.locator('.home-ad-slide.is-active img').getAttribute('alt'),'Workshop banner');
    await page.evaluate(()=>document.activeElement?.blur());
    await page.waitForFunction(()=>document.querySelector('.home-ad-slide.is-active img')?.getAttribute('alt')==='Second promotion',null,{timeout:5000});

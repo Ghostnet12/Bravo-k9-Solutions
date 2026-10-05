@@ -21,10 +21,12 @@ const startedAt=new Date(Date.now()-14*60000).toISOString();
 const makeSession=(id,trainerName,audience='public')=>({id,trainerId:id,trainerName,dogName:`Test dog ${id}`,trainingFocus:'Test field obedience',audience,status:'live',startedAt});
 try {for(const [name,engine] of Object.entries({chromium,webkit})) {
  const browser=await engine.launch(name==='chromium'?{channel:'chrome'}:{});
- let evidencePage,evidenceContext;const pendingRequests=new Set(),failedRequests=[],errors=[];
+ let evidencePage;const pendingRequests=new Set(),failedRequests=[],errors=[];
  try {
   const context=await browser.newContext({viewport:{width:390,height:900}}),page=await context.newPage();
-  evidenceContext=context;await context.tracing.start({screenshots:true,snapshots:true,sources:true});
+  // Keep evidence as screenshots and request diagnostics. WebKit trace capture
+  // can hold this media document's reload until tracing is stopped, changing
+  // the very lifecycle being verified. All new-document/UI assertions remain.
   evidencePage=page;page.on('request',r=>pendingRequests.add(r.url()));page.on('requestfinished',r=>pendingRequests.delete(r.url()));page.on('requestfailed',r=>{pendingRequests.delete(r.url());failedRequests.push({url:r.url(),error:r.failure()?.errorText});});page.on('pageerror',error=>errors.push(error.message));
   let sessions=[],failure=false,ads=[{id:'fixture-video',title:'Recorded Bravo training — test ad placement',alt:'Existing Bravo footage used as a test advertisement',enabled:true,link:'/dog-training',src:'/images/training-education.webp',videoSrc:'/assets/bravo-opening-565c14182176.mp4'}];
   handleApi=(req,res)=>{
@@ -52,7 +54,7 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
   const ad=page.locator('.home-ad-dock video');
   await page.waitForFunction(()=>document.querySelector('.home-ad-dock video')?.currentTime>0.3);
   await page.evaluate(()=>{window.__ad=document.querySelector('.home-ad-dock video');window.__adTime=window.__ad.currentTime;window.scrollTo({top:document.body.scrollHeight,behavior:"instant"});window.dispatchEvent(new Event('bravo-ads-changed'));});
-  await page.waitForFunction(()=>window.__ad.currentTime>window.__adTime+0.3);
+  await page.waitForFunction(()=>!window.__ad.paused && (window.__ad.currentTime>window.__adTime+0.3 || window.__adTime>window.__ad.duration-0.5 && window.__ad.currentTime<window.__adTime));
   assert.equal(await ad.evaluate(el=>el===window.__ad && el.muted && getComputedStyle(el).objectFit==='contain'),true);
   assert.equal(await page.locator('.home-ad-dock .ad-dock-controls').count(),0);
   // Follow the artwork, then site navigation, without replacing the ad player.
@@ -71,7 +73,8 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
    await page.waitForFunction(()=>document.querySelector('.home-ad-dock video')===window.__ad && !window.__ad.paused);
    assert.equal(await page.locator('.home-ad-dock').count(),1,'one dock survives route changes');
    const before=await ad.evaluate(el=>el.currentTime);
-   await page.waitForFunction(time=>document.querySelector('.home-ad-dock video').currentTime>time+0.2,before,{timeout:10000});
+   // Looping across the clip's end also proves playback has advanced.
+   await page.waitForFunction(time=>{const video=document.querySelector('.home-ad-dock video');return !video.paused && (video.currentTime>time+0.2 || time>video.duration-0.5 && video.currentTime<time);},before,{timeout:10000});
    await page.evaluate(()=>window.scrollTo({top:document.body.scrollHeight,behavior:'instant'}));
    assert.ok(await page.evaluate(()=>document.querySelector('footer').getBoundingClientRect().bottom<=document.querySelector('.home-ad-dock').getBoundingClientRect().top+2),'route footer clears dock');
   }
@@ -145,10 +148,9 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
   ads=ads.map(ad=>({...ad,enabled:false}));await page.evaluate(()=>window.dispatchEvent(new Event('bravo-ads-changed')));await page.waitForFunction(()=>!document.querySelector('.home-ad-dock'));
   assert.equal(await page.evaluate(()=>parseFloat(getComputedStyle(document.querySelector('#root')).paddingBottom)),0);
   assert.deepEqual(errors,[]);console.log(`PASS ${name}: offline/one/two/rename/stop/private/unavailable, persistent elapsed, 320–1440px framing, dock media continuity/footer/floating controls/dialogs, pause, keyboard focus, reduced motion, hidden collection`);
-  await context.tracing.stop();await context.close();
+  await context.close();
  }catch(error){
   console.log('Request diagnostics',{pending:[...pendingRequests],failed:failedRequests,errors});
-  if(evidenceContext)await evidenceContext.tracing.stop({path:`test-results/FAILED-live-experience-${name}-trace.zip`}).catch(()=>{});
   if(evidencePage){await evidencePage.screenshot({path:`test-results/FAILED-live-experience-${name}.png`}).catch(()=>{});console.log('Failure diagnostics',await evidencePage.evaluate(()=>({ready:document.readyState,body:document.body.innerText.slice(0,2500),visibility:document.visibilityState,url:location.href,videos:[...document.querySelectorAll('video')].map(v=>({src:v.currentSrc,paused:v.paused,muted:v.muted,ready:v.readyState,error:v.error?.message,time:v.currentTime})),dock:document.querySelector('.home-ad-dock')?.outerHTML,dialogs:document.querySelectorAll('dialog[open]').length})).catch(()=>({})));}
   throw error;
  }finally{await browser.close();}
