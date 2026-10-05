@@ -15,9 +15,10 @@ const startedAt=new Date(Date.now()-14*60000).toISOString();
 const makeSession=(id,trainerName,audience='public')=>({id,trainerId:id,trainerName,dogName:`Test dog ${id}`,trainingFocus:'Test field obedience',audience,status:'live',startedAt});
 try {for(const [name,engine] of Object.entries({chromium,webkit})) {
  const browser=await engine.launch(name==='chromium'?{channel:'chrome'}:{});
- let evidencePage;const pendingRequests=new Set(),failedRequests=[],errors=[];
+ let evidencePage,evidenceContext;const pendingRequests=new Set(),failedRequests=[],errors=[];
  try {
   const context=await browser.newContext({viewport:{width:390,height:900}}),page=await context.newPage();
+  evidenceContext=context;await context.tracing.start({screenshots:true,snapshots:true,sources:true});
   evidencePage=page;page.on('request',r=>pendingRequests.add(r.url()));page.on('requestfinished',r=>pendingRequests.delete(r.url()));page.on('requestfailed',r=>{pendingRequests.delete(r.url());failedRequests.push({url:r.url(),error:r.failure()?.errorText});});page.on('pageerror',error=>errors.push(error.message));
   let sessions=[],failure=false,ads=[{id:'fixture-video',title:'Recorded Bravo training — test ad placement',alt:'Existing Bravo footage used as a test advertisement',enabled:true,link:'/dog-training',src:'/images/training-education.webp',videoSrc:'/assets/bravo-opening-565c14182176.mp4'}];
   handleApi=(req,res)=>{
@@ -107,6 +108,7 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
   await page.goto(`${origin}/live`);await page.bringToFront();await page.getByText('Live status is temporarily unavailable. Reconnecting…',{exact:true}).waitFor();assert.equal(await page.getByRole('heading',{name:'OUT IN THE FIELD.'}).count(),0);
   failure=false;sessions=[makeSession('one','David · TEST'),makeSession('two','Ashley · TEST')];await refresh();await page.locator('.live-session-row').first().waitFor();
   await page.locator('.live-session-row').nth(1).click();await page.waitForFunction(()=>document.querySelector('.live-player-caption h2')?.textContent.includes('Ashley'));assert.match(await page.locator('.live-player-caption h2').innerText(),/Ashley/i);
+  await page.waitForLoadState('networkidle');
   await page.reload({waitUntil:'domcontentloaded'});
   assert.equal(await page.evaluate(()=>performance.getEntriesByType('navigation')[0].type),'reload');
   assert.equal(new URL(page.url()).searchParams.get('session'),'two');
@@ -130,9 +132,10 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
   ads=ads.map(ad=>({...ad,enabled:false}));await page.evaluate(()=>window.dispatchEvent(new Event('bravo-ads-changed')));await page.waitForFunction(()=>!document.querySelector('.home-ad-dock'));
   assert.equal(await page.evaluate(()=>parseFloat(getComputedStyle(document.querySelector('#root')).paddingBottom)),0);
   assert.deepEqual(errors,[]);console.log(`PASS ${name}: offline/one/two/rename/stop/private/unavailable, persistent elapsed, 320–1440px framing, dock media continuity/footer/floating controls/dialogs, pause, keyboard focus, reduced motion, hidden collection`);
-  await context.close();
+  await context.tracing.stop();await context.close();
  }catch(error){
   console.log('Request diagnostics',{pending:[...pendingRequests],failed:failedRequests,errors});
+  if(evidenceContext)await evidenceContext.tracing.stop({path:`test-results/FAILED-live-experience-${name}-trace.zip`}).catch(()=>{});
   if(evidencePage){await evidencePage.screenshot({path:`test-results/FAILED-live-experience-${name}.png`}).catch(()=>{});console.log('Failure diagnostics',await evidencePage.evaluate(()=>({ready:document.readyState,body:document.body.innerText.slice(0,2500),visibility:document.visibilityState,url:location.href,videos:[...document.querySelectorAll('video')].map(v=>({src:v.currentSrc,paused:v.paused,muted:v.muted,ready:v.readyState,error:v.error?.message,time:v.currentTime})),dock:document.querySelector('.home-ad-dock')?.outerHTML,dialogs:document.querySelectorAll('dialog[open]').length})).catch(()=>({})));}
   throw error;
  }finally{await browser.close();}
