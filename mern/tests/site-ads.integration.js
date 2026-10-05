@@ -6,7 +6,7 @@ import { randomBytes, createHash } from 'node:crypto';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { DEFAULT_HOME_ADS } from '../shared/site-ads.js';
 
-test('homepage ads are public but mutations are owner-only, durable and conflict-safe', { timeout: 180000 }, async () => {
+test('sitewide ads are public but mutations are owner-only, durable and conflict-safe', { timeout: 180000 }, async () => {
   const replica = await MongoMemoryReplSet.create({ replSet: { count: 1 }, binary: { version: '7.0.14' } });
   process.env.NODE_ENV='test'; process.env.MONGODB_URI=replica.getUri(); process.env.MONGODB_DB='site_ads_test'; process.env.APP_ORIGIN='http://localhost:5173';
   try {
@@ -47,6 +47,22 @@ test('homepage ads are public but mutations are owner-only, durable and conflict
     await ProofVideo.create({_id:'approved-video',title:'Recorded Bravo training',description:'Published footage',order:50,revision:1,uploadId:'approved-upload',deleted:false});
     const videoAd=await write('post','/api/site-ads','administrator',{expectedRevision:4,title:'Video ad',alt:'Recorded training',videoId:'approved-video'}).expect(201);
     assert.equal(videoAd.body.ads.at(-1).videoSrc,'/api/proof-videos/approved-video/video?v=1');
+    // More than the previous 20-ad ceiling can be published, reordered and edited.
+    let many=videoAd.body;
+    for(let index=0; index<23; index++) {
+      many=(await write('post','/api/site-ads','owner',{expectedRevision:many.revision,title:`Additional ad ${index}`,alt:'Published test ad',videoId:'approved-video'}).expect(201)).body;
+    }
+    assert.equal(many.ads.length,25);
+    const ids=many.ads.map(ad=>ad.id).reverse();
+    many=(await write('put','/api/site-ads','owner',{expectedRevision:many.revision,ids,settings:{autoplaySeconds:12}}).expect(200)).body;
+    assert.deepEqual(many.ads.map(ad=>ad.id),ids);
+    const first=ids[0];
+    many=(await write('put',`/api/site-ads/${first}`,'owner',{expectedRevision:many.revision,title:'Updated beyond former cap',alt:'Updated ad',enabled:false,videoId:'approved-video'}).expect(200)).body;
+    assert.equal(many.ads[0].enabled,false);
+    many=(await write('delete',`/api/site-ads/${first}`,'owner',{expectedRevision:many.revision}).expect(200)).body;
+    assert.equal(many.ads.length,24);
+    const persisted=(await request(app).get('/api/site-ads').expect(200)).body;
+    assert.deepEqual(persisted,many);
     await ProofVideo.updateOne({_id:'approved-video'},{$set:{deleted:true}});
     assert.equal((await request(app).get('/api/site-ads').expect(200)).body.ads.at(-1).videoSrc,'');
 

@@ -111,13 +111,19 @@ keeps OUT IN THE FIELD / Explore training and up to three existing published upl
 proof videos with training metadata, excluding obvious signup/sale promotions. Clips
 are labeled Recorded training; failed media is removed. No next date is fabricated.
 
-The original ad placement is removed. The fixed black/gold dock preserves existing
+The original page-specific ad placements are removed. One fixed black/gold dock
+stays mounted across website routes, including Live and Workshops, and preserves existing
 records, order, images, links, timing, fades and owner/admin editing. Three production
 ads were image records at implementation. The same editor can also reference an
 existing approved uploaded proof video; no new hosting/upload system is added.
 Persistent keyed media elements and stable rotation dependencies survive scrolling,
-clock updates and data refreshes. Videos stay muted. Pause/resume and expanded artwork
-are accessible; reduced motion starts rotation/video paused and disables pulses/fades.
+clock updates, in-site navigation and data refreshes. Videos stay muted. No buttons
+cover the artwork. Pause/resume, expanded artwork and owner/admin Manage advertisements
+are in the existing Aa menu; owner/admin hold-to-edit also remains available. There
+is no application-level ad-count ceiling. The public dock mounts only the current,
+previous and next creative, while retaining every record and its order. Existing
+storage, request-size and abuse protections still apply. Reduced motion starts
+rotation/video paused and disables pulses/fades.
 Measured dock height plus safe area reserves footer space and lifts floating controls.
 Empty/hidden collections leave no gap. Dialogs/fullscreen obscure and pause the dock;
 visualViewport keyboard shrinkage hides it while preserving layout space.
@@ -141,7 +147,12 @@ states, persisted elapsed time, full photo framing, 320/390/768/1440 px layouts,
 playing ad continuity/footer/floating controls/dialogs/focus/reduced motion/empty
 collections. Screenshots explicitly label isolated TEST DATA. Existing ad/banner
 integration and editor checks cover durable editing, permissions, timing, ordering,
-hiding, deletion and invalid/deleted video references. Fixture counters are not media
+hiding, deletion and invalid/deleted video references. The ad collection test creates
+25 records and verifies reorder/edit/hide/delete beyond the former 20-ad ceiling;
+browser checks verify bounded media loading and rotation. Sitewide navigation checks
+verify the same video element continues playing, one dock remains, and footer and
+mobile booking controls stay above it. Live promotions keep polling on all routes.
+Fixture counters are not media
 proof. The direct browser test also checks a second synthetic publisher, switching,
 independent stop, and a closed tab whose end request is lost. Four simultaneous media
 viewers means three Chromium and one WebKit on the same CI host, not four real phones.
@@ -173,3 +184,19 @@ with the phone kept foregrounded. No universally reachable or unlimited audience
 promised. Four peers at the configured target can require about 2.8 Mbps video upload
 before audio/overhead. Existing per-IP abuse budgets can affect large shared-IP groups;
 these are not a fixed viewer cap. No new relay, host or paid fallback is provisioned.
+
+### Browser media verification runtime
+
+The video lifecycle and full live/ad flows run in Chrome on Linux and WebKit on
+macOS, with both suites required by the homepage workflow's `verify` gate. A plain
+HTML page with existing Bravo H.264 footage first verifies actual playback, pause,
+resume and reload; no media methods or frames are mocked. Linux WebKit/GStreamer
+reproduced a roughly 30-second renderer stall on pause even without Bravo code;
+a virtual display also failed the CI media check. The macOS job exercises the
+native Apple media backend instead. This public repository uses a standard free
+GitHub runner, with no hosting or billing changes. The test runner is not proof
+of physical iPhone camera, cellular connectivity or audience capacity.
+
+The ad focus regression waits for the accessibility panel's next-frame focus
+restoration before focusing the ad, then verifies it remains paused through a
+full rotation interval. This prevents two competing test focus operations.

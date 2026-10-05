@@ -8,7 +8,7 @@ on:
 permissions:
   contents: read
 jobs:
-  verify:
+  browser-linux:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -27,12 +27,23 @@ jobs:
       - run: npm run build
       - run: npm test
       - run: node --test --test-concurrency=1 tests/site-banner.integration.js tests/site-ads.integration.js tests/proof-videos.integration.js tests/site-content.integration.js tests/customer-reviews.integration.js tests/website-editor.integration.js
-      - run: npm install --ignore-scripts --no-save --package-lock=false playwright@1.55.1
+      - run: npm install --ignore-scripts --no-save --package-lock=false playwright@1.63.0
       - run: npx playwright install --with-deps chromium webkit
       - run: npx playwright install chrome
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg gstreamer1.0-libav
-      - run: node tests/live-experience.browser.mjs
+      - run: node tests/media-lifecycle.browser.mjs
+        timeout-minutes: 2
+        if: ${{ !cancelled() }}
+        env:
+          BRAVO_BROWSER_ENGINES: chromium
       - run: node tests/home-ad-carousel.browser.mjs
+        timeout-minutes: 2
+        if: ${{ !cancelled() }}
+      - run: node tests/live-experience.browser.mjs
+        timeout-minutes: 3
+        env:
+          BRAVO_BROWSER_ENGINES: chromium
+        if: ${{ !cancelled() }}
       - run: node tests/site-content.browser.mjs
       - run: node tests/website-editor.browser.mjs
       - run: node tests/hero-carousel.browser.mjs
@@ -45,3 +56,52 @@ jobs:
         with:
           name: homepage-banner-evidence
           path: mern/test-results/
+
+  webkit-media:
+    # The Linux GStreamer port stalls even on a plain HTML video pause/reload.
+    # Test Apple's native media stack. This standard runner is free for this
+    # public repository; no hosting service or billing configuration changes.
+    runs-on: macos-15
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: mern
+    env:
+      BRAVO_BROWSER_ENGINES: webkit
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: mern/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: npm install --ignore-scripts --no-save --package-lock=false playwright@1.63.0
+      - run: npx playwright install webkit
+      - run: node tests/media-lifecycle.browser.mjs
+        timeout-minutes: 2
+      - run: node tests/live-experience.browser.mjs
+        timeout-minutes: 3
+        if: ${{ !cancelled() }}
+      - run: node tests/home-ad-carousel.browser.mjs
+        timeout-minutes: 2
+        if: ${{ !cancelled() }}
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always()
+        with:
+          name: webkit-native-media-evidence
+          path: mern/test-results/
+
+  verify:
+    needs: [browser-linux, webkit-media]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require both browser suites
+        env:
+          LINUX_RESULT: ${{ needs.browser-linux.result }}
+          WEBKIT_RESULT: ${{ needs.webkit-media.result }}
+        run: test "$LINUX_RESULT" = success && test "$WEBKIT_RESULT" = success

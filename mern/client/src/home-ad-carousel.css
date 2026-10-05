@@ -55,16 +55,14 @@
 .home-ad-slide.is-image-missing>a,.home-ad-slide.is-image-missing>img{display:none}
 /* One persistent viewport dock; measured height includes the device safe area. */
 :root{--ad-dock-height:0px}html{scroll-padding-bottom:calc(var(--ad-dock-height) + 20px)}
-.bravo-home{padding-bottom:var(--ad-dock-height)}
+#root{padding-bottom:var(--ad-dock-height)}
 .home-ad-dock{position:fixed;inset:auto 0 0;z-index:80;background:#101010f5;color:#fff;border-top:1px solid #ba9a64;box-shadow:0 -8px 35px #0005;padding:0 0 env(safe-area-inset-bottom);backdrop-filter:blur(12px)}
 .home-ad-dock[data-keyboard],.home-ad-dock[data-obscured]{visibility:hidden;pointer-events:none}
 .home-ad-dock .home-ad-carousel{position:relative;width:100%;margin:0;min-width:0;height:clamp(120px,38.6364vw,240px)}
 .home-ad-dock .home-ad-frame{height:100%;width:100%;aspect-ratio:auto;border:0;box-shadow:none;border-radius:0}
 .home-ad-dock .home-ad-track,.home-ad-dock .home-ad-slide,.home-ad-dock .home-ad-slide>a,.home-ad-dock .ad-art-button{height:100%;width:100%}
-.home-ad-dock .home-ad-slide :is(img,video){display:block;width:100%;height:100%;aspect-ratio:auto;object-fit:contain;background:#101010}
+.home-ad-dock .home-ad-slide :is(img,video){display:block;width:100%;height:100%;aspect-ratio:auto;object-fit:contain;background:#101010;pointer-events:none}
 .ad-art-button{padding:0;border:0;background:#101010;cursor:pointer}
-.ad-dock-copy{display:none}
-.ad-dock-controls{position:absolute;z-index:3;right:max(6px,env(safe-area-inset-right));top:6px;display:flex;gap:4px;align-items:center;padding:3px;border-radius:6px;background:#101010d9}.ad-dock-controls button{border:1px solid #ba9a6466;color:#f2d5a5;background:#101010d9;width:36px;height:36px;min-height:36px;padding:0;border-radius:4px;font-size:17px;cursor:pointer}
 .home-ad-dock :is(a,button):focus-visible{outline:3px solid #ffe4b5;outline-offset:-3px}
 .ad-live-creative{height:100%;display:flex;gap:5px;align-items:center;justify-content:center;flex-direction:column;background:radial-gradient(ellipse at center,#302319,#101010);border:1px solid #ba9a6444}
 .ad-live-trainer{max-width:90%;font-size:12px;line-height:1.3;text-align:center;overflow-wrap:anywhere;color:#fff}
@@ -84,6 +82,14 @@ body:has(.home-ad-dock) .media-rights-toast{bottom:calc(var(--ad-dock-height) + 
 /* Short landscape screens keep room for page controls; expand shows full artwork. */
 @media(max-height:500px) and (orientation:landscape){
   .home-ad-dock .home-ad-carousel{height:72px}
-  .ad-dock-controls{top:4px}
   .ad-live-creative>small,.ad-live-creative>strong{display:none}
+}
+
+/* Existing mobile booking actions stay reachable above the site-wide ads. */
+@media(max-width:700px){
+  body:has(.home-ad-dock) .mobile-booking-bar{bottom:var(--ad-dock-height)}
+  body:has(.home-ad-dock):has(.booking-page) .accessibility-tools{bottom:calc(var(--ad-dock-height) + 92px + env(safe-area-inset-bottom))!important}
+  body:has(.home-ad-dock):has(.booking-page) .accessibility-panel{max-height:calc(100dvh - var(--ad-dock-height) - 171px - env(safe-area-inset-bottom))!important}
+  body:has(.home-ad-dock):has(.booking-page) .content-edit-launcher{bottom:calc(var(--ad-dock-height) + 96px + env(safe-area-inset-bottom))}
+  body:has(.home-ad-dock):has(.booking-page) .action-feedback{bottom:calc(var(--ad-dock-height) + 92px + env(safe-area-inset-bottom))}
 }

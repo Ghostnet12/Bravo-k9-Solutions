@@ -114,6 +114,7 @@ try {
   await secondPhone.getByRole('button',{name:'■ End live session'}).click();
   await home.waitForFunction(()=>document.querySelectorAll('.hero-live li').length===1,null,{timeout:5000});
   await viewers[0].waitForFunction(()=>document.querySelector('.live-player-caption')?.textContent.includes('Gunner'));
+  await viewers[0].waitForURL(url=>url.searchParams.get('session')===record._id);
   await viewers[0].getByRole('button',{name:/Watch live/}).click();
   await viewers[0].waitForFunction(()=>document.querySelector('.live-video-stage video')?.currentTime>0.5,null,{timeout:60000});
   await viewers[0].evaluate(()=>{window.__remoteStream=document.querySelector('.live-video-stage video').srcObject;});

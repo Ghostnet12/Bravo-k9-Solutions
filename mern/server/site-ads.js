@@ -39,7 +39,7 @@ const updateInput = z.object({ expectedRevision: z.number().int().min(0), ...adF
 const revisionInput = z.object({ expectedRevision: z.number().int().min(0) }).strict();
 const orderInput = z.object({
   expectedRevision: z.number().int().min(0),
-  ids: z.array(idInput).max(20),
+  ids: z.array(idInput),
   settings: z.object({ autoplaySeconds: z.number().int().min(3).max(20) }).strict(),
 }).strict();
 
@@ -121,7 +121,6 @@ router.post('/', async (req, res) => {
   const input = addInput.parse(req.body);
   const id = `ad-${randomUUID()}`;
   const saved = await writeCollection(req, async ({ ads, current, session }) => {
-    if (ads.length >= 20) throw fail('Keep the homepage carousel to 20 ads or fewer.');
     await approvedVideo(input.videoId, session);
     const uploadId = input.image ? await storeImage(id, input.image, req.user._id, session) : undefined;
     return { ads: [...ads, { id, title: input.title, alt: input.alt, link: safeAdLink(input.link), enabled: input.enabled, videoId: input.videoId, uploadId, imageRevision: 1 }], settings: current?.settings, action: 'site-ad.created', targetId: id };
