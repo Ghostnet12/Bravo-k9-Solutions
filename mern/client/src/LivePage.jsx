@@ -69,6 +69,12 @@ export default function LivePage() {
   const publicLive = visible.filter(session => session.status === 'live' && session.audience === 'public');
   const privateNotices = announcements.filter(item => item.audience === 'client' && !sessions.some(session => session.trainerId === item.trainerId));
   const available = availability === 'available';
+  const requestedSession = search.get('session'), selectedId = selected?.id;
+  useEffect(() => {
+    // Persist the fallback after an ended selection. Otherwise that trainer
+    // restarting can silently replace the stream the visitor is now watching.
+    if (!loading && !error && available && requestedSession && selectedId && requestedSession !== selectedId) setSearch({ session: selectedId }, { replace: true });
+  }, [loading, error, available, requestedSession, selectedId, setSearch]);
   return <><Header/><main id="main-content" tabIndex={-1} className="bravo-live-page">
     <section className="live-hero"><img className="live-hero-photo" src="/images/hero-bravo-launch.webp" width="1774" height="887" alt="A trainer and dog walking together in the field"/><div className="live-shell"><p className="live-eyebrow">TRUST. TRAIN. DEPLOY.</p><h1>BRAVO <em>LIVE</em></h1><h2>REAL TRAINING. RIGHT NOW.</h2><p>Watch our trainers in live sessions.<br/>See the Bravo difference as it happens.</p><div className="live-hero-actions">{publicLive.length > 0 && <a className="button" href="#live-player">Watch live ↓</a>}{!user && <Link className="live-text-link" to="/account">Client sign in →</Link>}{['staff', 'owner'].includes(user?.role) && <Link className="live-text-link" to="/live/studio">Go live ↗</Link>}</div></div></section>
     <noscript><p className="live-shell live-noscript">Enable JavaScript to check live status and watch public training. Client sessions require sign-in.</p></noscript>

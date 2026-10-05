@@ -8,7 +8,7 @@ import { chromium, webkit } from 'playwright';
 const dist=fileURLToPath(new URL('../client/dist/',import.meta.url));
 const html=await readFile(`${dist}/bravo-shell.html`,'utf8');
 let handleApi;
-const app=express();app.use('/api',(req,res)=>handleApi(req,res));app.use(express.static(dist));app.get('/{*path}',(_req,res)=>res.type('html').send(html));
+const app=express();app.use('/api',(req,res)=>handleApi(req,res));app.use(express.static(dist,{redirect:false}));app.get('/{*path}',(_req,res)=>res.type('html').send(html));
 const server=app.listen(0,'127.0.0.1');await once(server,'listening');const origin=`http://127.0.0.1:${server.address().port}`;
 await mkdir('test-results',{recursive:true});
 const startedAt=new Date(Date.now()-14*60000).toISOString();
@@ -100,7 +100,7 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
   await page.goto(`${origin}/live`);await page.bringToFront();await page.getByText('Live status is temporarily unavailable. Reconnecting…',{exact:true}).waitFor();assert.equal(await page.getByRole('heading',{name:'OUT IN THE FIELD.'}).count(),0);
   failure=false;sessions=[makeSession('one','David · TEST'),makeSession('two','Ashley · TEST')];await refresh();await page.locator('.live-session-row').first().waitFor();
   await page.locator('.live-session-row').nth(1).click();await page.waitForFunction(()=>document.querySelector('.live-player-caption h2')?.textContent.includes('Ashley'));assert.match(await page.locator('.live-player-caption h2').innerText(),/Ashley/i);
-  await page.reload();await page.waitForFunction(()=>document.querySelector('.live-player-caption h2')?.textContent.includes('Ashley'));assert.match(await page.locator('.live-player-caption h2').innerText(),/Ashley/i);assert.match(await page.locator('.live-video-top .live-timer').innerText(),/^00:1[4-9]:/);
+  await page.reload({waitUntil:'domcontentloaded'});await page.waitForFunction(()=>document.querySelector('.live-player-caption h2')?.textContent.includes('Ashley'));assert.match(await page.locator('.live-player-caption h2').innerText(),/Ashley/i);assert.match(await page.locator('.live-video-top .live-timer').innerText(),/^00:1[4-9]:/);
   assert.match(await page.locator('.live-player-caption').innerText(),/Central Time/);
   for(const width of [390,768,1440]){
    await page.setViewportSize({width,height:1000});await page.evaluate(()=>window.scrollTo({top:0,behavior:"instant"}));
