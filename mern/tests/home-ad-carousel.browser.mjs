@@ -41,12 +41,15 @@ try{
    assert.equal(await carousel.evaluate(el=>!!el.closest('.home-ad-dock')),true);
    assert.equal(await page.locator('.home-status-banner').evaluate(el=>el.previousElementSibling.classList.contains('home-hero')),true);
    await page.getByRole('button',{name:'Edit information banner',exact:true}).waitFor();
+   assert.equal(await carousel.locator('.ad-dock-controls').count(),0,'no buttons cover ad artwork');
+   await page.getByRole('button',{name:'Accessibility',exact:true}).click();
    await page.getByRole('button',{name:'Manage advertisements',exact:true}).waitFor();
+   assert.equal(await page.getByRole('button',{name:'Pause advertisements',exact:true}).count(),1);
+   await page.getByRole('button',{name:'Close accessibility options'}).click();
    assert.ok(await page.locator('.content-edit-launcher').evaluate(el=>el.getBoundingClientRect().bottom<document.querySelector('.home-ad-dock').getBoundingClientRect().top),'owner page-edit control is above the dock');
    assert.equal(await carousel.getByRole('img',{name:'Workshop banner'}).count(),1);
    const workshopImage=page.locator('.home-ad-slide img[alt="Workshop banner"]');await workshopImage.waitFor();assert.equal(await workshopImage.getAttribute('src'),'/images/saturday-workshop-october-3.webp');
    await page.waitForFunction(()=>{const image=document.querySelector('.home-ad-slide img[alt="Workshop banner"]');return image?.complete&&image.naturalWidth>0;},null,{timeout:15000});
-   assert.equal(await page.getByRole('button',{name:'Pause advertisements',exact:true}).count(),1);
    assert.equal(await page.locator('.home-ad-slide.is-active img').getAttribute('alt'),'Workshop banner');
    const activeLink=page.locator('.home-ad-slide.is-active').getByRole('link',{name:'Saturday Dog Training Workshop'});await carousel.scrollIntoViewIfNeeded();await activeLink.focus();await page.waitForTimeout(3400);
    assert.equal(await page.locator('.home-ad-slide.is-active img').getAttribute('alt'),'Workshop banner');
@@ -63,7 +66,7 @@ try{
    if(!hit.matches){console.log('Ad hit diagnostics',hit);await page.screenshot({path:`test-results/FAILED-ad-hit-${engineName}.png`});}
    assert.equal(hit.matches,true,'hold target is the visible advertisement');
    await page.mouse.move(point.x,point.y);await page.mouse.down();
-   try { await page.getByRole('dialog',{name:/Manage homepage ads/i}).waitFor({timeout:8000}); }
+   try { await page.getByRole('dialog',{name:/Manage advertisements/i}).waitFor({timeout:8000}); }
    catch(error){await page.screenshot({path:`test-results/FAILED-ad-hold-${engineName}.png`});console.log('Ad hold diagnostics',await page.evaluate(()=>({target:document.elementFromPoint(innerWidth/2,innerHeight-50)?.outerHTML,dock:document.querySelector('.home-ad-dock')?.outerHTML,dialogs:[...document.querySelectorAll('dialog')].map(d=>({open:d.open,text:d.textContent?.slice(0,80)}))})));throw error;}
    finally {await page.mouse.up();}
    assert.equal(await page.locator('dialog[open]').count(),1,'ad holds open only the ad manager');
@@ -85,7 +88,7 @@ try{
    role='staff';await page.reload();await page.waitForLoadState('networkidle');
    assert.equal(await page.locator('[data-ad-editable]').count(),0);
    const publicCarousel=page.locator('.home-ad-carousel');await publicCarousel.scrollIntoViewIfNeeded();const b=await publicCarousel.boundingBox();await page.mouse.move(b.x+50,b.y+50);await page.mouse.down();await page.waitForTimeout(750);await page.mouse.up();
-   assert.equal(await page.getByRole('dialog',{name:/Manage homepage ads/i}).count(),0);
+   assert.equal(await page.getByRole('dialog',{name:/Manage advertisements/i}).count(),0);
    assert.deepEqual(errors,[]);
    await page.screenshot({path:`test-results/home-ad-carousel-${engineName}.png`});
    console.log(`PASS ${engineName}: fixed placement, automatic fade, pause control, hold editor, add/delete, and staff restriction`);

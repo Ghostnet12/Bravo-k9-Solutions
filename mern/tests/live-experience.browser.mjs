@@ -47,19 +47,35 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
   await page.evaluate(()=>{window.__ad=document.querySelector('.home-ad-dock video');window.__adTime=window.__ad.currentTime;window.scrollTo({top:document.body.scrollHeight,behavior:"instant"});window.dispatchEvent(new Event('bravo-ads-changed'));});
   await page.waitForFunction(()=>window.__ad.currentTime>window.__adTime+0.3);
   assert.equal(await ad.evaluate(el=>el===window.__ad && el.muted && getComputedStyle(el).objectFit==='contain'),true);
-  const layout=await page.evaluate(()=>{const dock=document.querySelector('.home-ad-dock').getBoundingClientRect(),footer=document.querySelector('footer').getBoundingClientRect(),floating=document.querySelector('.accessibility-tools')?.getBoundingClientRect();return {bottom:dock.bottom,height:dock.height,footer:footer.bottom,top:dock.top,floating:floating?.bottom,reserved:parseFloat(getComputedStyle(document.querySelector('.bravo-home')).paddingBottom),screen:innerHeight};});
+  assert.equal(await page.locator('.home-ad-dock .ad-dock-controls').count(),0);
+  // Follow the artwork, then site navigation, without replacing the ad player.
+  await page.locator('.home-ad-slide.is-active a').click();await page.waitForURL('**/dog-training');
+  for (const path of ['/live','/contact','/']) {
+   if(path==='/') await page.locator('footer a[href="/"]').first().click();
+   else { await page.getByRole('button',{name:'Menu',exact:true}).click();await page.locator(`header nav a[href="${path}"]`).first().click(); }
+   await page.waitForURL(`${origin}${path}`);
+   await page.waitForFunction(()=>document.querySelector('.home-ad-dock video')===window.__ad && !window.__ad.paused);
+   assert.equal(await page.locator('.home-ad-dock').count(),1,'one dock survives route changes');
+   const before=await ad.evaluate(el=>el.currentTime);await page.waitForTimeout(350);
+   assert.ok(await ad.evaluate((el,time)=>el.currentTime>time,before),'ad playback advances after route navigation');
+   await page.evaluate(()=>window.scrollTo({top:document.body.scrollHeight,behavior:'instant'}));
+   assert.ok(await page.evaluate(()=>document.querySelector('footer').getBoundingClientRect().bottom<=document.querySelector('.home-ad-dock').getBoundingClientRect().top+2),'route footer clears dock');
+  }
+  const layout=await page.evaluate(()=>{const dock=document.querySelector('.home-ad-dock').getBoundingClientRect(),footer=document.querySelector('footer').getBoundingClientRect(),floating=document.querySelector('.accessibility-tools')?.getBoundingClientRect();return {bottom:dock.bottom,height:dock.height,footer:footer.bottom,top:dock.top,floating:floating?.bottom,reserved:parseFloat(getComputedStyle(document.querySelector('#root')).paddingBottom),screen:innerHeight};});
   assert.ok(Math.abs(layout.bottom-layout.screen)<2);assert.ok(layout.reserved>=layout.height);assert.ok(layout.footer<=layout.top+2);if(layout.floating)assert.ok(layout.floating<layout.top);
   await page.setViewportSize({width:844,height:390});
   await page.evaluate(()=>window.scrollTo({top:document.body.scrollHeight,behavior:'instant'}));
-  await page.waitForFunction(()=>parseFloat(getComputedStyle(document.querySelector('.bravo-home')).paddingBottom)===Math.ceil(document.querySelector('.home-ad-dock').getBoundingClientRect().height));
+  await page.waitForFunction(()=>parseFloat(getComputedStyle(document.querySelector('#root')).paddingBottom)===Math.ceil(document.querySelector('.home-ad-dock').getBoundingClientRect().height));
   const landscape=await page.evaluate(()=>{const dock=document.querySelector('.home-ad-dock').getBoundingClientRect();return {height:dock.height,top:dock.top,footer:document.querySelector('footer').getBoundingClientRect().bottom,floating:document.querySelector('.accessibility-tools').getBoundingClientRect().bottom,overflow:document.documentElement.scrollWidth>innerWidth+1};});
   assert.ok(landscape.height<=75 && landscape.footer<=landscape.top+2 && landscape.floating<landscape.top && !landscape.overflow,'landscape dock leaves reading space and reachable footer/controls');
   assert.equal(await ad.evaluate(el=>el===window.__ad),true,'orientation preserves the video element');
   await page.setViewportSize({width:390,height:900});
+  await page.getByRole('button',{name:'Accessibility',exact:true}).click();
   await page.getByRole('button',{name:'Pause advertisements',exact:true}).click();assert.equal(await ad.evaluate(el=>el.paused),true);
   await page.getByRole('button',{name:'Resume advertisements',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('.home-ad-dock video').paused);
   await page.getByRole('button',{name:'Expand advertisement'}).click();await page.locator('.ad-expanded[open]').waitFor();
   assert.equal(await page.locator('.home-ad-dock').isVisible(),false);await page.getByRole('button',{name:'Close advertisement ×'}).click();await page.locator('.home-ad-dock').waitFor({state:'visible'});
+  await page.getByRole('button',{name:'Close accessibility options'}).click();
   await page.evaluate(()=>document.activeElement?.blur());
   sessions=[makeSession('one','David · TEST')];await refresh();await page.locator('.hero-live').waitFor();
   assert.equal(await page.locator('.hero-live li').count(),1);assert.equal(await page.locator('.hero-live li a').getAttribute('href'),'/live?session=one');
@@ -93,11 +109,11 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
    await page.screenshot({path:`test-results/bravo-live-framing-TEST-${name}-${width}.png`});
   }
   sessions=[];await refresh();await page.getByRole('heading',{name:'OUT IN THE FIELD.'}).waitFor();await page.getByRole('region',{name:'Recorded Bravo training'}).waitFor();
-  await page.goto(origin);await page.locator('.home-ad-dock').waitFor();await page.emulateMedia({reducedMotion:'reduce'});await page.getByRole('button',{name:'Resume advertisements',exact:true}).waitFor();
+  await page.goto(origin);await page.locator('.home-ad-dock').waitFor();await page.emulateMedia({reducedMotion:'reduce'});await page.getByRole('button',{name:'Accessibility',exact:true}).click();await page.getByRole('button',{name:'Resume advertisements',exact:true}).waitFor();
   assert.equal(await page.locator('.home-ad-dock video').evaluate(el=>el.paused),true);
   const resume=page.getByRole('button',{name:'Resume advertisements',exact:true});await page.keyboard.press('Tab');await resume.focus();assert.ok(await resume.evaluate(el=>getComputedStyle(el).outlineStyle!=='none'));
   ads=ads.map(ad=>({...ad,enabled:false}));await page.evaluate(()=>window.dispatchEvent(new Event('bravo-ads-changed')));await page.waitForFunction(()=>!document.querySelector('.home-ad-dock'));
-  assert.equal(await page.evaluate(()=>parseFloat(getComputedStyle(document.querySelector('.bravo-home')).paddingBottom)),0);
+  assert.equal(await page.evaluate(()=>parseFloat(getComputedStyle(document.querySelector('#root')).paddingBottom)),0);
   assert.deepEqual(errors,[]);console.log(`PASS ${name}: offline/one/two/rename/stop/private/unavailable, persistent elapsed, 320–1440px framing, dock media continuity/footer/floating controls/dialogs, pause, keyboard focus, reduced motion, hidden collection`);
   await context.close();
  }catch(error){

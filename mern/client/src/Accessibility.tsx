@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "./Link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 
 type Preferences = {
@@ -20,7 +20,7 @@ const defaultPreferences: Preferences = {
 
 const storageKey = "bravo-accessibility-preferences";
 
-export default function AccessibilityTools() {
+export default function AccessibilityTools({ children }: { children?: ReactNode }) {
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const [ready, setReady] = useState(false);
@@ -111,6 +111,7 @@ export default function AccessibilityTools() {
         <button type="button" aria-pressed={preferences.highContrast} onClick={() => toggle("highContrast", "High contrast")}>High contrast <span>{preferences.highContrast ? "On" : "Off"}</span></button>
         <button type="button" aria-pressed={preferences.reducedMotion} onClick={() => toggle("reducedMotion", "Reduced motion")}>Reduce motion <span>{preferences.reducedMotion ? "On" : "Off"}</span></button>
         <button type="button" aria-pressed={preferences.siteMusic} onClick={() => toggle("siteMusic", "Site music")}>Site music <span>{preferences.siteMusic ? "On" : "Off"}</span></button>
+        {children}
         <Link href="/accessibility">Accessibility statement</Link>
         <Link href="/learn#accessible-media">Captions & transcripts</Link>
         <small>These settings stay on this device.</small>

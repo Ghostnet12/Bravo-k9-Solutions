@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import Link from './Link';
+import Accessibility from './Accessibility';
 import { useLiveSessions } from './live-state';
 import { useBravo } from './context';
 import { api } from './api';
@@ -76,7 +78,7 @@ function AdEditor({ collection, publish, close }) {
     await order(ids);
   }
   async function remove(id, name) {
-    if (!window.confirm(`Delete “${name}” from the homepage ad rotation?`)) return;
+    if (!window.confirm(`Delete “${name}” from the website ad rotation?`)) return;
     setBusy(true); setError('');
     try { publish(await api(`/site-ads/${id}`, { method: 'DELETE', body: { expectedRevision: collection.revision } })); }
     catch (e) { setError(e.message); }
@@ -84,8 +86,8 @@ function AdEditor({ collection, publish, close }) {
   }
   async function saveTiming() { await order(collection.ads.map(ad => ad.id), seconds); }
   return <dialog ref={dialog} className="ad-editor-dialog" data-site-image-ignore="" aria-labelledby="ad-editor-title" onCancel={e => { e.preventDefault(); if (!busy) close(); }}>
-    <div className="ad-editor-heading"><div><p>BRAVO · HOMEPAGE ADVERTISING</p><h2 id="ad-editor-title">Manage homepage ads</h2></div><button type="button" disabled={busy} onClick={close} aria-label="Close ad editor">×</button></div>
-    <p>These ads rotate in the homepage bottom dock. Videos play muted; visitors can expand artwork. Add, reorder, hide, replace or delete them here.</p>
+    <div className="ad-editor-heading"><div><p>BRAVO · SITE ADVERTISING</p><h2 id="ad-editor-title">Manage advertisements</h2></div><button type="button" disabled={busy} onClick={close} aria-label="Close ad editor">×</button></div>
+    <p>These ads rotate across the website, including Bravo Live. Videos play muted. Add as many ads as you need, then reorder, hide, replace or delete them here.</p>
     <section className="ad-editor-settings" aria-label="Ad rotation settings">
       <label>Seconds between ads<input type="range" min="3" max="20" step="1" value={seconds} onChange={e => setSeconds(Number(e.target.value))}/><output>{seconds}s</output></label>
       <button type="button" disabled={busy || seconds === collection.settings?.autoplaySeconds} onClick={saveTiming}>Save timing</button>
@@ -169,10 +171,14 @@ export default function HomeAdCarousel() {
   const publish = data => { setCollection(data); window.dispatchEvent(new Event('bravo-ads-changed')); };
   if (typeof document === 'undefined') return null;
   return <>
-    {canEdit && <button type="button" className="section-edit-button ad-management-entry" onClick={openEditor}>Manage advertisements</button>}
+    <Accessibility>
+      {current && <button type="button" aria-pressed={paused || reduced} onClick={() => { setPaused(!(paused || reduced)); if (reduced) setReduced(false); }}>{paused || reduced ? 'Resume advertisements' : 'Pause advertisements'}</button>}
+      {current && !current.live && <button type="button" onClick={() => setExpanded(current)}>Expand advertisement</button>}
+      {canEdit && <button type="button" onClick={openEditor}>Manage advertisements</button>}
+    </Accessibility>
     {current && createPortal(<aside ref={dock} className="home-ad-dock" data-keyboard={keyboard || undefined} data-obscured={obscured || undefined} aria-label="Bravo announcements and promotions">
       <section className="home-ad-carousel" data-site-image-ignore="" data-ad-editable={canEdit || undefined}
-        onPointerDown={event => { if (!canEdit || event.button !== 0 || event.isPrimary === false || event.target.closest('.ad-dock-controls')) return; origin.current = { x: event.clientX, y: event.clientY }; cancelHold(); hold.current = setTimeout(openEditor, 650); }}
+        onPointerDown={event => { if (!canEdit || event.button !== 0 || event.isPrimary === false) return; origin.current = { x: event.clientX, y: event.clientY }; cancelHold(); hold.current = setTimeout(openEditor, 650); }}
         onPointerMove={event => { if (origin.current && Math.hypot(event.clientX - origin.current.x, event.clientY - origin.current.y) > 12) cancelHold(); }}
         onPointerUp={cancelHold} onPointerCancel={cancelHold} onPointerLeave={cancelHold}
         onContextMenu={event => { if (canEdit) event.preventDefault(); }}
@@ -182,11 +188,9 @@ export default function HomeAdCarousel() {
           const selected = ad.id === current.id;
           const art = ad.live ? <span className="ad-live-creative"><span className="live-badge"><i aria-hidden="true"/>LIVE</span><strong>BRAVO LIVE</strong><span className="ad-live-trainer">{ad.title}</span><small>{ad.audience === 'client' ? 'Client session' : 'Real training. Right now.'}</small></span> : <AdMedia ad={ad} playing={selected && !stopped}/>;
           return <article className={`home-ad-slide${selected ? ' is-active' : ''}`} key={ad.id} aria-hidden={!selected || undefined} inert={!selected}>
-            {ad.link ? <a href={ad.link} aria-label={ad.title}>{art}</a> : <button type="button" className="ad-art-button" onClick={() => setExpanded(ad)} aria-label={`View advertisement: ${ad.title}`}>{art}</button>}
+            {ad.link ? <Link href={ad.link} aria-label={ad.title}>{art}</Link> : <button type="button" className="ad-art-button" onClick={() => setExpanded(ad)} aria-label={`View advertisement: ${ad.title}`}>{art}</button>}
           </article>;
         })}</div></div>
-        <div className="ad-dock-copy"><span>{current.live ? 'ON AIR' : 'BRAVO · IN THE FIELD'}</span><a href={current.link || '#'} onClick={event => { if (!current.link) { event.preventDefault(); setExpanded(current); } }}>{current.title}</a>{current.live && <small>{current.audience === 'client' ? 'Sign in to check access' : 'Watch live →'}</small>}</div>
-        <div className="ad-dock-controls"><button type="button" aria-label={paused || reduced ? 'Resume advertisements' : 'Pause advertisements'} aria-pressed={paused || reduced} onClick={() => { setPaused(!(paused || reduced)); if (reduced) setReduced(false); setFocused(false); }}>{paused || reduced ? '▶' : 'Ⅱ'}</button>{!current.live && <button type="button" aria-label="Expand advertisement" onClick={() => setExpanded(current)}>⤢</button>}{canEdit && <button type="button" aria-label="Edit dock advertisements" onClick={openEditor}>✎</button>}</div>
       </section>
     </aside>, document.body)}
     {editing && canEdit && createPortal(<AdEditor collection={collection} publish={publish} close={() => setEditing(false)}/>, document.body)}
