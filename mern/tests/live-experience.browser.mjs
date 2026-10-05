@@ -115,6 +115,7 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
   failure=false;sessions=[makeSession('one','David · TEST'),makeSession('two','Ashley · TEST')];await refresh();await page.locator('.live-session-row').first().waitFor();
   await page.locator('.live-session-row').nth(1).click();await page.waitForFunction(()=>document.querySelector('.live-player-caption h2')?.textContent.includes('Ashley'));assert.match(await page.locator('.live-player-caption h2').innerText(),/Ashley/i);
   await page.waitForLoadState('networkidle');
+  await page.waitForFunction(async()=>(await navigator.serviceWorker.getRegistration('/live/'))?.active?.state==='activated');
   await page.reload({waitUntil:'domcontentloaded'});
   assert.equal(await page.evaluate(()=>performance.getEntriesByType('navigation')[0].type),'reload');
   assert.equal(new URL(page.url()).searchParams.get('session'),'two');
