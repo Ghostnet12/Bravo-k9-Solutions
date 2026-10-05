@@ -16,7 +16,7 @@ test('lazy live routes have no static dependency on the app bootstrap', async ()
     if (visited.has(name)) return;
     visited.add(name);
     const source = await readFile(new URL(name, assets), 'utf8');
-    for (const [, dependency] of source.matchAll(/from["']\.\/([^"']+\.js)["']/g)) await check(dependency, visited);
+    for (const [, dependency] of source.matchAll(/(?:from|import)\s*["']\.\/([^"']+\.js)["']/g)) await check(dependency, visited);
   }
   for (const name of files) await check(name);
 });

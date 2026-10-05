@@ -107,11 +107,7 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
   await page.goto(`${origin}/live`);await page.bringToFront();await page.getByText('Live status is temporarily unavailable. Reconnecting…',{exact:true}).waitFor();assert.equal(await page.getByRole('heading',{name:'OUT IN THE FIELD.'}).count(),0);
   failure=false;sessions=[makeSession('one','David · TEST'),makeSession('two','Ashley · TEST')];await refresh();await page.locator('.live-session-row').first().waitFor();
   await page.locator('.live-session-row').nth(1).click();await page.waitForFunction(()=>document.querySelector('.live-player-caption h2')?.textContent.includes('Ashley'));assert.match(await page.locator('.live-player-caption h2').innerText(),/Ashley/i);
-  // Initiate a real document reload from the page. WebKit's automation Page.reload
-  // command can stall while a media document has requests in flight. Keep the
-  // navigation, selected-session and persisted-duration checks on both engines.
-  const reloadNavigation=page.waitForNavigation({waitUntil:'domcontentloaded'});
-  await page.evaluate(()=>location.reload());await reloadNavigation;
+  await page.reload({waitUntil:'domcontentloaded'});
   assert.equal(await page.evaluate(()=>performance.getEntriesByType('navigation')[0].type),'reload');
   assert.equal(new URL(page.url()).searchParams.get('session'),'two');
   await page.waitForFunction(()=>document.querySelector('.live-player-caption h2')?.textContent.includes('Ashley'));assert.match(await page.locator('.live-player-caption h2').innerText(),/Ashley/i);assert.match(await page.locator('.live-video-top .live-timer').innerText(),/^00:1[4-9]:/);
