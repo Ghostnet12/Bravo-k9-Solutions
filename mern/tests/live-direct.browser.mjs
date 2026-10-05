@@ -27,6 +27,8 @@ try {
   const trainerContext = await chrome.newContext({ viewport: { width: 390, height: 1000 } });
   await trainerContext.addCookies([{ name: 'bravo_session', value: token, domain: '127.0.0.1', path: '/' }]);
   const phone = await trainerContext.newPage(), errors = [];
+  const controlFailures=[];
+  phone.on('response',response=>{if(response.url().includes('/api/live')&&response.status()>=400)controlFailures.push({path:new URL(response.url()).pathname,status:response.status()});});
   phone.on('pageerror', e => errors.push(e.message));
   let lostAnswerResponse = false, delayHeartbeat = false, heartbeatTimedOut = false;
   await phone.route('**/api/live/*/heartbeat', async route => {
@@ -62,6 +64,8 @@ try {
   for (const [name, engine] of [['chromium', chrome], ['webkit', safari], ['chromium-third', chrome], ['chromium-fourth', chrome]]) {
     const context = await engine.newContext({ viewport: { width: 390, height: 900 } });
     const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message));
+    page.bravoTestName=name;
+    page.on('response',response=>{if(response.url().includes('/api/live')&&response.status()>=400)controlFailures.push({viewer:name,path:new URL(response.url()).pathname,status:response.status()});});
     await page.addInitScript(() => { window.__cameraRequests = 0; navigator.mediaDevices.getUserMedia = async () => { window.__cameraRequests++; throw new Error('Viewers must not request camera access'); }; });
     await page.goto(`${origin}/live?session=${record._id}`);
     await page.getByRole('button', { name: /Watch live/ }).click();
@@ -135,8 +139,14 @@ try {
   console.log('PASS closed publisher tab with failed end request loses LIVE badge in eight seconds and expires at twenty seconds');
   console.log('PASS two real synthetic publishers, automatic staff name, working stream selection, independent stop within five seconds');
   await phone.getByRole('button', { name: 'Microphone off' }).click();
+  await phone.getByRole('button', { name: 'Microphone on' }).waitFor();
   for (const page of viewers) {
-    await page.waitForFunction(() => window.__remoteStream.getAudioTracks().some(t => t.readyState === 'live' && !t.muted), null, { timeout: 20000 });
+    try { await page.waitForFunction(() => window.__remoteStream.getAudioTracks().some(t => t.readyState === 'live' && !t.muted), null, { timeout: 20000 }); }
+    catch(error){
+      const describe=()=>{const video=document.querySelector('.live-video-stage video')||document.querySelector('.live-camera-preview video');return {text:document.querySelector('.live-player-caption, .live-camera-panel')?.textContent,visibility:document.visibilityState,time:video?.currentTime,sameStream:video?.srcObject===window.__remoteStream,tracks:video?.srcObject?.getTracks().map(t=>({kind:t.kind,ready:t.readyState,muted:t.muted,enabled:t.enabled})),saved:window.__remoteStream?.getTracks().map(t=>({kind:t.kind,ready:t.readyState,muted:t.muted}))};};
+      console.log('Microphone diagnostics',JSON.stringify({viewer:page.bravoTestName,remote:await page.evaluate(describe),publisher:await phone.evaluate(describe),controlFailures,session:(await LiveSession.findById(record._id))?.toObject(),peers:await LivePeer.countDocuments({sessionId:record._id})}));
+      throw error;
+    }
     await page.getByRole('button', { name: 'Enable audio' }).click();
     await page.getByRole('button', { name: 'Mute audio' }).waitFor();
   }
