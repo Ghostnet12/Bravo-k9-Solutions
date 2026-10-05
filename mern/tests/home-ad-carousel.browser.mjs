@@ -46,6 +46,9 @@ try{
    await page.getByRole('button',{name:'Manage advertisements',exact:true}).waitFor();
    assert.equal(await page.getByRole('button',{name:'Pause advertisements',exact:true}).count(),1);
    await page.getByRole('button',{name:'Close accessibility options'}).click();
+   // Closing returns focus on the next animation frame. Wait for that real
+   // interaction to finish before moving focus into the ad pause test.
+   await page.waitForFunction(()=>document.activeElement?.matches('.accessibility-trigger'));
    assert.ok(await page.locator('.content-edit-launcher').evaluate(el=>el.getBoundingClientRect().bottom<document.querySelector('.home-ad-dock').getBoundingClientRect().top),'owner page-edit control is above the dock');
    // The initial artwork may have rotated while the accessibility controls
    // were checked. Wait for its next turn before testing keyboard focus pause.

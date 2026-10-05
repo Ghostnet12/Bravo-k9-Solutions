@@ -5,6 +5,9 @@ import { once } from 'node:events';
 import { readFile, mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { chromium, webkit } from 'playwright';
+const requestedEngines = (process.env.BRAVO_BROWSER_ENGINES || 'chromium,webkit').split(',');
+assert.ok(requestedEngines.length && requestedEngines.every(name => ['chromium', 'webkit'].includes(name)), 'supported browser engines required');
+const engines = Object.entries({ chromium, webkit }).filter(([name]) => requestedEngines.includes(name));
 const dist=fileURLToPath(new URL('../client/dist/',import.meta.url));
 const html=await readFile(`${dist}/bravo-shell.html`,'utf8'),liveHtml=await readFile(`${dist}/live.html`,'utf8');
 let handleApi;
@@ -19,8 +22,8 @@ const server=app.listen(0,'127.0.0.1');await once(server,'listening');const orig
 await mkdir('test-results',{recursive:true});
 const startedAt=new Date(Date.now()-14*60000).toISOString();
 const makeSession=(id,trainerName,audience='public')=>({id,trainerId:id,trainerName,dogName:`Test dog ${id}`,trainingFocus:'Test field obedience',audience,status:'live',startedAt});
-try {for(const [name,engine] of Object.entries({chromium,webkit})) {
- const browser=await engine.launch(name==='chromium'?{channel:'chrome'}:{headless:process.env.BRAVO_HEADED_WEBKIT !== '1'});
+try {for(const [name,engine] of engines) {
+ const browser=await engine.launch(name==='chromium'?{channel:'chrome'}:{});
  let evidencePage;const pendingRequests=new Set(),failedRequests=[],errors=[];
  try {
   const context=await browser.newContext({viewport:{width:390,height:900}}),page=await context.newPage();

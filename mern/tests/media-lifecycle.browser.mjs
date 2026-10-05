@@ -6,6 +6,9 @@ import express from 'express';
 import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
 import { chromium, webkit } from 'playwright';
+const requestedEngines = (process.env.BRAVO_BROWSER_ENGINES || 'chromium,webkit').split(',');
+assert.ok(requestedEngines.length && requestedEngines.every(name => ['chromium', 'webkit'].includes(name)), 'supported browser engines required');
+const engines = Object.entries({ chromium, webkit }).filter(([name]) => requestedEngines.includes(name));
 
 const app = express();
 app.use('/assets', express.static(fileURLToPath(new URL('../client/dist/assets/', import.meta.url))));
@@ -13,8 +16,8 @@ app.get('/', (_req, res) => res.type('html').send('<!doctype html><title>Bravo m
 const server = app.listen(0, '127.0.0.1');
 await once(server, 'listening');
 try {
-  for (const [name, engine] of Object.entries({ chromium, webkit })) {
-    const browser = await engine.launch(name === 'chromium' ? { channel: 'chrome' } : { headless: process.env.BRAVO_HEADED_WEBKIT !== '1' });
+  for (const [name, engine] of engines) {
+    const browser = await engine.launch(name === 'chromium' ? { channel: 'chrome' } : {});
     try {
       const page = await browser.newPage();
       page.setDefaultTimeout(10000);

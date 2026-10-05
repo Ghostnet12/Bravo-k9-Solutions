@@ -184,3 +184,19 @@ with the phone kept foregrounded. No universally reachable or unlimited audience
 promised. Four peers at the configured target can require about 2.8 Mbps video upload
 before audio/overhead. Existing per-IP abuse budgets can affect large shared-IP groups;
 these are not a fixed viewer cap. No new relay, host or paid fallback is provisioned.
+
+### Browser media verification runtime
+
+The video lifecycle and full live/ad flows run in Chrome on Linux and WebKit on
+macOS, with both suites required by the homepage workflow's `verify` gate. A plain
+HTML page with existing Bravo H.264 footage first verifies actual playback, pause,
+resume and reload; no media methods or frames are mocked. Linux WebKit/GStreamer
+reproduced a roughly 30-second renderer stall on pause even without Bravo code;
+a virtual display also failed the CI media check. The macOS job exercises the
+native Apple media backend instead. This public repository uses a standard free
+GitHub runner, with no hosting or billing changes. The test runner is not proof
+of physical iPhone camera, cellular connectivity or audience capacity.
+
+The ad focus regression waits for the accessibility panel's next-frame focus
+restoration before focusing the ad, then verifies it remains paused through a
+full rotation interval. This prevents two competing test focus operations.
