@@ -24,9 +24,7 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
  let evidencePage;const pendingRequests=new Set(),failedRequests=[],errors=[];
  try {
   const context=await browser.newContext({viewport:{width:390,height:900}}),page=await context.newPage();
-  // Keep evidence as screenshots and request diagnostics. WebKit trace capture
-  // can hold this media document's reload until tracing is stopped, changing
-  // the very lifecycle being verified. All new-document/UI assertions remain.
+  // Keep media lifecycle evidence as screenshots and request diagnostics.
   evidencePage=page;page.on('request',r=>pendingRequests.add(r.url()));page.on('requestfinished',r=>pendingRequests.delete(r.url()));page.on('requestfailed',r=>{pendingRequests.delete(r.url());failedRequests.push({url:r.url(),error:r.failure()?.errorText});});page.on('pageerror',error=>errors.push(error.message));
   let sessions=[],failure=false,ads=[{id:'fixture-video',title:'Recorded Bravo training — test ad placement',alt:'Existing Bravo footage used as a test advertisement',enabled:true,link:'/dog-training',src:'/images/training-education.webp',videoSrc:'/assets/bravo-opening-565c14182176.mp4'}];
   handleApi=(req,res)=>{
@@ -124,7 +122,9 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
   // automation navigation event (WebKit can omit that event on media pages).
   const previousDocument=await page.evaluate(()=>performance.timeOrigin);
   await page.evaluate(()=>{setTimeout(()=>location.reload(),0);});
-  await page.waitForFunction(previous=>performance.timeOrigin!==previous && document.querySelector('.live-player-caption h2')?.textContent.includes('Ashley'),previousDocument);
+  await page.bringToFront();
+  await page.screenshot({path:`test-results/bravo-live-reload-TEST-${name}.png`});
+  await page.waitForFunction(previous=>performance.timeOrigin!==previous && document.querySelector('.live-player-caption h2')?.textContent.includes('Ashley'),previousDocument,{polling:100});
   assert.equal(await page.evaluate(()=>performance.getEntriesByType('navigation')[0].type),'reload');
   assert.equal(new URL(page.url()).searchParams.get('session'),'two');
   await page.waitForFunction(()=>document.querySelector('.live-player-caption h2')?.textContent.includes('Ashley'));assert.match(await page.locator('.live-player-caption h2').innerText(),/Ashley/i);assert.match(await page.locator('.live-video-top .live-timer').innerText(),/^00:1[4-9]:/);
