@@ -114,7 +114,8 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
   await page.goto(`${origin}/live`);await page.bringToFront();await page.getByText('Live status is temporarily unavailable. Reconnecting…',{exact:true}).waitFor();assert.equal(await page.getByRole('heading',{name:'OUT IN THE FIELD.'}).count(),0);
   failure=false;sessions=[makeSession('one','David · TEST'),makeSession('two','Ashley · TEST')];await refresh();await page.locator('.live-session-row').first().waitFor();
   await page.locator('.live-session-row').nth(1).click();await page.waitForFunction(()=>document.querySelector('.live-player-caption h2')?.textContent.includes('Ashley'));assert.match(await page.locator('.live-player-caption h2').innerText(),/Ashley/i);
-  await page.waitForLoadState('networkidle');
+  // A playing video can keep a media request open; UI and worker readiness,
+  // not network idleness, determine when this live document can be refreshed.
   await page.waitForFunction(async()=>(await navigator.serviceWorker.getRegistration('/live/'))?.active?.state==='activated');
   await page.reload({waitUntil:'domcontentloaded'});
   assert.equal(await page.evaluate(()=>performance.getEntriesByType('navigation')[0].type),'reload');
