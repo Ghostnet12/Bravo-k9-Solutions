@@ -35,7 +35,7 @@
   .home-quick-price{font-size:1.65rem;font-weight:700;line-height:1.3;color:var(--gold-light,#dec48f)}
   .home-quick-price>span{font-size:.85rem;font-weight:400;color:var(--cream)}
   .home-quick-facts>small{font-size:.75rem;line-height:1.6;color:var(--muted)}
-  .home-hero.home-hero-authentic .home-hero-actions{display:flex;flex-direction:column;align-items:stretch;gap:.3rem;margin-top:0}
+  .home-hero.home-hero-authentic .home-hero-actions{display:flex;flex-direction:column;align-items:stretch;gap:.3rem;margin-top:0;max-width:none;width:100%}
   .home-hero.home-hero-authentic .home-hero-actions>.button{min-height:48px;justify-content:center}
   .home-hero.home-hero-authentic .home-hero-actions>.button-ghost{min-height:44px;border:0;padding:.6rem;background:transparent;text-decoration:underline;text-underline-offset:4px}
   .home-hero.home-hero-authentic .hero-service-note{display:none}
