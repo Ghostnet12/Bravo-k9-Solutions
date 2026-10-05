@@ -5,6 +5,7 @@ import { Page, Notice } from './ui';
 import { api } from './api';
 import { liveDuration, liveTime, useLiveClock, refreshLive, useLiveSessions } from './live-state';
 import { cameraReady, stopStream, createBroadcaster, createPublisherHealth } from './live-direct';
+import { LIVE_STALE_MS, LIVE_FRESH_MS } from '../../shared/live-policy.js';
 import './live.css';
 
 function cameraError(error) {
@@ -20,7 +21,7 @@ export default function LiveStudio() {
   const video = useRef(null), stream = useRef(null), room = useRef(null), health = useRef(null), current = useRef(null), wakeLock = useRef(null), mounted = useRef(false), operation = useRef(false), cameraSwitch = useRef(0);
   const live = useLiveSessions();
   const activeSessions = live.sessions.filter(item => user?.role === 'owner' || item.trainerId === user?.id);
-  const localStatus = status === 'live' && session?.liveUntil && Date.parse(session.liveUntil) <= Date.now() ? 'reconnecting' : status;
+  const localStatus = status === 'live' && session?.liveUntil && Date.parse(session.liveUntil) <= Date.now() + live.offset ? 'reconnecting' : status;
   const now = useLiveClock(live.offset); const booking = data?.bookings.find(item => item.id === bookingId);
   const load = () => api('/live/studio').then(result => { if (mounted.current) setData(result); });
   useEffect(() => {
@@ -36,18 +37,29 @@ export default function LiveStudio() {
   }, [allowed, user?.id]);
   useEffect(() => {
     if (!session) return;
-    let active = true, timer;
+    let active = true, timer, leaseTimer;
+    const stopPublishing = message => {
+      if (!active) return;
+      active = false; clearTimeout(timer); clearTimeout(leaseTimer);
+      room.current?.disconnect(); health.current?.disconnect(); stopStream(stream.current); stream.current = null;
+      setPreview(false); setStatus('unavailable'); setError(`${message} End this session, then start again.`);
+    };
+    const renewLease = (row, serverTime) => {
+      clearTimeout(leaseTimer);
+      const publicationAge = row?.liveUntil && serverTime ? Math.max(0, Date.parse(serverTime) - (Date.parse(row.liveUntil) - LIVE_FRESH_MS)) : 0;
+      leaseTimer = setTimeout(() => stopPublishing('The publication health lease expired.'), Math.max(0, LIVE_STALE_MS - publicationAge));
+    };
+    renewLease(session, session.serverTime);
     const beat = async () => {
       if (!active || current.current?.id !== session.id) return;
       if (cameraSwitch.current && Date.now() - cameraSwitch.current < 10000) { timer = setTimeout(beat, 2000); return; }
       try {
         const result = await api(`/live/${session.id}/heartbeat`, { method: 'POST', body: { cameraReady: cameraReady(stream.current), publication: await health.current.sample() }, timeoutMs: 4000 });
-        if (active && current.current?.id === session.id) { room.current?.sync(result.peers); setSession(result.session); current.current = result.session; setStatus(result.session.status); setError(''); refreshLive(); }
+        if (active && current.current?.id === session.id) { renewLease(result.session, result.serverTime); room.current?.sync(result.peers); setSession(result.session); current.current = result.session; setStatus(result.session.status); setError(''); refreshLive(); }
       } catch (e) {
         if (!active || current.current?.id !== session.id) return;
-        room.current?.disconnect(); health.current?.disconnect(); stopStream(stream.current); stream.current = null;
-        if (active) { setPreview(false); setStatus('unavailable'); setError(`${e.message} End this session, then start again.`); }
-        return;
+        if ([400, 401, 403, 404, 409, 410].includes(e.status) || e.code === 'LIVE_NOT_CONFIGURED') { stopPublishing(e.message); return; }
+        setStatus('reconnecting'); setError('Connection interrupted. Reconnecting…');
       }
       if (active) timer = setTimeout(beat, 2000);
     };
@@ -56,7 +68,7 @@ export default function LiveStudio() {
     const pageHide = () => { stopStream(stream.current); room.current?.disconnect(); health.current?.disconnect(); fetch(`/api/live/${session.id}/end`, { method: 'POST', credentials: 'same-origin', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {}); };
     const keepAwake = async () => { if (document.visibilityState === 'visible' && navigator.wakeLock) { try { wakeLock.current = await navigator.wakeLock.request('screen'); } catch { /* Some browsers or power-saving settings deny wake locks. */ } } };
     keepAwake(); document.addEventListener('visibilitychange', keepAwake); window.addEventListener('beforeunload', beforeUnload); window.addEventListener('pagehide', pageHide);
-    return () => { active = false; clearTimeout(timer); wakeLock.current?.release(); document.removeEventListener('visibilitychange', keepAwake); window.removeEventListener('beforeunload', beforeUnload); window.removeEventListener('pagehide', pageHide); };
+    return () => { active = false; clearTimeout(timer); clearTimeout(leaseTimer); wakeLock.current?.release(); document.removeEventListener('visibilitychange', keepAwake); window.removeEventListener('beforeunload', beforeUnload); window.removeEventListener('pagehide', pageHide); };
   }, [session?.id]);
   async function withAction(action) {
     if (operation.current) return; operation.current = true; setBusy(true); setError('');
@@ -84,7 +96,7 @@ export default function LiveStudio() {
       room.current = createBroadcaster(credentials.session.id, () => stream.current, count => { if (mounted.current && current.current?.id === credentials.session.id) setViewerCount(count); });
       const result = await api(`/live/${credentials.session.id}/heartbeat`, { method: 'POST', body: { cameraReady: cameraReady(stream.current), publication: await health.current.sample() } });
       if (!mounted.current) throw new Error('Broadcast cancelled.');
-      current.current = result.session; setSession(result.session); setStatus(result.session.status); refreshLive(); await load();
+      current.current = result.session; setSession({ ...result.session, serverTime: result.serverTime }); setStatus(result.session.status); refreshLive(); await load();
     } catch (e) {
       await room.current?.disconnect(); health.current?.disconnect(); stopStream(stream.current); stream.current = null;
       await api(`/live/${credentials.session.id}/end`, { method: 'POST', body: {} }).catch(() => {});

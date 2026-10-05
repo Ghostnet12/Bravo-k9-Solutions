@@ -16,4 +16,6 @@ test('unconditional live-now notices are removed without removing ordinary train
   assert.equal(isLiveAnnouncement('Training live now — watch Bravo'), true);
   assert.equal(isLiveAnnouncement('New Live Cams page available'), false);
   assert.equal(isLiveAnnouncement('We train where you live.'), false);
+  assert.equal(isLiveAnnouncement('Registration is live today through Friday'), false);
+  assert.equal(isLiveAnnouncement('Our new website is live now.'), false);
 });

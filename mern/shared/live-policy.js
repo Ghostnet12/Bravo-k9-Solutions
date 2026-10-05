@@ -10,4 +10,4 @@ export function sessionState(session, now = Date.now()) {
   if (age >= LIVE_STALE_MS) return 'ended';
   return session.status === 'live' && age < LIVE_FRESH_MS ? 'live' : 'reconnecting';
 }
-export const isLiveAnnouncement = text => /\b(?:is|are|we.re|training|streaming|broadcasting)\s+live\s+(?:now|today)|\blive\s+now\b/i.test(String(text));
+export const isLiveAnnouncement = text => /\b(?:bravo(?:\s+k9(?:\s+solutions)?)?(?:\s+is)?|training|streaming|broadcasting)\s+live\s+(?:now|today)\b/i.test(String(text));

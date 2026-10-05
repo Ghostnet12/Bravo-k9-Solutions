@@ -78,8 +78,10 @@ https://webrtc.org/getting-started/turn-server.
   The 45-second lease is renewed while watching. End removes all peer records.
 - Stopping ends local tracks and all local peers immediately. A remote owner stop
   or credential revocation reaches cooperative browsers on their next checks
-  (trainer around 2 seconds, connected viewers around 4 seconds). Signaling loss
-  closes the trainer's peer connections; viewers also fail closed on expired
+  (trainer around 2 seconds, connected viewers around 4 seconds). Transient signaling loss
+  retries with a Reconnecting status while preserving healthy peers until the
+  20-second publication lease expires. Terminal authorization/session errors stop
+  immediately; on lease expiry the trainer's peer connections close; viewers also fail closed on expired
   authorization. A stopped/frozen phone loses LIVE at 8 seconds and expires at 20 seconds, plus the UI/discovery tick.
   No server can forcibly revoke an already established direct connection between
   modified/non-cooperating clients; clients must implement these lease checks.

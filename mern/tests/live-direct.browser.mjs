@@ -28,7 +28,14 @@ try {
   await trainerContext.addCookies([{ name: 'bravo_session', value: token, domain: '127.0.0.1', path: '/' }]);
   const phone = await trainerContext.newPage(), errors = [];
   phone.on('pageerror', e => errors.push(e.message));
-  let lostAnswerResponse = false;
+  let lostAnswerResponse = false, delayHeartbeat = false, heartbeatTimedOut = false;
+  await phone.route('**/api/live/*/heartbeat', async route => {
+    if (!delayHeartbeat) return route.continue();
+    delayHeartbeat = false; heartbeatTimedOut = true;
+    const delivered = await route.fetch();
+    await new Promise(resolve => setTimeout(resolve, 5500));
+    await route.fulfill({ response: delivered }).catch(() => {});
+  });
   await phone.route('**/api/live/*/peers/*/answer', async route => {
     if (!lostAnswerResponse) {
       lostAnswerResponse = true;
@@ -72,6 +79,16 @@ try {
     await page.waitForFunction(time => document.querySelector('.live-video-stage video').currentTime > time + 0.5, before);
   }
   console.log('PASS four simultaneous viewers receive advancing video beyond the former cap');
+  delayHeartbeat = true;
+  await phone.getByText('Connection interrupted. Reconnecting…', { exact: true }).waitFor();
+  assert.equal(heartbeatTimedOut, true);
+  assert.equal(await phone.locator('.live-camera-preview video').evaluate(video => video.srcObject.getVideoTracks()[0].readyState), 'live');
+  for (const viewer of viewers) {
+    const before = await viewer.locator('.live-video-stage video').evaluate(video => video.currentTime);
+    await viewer.waitForFunction(time => document.querySelector('.live-video-stage video').currentTime > time + .3, before);
+  }
+  await phone.locator('.live-camera-preview .live-badge').waitFor();
+  console.log('PASS a delayed heartbeat times out, preserves four media connections and recovers within the health lease');
   // A second eligible staff account publishes its own real synthetic camera.
   const secondTrainer = await User.create({ name: 'Ashley TEST', publicName: 'Second trainer TEST', role: 'staff', passwordHash: 'fixture-only' });
   const secondToken = randomBytes(32).toString('hex');

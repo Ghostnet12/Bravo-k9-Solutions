@@ -7,7 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { chromium, webkit } from 'playwright';
 const dist=fileURLToPath(new URL('../client/dist/',import.meta.url));
 const html=await readFile(`${dist}/bravo-shell.html`,'utf8');
-const app=express();app.use(express.static(dist));app.get('/{*path}',(_req,res)=>res.type('html').send(html));
+let handleApi;
+const app=express();app.use('/api',(req,res)=>handleApi(req,res));app.use(express.static(dist));app.get('/{*path}',(_req,res)=>res.type('html').send(html));
 const server=app.listen(0,'127.0.0.1');await once(server,'listening');const origin=`http://127.0.0.1:${server.address().port}`;
 await mkdir('test-results',{recursive:true});
 const startedAt=new Date(Date.now()-14*60000).toISOString();
@@ -19,8 +20,9 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
   const context=await browser.newContext({viewport:{width:390,height:900}}),page=await context.newPage();
   evidencePage=page;const errors=[];page.on('pageerror',error=>errors.push(error.message));
   let sessions=[],failure=false,ads=[{id:'fixture-video',title:'Recorded Bravo training — test ad placement',alt:'Existing Bravo footage used as a test advertisement',enabled:true,link:'/dog-training',src:'/images/training-education.webp',videoSrc:'/assets/bravo-opening-565c14182176.mp4'}];
-  await page.route('**/api/**',async route=>{
-   const path=new URL(route.request().url()).pathname;
+  handleApi=(req,res)=>{
+   const path=new URL(req.originalUrl,origin).pathname;
+   res.set('Cache-Control','no-store');
    let json={services:[],team:[],images:{},reviews:[],schedules:[],clips:[],count:0};
    if(path==='/api/auth/me')json={user:null,services:[]};
    if(path==='/api/site-ads')json={revision:0,settings:{autoplaySeconds:20},ads};
@@ -28,13 +30,13 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
    if(path==='/api/site-banner')json={revision:0,settings:{motion:'never'},alerts:['Bravo is live now under live cams in menu on upper right-hand corner.','Test announcement — browser verification only.']};
    if(path==='/api/site-banner/weather')json={weather:null};
    if(path==='/api/live') {
-    if(failure)return route.fulfill({status:503,json:{error:'Test status outage'}});
+    if(failure)return res.status(503).json({error:'Test status outage'});
     const fresh=sessions.map(s=>({...s,liveUntil:new Date(Date.now()+8000).toISOString()}));
     json={sessions:fresh.filter(s=>s.audience==='public'),announcements:fresh.map(({id,trainerId,trainerName,audience,status,liveUntil})=>({trainerId,trainerName,audience,status,liveUntil,href:`/live?${audience==='public'?'session':'trainer'}=${id}`})),availability:'available',serverTime:new Date().toISOString()};
    }
    if(path==='/api/proof-videos')json={clips:[{id:'recorded-test',title:'Recorded training test fixture',src:'/assets/bravo-opening-565c14182176.mp4',description:'Existing Bravo training footage'}]};
-   await route.fulfill({json});
-  });
+   res.json(json);
+  };
   const refresh=()=>page.evaluate(()=>window.dispatchEvent(new Event('bravo-live-changed')));
   await page.goto(origin);await page.locator('.home-ad-dock').waitFor();
   await page.waitForResponse(r=>r.url().endsWith('/api/live'));
@@ -72,7 +74,7 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
   assert.equal(await page.locator('.hero-live li a').getAttribute('href'),'/live?trainer=two');
   sessions=[];await refresh();await page.waitForFunction(()=>!document.querySelector('.hero-live'));assert.equal(await page.locator('.ad-live-creative').count(),0);
   failure=true;await refresh();await page.locator('.hero-live-unavailable').waitFor();assert.equal(await page.locator('.hero-live').count(),0);
-  await page.goto(`${origin}/live`);await page.getByText('Live status is temporarily unavailable. Reconnecting…',{exact:true}).waitFor();assert.equal(await page.getByRole('heading',{name:'OUT IN THE FIELD.'}).count(),0);
+  await page.goto(`${origin}/live`);await page.bringToFront();await page.getByText('Live status is temporarily unavailable. Reconnecting…',{exact:true}).waitFor();assert.equal(await page.getByRole('heading',{name:'OUT IN THE FIELD.'}).count(),0);
   failure=false;sessions=[makeSession('one','David · TEST'),makeSession('two','Ashley · TEST')];await refresh();await page.locator('.live-session-row').first().waitFor();
   await page.locator('.live-session-row').nth(1).click();await page.waitForFunction(()=>document.querySelector('.live-player-caption h2')?.textContent.includes('Ashley'));assert.match(await page.locator('.live-player-caption h2').innerText(),/Ashley/i);
   await page.reload();await page.waitForFunction(()=>document.querySelector('.live-player-caption h2')?.textContent.includes('Ashley'));assert.match(await page.locator('.live-player-caption h2').innerText(),/Ashley/i);assert.match(await page.locator('.live-video-top .live-timer').innerText(),/^00:1[4-9]:/);
@@ -92,7 +94,7 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
   assert.deepEqual(errors,[]);console.log(`PASS ${name}: offline/one/two/rename/stop/private/unavailable, persistent elapsed, 320–1440px framing, dock media continuity/footer/floating controls/dialogs, pause, keyboard focus, reduced motion, hidden collection`);
   await context.close();
  }catch(error){
-  if(evidencePage){await evidencePage.screenshot({path:`test-results/FAILED-live-experience-${name}.png`}).catch(()=>{});console.log('Failure diagnostics',await evidencePage.evaluate(()=>({videos:[...document.querySelectorAll('video')].map(v=>({src:v.currentSrc,paused:v.paused,muted:v.muted,ready:v.readyState,error:v.error?.message,time:v.currentTime})),dock:document.querySelector('.home-ad-dock')?.outerHTML,dialogs:document.querySelectorAll('dialog[open]').length})).catch(()=>({})));}
+  if(evidencePage){await evidencePage.screenshot({path:`test-results/FAILED-live-experience-${name}.png`}).catch(()=>{});console.log('Failure diagnostics',await evidencePage.evaluate(()=>({visibility:document.visibilityState,url:location.href,videos:[...document.querySelectorAll('video')].map(v=>({src:v.currentSrc,paused:v.paused,muted:v.muted,ready:v.readyState,error:v.error?.message,time:v.currentTime})),dock:document.querySelector('.home-ad-dock')?.outerHTML,dialogs:document.querySelectorAll('dialog[open]').length})).catch(()=>({})));}
   throw error;
  }finally{await browser.close();}
 }}finally{server.close();}

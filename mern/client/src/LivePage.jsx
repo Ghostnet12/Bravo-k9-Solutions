@@ -13,7 +13,8 @@ function LivePlayer({ session, offset }) {
   const [state, setState] = useState('idle'), [error, setError] = useState(''), [sound, setSound] = useState(false);
   const now = useLiveClock(offset), active = session.status === 'live';
   useEffect(() => {
-    const stop = () => { generation.current++; roomRef.current?.disconnect(); releaseLiveAudio(); };
+    const element = video.current;
+    const stop = () => { generation.current++; roomRef.current?.disconnect(); releaseLiveAudio(element); };
     const hide = () => { stop(); setState('ended'); };
     window.addEventListener('pagehide', hide);
     return () => { stop(); window.removeEventListener('pagehide', hide); };
@@ -21,7 +22,7 @@ function LivePlayer({ session, offset }) {
   async function watch() {
     const current = ++generation.current; setState('connecting'); setError('');
     try {
-      roomRef.current?.disconnect(); setSound(false); releaseLiveAudio();
+      roomRef.current?.disconnect(); setSound(false); releaseLiveAudio(video.current);
       const room = createViewer(session.id,
         stream => { if (current === generation.current && video.current) { video.current.srcObject = stream; video.current.play().catch(() => {}); } },
         state => { if (current === generation.current) setState(state); },
@@ -33,7 +34,7 @@ function LivePlayer({ session, offset }) {
   }
   async function toggleSound() {
     if (!sound) { claimLiveAudio(video.current); video.current.muted = false; await video.current.play(); }
-    else { video.current.muted = true; releaseLiveAudio(); }
+    else { video.current.muted = true; releaseLiveAudio(video.current); }
     setSound(!sound);
   }
   const connection = session.status === 'unavailable' ? 'Status unavailable' : !active ? 'Reconnecting' : state === 'watching' ? 'Connected' : state === 'reconnecting' ? 'Reconnecting' : state === 'ended' ? 'Connection ended' : state === 'idle' ? 'Ready to watch' : 'Connecting';
@@ -50,15 +51,15 @@ function LivePlayer({ session, offset }) {
     <div className="live-player-caption"><div><h2>{session.trainerName} <span> / </span> {session.dogName}</h2>
       {session.trainingFocus && <p className="live-training-focus">{session.trainingFocus}</p>}
       <p>Started {liveTime(session.startedAt)} Central Time · {session.audience === 'client' ? 'Client session' : 'Public session'}</p><p role="status">{connection}</p></div>
-      <div className="live-controls"><button onClick={() => toggleSound().catch(() => { video.current.muted = true; releaseLiveAudio(); setError('Tap again to enable sound.'); })} disabled={state !== 'watching'} aria-pressed={sound}>{sound ? 'Mute audio' : 'Enable audio'}</button><button onClick={() => { const element = video.current; if (element?.webkitEnterFullscreen) element.webkitEnterFullscreen(); else element?.requestFullscreen?.().catch(() => setError('Full screen is unavailable in this browser.')); }} disabled={state !== 'watching'}>Full screen</button></div>
+      <div className="live-controls"><button onClick={() => toggleSound().catch(() => { video.current.muted = true; releaseLiveAudio(video.current); setError('Tap again to enable sound.'); })} disabled={state !== 'watching'} aria-pressed={sound}>{sound ? 'Mute audio' : 'Enable audio'}</button><button onClick={() => { const element = video.current; if (element?.webkitEnterFullscreen) element.webkitEnterFullscreen(); else element?.requestFullscreen?.().catch(() => setError('Full screen is unavailable in this browser.')); }} disabled={state !== 'watching'}>Full screen</button></div>
     </div><p className="live-caption-note">Direct phone stream. Quality depends on the trainer’s connection and audience size. If this network cannot connect, try Wi-Fi. Automatic captions and replays are not available.</p>
   </section>;
 }
 function TrainingHighlights() {
-  const [clips, setClips] = useState([]);
-  useEffect(() => { let active = true; api('/proof-videos').then(data => { if (active) setClips((data.clips || []).filter(clip => clip.src && !/sign up|signup|sale|register/i.test(clip.title) && /leash|training|puppy|first day|obedience|public|exposure/i.test(`${clip.title} ${clip.description}`)).slice(0, 3)); }).catch(() => {}); return () => { active = false; releaseLiveAudio(); }; }, []);
+  const [clips, setClips] = useState([]), activeMedia = useRef(null);
+  useEffect(() => { let active = true; api('/proof-videos').then(data => { if (active) setClips((data.clips || []).filter(clip => clip.src && !/sign up|signup|sale|register/i.test(clip.title) && /leash|training|puppy|first day|obedience|public|exposure/i.test(`${clip.title} ${clip.description}`)).slice(0, 3)); }).catch(() => {}); return () => { active = false; releaseLiveAudio(activeMedia.current); }; }, []);
   if (!clips.length) return null;
-  return <section className="live-highlights" aria-label="Recorded Bravo training"><h2>TRAINING HIGHLIGHTS</h2><p>Recorded training · Real Bravo sessions, between broadcasts.</p><div>{clips.map(clip => <article key={clip.id}><video controls playsInline preload="none" poster={clip.poster || undefined} src={clip.src} aria-label={`Recorded training: ${clip.title}`} onPlay={event => claimLiveAudio(event.currentTarget)} onPause={releaseLiveAudio} onEnded={releaseLiveAudio} onError={() => setClips(old => old.filter(item => item.id !== clip.id))}/><h3>{clip.title}</h3><span>Recorded training</span></article>)}</div></section>;
+  return <section className="live-highlights" aria-label="Recorded Bravo training"><h2>TRAINING HIGHLIGHTS</h2><p>Recorded training · Real Bravo sessions, between broadcasts.</p><div>{clips.map(clip => <article key={clip.id}><video controls playsInline preload="none" poster={clip.poster || undefined} src={clip.src} aria-label={`Recorded training: ${clip.title}`} onPlay={event => { activeMedia.current = event.currentTarget; claimLiveAudio(event.currentTarget); }} onPause={event => releaseLiveAudio(event.currentTarget)} onEnded={event => releaseLiveAudio(event.currentTarget)} onError={() => setClips(old => old.filter(item => item.id !== clip.id))}/><h3>{clip.title}</h3><span>Recorded training</span></article>)}</div></section>;
 }
 export default function LivePage() {
   const { user } = useBravo(), { sessions, announcements, loading, error, availability, offset } = useLiveSessions();
