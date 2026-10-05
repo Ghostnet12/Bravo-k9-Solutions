@@ -103,10 +103,10 @@ export const ProofCarousel = model('BravoProofCarousel', new Schema({ _id: Strin
 export const HeroCarousel = model('BravoHeroCarousel', new Schema({ _id: String, photos: [String], intervalSeconds: { type: Number, default: 5 }, revision: { type: Number, default: 0 }, updatedBy: id }, { timestamps: true }));
 const liveSessionSchema = new Schema({
   _id: String, trainerId: { type: id, required: true }, trainerName: String, credentialVersion: Number,
-  dogName: String, clientId: id, bookingId: id, audience: { type: String, enum: ['public', 'client'], required: true },
+  dogName: String, trainingFocus: String, clientId: id, bookingId: id, audience: { type: String, enum: ['public', 'client'], required: true },
   roomName: { type: String, required: true, unique: true }, publisherIdentity: String,
-  open: { type: Boolean, default: true }, status: { type: String, enum: ['starting', 'live', 'ending', 'ended'] },
-  startedAt: Date, lastSeenAt: Date, endedAt: Date, publicConsentAt: Date,
+  open: { type: Boolean, default: true }, status: { type: String, enum: ['starting', 'live', 'reconnecting', 'ending', 'ended'] },
+  startedAt: Date, lastSeenAt: Date, lastPublishedAt: Date, publication: { id: String, framesEncoded: Number, framesDecoded: Number }, endedAt: Date, publicConsentAt: Date,
   transport: String, signalingRevision: { type: Number, default: 0 },
 }, { timestamps: true });
 liveSessionSchema.index({ trainerId: 1 }, { unique: true, partialFilterExpression: { open: true } });

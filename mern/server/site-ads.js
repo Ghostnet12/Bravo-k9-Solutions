@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { connectDb, transaction } from './db.js';
-import { AuditEvent, MediaUpload, MediaChunk } from './models.js';
+import { AuditEvent, MediaUpload, MediaChunk, ProofVideo } from './models.js';
 import { identify, requireUser, requireOwner, sameOrigin, rateLimit } from './auth.js';
 import { requestError } from './errors.js';
 import { CHUNK_SIZE, validMediaHeader, sendUploadedMedia } from './media.js';
@@ -32,8 +32,9 @@ const adFields = {
   alt: z.string().trim().min(1).max(240),
   link: linkInput.default(''),
   enabled: z.boolean().default(true),
+  videoId: z.string().regex(/^[a-z0-9][a-z0-9-]{0,80}$/).or(z.literal('')).default(''),
 };
-const addInput = z.object({ expectedRevision: z.number().int().min(0), ...adFields, image: imageInput }).strict();
+const addInput = z.object({ expectedRevision: z.number().int().min(0), ...adFields, image: imageInput.optional() }).strict().refine(value => value.image || value.videoId, 'Choose artwork or a published training video.');
 const updateInput = z.object({ expectedRevision: z.number().int().min(0), ...adFields, image: imageInput.optional() }).strict();
 const revisionInput = z.object({ expectedRevision: z.number().int().min(0) }).strict();
 const orderInput = z.object({
@@ -44,19 +45,24 @@ const orderInput = z.object({
 
 const connect = async (_req, _res, next) => { await connectDb(); next(); };
 const storedAds = row => row ? (Array.isArray(row.ads) ? row.ads : []).map(ad => ({ ...ad })) : cloneDefaultAds();
-const publicAd = ad => ({
+const publicAd = (ad, video) => ({
   id: ad.id,
   title: ad.title || '',
   alt: ad.alt || '',
   link: safeAdLink(ad.link || ''),
   enabled: ad.enabled !== false,
+  videoId: ad.videoId || '', videoSrc: video?.uploadId && !video.deleted ? `/api/proof-videos/${video._id}/video?v=${video.revision}` : '',
   src: ad.uploadId ? `/api/site-ads/${ad.id}/image?v=${ad.imageRevision || 0}` : ad.image || '',
 });
-const publicCollection = row => ({
-  revision: row?.revision || 0,
-  settings: normalizeAdSettings(row?.settings || DEFAULT_AD_CAROUSEL),
-  ads: storedAds(row).filter(ad => SITE_AD_ID.test(ad.id || '')).map(publicAd),
-});
+const publicCollection = async row => {
+  const ads = storedAds(row).filter(ad => SITE_AD_ID.test(ad.id || ''));
+  const videos = await ProofVideo.find({ _id: { $in: ads.map(ad => ad.videoId).filter(Boolean) }, deleted: false }).lean();
+  return { revision: row?.revision || 0, settings: normalizeAdSettings(row?.settings || DEFAULT_AD_CAROUSEL),
+    ads: ads.map(ad => publicAd(ad, videos.find(video => video._id === ad.videoId))) };
+};
+async function approvedVideo(videoId, session) {
+  if (videoId && !await ProofVideo.exists({ _id: videoId, deleted: false, uploadId: { $exists: true } }).session(session)) throw fail('Choose an available published Bravo training video.');
+}
 
 async function imageBytes(input) {
   const bytes = Buffer.from(input.data, 'base64');
@@ -93,14 +99,14 @@ async function writeCollection(req, operation) {
     row.updatedBy = req.user._id;
     await row.save({ session });
     await AuditEvent.create([{ actorId: req.user._id, action: result.action, targetType: 'site-ads', targetId: result.targetId || 'home', details: { revision: row.revision, count: row.ads.length } }], { session });
-    response = publicCollection(row);
+    response = row.toObject();
   });
-  return response;
+  return publicCollection(response);
 }
 
 const router = express.Router();
 router.use((_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
-router.get('/', connect, async (_req, res) => res.json(publicCollection(await SiteAdCollection.findById('home').lean())));
+router.get('/', connect, async (_req, res) => res.json(await publicCollection(await SiteAdCollection.findById('home').lean())));
 router.get('/:id/image', connect, async (req, res) => {
   if (!SITE_AD_ID.test(req.params.id)) return res.status(404).end();
   const row = await SiteAdCollection.findById('home').lean();
@@ -116,8 +122,9 @@ router.post('/', async (req, res) => {
   const id = `ad-${randomUUID()}`;
   const saved = await writeCollection(req, async ({ ads, current, session }) => {
     if (ads.length >= 20) throw fail('Keep the homepage carousel to 20 ads or fewer.');
-    const uploadId = await storeImage(id, input.image, req.user._id, session);
-    return { ads: [...ads, { id, title: input.title, alt: input.alt, link: safeAdLink(input.link), enabled: input.enabled, uploadId, imageRevision: 1 }], settings: current?.settings, action: 'site-ad.created', targetId: id };
+    await approvedVideo(input.videoId, session);
+    const uploadId = input.image ? await storeImage(id, input.image, req.user._id, session) : undefined;
+    return { ads: [...ads, { id, title: input.title, alt: input.alt, link: safeAdLink(input.link), enabled: input.enabled, videoId: input.videoId, uploadId, imageRevision: 1 }], settings: current?.settings, action: 'site-ad.created', targetId: id };
   });
   res.status(201).json(saved);
 });
@@ -128,6 +135,7 @@ router.put('/:id', async (req, res) => {
     const index = ads.findIndex(ad => ad.id === id);
     if (index < 0) throw fail('Advertisement not found.', 404);
     const previous = ads[index];
+    await approvedVideo(input.videoId, session);
     let uploadId = previous.uploadId, imageRevision = previous.imageRevision || 0;
     if (input.image) {
       uploadId = await storeImage(id, input.image, req.user._id, session);
@@ -135,7 +143,7 @@ router.put('/:id', async (req, res) => {
       await retireImage(id, previous.uploadId, session);
     }
     const next = [...ads];
-    next[index] = { ...previous, title: input.title, alt: input.alt, link: safeAdLink(input.link), enabled: input.enabled, uploadId, imageRevision };
+    next[index] = { ...previous, title: input.title, alt: input.alt, link: safeAdLink(input.link), enabled: input.enabled, videoId: input.videoId, uploadId, imageRevision };
     return { ads: next, settings: current?.settings, action: 'site-ad.updated', targetId: id };
   });
   res.json(saved);

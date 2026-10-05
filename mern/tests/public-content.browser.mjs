@@ -17,7 +17,7 @@ try {
       ]) for (const mode of ['slow', 'failed']) {
         const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
         const page = await context.newPage();
-        await page.route('**/api/**', route => route.fulfill({ json: { user: null, services: [], lessons: [], team: [], images: {}, reviews: [], schedules: [] } }));
+        await page.route('**/api/**', route => route.fulfill({ json: new URL(route.request().url()).pathname === '/api/live' ? { sessions: [], announcements: [], availability: 'available', serverTime: new Date().toISOString() } : { user: null, services: [], lessons: [], team: [], images: {}, reviews: [], schedules: [] } }));
         let release, requested;
         const hold = new Promise(resolve => { release = resolve; });
         const intercepted = new Promise(resolve => { requested = resolve; });

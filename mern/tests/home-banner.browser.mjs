@@ -21,6 +21,7 @@ try {
           const path = new URL(route.request().url()).pathname;
           let json = { services: [], team: [], images: {}, reviews: [], schedules: [], clips: [], count: 0 }, status = 200;
           if (path === '/api/auth/me') json = { user: role ? { id: 'fixture', role, name: 'Fixture' } : null, services: [] };
+          if (path === '/api/live') json = { sessions: [], announcements: [], availability: 'available', serverTime: new Date().toISOString() };
           if (path === '/api/site-banner') {
             if (route.request().method() === 'PUT') {
               if (failSave) { status = 409; json = { error: 'Alerts changed while you were editing.' }; }

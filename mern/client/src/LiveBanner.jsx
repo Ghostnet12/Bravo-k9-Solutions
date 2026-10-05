@@ -3,11 +3,11 @@ import { useLiveSessions } from './live-state';
 import './live.css';
 
 export default function LiveBanner() {
-  const { sessions } = useLiveSessions();
-  const publicSessions = sessions.filter(session => session.audience === 'public');
-  if (!publicSessions.length) return null;
-  return <aside className="live-promo-wrap" aria-label="Bravo is training live"><Link to="/live" className="live-promo">
-    <div><span className="live-badge"><i/>LIVE</span><p>TRAINING NOW</p><h2>WATCH BRAVO <em>LIVE</em></h2><span>Real sessions. Real dogs. Real progress.</span></div>
-    <span className="live-promo-arrow" aria-hidden="true">↗</span>
-  </Link></aside>;
+  const { announcements, availability, loading } = useLiveSessions();
+  const live = announcements.filter(item => item.status === 'live');
+  if (!live.length) return availability === 'unavailable' && !loading ? <p className="hero-live-unavailable" role="status">Live status unavailable · <Link to="/live">Check sessions →</Link></p> : null;
+  return <aside className="hero-live" aria-label="Trainers broadcasting now" data-site-image-ignore="">
+    <Link to={live.length === 1 ? live[0].href : '/live'} className="live-badge"><i aria-hidden="true"/>LIVE</Link>
+    <ul>{live.map(item => <li key={item.trainerId}><Link to={item.href}>{item.trainerName}{item.audience === 'client' && <small>Client session</small>}</Link></li>)}</ul>
+  </aside>;
 }

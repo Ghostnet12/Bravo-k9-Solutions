@@ -24,7 +24,7 @@ function rememberedPosition() {
 }
 
 export default function SiteSoundtrack() {
-  const audio = useRef(null), enabled = useRef(true), liveRoute = useRef(false);
+  const audio = useRef(null), enabled = useRef(true), liveRoute = useRef(false), audioFocus = useRef(false);
   const { pathname } = useLocation();
   liveRoute.current = pathname === '/live' || pathname.startsWith('/live/');
   useEffect(() => { window.dispatchEvent(new Event('bravo-live-audio-focus')); }, [pathname]);
@@ -50,7 +50,7 @@ export default function SiteSoundtrack() {
       if (Number.isFinite(element.duration) && element.duration > 0) element.currentTime = position % element.duration;
       else element.currentTime = position;
     };
-    const shouldPlay = () => enabled.current && !document.hidden && !liveRoute.current;
+    const shouldPlay = () => enabled.current && !document.hidden && !liveRoute.current && !audioFocus.current;
     const attempt = () => {
       if (!shouldPlay()) { element.pause(); return; }
       if (!element.getAttribute('src')) {
@@ -81,6 +81,8 @@ export default function SiteSoundtrack() {
     document.addEventListener('keydown', gesture, true);
     document.addEventListener('visibilitychange', visibility);
     window.addEventListener('pagehide', remember);
+    const focus = event => { audioFocus.current = event.detail?.active === true; attempt(); };
+    window.addEventListener('bravo-audio-focus', focus);
     window.addEventListener('bravo-site-music', preference);
     window.addEventListener('bravo-live-audio-focus', attempt);
     return () => {
@@ -91,6 +93,7 @@ export default function SiteSoundtrack() {
       document.removeEventListener('keydown', gesture, true);
       document.removeEventListener('visibilitychange', visibility);
       window.removeEventListener('pagehide', remember);
+      window.removeEventListener('bravo-audio-focus', focus);
       window.removeEventListener('bravo-site-music', preference);
       window.removeEventListener('bravo-live-audio-focus', attempt);
     };

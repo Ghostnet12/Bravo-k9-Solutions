@@ -8,13 +8,14 @@ import { AuditEvent } from './models.js';
 import { identify, requireUser, requireOwner, sameOrigin, rateLimit } from './auth.js';
 import { requestError } from './errors.js';
 import { readWeather } from './banner-weather.js';
+import { isLiveAnnouncement } from '../shared/live-policy.js';
 import { bannerSettingsWithDefaults } from '../shared/site-banner.js';
 import { bannerSettingsInput } from './banner-settings.js';
 
 export const SiteBanner = mongoose.models.BravoSiteBanner || mongoose.model('BravoSiteBanner', new mongoose.Schema({ _id: String, alerts: [String], settings: mongoose.Schema.Types.Mixed, revision: { type: Number, default: 0 }, updatedBy: mongoose.Schema.Types.ObjectId }, { timestamps: true }));
 const input = z.object({ expectedRevision: z.number().int().min(0), alerts: z.array(z.string().trim().min(1).max(280)).max(30), settings: bannerSettingsInput.optional() }).strict();
 const connect = async (_req, _res, next) => { await connectDb(); next(); };
-const publicBanner = value => ({ alerts: value?.alerts || [], revision: value?.revision || 0, settings: bannerSettingsWithDefaults(value?.settings) });
+const publicBanner = value => ({ alerts: (value?.alerts || []).filter(text => !isLiveAnnouncement(text)), revision: value?.revision || 0, settings: bannerSettingsWithDefaults(value?.settings) });
 const router = express.Router();
 router.use(securityHeaders(), (_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
 router.get('/weather', async (_req, res) => res.json({ weather: await readWeather() }));
@@ -27,7 +28,7 @@ router.put('/', sameOrigin, cookieParser(), connect, identify, requireUser, requ
     const current = await SiteBanner.findById('home').session(session);
     if ((current?.revision || 0) !== data.expectedRevision) throw Object.assign(new Error('Another administrator updated the alerts. Close and reopen the editor to load their changes.'), { status: 409 });
     const record = current || new SiteBanner({ _id: 'home' });
-    record.alerts = data.alerts; record.revision = data.expectedRevision + 1; record.updatedBy = req.user._id;
+    record.alerts = data.alerts.filter(text => !isLiveAnnouncement(text)); record.revision = data.expectedRevision + 1; record.updatedBy = req.user._id;
     if (data.settings) record.settings = data.settings;
     await record.save({ session });
     await AuditEvent.create([{ actorId: req.user._id, action: 'site-banner.published', targetType: 'site-banner', targetId: 'home', details: { revision: record.revision, count: data.alerts.length } }], { session });

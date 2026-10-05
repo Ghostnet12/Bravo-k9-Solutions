@@ -31,12 +31,13 @@ jobs:
       - run: npx playwright install --with-deps chromium webkit
       - run: npx playwright install chrome
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg gstreamer1.0-libav
+      - run: node tests/live-experience.browser.mjs
+      - run: node tests/home-ad-carousel.browser.mjs
       - run: node tests/site-content.browser.mjs
       - run: node tests/website-editor.browser.mjs
       - run: node tests/hero-carousel.browser.mjs
       - run: node tests/customer-clarity.browser.mjs
       - run: node tests/home-banner.browser.mjs
-      - run: node tests/home-ad-carousel.browser.mjs
       - run: node tests/proof-carousel.browser.mjs
       - run: node tests/home-hero.browser.mjs
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
