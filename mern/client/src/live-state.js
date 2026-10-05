@@ -1,7 +1,6 @@
 import { createContext, createElement, useContext, useEffect, useState } from 'react';
 import { useBravo } from './context';
 import { api } from './api';
-import { useLocation } from 'react-router-dom';
 import { LIVE_POLL_MS } from '../../shared/live-policy.js';
 
 export const liveTime = date => date ? new Date(date).toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: 'numeric', minute: '2-digit' }) : 'Connecting';
@@ -19,12 +18,11 @@ const initial = { sessions: [], announcements: [], loading: true, availability: 
 const LiveContext = createContext(initial);
 export const refreshLive = () => window.dispatchEvent(new Event('bravo-live-changed'));
 export function LiveStatusProvider({ children }) {
-  const { user, authReady } = useBravo(), { pathname } = useLocation();
-  const relevant = pathname === '/' || pathname.startsWith('/live') || pathname === '/admin';
+  const { user, authReady } = useBravo();
   const identity = `${user?.id || 'public'}:${user?.role || ''}`;
   const [data, setData] = useState(initial), now = useLiveClock(data.offset);
   useEffect(() => {
-    if (!authReady || !relevant) return;
+    if (!authReady) return;
     let active = true, busy = false, suspended = false, request;
     const load = async () => {
       if (!active || busy || suspended || document.hidden) return;
@@ -46,7 +44,7 @@ export function LiveStatusProvider({ children }) {
     window.addEventListener('pagehide', hide); window.addEventListener('pageshow', show);
     window.addEventListener('bravo-live-changed', load); window.addEventListener('online', load); document.addEventListener('visibilitychange', visibility);
     return () => { active = false; request?.abort(); clearInterval(timer); window.removeEventListener('pagehide', hide); window.removeEventListener('pageshow', show); window.removeEventListener('bravo-live-changed', load); window.removeEventListener('online', load); document.removeEventListener('visibilitychange', visibility); };
-  }, [identity, authReady, relevant]);
+  }, [identity, authReady]);
   const snapshot = data.identity === identity ? data : initial;
   const state = item => snapshot.availability !== 'available' ? 'unavailable' : item.status === 'live' && (!item.liveUntil || new Date(item.liveUntil).getTime() <= now) ? 'reconnecting' : item.status;
   const value = { ...snapshot, sessions: snapshot.sessions.map(item => ({ ...item, status: state(item) })),

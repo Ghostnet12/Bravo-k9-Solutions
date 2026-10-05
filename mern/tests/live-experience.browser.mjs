@@ -54,6 +54,13 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
    if(path==='/') await page.locator('footer a[href="/"]').first().click();
    else { await page.getByRole('button',{name:'Menu',exact:true}).click();await page.locator(`header nav a[href="${path}"]`).first().click(); }
    await page.waitForURL(`${origin}${path}`);
+   if(path==='/contact') {
+    sessions=[makeSession('sitewide','Sitewide trainer TEST')];await refresh();
+    await page.waitForFunction(()=>!!document.querySelector('.ad-live-creative'));
+    await page.waitForTimeout(9000);
+    assert.equal(await page.locator('.ad-live-creative').count(),1,'live promotions stay fresh beyond the lease on other pages');
+    sessions=[];await refresh();await page.waitForFunction(()=>!document.querySelector('.ad-live-creative'));
+   }
    await page.waitForFunction(()=>document.querySelector('.home-ad-dock video')===window.__ad && !window.__ad.paused);
    assert.equal(await page.locator('.home-ad-dock').count(),1,'one dock survives route changes');
    const before=await ad.evaluate(el=>el.currentTime);
