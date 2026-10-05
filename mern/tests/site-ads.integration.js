@@ -22,6 +22,21 @@ test('sitewide ads are public but mutations are owner-only, durable and conflict
     }
     const initial=await request(app).get('/api/site-ads').expect(200);
     assert.equal(initial.body.revision,0); assert.equal(initial.body.ads[0].id,DEFAULT_HOME_ADS[0].id);
+    const { Workshop }=await import('../server/workshop-store.js');
+    const { DEFAULT_WORKSHOP }=await import('../shared/workshops.js');
+    const { resolveWorkshop }=await import('../shared/workshop-schedule.js');
+    await Workshop.create({_id:'featured',details:{...DEFAULT_WORKSHOP,scheduleMode:'weekly',startTime:'12:00',endTime:'14:00'},revision:1});
+    const recurring=(await request(app).get('/api/site-ads').expect(200)).body.ads[0];
+    const resolved=resolveWorkshop({...DEFAULT_WORKSHOP,scheduleMode:'weekly',startTime:'12:00',endTime:'14:00'});
+    assert.equal(recurring.workshop.date,resolved.date);assert.equal(recurring.workshop.time,resolved.time);
+    assert.equal(recurring.scheduleHidden,resolved.date!=='2026-10-03','dated artwork cannot advertise another occurrence');
+    await Workshop.updateOne({_id:'featured'},{$set:{'details.scheduleMode':'none'}});
+    const undated=(await request(app).get('/api/site-ads').expect(200)).body.ads[0];
+    assert.equal(undated.workshop.date,null);assert.equal(undated.workshop.time,'');assert.equal(undated.scheduleHidden,true);
+    await Workshop.updateOne({_id:'featured'},{$set:{'details.published':false}});
+    assert.equal((await request(app).get('/api/site-ads').expect(200)).body.ads[0].workshop,null);
+    await Workshop.deleteOne({_id:'featured'});
+
 
     const png='iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Wl9sAAAAASUVORK5CYII=';
     const body={expectedRevision:0,title:'Second ad',alt:'Second Bravo advertisement',link:'/contact',enabled:true,image:{filename:'ad.png',contentType:'image/png',data:png}};

@@ -29,7 +29,7 @@ function AdRow({ ad, first, last, collection, publish, move, remove, videos }) {
   }
   return <article className="ad-editor-card">
     {ad.src ? <img src={ad.src} alt="" width="330" height="128"/> : <video src={ad.videoSrc} muted playsInline preload="metadata" aria-label={ad.title}/>}
-    <div className="ad-editor-fields">
+    <div className="ad-editor-fields">{ad.scheduleHidden && <p role="status">This workshop ad is paused for the current schedule. Publish the workshop and replace dated artwork with date-free artwork to display it.</p>}
       <label>Ad name<input value={draft.title} maxLength={120} onChange={e => setDraft(old => ({ ...old, title: e.target.value }))}/></label>
       <label>Image description<input value={draft.alt} maxLength={240} onChange={e => setDraft(old => ({ ...old, alt: e.target.value }))}/></label>
       <label>Click destination<input value={draft.link} maxLength={1000} placeholder="/contact or https://…" onChange={e => setDraft(old => ({ ...old, link: e.target.value }))}/></label>
@@ -158,7 +158,7 @@ export default function HomeAdCarousel() {
     return () => { live = false; clearInterval(timer); cancelHold(); observer.disconnect(); dialogs.disconnect(); media.removeEventListener('change', changed); window.visualViewport?.removeEventListener('resize', viewport); document.removeEventListener('visibilitychange', visibility); document.removeEventListener('fullscreenchange', visibility); window.removeEventListener('bravo-ads-changed', refresh); };
   }, []);
   const promotions = announcements.filter(item => item.status === 'live').map(item => ({ id: `live-${item.trainerId}`, title: `${item.trainerName} · ${item.audience === 'client' ? 'Client session' : 'Training live'}`, link: item.href, live: true, audience: item.audience }));
-  const slides = [...collection.ads.filter(ad => ad.enabled !== false && (ad.src || ad.videoSrc)), ...promotions];
+  const slides = [...collection.ads.filter(ad => ad.enabled !== false && !ad.scheduleHidden && (ad.src || ad.videoSrc)), ...promotions];
   const current = slides.find(ad => ad.id === activeId) || slides[0];
   const currentId = current?.id;
   const activeIndex = slides.findIndex(ad => ad.id === currentId);
@@ -204,7 +204,7 @@ export default function HomeAdCarousel() {
         onClickCapture={event => { if (Date.now() < suppressUntil.current) { event.preventDefault(); event.stopPropagation(); } }}>
         <div className="home-ad-frame"><div className="home-ad-track">{visibleSlides.map(ad => {
           const selected = ad.id === current.id;
-          const art = ad.live ? <span className="ad-live-creative"><span className="live-badge"><i aria-hidden="true"/>LIVE</span><strong>BRAVO LIVE</strong><span className="ad-live-trainer">{ad.title}</span><small>{ad.audience === 'client' ? 'Client session' : 'Real training. Right now.'}</small></span> : <AdMedia ad={ad} playing={selected && !stopped}/>;
+          const art = ad.live ? <span className="ad-live-creative"><span className="live-badge"><i aria-hidden="true"/>LIVE</span><strong>BRAVO LIVE</strong><span className="ad-live-trainer">{ad.title}</span><small>{ad.audience === 'client' ? 'Client session' : 'Real training. Right now.'}</small></span> : ad.workshop ? <span className="ad-workshop-creative"><AdMedia ad={ad} playing={selected && !stopped}/><span className="ad-workshop-schedule">{ad.workshop.dateLabel || 'Workshop announcement'}{ad.workshop.date && ad.workshop.time && <small>{ad.workshop.time} · Central</small>}</span></span> : <AdMedia ad={ad} playing={selected && !stopped}/>;
           return <article className={`home-ad-slide${selected ? ' is-active' : ''}`} key={ad.id} aria-hidden={!selected || undefined} inert={!selected}>
             {ad.link ? <Link href={ad.link} aria-label={ad.title}>{art}</Link> : <button type="button" className="ad-art-button" onClick={() => setExpanded(ad)} aria-label={`View advertisement: ${ad.title}`}>{art}</button>}
           </article>;
