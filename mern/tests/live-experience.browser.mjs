@@ -131,7 +131,12 @@ try {for(const [name,engine] of engines) {
   assert.match(await page.locator('.live-player-caption').innerText(),/Central Time/);
   for(const width of [390,768,1440]){
    await page.setViewportSize({width,height:1000});await page.evaluate(()=>window.scrollTo({top:0,behavior:"instant"}));
-   const photo=page.locator('.live-hero-photo');await photo.waitFor();assert.equal(await photo.evaluate(el=>getComputedStyle(el).objectFit),'contain');
+   const hero=page.locator('.live-hero');await hero.waitFor();
+   const framing=await hero.evaluate(el=>{const style=getComputedStyle(el);return {background:style.backgroundImage,size:style.backgroundSize,position:style.backgroundPosition,heading:getComputedStyle(el.querySelector('h1')).fontSize};});
+   assert.match(framing.background,/linear-gradient.*hero-bravo-launch\.webp/);
+   assert.match(framing.size,/cover/);
+   assert.ok(framing.position.endsWith(width<=760?'58% 50%':'50% 48%'));
+   if(width<=760)assert.equal(framing.heading,'65px');
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
    await page.screenshot({path:`test-results/bravo-live-framing-TEST-${name}-${width}.png`});
   }
