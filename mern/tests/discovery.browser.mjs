@@ -27,7 +27,7 @@ try {
       async function visit(url,options){await settleApi();return page.goto(url,{waitUntil:'domcontentloaded',...options});}
       async function reload(){await settleApi();return page.reload({waitUntil:'domcontentloaded'});}
 
-      let owner=false, event={...DEFAULT_WORKSHOP}, entries={}, signup=null, failSave=false;
+      let owner=false, event={...DEFAULT_WORKSHOP}, entries={}, signup=null, failSave=false, failWorkshop=false;
       // WebKit also emits pageerror for handled fetch cancellations during
       // navigation. Keep those diagnostics and assert the browser's actual
       // uncaught exceptions and promise rejections, as the toolkit suite does.
@@ -57,7 +57,7 @@ try {
         if(path==='/api/site-content')json={entries};
         if(path.startsWith('/api/site-content/')){ if(failSave){await route.fulfill({status:503,json:{error:'Fixture connection interrupted'}});return;} const key=path.split('/').at(-1),body=route.request().postDataJSON(); if(key==='batch'){for(const item of body.changes){assert.equal(item.expectedRevision,entries[item.key]?.revision||0);entries[item.key]={value:item.value,revision:item.expectedRevision+1};}json={entries};}else{entries[key]={value:body.value,revision:(entries[key]?.revision||0)+1};json={entry:entries[key]};} }
         if(path==='/api/workshops/schedule-preview')json={event:resolveWorkshop({scheduleMode:'weekly'})};
-        if(path==='/api/workshops'){if(method==='PUT'){const {expectedRevision,...details}=route.request().postDataJSON();assert.equal(expectedRevision,event.revision);event={...details,revision:event.revision+1};}json={event:resolveWorkshop(event),configuration:event};}
+        if(path==='/api/workshops'){if(failWorkshop && method==='GET'){await route.fulfill({status:503,json:{error:'Fixture workshop refresh interrupted'}});return;}if(method==='PUT'){const {expectedRevision,...details}=route.request().postDataJSON();assert.equal(expectedRevision,event.revision);event={...details,revision:event.revision+1};}json={event:resolveWorkshop(event),configuration:event};}
         if(path==='/api/course-interest'){signup=route.request().postDataJSON();json={ok:true};}
         if(path==='/api/availability')json={days:[]};
         await route.fulfill({json});
@@ -146,6 +146,10 @@ try {
         await workshopEditor.getByRole('button',{name:'Save workshop',exact:true}).click();
         await page.getByText('12:00 PM–2:00 PM · Central',{exact:true}).waitFor();
 
+        failWorkshop=true;await page.evaluate(()=>window.dispatchEvent(new Event('bravo-workshop-changed')));
+        await page.getByText(/Showing the last verified workshop schedule/).waitFor();
+        assert.match(await page.locator('.workshop-details').innerText(),/12:00 PM–2:00 PM/);
+        failWorkshop=false;await page.evaluate(()=>window.dispatchEvent(new Event('bravo-workshop-changed')));await settleApi();
         await visit(origin);await page.getByRole('button',{name:'Edit page text & design'}).click();const dialog=page.getByRole('dialog',{name:'Edit website section'});await dialog.getByLabel('Edit this part',{exact:true}).selectOption('discovery-goal-title');await dialog.getByLabel('Text',{exact:true}).fill('Find your next step.');failSave=true;await dialog.getByRole('button',{name:'Publish website changes'}).click();await dialog.getByText('Fixture connection interrupted').waitFor();assert.equal(await dialog.getByLabel('Text',{exact:true}).inputValue(),'Find your next step.');failSave=false;await dialog.getByRole('button',{name:'Publish website changes'}).click();await dialog.waitFor({state:'hidden'});await page.getByText('Saved. Your website changes are published.',{exact:true}).waitFor();await reload();await page.getByRole('heading',{name:'Find your next step.',exact:true}).waitFor();
         // Cancelling preserves drafts; publishing saves every changed section atomically.
         await page.getByRole('button',{name:'Edit page text & design'}).click();
