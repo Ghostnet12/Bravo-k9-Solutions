@@ -34,6 +34,8 @@ test('discovery publishing, consent, privacy and performance reporting persist',
     await call(null,'put','/api/workshops',update).expect(401);
     await call('owner','put','/api/workshops',{ ...update, date:'2026-02-31' }).expect(400);
     await call('owner','put','/api/workshops',update).expect(200);
+    const { WorkshopOccurrence }=await import('../server/workshop-store.js');
+    assert.ok((await WorkshopOccurrence.findById('featured:2026-10-03').lean()).snapshots.some(snapshot=>snapshot.revision===0),'first save preserves the fallback occurrence');
     assert.equal((await call(null,'get','/api/workshops')).body.event.time,'10:00 a.m.');
     const publishedHtml = (await request(publicApp).get('/workshops').expect(200)).text;
     assert.match(publishedHtml,/Fixture training location/); assert.match(publishedHtml,/10:00 a.m./); assert.match(publishedHtml,/October 3, 2026/); assert.match(publishedHtml,/\$100/);

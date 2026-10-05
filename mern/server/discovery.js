@@ -34,7 +34,7 @@ export function discoveryRoutes(app) {
       const current = await Workshop.findById('featured').session(session);
       if ((current?.revision || 0) !== expectedRevision) throw Object.assign(new Error('Workshop changed while you were editing. Reload the page to see the latest version. Your draft is still open.'), { status: 409 });
       const record = current || new Workshop({ _id: 'featured' });
-      if (current) await preserveWorkshopOccurrence(publicEvent(current), session);
+      await preserveWorkshopOccurrence(publicEvent(current), session);
       record.details = details; record.revision = expectedRevision + 1;
       await record.save({ session });
       await AuditEvent.create([{ actorId: req.user._id, action: 'workshop.updated', targetType: 'workshop', targetId: 'featured', details: { revision: record.revision } }], { session });

@@ -34,7 +34,8 @@ export function WorkshopDetails({ compact = false }) {
   const owner = user?.role === 'owner' && !user.mustChangePassword && !user.blocked;
   useEffect(() => {
     let active = true;
-    const load = () => { if (document.hidden) return; api('/workshops').then(data => { if (active) { setEvent(managedEvent(data)); setError(''); } }).catch(() => { if (active) { setEvent(null); setError('Workshop details could not load. Call Bravo for the latest information.'); } }); };
+    if (!owner) setEvent(current => current?.published ? current : null);
+    const load = () => { if (document.hidden) return; api('/workshops').then(data => { if (active) { setEvent(managedEvent(data)); setError(''); } }).catch(() => { if (active) { setEvent(current => owner || current?.published ? current : null); setError('Showing the last verified workshop schedule when available. Refresh failed; call Bravo to confirm the latest details.'); } }); };
     void load(); const timer = setInterval(load,15000); window.addEventListener('bravo-workshop-changed',load); document.addEventListener('visibilitychange',load);
     return () => { active = false; clearInterval(timer); window.removeEventListener('bravo-workshop-changed',load); document.removeEventListener('visibilitychange',load); };
   }, [owner]);
