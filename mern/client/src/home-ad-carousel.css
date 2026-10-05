@@ -61,7 +61,7 @@
 .home-ad-dock .home-ad-carousel{position:relative;width:100%;margin:0;min-width:0;height:clamp(120px,38.6364vw,240px)}
 .home-ad-dock .home-ad-frame{height:100%;width:100%;aspect-ratio:auto;border:0;box-shadow:none;border-radius:0}
 .home-ad-dock .home-ad-track,.home-ad-dock .home-ad-slide,.home-ad-dock .home-ad-slide>a,.home-ad-dock .ad-art-button{height:100%;width:100%}
-.home-ad-dock .home-ad-slide :is(img,video){display:block;width:100%;height:100%;aspect-ratio:auto;object-fit:contain;background:#101010}
+.home-ad-dock .home-ad-slide :is(img,video){display:block;width:100%;height:100%;aspect-ratio:auto;object-fit:contain;background:#101010;pointer-events:none}
 .ad-art-button{padding:0;border:0;background:#101010;cursor:pointer}
 .home-ad-dock :is(a,button):focus-visible{outline:3px solid #ffe4b5;outline-offset:-3px}
 .ad-live-creative{height:100%;display:flex;gap:5px;align-items:center;justify-content:center;flex-direction:column;background:radial-gradient(ellipse at center,#302319,#101010);border:1px solid #ba9a6444}

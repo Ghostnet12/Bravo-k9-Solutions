@@ -57,7 +57,7 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
   assert.equal(await page.locator('.home-ad-dock .ad-dock-controls').count(),0);
   // Follow the artwork, then site navigation, without replacing the ad player.
   await page.locator('.home-ad-slide.is-active a').click();await page.waitForURL('**/dog-training');
-  for (const path of ['/live','/contact','/']) {
+  for (const path of ['/workshops','/live','/contact','/']) {
    if(path==='/') await page.locator('footer a[href="/"]').first().click();
    else { await page.getByRole('button',{name:'Menu',exact:true}).click();await page.locator(`header nav a[href="${path}"]`).first().click(); }
    await page.waitForURL(`${origin}${path}`);
