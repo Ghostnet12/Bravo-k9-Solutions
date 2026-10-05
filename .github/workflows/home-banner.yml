@@ -33,6 +33,7 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg gstreamer1.0-libav
       - run: node tests/home-ad-carousel.browser.mjs
       - run: node tests/live-experience.browser.mjs
+        if: ${{ !cancelled() }}
       - run: node tests/site-content.browser.mjs
       - run: node tests/website-editor.browser.mjs
       - run: node tests/hero-carousel.browser.mjs

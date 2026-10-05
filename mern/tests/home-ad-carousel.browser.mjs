@@ -89,6 +89,10 @@ try{
    assert.equal(await page.locator('[data-ad-editable]').count(),0);
    const publicCarousel=page.locator('.home-ad-carousel');await publicCarousel.scrollIntoViewIfNeeded();const b=await publicCarousel.boundingBox();await page.mouse.move(b.x+50,b.y+50);await page.mouse.down();await page.waitForTimeout(750);await page.mouse.up();
    assert.equal(await page.getByRole('dialog',{name:/Manage advertisements/i}).count(),0);
+   // Staff cannot open the owner editor, but releasing the artwork can still
+   // open its public expanded view. Close that view before testing rotation.
+   if(await page.getByRole('button',{name:'Close advertisement ×'}).isVisible())await page.getByRole('button',{name:'Close advertisement ×'}).click();
+   await page.evaluate(()=>document.activeElement?.blur());
    collection={...collection,ads:Array.from({length:25},(_,index)=>({id:`large-collection-${index}`,title:`Ad ${index}`,alt:`Ad artwork ${index}`,link:'/contact',enabled:true,src:'/images/saturday-workshop-october-3.webp'}))};
    await page.evaluate(()=>window.dispatchEvent(new Event('bravo-ads-changed')));
    await page.waitForFunction(()=>document.querySelector('.home-ad-slide.is-active img')?.alt==='Ad artwork 0');
