@@ -15,16 +15,19 @@ and owner also have authorized access. Public sessions appear in the homepage ad
 Camera and microphone permission are requested only by the trainer. Audio starts
 off. Front/rear camera switching and microphone changes work during a session.
 Keep the phone unlocked and this screen open. There is no fixed concurrent viewer cap.
-The phone sends one copy per viewer, targeting 540p/20fps and up to 700 kbps video per connection where the
-browser supports bitrate control. More viewers increase phone upload, CPU and
+The phone sends one copy per viewer, targeting 540p/20fps. No application video
+or audio bitrate ceiling is imposed: the browser estimates bandwidth and adapts
+each connection. No Wi-Fi-only rule, connection-type gate or minimum-speed check
+is used. Cellular data is allowed, including browsers reporting Save Data. More viewers increase phone upload, CPU and
 battery use; removing the cap does not guarantee unlimited capacity or unchanged
 quality. Existing API abuse protection and hosting/database quotas still apply.
 
 ## Network and cost boundary
 
-The only ICE service is Cloudflare's public free STUN endpoint:
-`stun:stun.cloudflare.com:3478`. STUN discovers reachable addresses; it does not
-relay video. No TURN URL or credentials are configured. Some cellular networks,
+The shared `shared/live-network.js` configuration uses two public free STUN
+endpoints: `stun:stun.cloudflare.com:3478` and `stun:stun.l.google.com:19302`.
+A second provider avoids depending on one address-discovery service. STUN discovers
+reachable addresses; it does not relay video or bypass carrier NAT/firewalls. No TURN URL or credentials are configured. Some cellular networks,
 VPNs or firewalls prevent a direct connection. Connection timeout explains this
 and suggests Wi-Fi or another network. This deliberately cannot promise universal
 connectivity or large public audiences. Direct peers can see each other's network
@@ -170,6 +173,19 @@ upload capacity, lock-screen behavior, native keyboard and iOS fullscreen/safe-a
 behavior require these physical checks. Same-host browser tests cannot establish them.
 Free practical connectivity options are existing Wi-Fi or a less restricted network,
 with the phone kept foregrounded. No universally reachable or unlimited audience is
-promised. Four peers at the configured target can require about 2.8 Mbps video upload
-before audio/overhead. Existing per-IP abuse budgets can affect large shared-IP groups;
+promised. Aggregate upload is the sum of each viewer connection, plus audio and overhead;
+there is no fixed Mbps promise after removing the per-connection bitrate ceiling. Existing per-IP abuse budgets can affect large shared-IP groups;
 these are not a fixed viewer cap. No new relay, host or paid fallback is provisioned.
+
+### Cellular startup regression
+
+Camera encode/decode health is now established before creating the server session.
+Slow phone setup must not consume the 20-second abandoned-start lease. A failed
+health check creates no session, and failed admission cleans up local tracks.
+The direct browser suite delays a real WebRTC health statistics read by 21 seconds,
+checks that no session exists during setup, and then verifies successful publication
+and four viewers with advancing media frames. It also marks browser connection
+metadata as cellular/2g/Save Data and verifies no bitrate ceiling on the senders.
+These metadata flags and same-host synthetic camera frames are not an actual
+carrier or phone-camera test. Removing a bitrate ceiling does not repair blocked
+direct ICE connectivity. No TURN relay, paid service or new host was introduced.

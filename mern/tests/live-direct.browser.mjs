@@ -27,6 +27,21 @@ try {
   const trainerContext = await chrome.newContext({ viewport: { width: 390, height: 1000 } });
   await trainerContext.addCookies([{ name: 'bravo_session', value: token, domain: '127.0.0.1', path: '/' }]);
   const phone = await trainerContext.newPage(), errors = [];
+  await phone.addInitScript(() => {
+    // Slow phone setup exceeds the 20-second abandoned-session lease. Keep
+    // real WebRTC camera frames; delay only the first health statistics read.
+    const NativePeer = window.RTCPeerConnection;
+    let delayHealth = true;
+    window.__testPeers = [];
+    window.RTCPeerConnection = class extends NativePeer {
+      constructor(config) { super(config); window.__testPeers.push(this); }
+      async getStats(...args) {
+        if (delayHealth) { delayHealth = false; await new Promise(resolve => setTimeout(resolve, 21000)); }
+        return super.getStats(...args);
+      }
+    };
+    Object.defineProperty(navigator, 'connection', { configurable: true, value: { type: 'cellular', effectiveType: '2g', downlink: .05, saveData: true } });
+  });
   const controlFailures=[];
   phone.on('response',response=>{if(response.url().includes('/api/live')&&response.status()>=400)controlFailures.push({path:new URL(response.url()).pathname,status:response.status()});});
   phone.on('pageerror', e => errors.push(e.message));
@@ -54,7 +69,9 @@ try {
   await phone.waitForFunction(() => document.querySelector('.live-camera-preview video')?.srcObject?.getVideoTracks().some(t => t.readyState === 'live' && !t.muted));
   assert.deepEqual((await (await fetch(`${origin}/api/live`)).json()).announcements, [], 'preview never advertises LIVE');
   await phone.getByRole('button', { name: '● Start live' }).click();
-  await phone.getByRole('button', { name: '■ End live session' }).waitFor();
+  assert.equal(await LiveSession.countDocuments({ open: true }), 0, 'slow camera health setup does not consume a server session lease');
+  await phone.getByRole('button', { name: '■ End live session' }).waitFor({ timeout: 60000 });
+  console.log('PASS slow publisher setup beyond the stale timeout; cellular/save-data metadata never blocks Start');
   const record = await LiveSession.findOne({ open: true }); assert.equal(record.transport, 'direct'); assert.equal(record.status, 'live'); assert.ok(record.publication.framesEncoded > 0 && record.publication.framesDecoded > 0); assert.equal(record.trainingFocus, 'Field obedience');
   const homeContext = await chrome.newContext({ viewport: { width: 1440, height: 1000 } });
   const home = await homeContext.newPage(); await home.goto(origin);
@@ -77,6 +94,7 @@ try {
     console.log(`PASS real direct video frames: Chromium phone to ${name}, no viewer camera permission`);
   }
   await phone.getByText('4 viewers', { exact: false }).waitFor();
+  assert.equal(await phone.evaluate(() => window.__testPeers.flatMap(pc => pc.getSenders()).some(sender => sender.getParameters().encodings?.some(encoding => encoding.maxBitrate !== undefined))), false, 'no application bitrate ceiling on live connections');
   assert.equal(await LivePeer.countDocuments({ sessionId: record._id }), 4);
   for (const page of viewers) {
     const before = await page.locator('.live-video-stage video').evaluate(video => video.currentTime);

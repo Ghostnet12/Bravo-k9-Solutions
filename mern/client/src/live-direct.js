@@ -1,7 +1,8 @@
 import { api } from './api';
+import { LIVE_ICE_SERVERS } from '../../shared/live-network.js';
 
-export const DIRECT_ICE = [{ urls: 'stun:stun.cloudflare.com:3478' }];
-export const DIRECT_FAILURE = 'This network could not make a direct connection. Try Wi-Fi or a different network. Bravo does not use a paid video relay.';
+export const DIRECT_ICE = LIVE_ICE_SERVERS;
+export const DIRECT_FAILURE = 'This network could not connect the phone and viewer directly. Cellular data is allowed, but some carriers, VPNs and firewalls require a video relay. Bravo currently has no relay configured. Try another network.';
 export const cameraReady = stream => !!stream?.getVideoTracks().some(track => track.readyState === 'live' && track.enabled && !track.muted);
 export function stopStream(stream) { stream?.getTracks().forEach(track => track.stop()); }
 export async function gatherDescription(pc) {
@@ -47,14 +48,8 @@ export function createBroadcaster(sessionId, getStream, onCount) {
           await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
         }
       }
-      for (const sender of pc.getSenders()) {
-        if (!sender.track) continue;
-        const parameters = sender.getParameters();
-        if (parameters.encodings?.length) {
-          parameters.encodings.forEach(encoding => { encoding.maxBitrate = sender.track.kind === 'video' ? 700000 : 48000; });
-          await sender.setParameters(parameters).catch(() => {});
-        }
-      }
+      // Let WebRTC estimate available bandwidth and adapt each connection.
+      // No application bitrate ceiling or minimum connection speed is imposed.
     } catch {
       clearTimeout(peer.timeout); pc.close(); count();
       // Release a failed slot; retain the local tombstone until the next sync so
