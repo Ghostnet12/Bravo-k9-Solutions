@@ -31,12 +31,14 @@ try {
     // Slow phone setup exceeds the 20-second abandoned-session lease. Keep
     // real WebRTC camera frames; delay only the first health statistics read.
     const NativePeer = window.RTCPeerConnection;
-    let delayHealth = true;
+    let healthReads = 0, healthDelay;
     window.__testPeers = [];
     window.RTCPeerConnection = class extends NativePeer {
       constructor(config) { super(config); window.__testPeers.push(this); }
       async getStats(...args) {
-        if (delayHealth) { delayHealth = false; await new Promise(resolve => setTimeout(resolve, 21000)); }
+        // Both sides must sample after the delay. Sampling the receiver before
+        // frames arrive would manufacture a stalled pipeline instead of slow setup.
+        if (healthReads++ < 2) { healthDelay ||= new Promise(resolve => setTimeout(resolve, 21000)); await healthDelay; }
         return super.getStats(...args);
       }
     };
