@@ -5,7 +5,12 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { chromium, webkit } from 'playwright';
 const dist = fileURLToPath(new URL('../client/dist/', import.meta.url)), html = await readFile(`${dist}/bravo-shell.html`, 'utf8');
-const app = express(); app.use(express.static(dist)); app.get('/{*path}', (_req, res) => res.type('html').send(html));
+const app = express();
+// Let WebKit cancel native polling requests normally during repeated reloads.
+// Intercepting this periodic request can report an access-control page error
+// when a response is fulfilled after its document has already navigated away.
+app.get('/api/live', (_req, res) => res.json({ sessions: [], announcements: [], availability: 'available', serverTime: new Date().toISOString() }));
+app.use(express.static(dist)); app.get('/{*path}', (_req, res) => res.type('html').send(html));
 const server = app.listen(0, '127.0.0.1'); await once(server, 'listening'); const origin = `http://127.0.0.1:${server.address().port}`;
 await mkdir('test-results', { recursive: true });
 try {
@@ -17,11 +22,10 @@ try {
         const context = await browser.newContext({ viewport: { width, height: 900 } }), page = await context.newPage();
         let saved = { revision: 0, alerts: ['Bravo fixture announcement'] }, role = 'owner', failSave = false, weatherAvailable = true;
         const errors = []; page.on('pageerror', e => errors.push(e.message));
-        await page.route('**/api/**', async route => {
+        await page.route(url => url.pathname.startsWith('/api/') && url.pathname !== '/api/live', async route => {
           const path = new URL(route.request().url()).pathname;
           let json = { services: [], team: [], images: {}, reviews: [], schedules: [], clips: [], count: 0 }, status = 200;
           if (path === '/api/auth/me') json = { user: role ? { id: 'fixture', role, name: 'Fixture' } : null, services: [] };
-          if (path === '/api/live') json = { sessions: [], announcements: [], availability: 'available', serverTime: new Date().toISOString() };
           if (path === '/api/site-banner') {
             if (route.request().method() === 'PUT') {
               if (failSave) { status = 409; json = { error: 'Alerts changed while you were editing.' }; }
