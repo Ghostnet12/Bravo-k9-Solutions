@@ -216,3 +216,13 @@ metadata as cellular/2g/Save Data and verifies no bitrate ceiling on the senders
 These metadata flags and same-host synthetic camera frames are not an actual
 carrier or phone-camera test. Removing a bitrate ceiling does not repair blocked
 direct ICE connectivity. No TURN relay, paid service or new host was introduced.
+
+The physical-phone recording exposed a `createPublisherHealth` timeout: camera
+preview opens but the local WebRTC encode/decode check does not complete. The
+health peers now share the two free STUN endpoints with viewer peers instead of
+using host-only ICE. The same real frame thresholds remain mandatory; this is
+a candidate cellular/Safari compatibility fix, not a verified phone result or
+a TURN substitute. Failure diagnostics show both ICE states and frame counters
+beside the camera controls, without network addresses, SDP or credentials.
+The browser regression also emulates zero media counters and requires that a
+failed health check creates no session/announcement and cleans up its receiver.

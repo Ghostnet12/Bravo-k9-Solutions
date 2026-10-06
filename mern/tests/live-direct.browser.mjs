@@ -39,7 +39,11 @@ try {
         // Both sides must sample after the delay. Sampling the receiver before
         // frames arrive would manufacture a stalled pipeline instead of slow setup.
         if (healthReads++ < 2) { healthDelay ||= new Promise(resolve => setTimeout(resolve, 21000)); await healthDelay; }
-        return super.getStats(...args);
+        const report = await super.getStats(...args);
+        // Negative fixture only: emulate a stalled publishing check, never
+        // manufacture positive frame counts for successful streaming tests.
+        if (window.__failPublication) return new Map([...report].map(([id, stat]) => [id, { ...stat, framesEncoded: 0, framesDecoded: 0 }]));
+        return report;
       }
     };
     Object.defineProperty(navigator, 'connection', { configurable: true, value: { type: 'cellular', effectiveType: '2g', downlink: .05, saveData: true } });
@@ -74,6 +78,7 @@ try {
   assert.equal(await LiveSession.countDocuments({ open: true }), 0, 'slow camera health setup does not consume a server session lease');
   await phone.getByRole('button', { name: '■ End live session' }).waitFor({ timeout: 60000 });
   console.log('PASS slow publisher setup beyond the stale timeout; cellular/save-data metadata never blocks Start');
+  assert.equal(await phone.evaluate(() => window.__testPeers.slice(0, 2).every(pc => pc.getConfiguration().iceServers.length === 2)), true, 'the publisher health check shares free STUN discovery with viewer connections');
   const record = await LiveSession.findOne({ open: true }); assert.equal(record.transport, 'direct'); assert.equal(record.status, 'live'); assert.ok(record.publication.framesEncoded > 0 && record.publication.framesDecoded > 0); assert.equal(record.trainingFocus, 'Field obedience');
   const homeContext = await chrome.newContext({ viewport: { width: 1440, height: 1000 } });
   const home = await homeContext.newPage(); await home.goto(origin);
@@ -189,6 +194,16 @@ try {
   assert.equal(lostAnswerResponse, true);
   assert.deepEqual(errors, []);
   console.log('PASS lost-answer response recovery, microphone enable/disable, live camera switch, viewer count, local track cleanup, peer cleanup and remote shutdown');
+  const recordsBeforeFailure = await LiveSession.countDocuments({});
+  await phone.evaluate(() => { window.__failPublication = true; });
+  await phone.getByRole('button', { name: 'Enable camera preview' }).click();
+  await phone.getByRole('button', { name: '● Start live' }).click();
+  await phone.locator('.live-camera-panel').getByRole('alert').filter({ hasText: 'PUBLISH_CHECK' }).waitFor({ timeout: 40000 });
+  assert.equal(await LiveSession.countDocuments({}), recordsBeforeFailure, 'a failed local publishing check creates no live-session record');
+  assert.deepEqual((await (await fetch(`${origin}/api/live`)).json()).announcements, [], 'a stalled pipeline never advertises LIVE');
+  assert.equal(await phone.locator('[data-publisher-health]').count(), 0, 'the failed local receiver is cleaned up');
+  assert.deepEqual(errors, []);
+  console.log('PASS stalled publishing check shows its diagnostic beside the camera controls and creates no false LIVE state');
 } finally {
   await chrome?.close(); await safari?.close();
   if (server) await new Promise(resolve => server.close(resolve));

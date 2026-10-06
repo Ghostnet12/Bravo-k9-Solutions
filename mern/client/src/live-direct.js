@@ -130,7 +130,10 @@ export function createViewer(sessionId, onStream, onState, onError) {
 // frames before discovery. This is media-pipeline health, not proof of cellular
 // reachability. Actual viewers still negotiate their own direct connections.
 export async function createPublisherHealth(getStream) {
-  const sender = new RTCPeerConnection({ iceServers: [] }), receiver = new RTCPeerConnection({ iceServers: [] });
+  // Phones may not expose a usable host-only path on cellular. Give the local
+  // media check the same free address discovery as real viewer connections.
+  // STUN is not a relay and does not guarantee carrier/NAT reachability.
+  const sender = new RTCPeerConnection({ iceServers: DIRECT_ICE }), receiver = new RTCPeerConnection({ iceServers: DIRECT_ICE });
   const id = crypto.randomUUID(); let closed = false;
   const sink = document.createElement('video'); sink.muted = true; sink.autoplay = true; sink.playsInline = true;
   sink.setAttribute('aria-hidden', 'true'); sink.setAttribute('data-publisher-health', '');
@@ -153,11 +156,12 @@ export async function createPublisherHealth(getStream) {
     await receiver.setLocalDescription(await receiver.createAnswer());
     await sender.setRemoteDescription(await gatherDescription(receiver));
     const until = Date.now() + 10000;
+    let lastHealth = { framesEncoded: 0, framesDecoded: 0 };
     while (!closed && Date.now() < until) {
-      const health = await sample();
+      const health = await sample(); lastHealth = health;
       if (health.framesEncoded > 1 && health.framesDecoded > 1) return { sample, disconnect, replaceTrack: track => videoSender.replaceTrack(track) };
       await new Promise(resolve => setTimeout(resolve, 150));
     }
-    throw new Error('The camera is not publishing video frames. End the session and try again.');
+    throw new Error(`The camera opened, but its WebRTC publishing check failed. Retry the camera. If this repeats, share this diagnostic: PUBLISH_CHECK ${sender.iceConnectionState}/${receiver.iceConnectionState} ${lastHealth.framesEncoded}/${lastHealth.framesDecoded}.`);
   } catch (error) { disconnect(); throw error; }
 }
