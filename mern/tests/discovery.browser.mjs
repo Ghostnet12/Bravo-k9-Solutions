@@ -17,7 +17,10 @@ try {
     const browser=await engine.launch();
     try { for (const width of [360,768,1440]) {
       const context=await browser.newContext({viewport:{width,height:900},reducedMotion:width === 360 ? 'reduce' : 'no-preference'}), page=await context.newPage(), errors=[], browserDiagnostics=[];
-      let discard=true, confirmations=0;
+      let discard=true, confirmations=0, failure=null;
+      const navigation=[];
+      page.on('framenavigated',frame=>{if(frame===page.mainFrame())navigation.push({at:Date.now(),url:frame.url()});});
+      await context.tracing.start({screenshots:true,snapshots:true});
       // Finish mocked responses before navigation; preserve cancellation diagnostics.
       const pendingApi=new Set();let lastApi=0;
       page.on('request',request=>{if(new URL(request.url()).pathname.startsWith('/api/')){pendingApi.add(request);lastApi=Date.now();}});
@@ -25,6 +28,24 @@ try {
       async function settleApi(){const deadline=Date.now()+5000;while(pendingApi.size || Date.now()-lastApi<150){if(Date.now()>deadline)throw new Error('Mocked API requests did not settle');await new Promise(resolve=>setTimeout(resolve,25));}}
       async function visit(url,options){await settleApi();return page.goto(url,{waitUntil:'domcontentloaded',...options});}
       async function reload(){await settleApi();return page.reload({waitUntil:'domcontentloaded'});}
+      // Wait for the requested reactive state, not merely the prior button in
+      // the same location. Keep URL and rendered-page assertions independent
+      // of unrelated media finishing a document's load event.
+      async function selectGoal(label, expected) {
+        const preview=page.getByRole('button',{name:`Preview ${label}`,exact:true});
+        await preview.click();
+        await page.waitForFunction(({label,expected})=>
+          [...document.querySelectorAll('.goal-preview')].some(el=>el.getAttribute('aria-label')===`Preview ${label}`&&el.getAttribute('aria-pressed')==='true')
+          && document.querySelector('.goal-result .goal-actions .button')?.getAttribute('href')===expected,{label,expected});
+        return page.locator('.goal-result .goal-actions .button').and(page.locator(`a[href="${expected}"]`));
+      }
+      async function follow(link, destination) {
+        await settleApi();
+        assert.equal(await link.getAttribute('href'),destination);
+        await link.click();
+        await page.waitForURL(origin+destination,{waitUntil:'domcontentloaded'});
+        await page.locator('main h1').waitFor();
+      }
       let owner=false, event={...DEFAULT_WORKSHOP}, entries={}, signup=null, failSave=false, failWorkshop=false;
       page.on('pageerror',error=>browserDiagnostics.push({message:error.message,stack:error.stack,url:page.url()}));
       await page.exposeFunction('reportDiscoveryError',message=>errors.push(message));
@@ -80,16 +101,16 @@ try {
         ]){
           const card=page.getByRole('link',{name:label,exact:true});
           assert.ok((await card.innerText()).includes(price),`${label} has its own service price`);
-          await page.getByRole('button',{name:`Preview ${label}`,exact:true}).click();
+          const expected=`/portal?program=${program}${focus ? `&focus=${focus}` : ''}`;
+          await selectGoal(label,expected);
           assert.ok((await page.locator('.goal-price').innerText()).includes(price));
           assert.equal(await page.locator('.goal-result').getByRole('link',{name:'What’s included'}).getAttribute('href'),details);
-          const expected=`/portal?program=${program}${focus ? `&focus=${focus}` : ''}`;
           assert.equal(await card.getAttribute('href'),details,'the service card explains the program before booking');
           assert.equal(await page.locator('.goal-result .goal-actions .button').getAttribute('href'),expected);
-          await card.click();await page.waitForURL(origin+details);await page.locator('main h1').waitFor();
+          await follow(card,details);
           await visit(origin);await page.locator('.goal-proof figcaption').waitFor();await settleApi();
-          await page.getByRole('button',{name:`Preview ${label}`,exact:true}).click();
-          await page.locator('.goal-result .goal-actions .button').click();await page.waitForURL(origin+expected);
+          const bookingAction=await selectGoal(label,expected);
+          await follow(bookingAction,expected);
           if(program==='training'){
             const field=page.getByRole('combobox',{name:'What would you like help with?',exact:true});
             await field.waitFor();assert.equal(await field.inputValue(),focus);
@@ -110,12 +131,12 @@ try {
         assert.equal(specialistText.includes('$200'),false,'specialist card does not promise the standard monthly rate');
         assert.match(specialistText,/Talk with Bravo/);assert.match(specialistText,/Scope & pricing are goal-specific/);
         assert.equal(await specialistCard.getAttribute('href'),'/contact');
-        await page.getByRole('button',{name:'Preview Advanced & working-dog goals',exact:true}).click();
+        await selectGoal('Advanced & working-dog goals','/contact');
         assert.equal(await page.locator('.goal-result .goal-price').count(),0,'specialist preview has no standard membership price');
         assert.match(await page.locator('.goal-result').innerText(),/scoped individually/i);
         assert.equal(await page.locator('.goal-result .goal-actions .button').getAttribute('href'),'/contact');
         assert.equal(await page.locator('.goal-result').getByRole('link',{name:'Explore working-dog goals'}).getAttribute('href'),'/#specialist-training');
-        await specialistCard.click();await page.waitForURL(origin+'/contact');await page.getByRole('heading',{name:'Talk to Bravo.',exact:true}).waitFor();
+        await follow(specialistCard,'/contact');await page.getByRole('heading',{name:'Talk to Bravo.',exact:true}).waitFor();
         await visit(origin);await page.locator('.goal-proof figcaption').waitFor();await settleApi();
         const proof=page.locator('.home-work-proof');await proof.getByRole('button',{name:'Working dogs',exact:true}).click();assert.equal(await proof.locator('article[data-proof-video]').count(),1);await proof.getByRole('button',{name:'All training',exact:true}).click();assert.equal(await proof.locator('article[data-proof-video]').count(),3);
         await visit(origin+'/learn');await page.getByLabel('Email address',{exact:true}).fill('visitor@example.test');await page.getByLabel('Email me once when Bravo online courses launch.').check();await page.getByRole('button',{name:'Request a launch update'}).click();await page.getByText('Your launch-update request is saved.',{exact:false}).waitFor();assert.equal(signup.consent,true);assert.equal(signup.email,'visitor@example.test');
@@ -162,7 +183,15 @@ try {
         discard=true;await reload();await page.getByRole('heading',{name:'A preserved draft.',exact:true}).waitFor();
         await visit(origin+'/learn?preview=launch');await page.getByRole('heading',{name:'Bravo. Anywhere.',exact:true}).waitFor();await page.getByRole('button',{name:'Edit page text & design'}).click();await page.getByRole('dialog',{name:'Edit website section'}).getByLabel('Edit this part',{exact:true}).selectOption('discovery-course-copy');assert.match(await page.getByRole('dialog',{name:'Edit website section'}).getByLabel('Text',{exact:true}).inputValue(),/David and Ashley/);
         assert.deepEqual(errors,[]);console.log(`${engineName} ${width}: discovery, pricing, routing, filters, signup and editor recovery passed`);
-      }finally{await writeFile(`test-results/discovery-diagnostics-${engineName}-${width}.json`,JSON.stringify({errors,browserDiagnostics},null,2));await context.close();}
+      }catch(error){
+        failure={message:error.message,url:page.url(),state:await page.evaluate(()=>({readyState:document.readyState,heading:document.querySelector('main h1')?.textContent,goal:document.querySelector('.goal-result')?.innerText,actions:[...document.querySelectorAll('.goal-result .goal-actions a')].map(el=>({text:el.textContent,href:el.getAttribute('href')}))})).catch(()=>null)};
+        await page.screenshot({path:`test-results/discovery-failure-${engineName}-${width}.png`,fullPage:true}).catch(()=>{});
+        throw error;
+      }finally{
+        await writeFile(`test-results/discovery-diagnostics-${engineName}-${width}.json`,JSON.stringify({errors,browserDiagnostics,navigation,failure},null,2));
+        await context.tracing.stop(failure?{path:`test-results/discovery-failure-${engineName}-${width}.zip`}:{});
+        await context.close();
+      }
     }}finally{await browser.close();}
   }
 }finally{await new Promise(resolve=>server.close(resolve));}
