@@ -11,7 +11,7 @@ import { identify, requireUser, requireOwner, sameOrigin, rateLimit } from './au
 import { requestError } from './errors.js';
 import { CHUNK_SIZE, validMediaHeader, sendUploadedMedia } from './media.js';
 import { SITE_IMAGE_MAX_BYTES } from '../shared/site-images.js';
-import { cloneDefaultAds, DEFAULT_AD_CAROUSEL, normalizeAdSettings, safeAdLink, SITE_AD_ID } from '../shared/site-ads.js';
+import { cloneDefaultAds, DEFAULT_AD_CAROUSEL, normalizeAdSettings, safeAdLink, resolveAdDestination, SITE_AD_ID } from '../shared/site-ads.js';
 
 export const SiteAdCollection = mongoose.models.BravoSiteAds || mongoose.model('BravoSiteAds', new mongoose.Schema({
   _id: String,
@@ -51,19 +51,19 @@ const publicAd = (ad, video) => ({
   id: ad.id,
   title: ad.title || '',
   alt: ad.alt || '',
-  link: safeAdLink(ad.link || ''),
+  link: resolveAdDestination(ad),
   enabled: ad.enabled !== false,
   videoId: ad.videoId || '', videoSrc: video?.uploadId && !video.deleted ? `/api/proof-videos/${video._id}/video?v=${video.revision}` : '',
   src: ad.uploadId ? `/api/site-ads/${ad.id}/image?v=${ad.imageRevision || 0}` : ad.image || '',
 });
 const publicCollection = async row => {
   const ads = storedAds(row).filter(ad => SITE_AD_ID.test(ad.id || ''));
-  const workshop = ads.some(ad => ad.id === 'saturday-workshop-october-3' || ad.link === '/workshops') ? await loadPublicWorkshop() : undefined;
+  const workshop = ads.some(ad => ad.id === 'saturday-workshop-october-3' || resolveAdDestination(ad) === '/workshops') ? await loadPublicWorkshop() : undefined;
   const videos = await ProofVideo.find({ _id: { $in: ads.map(ad => ad.videoId).filter(Boolean) }, deleted: false }).lean();
   return { revision: row?.revision || 0, settings: normalizeAdSettings(row?.settings || DEFAULT_AD_CAROUSEL),
     ads: ads.map(ad => {
       const result = publicAd(ad, videos.find(video => video._id === ad.videoId));
-      if (ad.id === 'saturday-workshop-october-3' || ad.link === '/workshops') {
+      if (ad.id === 'saturday-workshop-october-3' || resolveAdDestination(ad) === '/workshops') {
         result.workshop = workshop ? { date: workshop.date, dateLabel: workshopDateLabel(workshop.date), time: workshop.time, scheduleMode: workshop.scheduleMode } : null;
         // Artwork with an October 3 date cannot truthfully advertise a different occurrence.
         result.scheduleHidden = !workshop || !ad.uploadId && ad.image === '/images/saturday-workshop-october-3.webp' && workshop.date !== '2026-10-03';
@@ -135,7 +135,7 @@ router.post('/', async (req, res) => {
   const saved = await writeCollection(req, async ({ ads, current, session }) => {
     await approvedVideo(input.videoId, session);
     const uploadId = input.image ? await storeImage(id, input.image, req.user._id, session) : undefined;
-    return { ads: [...ads, { id, title: input.title, alt: input.alt, link: safeAdLink(input.link), enabled: input.enabled, videoId: input.videoId, uploadId, imageRevision: 1 }], settings: current?.settings, action: 'site-ad.created', targetId: id };
+    return { ads: [...ads, { id, title: input.title, alt: input.alt, link: safeAdLink(input.link), destinationConfigured: true, enabled: input.enabled, videoId: input.videoId, uploadId, imageRevision: 1 }], settings: current?.settings, action: 'site-ad.created', targetId: id };
   });
   res.status(201).json(saved);
 });
@@ -154,7 +154,7 @@ router.put('/:id', async (req, res) => {
       await retireImage(id, previous.uploadId, session);
     }
     const next = [...ads];
-    next[index] = { ...previous, title: input.title, alt: input.alt, link: safeAdLink(input.link), enabled: input.enabled, videoId: input.videoId, uploadId, imageRevision };
+    next[index] = { ...previous, title: input.title, alt: input.alt, link: safeAdLink(input.link), destinationConfigured: true, enabled: input.enabled, videoId: input.videoId, uploadId, imageRevision };
     return { ads: next, settings: current?.settings, action: 'site-ad.updated', targetId: id };
   });
   res.json(saved);

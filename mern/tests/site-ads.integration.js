@@ -81,5 +81,35 @@ test('sitewide ads are public but mutations are owner-only, durable and conflict
     await ProofVideo.updateOne({_id:'approved-video'},{$set:{deleted:true}});
     assert.equal((await request(app).get('/api/site-ads').expect(200)).body.ads.at(-1).videoSrc,'');
 
+
+    // Legacy destination repair is presentation-only. Explicit authenticated
+    // edits persist and can intentionally restore Contact or remove the link.
+    const { SiteAdCollection } = await import('../server/site-ads.js');
+    const legacy = [
+      ['ad-b3df1e50-01ff-498b-8ddf-e6c3271a125a', 'Online courses', '/learn'],
+      ['ad-2b5c8355-930e-40dc-b036-4c99a92cf18c', 'Gunner', '/#specialist-training'],
+      ['ad-84622f25-49c4-46b4-9fab-f48956a8988e', 'Saturday workshops', '/workshops'],
+      ['ad-25871280-b5a3-430c-bac6-22da0edc2009', 'No treats or toys', '/dog-training'],
+      ['ad-10a0021e-75de-42e1-9944-2f89ebdea4f3', 'Live', '/live'],
+    ];
+    await Workshop.create({ _id: 'featured', details: { ...DEFAULT_WORKSHOP, published: true, scheduleMode: 'weekly', startTime: '12:00', endTime: '14:00' }, revision: 1 });
+    await SiteAdCollection.updateOne({ _id: 'home' }, { $set: { ads: legacy.map(([id, title]) => ({ id, title, alt: title, link: '/contact', enabled: true, image: '/images/training-education.webp' })) } });
+    const beforeRead = await SiteAdCollection.findById('home').lean();
+    const routed = (await request(app).get('/api/site-ads').expect(200)).body;
+    assert.deepEqual(routed.ads.map(ad => ad.link), legacy.map(ad => ad[2]));
+    assert.equal(routed.ads[2].scheduleHidden, false);
+    assert.equal(routed.ads[2].workshop.date, resolved.date, 'workshop metadata uses the same effective destination');
+    assert.deepEqual(await SiteAdCollection.findById('home').lean(), beforeRead, 'a public GET never edits stored data');
+    const edited = routed.ads[0];
+    const explicit = (await write('put', `/api/site-ads/${edited.id}`, 'owner', { expectedRevision: routed.revision, title: edited.title, alt: edited.alt, link: '/contact', enabled: true }).expect(200)).body;
+    assert.equal(explicit.ads[0].link, '/contact');
+    assert.equal((await request(app).get('/api/site-ads').expect(200)).body.ads[0].link, '/contact', 'explicit Contact choice survives a fresh read');
+    const saved = await SiteAdCollection.findById('home').lean();
+    assert.equal(saved.ads[0].destinationConfigured, true);
+    assert.equal(saved.ads[0].image, beforeRead.ads[0].image, 'destination-only edit retains artwork');
+    await write('put', `/api/site-ads/${edited.id}`, 'administrator', { expectedRevision: explicit.revision, title: edited.title, alt: edited.alt, link: '', enabled: true }).expect(200);
+    assert.equal((await request(app).get('/api/site-ads').expect(200)).body.ads[0].link, '', 'an explicit empty destination remains optional');
+
   } finally { await mongoose.disconnect(); await replica.stop(); }
 });
+
