@@ -2,6 +2,7 @@
 import { CONTENT_KEYS as BASE_CONTENT_KEYS } from './site-content-base-keys.js';
 export const CONTENT_KEYS = {
   ...BASE_CONTENT_KEYS,
+  'member-overview-title': { text: true },
   'nav-training-pricing': { text: true, link: true },
   'nav-bravo-approach': { text: true, link: true },
   'nav-bravo-phone': { text: true, link: true },

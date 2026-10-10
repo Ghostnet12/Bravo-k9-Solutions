@@ -61,3 +61,14 @@
   .app-header.bravo-nav .brand-lockup > span { display: none; }
   .app-header.bravo-nav .header-inner > .header-quick-action { padding-inline: 12px; }
 }
+
+.member-overview { margin-block: 20px; }
+.member-overview h2 { margin-bottom: 12px; }
+.member-overview-date { font-size: clamp(18px, 3vw, 26px); }
+.member-overview-facts { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; margin: 20px 0; }
+.member-overview-facts dt { font-size: 13px; color: var(--muted); }
+.member-overview-facts dd { margin: 6px 0 0; overflow-wrap: anywhere; }
+.member-overview-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+.member-overview-actions a, .workshop-details .goal-actions a, .live-controls button { min-height: 44px; min-width: 44px; }
+@media(max-width:600px) { .member-overview-facts { grid-template-columns: 1fr; gap: 10px; } .member-overview-actions a { width: 100%; justify-content: center; } }
+@media print { .member-overview-actions { display:none; } }

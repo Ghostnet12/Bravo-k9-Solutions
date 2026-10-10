@@ -7,6 +7,7 @@ import { useLiveSessions, useLiveClock, liveTime, liveDuration } from './live-st
 import { createViewer } from './live-direct';
 import { claimLiveAudio, releaseLiveAudio } from './live-audio';
 import './live.css';
+import { livePlayerStatus } from '../../shared/live-presentation';
 
 function LivePlayer({ session, offset }) {
   const video = useRef(null), roomRef = useRef(null), generation = useRef(0);
@@ -24,7 +25,7 @@ function LivePlayer({ session, offset }) {
     try {
       roomRef.current?.disconnect(); setSound(false); releaseLiveAudio(video.current);
       const room = createViewer(session.id,
-        stream => { if (current === generation.current && video.current) { video.current.srcObject = stream; video.current.play().catch(() => {}); } },
+        stream => { if (current === generation.current && video.current) { video.current.srcObject = stream; video.current.play().catch(() => { if (current === generation.current) setState('blocked'); }); } },
         state => { if (current === generation.current) setState(state); },
         message => { if (current === generation.current) setError(message); });
       roomRef.current = room; await room.connect();
@@ -37,22 +38,31 @@ function LivePlayer({ session, offset }) {
     else { video.current.muted = true; releaseLiveAudio(video.current); }
     setSound(!sound);
   }
-  const connection = session.status === 'unavailable' ? 'Status unavailable' : !active ? 'Reconnecting' : state === 'watching' ? 'Connected' : state === 'reconnecting' ? 'Reconnecting' : state === 'ended' ? 'Connection ended' : state === 'idle' ? 'Ready to watch' : 'Connecting';
+  useEffect(() => {
+    if (!['connecting', 'waiting'].includes(state)) return;
+    const timer = setTimeout(() => { setState('reconnecting'); setError('The connection is taking longer than expected. You can retry without leaving this page.'); }, 20000);
+    return () => clearTimeout(timer);
+  }, [state]);
+  useEffect(() => { const element = video.current; if (!active) element?.pause(); else if (element?.srcObject) element.play().catch(() => setState('blocked')); }, [active]);
+  const connection = livePlayerStatus(session.status, state);
+  const ready = active && state === 'watching';
   return <section id="live-player" className="live-player" aria-label={`${session.trainerName} training ${session.dogName}`}>
     <div className="live-video-stage">
-      <video ref={video} autoPlay playsInline muted={!sound} aria-label="Live training video"/>
-      <div className="live-video-top">{active && state !== 'ended' ? <span className="live-badge"><i aria-hidden="true"/>LIVE</span> : <span className="live-connection-state">{connection}</span>}<span className="live-timer">{liveDuration(session.startedAt, now)}</span></div>
-      {state !== 'watching' && <div className="live-video-cover"><img src="/bravo-shield-192.png" alt="" width="72" height="72"/>
-        <h3>{state === 'idle' ? 'Step into the session.' : state === 'ended' ? 'This connection has ended.' : state === 'reconnecting' ? 'Reconnecting…' : 'Connecting to Bravo…'}</h3>
-        {['idle', 'ended'].includes(state) && active && <button className="button" onClick={watch}>Watch live <span aria-hidden="true">▶</span></button>}
+      <video ref={video} autoPlay playsInline muted={!sound} aria-label="Live training video" onPlaying={() => setState('watching')} onStalled={() => { if (state === 'watching') setState('reconnecting'); }} onEnded={() => { setState('ended'); releaseLiveAudio(video.current); }}/>
+      <div className="live-video-top">{ready ? <span className="live-badge"><i aria-hidden="true"/>LIVE</span> : <span className="live-connection-state">{connection}</span>}<span className="live-timer">{liveDuration(session.startedAt, now)}</span></div>
+      {!ready && <div className="live-video-cover"><img src="/bravo-shield-192.png" alt="" width="72" height="72"/>
+        <h3>{!active ? connection : state === 'idle' ? 'Step into the session.' : state === 'blocked' ? 'Tap to start the video.' : state === 'ended' ? 'Your connection was interrupted.' : state === 'reconnecting' ? 'Reconnecting…' : 'Connecting to Bravo…'}</h3>
+        {['idle', 'ended', 'reconnecting'].includes(state) && active && <button className="button" onClick={watch}>{state === 'idle' ? 'Watch live' : 'Retry connection'} <span aria-hidden="true">▶</span></button>}
+        {state === 'blocked' && active && <button className="button" onClick={() => video.current?.play().catch(() => setError('Playback is still blocked. Check your browser’s media settings.'))}>Play video</button>}
+        {!active && <p role="status">{session.status === 'unavailable' ? 'We cannot verify the broadcast right now. The last frame is not a live status confirmation.' : 'Waiting for the trainer’s connection to recover.'}</p>}
         {error && <p role="alert">{error}</p>}
       </div>}
     </div>
     <div className="live-player-caption"><div><h2>{session.trainerName} <span> / </span> {session.dogName}</h2>
       {session.trainingFocus && <p className="live-training-focus">{session.trainingFocus}</p>}
       <p>Started {liveTime(session.startedAt)} Central Time · {session.audience === 'client' ? 'Client session' : 'Public session'}</p><p role="status">{connection}</p></div>
-      <div className="live-controls"><button onClick={() => toggleSound().catch(() => { video.current.muted = true; releaseLiveAudio(video.current); setError('Tap again to enable sound.'); })} disabled={state !== 'watching'} aria-pressed={sound}>{sound ? 'Mute audio' : 'Enable audio'}</button><button onClick={() => { const element = video.current; if (element?.webkitEnterFullscreen) element.webkitEnterFullscreen(); else element?.requestFullscreen?.().catch(() => setError('Full screen is unavailable in this browser.')); }} disabled={state !== 'watching'}>Full screen</button></div>
-    </div><p className="live-caption-note">Direct phone stream. Quality depends on the trainer’s connection and audience size. If this network cannot connect, try Wi-Fi. Automatic captions and replays are not available.</p>
+      <div className="live-controls"><button onClick={() => toggleSound().catch(() => { video.current.muted = true; releaseLiveAudio(video.current); setError('Tap again to enable sound.'); })} disabled={!ready} aria-pressed={sound}>{sound ? 'Mute audio' : 'Enable audio'}</button><button onClick={() => { const element = video.current; if (element?.webkitEnterFullscreen) element.webkitEnterFullscreen(); else element?.requestFullscreen?.().catch(() => setError('Full screen is unavailable in this browser.')); }} disabled={!ready}>Full screen</button></div>
+    </div><p className="live-caption-note">Direct phone stream. Quality depends on the trainer’s connection and audience size. On a weak cellular connection, retry here or switch networks. Some networks require a media relay before a direct stream can connect. Automatic captions and replays are not available.</p>
   </section>;
 }
 function TrainingHighlights() {
@@ -94,3 +104,4 @@ export default function LivePage() {
       <div className="live-signature"><img src="/bravo-shield-192.png" width="56" height="56" alt="Bravo K9 shield"/><p>MORE THAN TRAINING.<br/><span>A STRONGER TOMORROW.</span></p></div>
     </div></main><Footer/></>;
 }
+
