@@ -7,7 +7,7 @@ import { useLiveSessions, useLiveClock, liveTime, liveDuration } from './live-st
 import { createViewer } from './live-direct';
 import { claimLiveAudio, releaseLiveAudio } from './live-audio';
 import './live.css';
-import { livePlayerStatus } from '../../shared/live-presentation';
+import { livePlayerStatus, liveConnectionState } from '../../shared/live-presentation';
 
 function LivePlayer({ session, offset }) {
   const video = useRef(null), roomRef = useRef(null), generation = useRef(0);
@@ -26,7 +26,7 @@ function LivePlayer({ session, offset }) {
       roomRef.current?.disconnect(); setSound(false); releaseLiveAudio(video.current);
       const room = createViewer(session.id,
         stream => { if (current === generation.current && video.current) { video.current.srcObject = stream; video.current.play().catch(() => { if (current === generation.current) setState('blocked'); }); } },
-        state => { if (current === generation.current) setState(state); },
+        state => { if (current === generation.current) setState(previous => liveConnectionState(previous, state)); },
         message => { if (current === generation.current) setError(message); });
       roomRef.current = room; await room.connect();
       if (current !== generation.current) { room.disconnect(); return; }
@@ -104,4 +104,5 @@ export default function LivePage() {
       <div className="live-signature"><img src="/bravo-shield-192.png" width="56" height="56" alt="Bravo K9 shield"/><p>MORE THAN TRAINING.<br/><span>A STRONGER TOMORROW.</span></p></div>
     </div></main><Footer/></>;
 }
+
 

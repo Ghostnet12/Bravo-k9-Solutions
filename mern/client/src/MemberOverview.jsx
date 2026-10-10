@@ -7,7 +7,7 @@ import { Editable } from './SiteContent';
 import { formatDate, formatTime } from './ui';
 import { lessonLibraryVisible } from '../../shared/lesson-library';
 import { currentTrainingTerm, nextRequestedVisit } from '../../shared/customer-journey';
-const centralDate = value => DateTime.fromISO(value, { zone: 'America/Chicago' }).toFormat('LLL d, yyyy');
+const centralDate = value => value ? DateTime.fromISO(value, { zone: 'America/Chicago' }).toFormat('LLL d, yyyy') : 'Start date not recorded';
 export default function MemberOverview({ bookings = [], loading = false, failed = false }) {
   const { user, config } = useBravo();
   const next = nextRequestedVisit(bookings), month = next?.date?.slice(0, 7) || DateTime.now().setZone('America/Chicago').toFormat('yyyy-MM');

@@ -16,8 +16,8 @@ test('next visit excludes cancelled and waitlisted records, keeps requests disti
  assert.equal(nextRequestedVisit(bookings,now).status,'requested');
  assert.equal(nextRequestedVisit([],now),null);
 });
-test('coverage only shows active dated training terms, including paid canceled renewal', () => {
- const active={serviceIds:['training'],status:'canceled',validFrom:'2026-10-01T00:00:00Z',validUntil:'2026-11-01T00:00:00Z'};
+test('coverage only shows active dated training terms, including canceled terms with remaining credited access', () => {
+ const active={serviceIds:['training'],status:'canceled',creditedUntil:'2026-11-01T00:00:00Z',validFrom:'2026-10-01T00:00:00Z',validUntil:'2026-11-01T00:00:00Z'};
  assert.equal(currentTrainingTerm([active],now.toMillis()),active);
  assert.equal(currentTrainingTerm([{...active,validFrom:'2026-11-01T00:00:00Z'}],now.toMillis()),null);
  assert.equal(currentTrainingTerm([{...active,serviceIds:['online']}],now.toMillis()),null);
