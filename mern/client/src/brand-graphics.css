@@ -1,0 +1,128 @@
+/* Original Bravo graphics. Decorative only: no content, navigation or business logic. */
+.cinema-home { --bravo-graphic-gold: var(--gold, #ba9a64); }
+
+/* A coherent set of original line icons, alongside the existing service labels. */
+.cinema-home .goal-choice-link::before {
+  content: ""; display: block; width: 52px; height: 52px; flex: 0 0 52px;
+  margin: 2px 0 8px; background-color: currentColor; pointer-events: none;
+  -webkit-mask: var(--bravo-service-icon) center / contain no-repeat;
+  mask: var(--bravo-service-icon) center / contain no-repeat;
+  transition: transform 220ms ease;
+}
+.cinema-home .goal-choice-link[aria-labelledby="goal-tab-manners"] { --bravo-service-icon: url('/graphics/companion.svg'); }
+.cinema-home .goal-choice-link[aria-labelledby="goal-tab-walks"] { --bravo-service-icon: url('/graphics/leash.svg'); }
+.cinema-home .goal-choice-link[aria-labelledby="goal-tab-handling"] { --bravo-service-icon: url('/graphics/assessment.svg'); }
+.cinema-home .goal-choice-link[aria-labelledby="goal-tab-specialist"] { --bravo-service-icon: url('/graphics/compass.svg'); }
+.cinema-home .goal-choice { border-radius: 14px; }
+.cinema-home .goal-choice-link { padding: 24px; }
+.cinema-home .goal-preview { min-height: 44px; }
+
+/* Field contour drawing: kept out of the text column and out of the hit-test path. */
+.cinema-home .goal-result { position: relative; isolation: isolate; }
+.cinema-home .goal-result::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
+  background: url('/graphics/field-lines.svg') right bottom / 650px auto no-repeat;
+  opacity: .16; pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent 28%, #000);
+  mask-image: linear-gradient(90deg, transparent 28%, #000);
+}
+.cinema-home #specialist-training {
+  position: relative; isolation: isolate; padding: 28px; border: 1px solid var(--line);
+  border-radius: 16px; background: linear-gradient(120deg, #191611, #101010);
+}
+.cinema-home #specialist-training::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
+  background: url('/graphics/field-lines.svg') right center / 560px auto no-repeat;
+  opacity: .17; pointer-events: none;
+}
+.cinema-home #specialist-training > summary { min-height: 44px; }
+.cinema-home #specialist-training a { min-height: 44px; }
+
+/* Frame the real photographs without touching crops or intercepting editor gestures. */
+.cinema-home .cinema-program-image, .cinema-home .cinema-portrait { position: relative; }
+.cinema-home .cinema-program-image::after, .cinema-home .cinema-portrait::after {
+  content: ""; position: absolute; inset: 15px; pointer-events: none;
+  background:
+    linear-gradient(var(--bravo-graphic-gold),var(--bravo-graphic-gold)) left top/28px 1px,
+    linear-gradient(var(--bravo-graphic-gold),var(--bravo-graphic-gold)) left top/1px 28px,
+    linear-gradient(var(--bravo-graphic-gold),var(--bravo-graphic-gold)) right top/28px 1px,
+    linear-gradient(var(--bravo-graphic-gold),var(--bravo-graphic-gold)) right top/1px 28px,
+    linear-gradient(var(--bravo-graphic-gold),var(--bravo-graphic-gold)) left bottom/28px 1px,
+    linear-gradient(var(--bravo-graphic-gold),var(--bravo-graphic-gold)) left bottom/1px 28px,
+    linear-gradient(var(--bravo-graphic-gold),var(--bravo-graphic-gold)) right bottom/28px 1px,
+    linear-gradient(var(--bravo-graphic-gold),var(--bravo-graphic-gold)) right bottom/1px 28px;
+  background-repeat: no-repeat; opacity: .8;
+}
+.cinema-home .cinema-person { border-bottom: 1px solid var(--line); }
+
+/* Existing Bravo shield, original connection geometry, and the existing three words. */
+.cinema-home #method { position: relative; }
+.cinema-home #method::before {
+  content: ""; display: block; width: min(320px, 100%); height: 210px; margin: 0 auto 30px;
+  background: url('/images/bravo-logo-small.webp') center / 72px auto no-repeat,
+    url('/graphics/connection-rings.svg') center / contain no-repeat;
+  pointer-events: none;
+}
+.cinema-home #method .cinema-method-signature {
+  position: relative; display: grid; grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 20px; max-width: 760px; margin: 48px auto 0;
+  font-size: clamp(23px,3.2vw,34px); letter-spacing: .04em;
+}
+.cinema-home #method .cinema-method-signature::before {
+  content: ""; position: absolute; left: 16.66%; right: 16.66%; top: 39px;
+  height: 1px; background: linear-gradient(90deg,transparent,var(--bravo-graphic-gold),transparent);
+  pointer-events: none;
+}
+.cinema-home #method .cinema-method-signature > span {
+  display: flex; flex-direction: column; align-items: center; min-width: 0; gap: 18px;
+  padding: 12px 8px 24px; border-bottom: 1px solid var(--line); overflow-wrap: anywhere;
+}
+.cinema-home #method .cinema-method-signature > span::before {
+  content: ""; display: block; width: 54px; height: 54px; background-color: var(--bravo-graphic-gold);
+  -webkit-mask: var(--bravo-method-icon) center / contain no-repeat;
+  mask: var(--bravo-method-icon) center / contain no-repeat; pointer-events: none;
+}
+.cinema-home #method .cinema-method-signature > span:nth-child(1) { --bravo-method-icon: url('/graphics/bond.svg'); }
+.cinema-home #method .cinema-method-signature > span:nth-child(2) { --bravo-method-icon: url('/graphics/focus.svg'); }
+.cinema-home #method .cinema-method-signature > span:nth-child(3) { --bravo-method-icon: url('/graphics/route.svg'); }
+
+/* Editorial dividers and a quiet graphic finish; all existing copy stays editable. */
+.cinema-home #training > .cinema-section-heading, .cinema-home #team .cinema-section-heading {
+  padding-top: 25px; border-top: 1px solid var(--line); position: relative;
+}
+.cinema-home #training > .cinema-section-heading::before, .cinema-home #team .cinema-section-heading::before {
+  content: ""; position: absolute; top: -1px; left: 0; height: 2px; width: 72px;
+  background: var(--bravo-graphic-gold); pointer-events: none;
+}
+.cinema-home .cinema-close { position: relative; isolation: isolate; }
+.cinema-home .cinema-close::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: url('/graphics/field-lines.svg') center / cover no-repeat; opacity: .14;
+  -webkit-mask-image: radial-gradient(ellipse,#000 25%,transparent 72%);
+  mask-image: radial-gradient(ellipse,#000 25%,transparent 72%);
+}
+@media (hover:hover) and (prefers-reduced-motion:no-preference) {
+  .cinema-home .goal-choice-link:hover::before { transform: translateY(-3px); }
+}
+@media (max-width:760px) {
+  .cinema-home .goal-choice-link { padding: 18px 14px; }
+  .cinema-home .goal-choice-link::before { width: 40px; height: 40px; flex-basis: 40px; margin-bottom: 4px; }
+  .cinema-home #specialist-training { padding: 20px; }
+  .cinema-home #method::before { height: 165px; margin-bottom: 24px; background-size: 56px auto, contain; }
+  .cinema-home #method .cinema-method-signature { gap: 8px; margin-top: 32px; }
+  .cinema-home #method .cinema-method-signature > span { padding-inline: 2px; gap: 14px; }
+  .cinema-home #method .cinema-method-signature > span::before { width: 44px; height: 44px; }
+  .cinema-home #method .cinema-method-signature::before { top: 34px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .cinema-home .goal-choice-link::before { transition: none; transform: none; }
+}
+html:is(.access-reduced-motion,.a11y-reduce-motion) .cinema-home .goal-choice-link::before { transition: none; transform: none; }
+/* Decorative graphics are never the only label and disappear in contrast modes. */
+html.access-high-contrast .cinema-home :is(.goal-choice-link,.goal-result,#method,.cinema-method-signature,.cinema-method-signature > span,#specialist-training,.cinema-close)::before,
+html.access-high-contrast .cinema-home :is(.cinema-program-image,.cinema-portrait)::after { display: none; }
+@media (forced-colors:active) {
+  .cinema-home :is(.goal-choice-link,.goal-result,#method,.cinema-method-signature,.cinema-method-signature > span,#specialist-training,.cinema-close)::before,
+  .cinema-home :is(.cinema-program-image,.cinema-portrait)::after { display: none; }
+  .cinema-home #specialist-training { background: Canvas; border-color: CanvasText; }
+}

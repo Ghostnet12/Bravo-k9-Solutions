@@ -1,0 +1,44 @@
+name: Bravo graphics verification
+on:
+  pull_request:
+    branches: [bravo-mern]
+    paths:
+      - 'mern/client/public/graphics/**'
+      - 'mern/client/src/brand-graphics.css'
+      - 'mern/client/src/home-polish.css'
+      - 'mern/tests/brand-graphics*'
+      - '.github/workflows/brand-graphics.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: brand-graphics-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  graphics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    defaults:
+      run:
+        working-directory: mern
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: mern/package-lock.json
+      - run: npm ci --include=dev --ignore-scripts
+      - run: npm run build
+      - run: node --test tests/brand-graphics.test.js
+      - run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.63.0
+      - run: npx playwright install --with-deps chromium
+      - run: node tests/brand-graphics.browser.mjs
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: bravo-graphics-verification
+          path: mern/test-results/graphics-*
+          retention-days: 7
