@@ -1,4 +1,8 @@
 /* Customer task paths. Keep the existing brand, editor hooks and staff workspace. */
+/* The background video has no native controls. Let the stable hero surface
+   receive presses rather than WebKit's changing native video hit targets.
+   The visible manager and text/link controls are siblings and remain interactive. */
+.cinema-hero .cinema-hero-media, .cinema-hero .cinema-hero-media video { pointer-events: none; }
 .app-header.bravo-nav .header-inner > .header-quick-action {
   display: none; align-items: center; justify-content: center; min-height: 44px;
   padding: 10px 15px; border-radius: 30px; background: var(--gold, #ba9a64);
@@ -26,6 +30,7 @@
 .app-header.bravo-nav #bravo-navigation.is-open .nav-about { flex: 1 1 40%; }
 .app-header.bravo-nav #bravo-navigation.is-open .nav-about[open] { flex-basis: 100%; }
 .app-header.bravo-nav #bravo-navigation.is-open .nav-about > summary { padding: 10px 12px; font-size: 14px; }
+.app-header.bravo-nav #bravo-navigation #bravo-navigation .nav-about-links { position: static; }
 .app-header.bravo-nav #bravo-navigation.is-open .nav-about-links { position: static; width: 100%; max-width: none; box-shadow: none; }
 .app-header.bravo-nav #bravo-navigation.is-open .nav-about-links a { flex: none; }
 .training-service-links { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 24px; }
