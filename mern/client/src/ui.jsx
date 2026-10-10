@@ -44,6 +44,13 @@ export function Header() {
     if (about.current?.open) { about.current.open = false; about.current.querySelector('summary')?.focus(); event.stopPropagation(); }
     else if (menuOpen) { setMenuOpen(false); menuButton.current?.focus(); }
   }
+  function leaveAbout(event) {
+    // WebKit may blur the summary to a null target while a submenu link is
+    // being pressed. Closing on that blur removes the link before its click.
+    // Keyboard focus to a known outside element, outside presses and Escape
+    // still close the disclosure; successful link activation closes the menu.
+    if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false;
+  }
   return <Editable as="header" contentKey="ui-1" ref={header} className="app-header bravo-nav" data-signed-in={Boolean(user)} onKeyDown={handleEscape}>
     <Editable as="div" contentKey="ui-2" className="header-inner">
       <Brand/>
@@ -58,7 +65,7 @@ export function Header() {
           <Editable as={Link} contentKey="nav-training-pricing" canEditLink canEditText to="/#training">Training &amp; Pricing</Editable>
           <Editable as={NavLink} contentKey="cinema-nav-workshops" canEditLink canEditText to="/workshops">Workshops</Editable>
           <NavLink to="/live">Live Cams</NavLink>
-          <details className="nav-about" ref={about} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false; }}>
+          <details className="nav-about" ref={about} onBlur={leaveAbout}>
             <summary>About Bravo</summary>
             <div className="nav-about-links">
               <Editable as={Link} contentKey="cinema-nav-about" canEditLink canEditText to="/#team">Meet the team</Editable>
