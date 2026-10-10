@@ -6,7 +6,7 @@ test('homepage ad carousel ships with the Saturday workshop as its first banner'
   const ad = DEFAULT_HOME_ADS[0];
   assert.equal(ad.id, 'saturday-workshop-october-3');
   assert.equal(ad.title, 'Saturday Dog Training Workshop');
-  assert.equal(ad.link, '/contact');
+  assert.equal(ad.link, '/workshops');
   assert.equal(ad.enabled, true);
   assert.equal(ad.image, '/images/saturday-workshop-october-3.webp');
 });
