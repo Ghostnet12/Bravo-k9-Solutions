@@ -48,7 +48,7 @@ function LivePlayer({ session, offset }) {
   const ready = active && state === 'watching';
   return <section id="live-player" className="live-player" aria-label={`${session.trainerName} training ${session.dogName}`}>
     <div className="live-video-stage">
-      <video ref={video} autoPlay playsInline muted={!sound} aria-label="Live training video" onPlaying={() => setState('watching')} onStalled={() => { if (state === 'watching') setState('reconnecting'); }} onEnded={() => { setState('ended'); releaseLiveAudio(video.current); }}/>
+      <video ref={video} autoPlay playsInline muted={!sound} aria-label="Live training video" onPlaying={() => setState('watching')} onTimeUpdate={event => { const media = event.currentTarget; if (!media.paused && !media.ended && !media.seeking && media.readyState >= 2 && ['connecting', 'waiting', 'reconnecting'].includes(state)) setState('watching'); }} onWaiting={() => { if (state === 'watching') setState('reconnecting'); }} onEnded={() => { setState('ended'); releaseLiveAudio(video.current); }}/>
       <div className="live-video-top">{ready ? <span className="live-badge"><i aria-hidden="true"/>LIVE</span> : <span className="live-connection-state">{connection}</span>}<span className="live-timer">{liveDuration(session.startedAt, now)}</span></div>
       {!ready && <div className="live-video-cover"><img src="/bravo-shield-192.png" alt="" width="72" height="72"/>
         <h3>{!active ? connection : state === 'idle' ? 'Step into the session.' : state === 'blocked' ? 'Tap to start the video.' : state === 'ended' ? 'Your connection was interrupted.' : state === 'reconnecting' ? 'Reconnecting…' : 'Connecting to Bravo…'}</h3>
