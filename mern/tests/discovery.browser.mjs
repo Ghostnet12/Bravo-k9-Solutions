@@ -18,19 +18,14 @@ try {
     try { for (const width of [360,768,1440]) {
       const context=await browser.newContext({viewport:{width,height:900},reducedMotion:width === 360 ? 'reduce' : 'no-preference'}), page=await context.newPage(), errors=[], browserDiagnostics=[];
       let discard=true, confirmations=0;
-      // Finish mocked API responses before tearing down the document. WebKit
-      // reports intercepted requests cancelled by navigation as access errors.
+      // Finish mocked responses before navigation; preserve cancellation diagnostics.
       const pendingApi=new Set();let lastApi=0;
       page.on('request',request=>{if(new URL(request.url()).pathname.startsWith('/api/')){pendingApi.add(request);lastApi=Date.now();}});
       for(const name of ['requestfinished','requestfailed'])page.on(name,request=>{if(pendingApi.delete(request))lastApi=Date.now();});
       async function settleApi(){const deadline=Date.now()+5000;while(pendingApi.size || Date.now()-lastApi<150){if(Date.now()>deadline)throw new Error('Mocked API requests did not settle');await new Promise(resolve=>setTimeout(resolve,25));}}
       async function visit(url,options){await settleApi();return page.goto(url,{waitUntil:'domcontentloaded',...options});}
       async function reload(){await settleApi();return page.reload({waitUntil:'domcontentloaded'});}
-
       let owner=false, event={...DEFAULT_WORKSHOP}, entries={}, signup=null, failSave=false, failWorkshop=false;
-      // WebKit also emits pageerror for handled fetch cancellations during
-      // navigation. Keep those diagnostics and assert the browser's actual
-      // uncaught exceptions and promise rejections, as the toolkit suite does.
       page.on('pageerror',error=>browserDiagnostics.push({message:error.message,stack:error.stack,url:page.url()}));
       await page.exposeFunction('reportDiscoveryError',message=>errors.push(message));
       await page.addInitScript(()=>{
@@ -64,7 +59,6 @@ try {
       });
       try {
         for(const path of ['/','/dog-training','/behavior-assessment','/dog-walking','/workshops','/learn','/contact']){
-          // Video range requests can stay active in WebKit; wait for the usable page instead.
           const configured=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/config' && response.ok());
           await visit(origin+path,{waitUntil:'domcontentloaded'});await configured;
           await page.locator('.accessibility-trigger').waitFor();
@@ -80,9 +74,9 @@ try {
         await page.locator('.goal-proof figcaption').waitFor();await settleApi();
         await page.locator('.goal-choices').screenshot({path:`test-results/program-cards-${engineName}-${width}.png`});
         for(const [label,price,program,focus,details] of [
-          ['Everyday manners','$200','training','basic-obedience','/dog-training'],
+          ['Pulling, jumping & puppy manners','$200','training','basic-obedience','/dog-training'],
           ['Dog walking','$25','walking',null,'/dog-walking'],
-          ['Aggression & handling','$400','aggression',null,'/behavior-assessment'],
+          ['Aggression concerns','$400','aggression',null,'/behavior-assessment'],
         ]){
           const card=page.getByRole('link',{name:label,exact:true});
           assert.ok((await card.innerText()).includes(price),`${label} has its own service price`);
@@ -90,10 +84,12 @@ try {
           assert.ok((await page.locator('.goal-price').innerText()).includes(price));
           assert.equal(await page.locator('.goal-result').getByRole('link',{name:'What’s included'}).getAttribute('href'),details);
           const expected=`/portal?program=${program}${focus ? `&focus=${focus}` : ''}`;
-          assert.equal(await card.getAttribute('href'),expected);
+          assert.equal(await card.getAttribute('href'),details,'the service card explains the program before booking');
           assert.equal(await page.locator('.goal-result .goal-actions .button').getAttribute('href'),expected);
-          // The price card itself must navigate, without another CTA tap.
-          await card.click();await page.waitForURL(origin+expected);
+          await card.click();await page.waitForURL(origin+details);await page.locator('main h1').waitFor();
+          await visit(origin);await page.locator('.goal-proof figcaption').waitFor();await settleApi();
+          await page.getByRole('button',{name:`Preview ${label}`,exact:true}).click();
+          await page.locator('.goal-result .goal-actions .button').click();await page.waitForURL(origin+expected);
           if(program==='training'){
             const field=page.getByRole('combobox',{name:'What would you like help with?',exact:true});
             await field.waitFor();assert.equal(await field.inputValue(),focus);
@@ -109,16 +105,16 @@ try {
           }
           await visit(origin);await page.locator('.goal-proof figcaption').waitFor();await settleApi();
         }
-        const specialistCard=page.getByRole('link',{name:'Specialized training',exact:true});
+        const specialistCard=page.getByRole('link',{name:'Advanced & working-dog goals',exact:true});
         const specialistText=await specialistCard.innerText();
         assert.equal(specialistText.includes('$200'),false,'specialist card does not promise the standard monthly rate');
         assert.match(specialistText,/Talk with Bravo/);assert.match(specialistText,/Scope & pricing are goal-specific/);
         assert.equal(await specialistCard.getAttribute('href'),'/contact');
-        await page.getByRole('button',{name:'Preview Specialized training',exact:true}).click();
+        await page.getByRole('button',{name:'Preview Advanced & working-dog goals',exact:true}).click();
         assert.equal(await page.locator('.goal-result .goal-price').count(),0,'specialist preview has no standard membership price');
         assert.match(await page.locator('.goal-result').innerText(),/scoped individually/i);
         assert.equal(await page.locator('.goal-result .goal-actions .button').getAttribute('href'),'/contact');
-        assert.equal(await page.locator('.goal-result').getByRole('link',{name:'See the training approach'}).getAttribute('href'),'/dog-training');
+        assert.equal(await page.locator('.goal-result').getByRole('link',{name:'Explore working-dog goals'}).getAttribute('href'),'/#specialist-training');
         await specialistCard.click();await page.waitForURL(origin+'/contact');await page.getByRole('heading',{name:'Talk to Bravo.',exact:true}).waitFor();
         await visit(origin);await page.locator('.goal-proof figcaption').waitFor();await settleApi();
         const proof=page.locator('.home-work-proof');await proof.getByRole('button',{name:'Working dogs',exact:true}).click();assert.equal(await proof.locator('article[data-proof-video]').count(),1);await proof.getByRole('button',{name:'All training',exact:true}).click();assert.equal(await proof.locator('article[data-proof-video]').count(),3);
@@ -145,13 +141,12 @@ try {
         await workshopEditor.getByRole('radio',{name:'Every Saturday — Automatic',exact:true}).check();
         await workshopEditor.getByRole('button',{name:'Save workshop',exact:true}).click();
         await page.getByText('12:00 PM–2:00 PM · Central',{exact:true}).waitFor();
-
         failWorkshop=true;await page.evaluate(()=>window.dispatchEvent(new Event('bravo-workshop-changed')));
         await page.getByText(/Showing the last verified workshop schedule/).waitFor();
         assert.match(await page.locator('.workshop-details').innerText(),/12:00 PM–2:00 PM/);
         failWorkshop=false;await page.evaluate(()=>window.dispatchEvent(new Event('bravo-workshop-changed')));await settleApi();
         await visit(origin);await page.getByRole('button',{name:'Edit page text & design'}).click();const dialog=page.getByRole('dialog',{name:'Edit website section'});await dialog.getByLabel('Edit this part',{exact:true}).selectOption('discovery-goal-title');await dialog.getByLabel('Text',{exact:true}).fill('Find your next step.');failSave=true;await dialog.getByRole('button',{name:'Publish website changes'}).click();await dialog.getByText('Fixture connection interrupted').waitFor();assert.equal(await dialog.getByLabel('Text',{exact:true}).inputValue(),'Find your next step.');failSave=false;await dialog.getByRole('button',{name:'Publish website changes'}).click();await dialog.waitFor({state:'hidden'});await page.getByText('Saved. Your website changes are published.',{exact:true}).waitFor();await reload();await page.getByRole('heading',{name:'Find your next step.',exact:true}).waitFor();
-        // Cancelling preserves drafts; publishing saves every changed section atomically.
+        // Cancelling preserves drafts; publishing saves changed sections atomically.
         await page.getByRole('button',{name:'Edit page text & design'}).click();
         await dialog.getByLabel('Edit this part',{exact:true}).selectOption('discovery-goal-title');
         await dialog.getByLabel('Text',{exact:true}).fill('A preserved draft.');
