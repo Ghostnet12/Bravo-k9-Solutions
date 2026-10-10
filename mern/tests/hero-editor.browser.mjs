@@ -36,8 +36,16 @@ try {
       const context = await browser.newContext({ viewport: { width, height: 900 }, isMobile: width === 390, hasTouch: width === 390 });
       const signIn = async name => { await context.clearCookies(); if (name) await context.addCookies([{ name: 'bravo_session', value: tokens[name], url: origin }]); };
       await signIn('owner');
-      const page = await context.newPage(), errors = [], retiredRequests = [];
-      page.on('pageerror', error => errors.push(error.message));
+      const page = await context.newPage(), errors = [], browserDiagnostics = [], retiredRequests = [];
+      // Keep browser-internal diagnostics, including WebKit's cancelled old-
+      // document polling requests. Assert actual DOM runtime errors and
+      // unhandled rejections separately, as the discovery regression does.
+      page.on('pageerror', error => browserDiagnostics.push({ message: error.message, stack: error.stack, url: page.url() }));
+      await page.exposeFunction('recordHeroRuntimeError', message => errors.push(message));
+      await page.addInitScript(() => {
+        window.addEventListener('error', event => { if (event instanceof ErrorEvent) void window.recordHeroRuntimeError(event.error?.stack || event.message).catch(() => {}); });
+        window.addEventListener('unhandledrejection', event => { void window.recordHeroRuntimeError(event.reason?.stack || event.reason?.message || String(event.reason)).catch(() => {}); });
+      });
       await page.addInitScript(()=>{window.heroPointerEvents=[];for(const type of ['pointerdown','pointerup','pointermove','pointercancel','pointerleave','scroll','blur'])document.addEventListener(type,event=>{window.heroPointerEvents.push({type,pointer:event.pointerType,target:event.target?.className,x:event.clientX,y:event.clientY});window.heroPointerEvents=window.heroPointerEvents.slice(-30);},true);});
       page.on('request', request => { if (/bravo-real-world\.(mp4|webm)|bravo-film-poster\.webp/.test(request.url())) retiredRequests.push(request.url()); });
       const film = page.locator('.cinema-film video');
@@ -161,9 +169,12 @@ try {
         console.log(`PASS ${engineName}/${width}: real hold, upload, database save, owner/admin copy, reload, public SSR and muted autoplay`);
       } catch (error) {
         await page.screenshot({ path: `test-results/hero-editor-failure-${engineName}-${width}.png`, fullPage: true });
-        await writeFile(`test-results/hero-editor-failure-${engineName}-${width}.json`, JSON.stringify({ error: error.message, errors, pointers:await page.evaluate(()=>window.heroPointerEvents), body: await page.locator('body').innerText() }, null, 2));
+        await writeFile(`test-results/hero-editor-failure-${engineName}-${width}.json`, JSON.stringify({ error: error.message, errors, browserDiagnostics, pointers:await page.evaluate(()=>window.heroPointerEvents), body: await page.locator('body').innerText() }, null, 2));
         throw error;
-      } finally { await context.close(); }
+      } finally {
+        await writeFile(`test-results/hero-editor-diagnostics-${engineName}-${width}.json`, JSON.stringify({ errors, browserDiagnostics }, null, 2));
+        await context.close();
+      }
     }} finally { await browser.close(); }
   }
 } finally { server?.close(); await mongoose.disconnect(); await replica.stop(); }
