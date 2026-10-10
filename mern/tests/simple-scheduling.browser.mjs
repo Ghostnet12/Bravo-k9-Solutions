@@ -99,7 +99,11 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})){
    const nav=page.getByRole('navigation',{name:'Primary navigation',exact:true});
    assert.equal(await nav.locator('button').last().innerText(),'Sign out');
    if(access==='member'){
-    assert.equal(await nav.getByRole('link',{name:'My schedule',exact:true}).count(),1);
+    const scheduleAction=page.locator('header > .header-inner > .header-quick-action');
+    assert.ok(await scheduleAction.isVisible());
+    assert.equal(await scheduleAction.innerText(),'My Schedule');
+    assert.equal(await scheduleAction.getAttribute('href'),'/schedule');
+    assert.equal(await nav.getByRole('link',{name:'My Schedule',exact:true}).isVisible(),false);
     assert.equal(await nav.getByRole('link',{name:'Message Bravo',exact:true}).getAttribute('href'),'/community?tab=direct');
    }else{
     assert.equal(await nav.getByRole('link',{name:'Team schedule',exact:true}).getAttribute('href'),'/admin?tab=schedule');
