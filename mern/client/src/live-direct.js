@@ -1,7 +1,8 @@
 import { api } from './api';
+import { LIVE_ICE_SERVERS } from '../../shared/live-network.js';
 
-export const DIRECT_ICE = [{ urls: 'stun:stun.cloudflare.com:3478' }];
-export const DIRECT_FAILURE = 'This network could not make a direct connection. Try Wi-Fi or a different network. Bravo does not use a paid video relay.';
+export const DIRECT_ICE = LIVE_ICE_SERVERS;
+export const DIRECT_FAILURE = 'This network could not connect the phone and viewer directly. Cellular data is allowed, but some carriers, VPNs and firewalls require a video relay. Bravo currently has no relay configured. Try another network.';
 export const cameraReady = stream => !!stream?.getVideoTracks().some(track => track.readyState === 'live' && track.enabled && !track.muted);
 export function stopStream(stream) { stream?.getTracks().forEach(track => track.stop()); }
 export async function gatherDescription(pc) {
@@ -47,14 +48,8 @@ export function createBroadcaster(sessionId, getStream, onCount) {
           await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
         }
       }
-      for (const sender of pc.getSenders()) {
-        if (!sender.track) continue;
-        const parameters = sender.getParameters();
-        if (parameters.encodings?.length) {
-          parameters.encodings.forEach(encoding => { encoding.maxBitrate = sender.track.kind === 'video' ? 700000 : 48000; });
-          await sender.setParameters(parameters).catch(() => {});
-        }
-      }
+      // Let WebRTC estimate available bandwidth and adapt each connection.
+      // No application bitrate ceiling or minimum connection speed is imposed.
     } catch {
       clearTimeout(peer.timeout); pc.close(); count();
       // Release a failed slot; retain the local tombstone until the next sync so
@@ -135,7 +130,10 @@ export function createViewer(sessionId, onStream, onState, onError) {
 // frames before discovery. This is media-pipeline health, not proof of cellular
 // reachability. Actual viewers still negotiate their own direct connections.
 export async function createPublisherHealth(getStream) {
-  const sender = new RTCPeerConnection({ iceServers: [] }), receiver = new RTCPeerConnection({ iceServers: [] });
+  // Phones may not expose a usable host-only path on cellular. Give the local
+  // media check the same free address discovery as real viewer connections.
+  // STUN is not a relay and does not guarantee carrier/NAT reachability.
+  const sender = new RTCPeerConnection({ iceServers: DIRECT_ICE }), receiver = new RTCPeerConnection({ iceServers: DIRECT_ICE });
   const id = crypto.randomUUID(); let closed = false;
   const sink = document.createElement('video'); sink.muted = true; sink.autoplay = true; sink.playsInline = true;
   sink.setAttribute('aria-hidden', 'true'); sink.setAttribute('data-publisher-health', '');
@@ -158,11 +156,12 @@ export async function createPublisherHealth(getStream) {
     await receiver.setLocalDescription(await receiver.createAnswer());
     await sender.setRemoteDescription(await gatherDescription(receiver));
     const until = Date.now() + 10000;
+    let lastHealth = { framesEncoded: 0, framesDecoded: 0 };
     while (!closed && Date.now() < until) {
-      const health = await sample();
+      const health = await sample(); lastHealth = health;
       if (health.framesEncoded > 1 && health.framesDecoded > 1) return { sample, disconnect, replaceTrack: track => videoSender.replaceTrack(track) };
       await new Promise(resolve => setTimeout(resolve, 150));
     }
-    throw new Error('The camera is not publishing video frames. End the session and try again.');
+    throw new Error(`The camera opened, but its WebRTC publishing check failed. Retry the camera. If this repeats, share this diagnostic: PUBLISH_CHECK ${sender.iceConnectionState}/${receiver.iceConnectionState} ${lastHealth.framesEncoded}/${lastHealth.framesDecoded}.`);
   } catch (error) { disconnect(); throw error; }
 }

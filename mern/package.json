@@ -39,5 +39,10 @@
     "mongodb-memory-server": "^11.0.0",
     "supertest": "^7.2.2",
     "vite": "8.0.16"
+  },
+  "overrides": {
+    "concurrently": {
+      "shell-quote": "1.12.0"
+    }
   }
 }

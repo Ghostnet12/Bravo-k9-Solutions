@@ -8,7 +8,11 @@ import { DateTime } from 'luxon';
 import { SERVICES } from '../shared/catalog.js';
 
 const dist = fileURLToPath(new URL('../client/dist/', import.meta.url)), html = await readFile(`${dist}/bravo-shell.html`, 'utf8');
-const app = express(); app.use(express.static(dist)); app.get('/{*path}', (_req, res) => res.type('html').send(html));
+const app = express();
+// Native same-origin polling can be cancelled safely during fixture navigation.
+// Do not fulfill an intercepted Live poll after its document has navigated away.
+app.get('/api/live', (_req, res) => res.json({ sessions: [], announcements: [], availability: 'available', serverTime: new Date().toISOString() }));
+app.use(express.static(dist)); app.get('/{*path}', (_req, res) => res.type('html').send(html));
 const server = app.listen(0, '127.0.0.1'); await once(server, 'listening'); const origin = `http://127.0.0.1:${server.address().port}`;
 const clientId = 'cccccccccccccccccccccccc', now = DateTime.now().setZone('America/Chicago'), date = now.toISODate();
 await mkdir('test-results', { recursive: true });
@@ -39,7 +43,7 @@ try {
         page.on('dialog', dialog => acceptedReplacement ? dialog.accept() : dialog.dismiss());
         await page.addInitScript(() => Object.defineProperty(navigator, 'clipboard', { value: { writeText: async text => { window.fixtureCopiedText = text; } }, configurable: true }));
         const membership = { active: true, enabled: true, manual: true, revision: 1, startsAt: now.toISO(), endsAt: now.plus({ months: 1 }).toISO() };
-        await page.route('**/api/**', async route => {
+        await page.route(url => url.pathname.startsWith('/api/') && url.pathname !== '/api/live', async route => {
           const url = new URL(route.request().url()), path = url.pathname, method = route.request().method(); let json = {}, status = 200;
           if (path === '/api/config') json = { connected: true, paymentsReady: false, services: SERVICES, schedule: { enabled: true, weekdays: [1, 2, 3, 4, 5], hours: ['10:00'] } };
           else if (path === '/api/auth/me') json = { user: activeUser, services: activeUser === client && !client.mustChangePassword ? ['training', 'online'] : [], membership: activeUser === client && !client.mustChangePassword ? membership : { active: false } };

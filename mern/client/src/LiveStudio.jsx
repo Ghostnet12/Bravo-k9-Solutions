@@ -86,20 +86,25 @@ export default function LiveStudio() {
   }
   async function start() {
     if (!preview || !data?.configured) return;
-    const credentials = await api('/live', { method: 'POST', body: { audience, dogName: booking?.dogName || dogName, trainingFocus,
-      ...(bookingId ? { bookingId } : {}), publicConsent: audience === 'public' && consent } });
-    current.current = credentials.session;
+    let credentials;
     try {
       if (!mounted.current) throw new Error('Broadcast cancelled.');
       setStatus('starting');
+      // Camera health setup can take longer on phones. Do it before creating
+      // the short-lived server session so setup cannot consume its start lease.
       health.current = await createPublisherHealth(() => stream.current);
+      if (!mounted.current) throw new Error('Broadcast cancelled.');
+      credentials = await api('/live', { method: 'POST', body: { audience, dogName: booking?.dogName || dogName, trainingFocus,
+        ...(bookingId ? { bookingId } : {}), publicConsent: audience === 'public' && consent } });
+      current.current = credentials.session;
+      if (!mounted.current) throw new Error('Broadcast cancelled.');
       room.current = createBroadcaster(credentials.session.id, () => stream.current, count => { if (mounted.current && current.current?.id === credentials.session.id) setViewerCount(count); });
       const result = await api(`/live/${credentials.session.id}/heartbeat`, { method: 'POST', body: { cameraReady: cameraReady(stream.current), publication: await health.current.sample() } });
       if (!mounted.current) throw new Error('Broadcast cancelled.');
       current.current = result.session; setSession({ ...result.session, serverTime: result.serverTime }); setStatus(result.session.status); refreshLive(); await load();
     } catch (e) {
       await room.current?.disconnect(); health.current?.disconnect(); stopStream(stream.current); stream.current = null;
-      await api(`/live/${credentials.session.id}/end`, { method: 'POST', body: {} }).catch(() => {});
+      if (credentials) await api(`/live/${credentials.session.id}/end`, { method: 'POST', body: {} }).catch(() => {});
       current.current = null;
       if (mounted.current) { setPreview(false); await load(); }
       throw e;
@@ -145,7 +150,7 @@ export default function LiveStudio() {
   }
   return <Page className="live-studio" title={<>BRAVO <em>LIVE</em></>} eyebrow="TRAINER BROADCAST" intro="Your phone. Your dog. Your session.">
     {!authReady ? <p role="status">Checking trainer access…</p> : !allowed ? <section className="panel"><h2>Trainer sign in required.</h2><Link className="button" to="/account">Sign in</Link></section> : <>
-      <Notice error>{error}</Notice>
+
       {data && !data.configured && <Notice>Camera preview is available. Broadcasting is temporarily disabled.</Notice>}
       <div className="live-studio-grid"><section className="live-setup panel"><p className="live-eyebrow">01 / SET THE SESSION</p>
         <fieldset disabled={busy || !!session}><legend className="sr-only">Session details</legend><label>Dog / scheduled client<select value={bookingId} onChange={event => { setBookingId(event.target.value); setConsent(false); }}><option value="">Choose a saved training request…</option>{data?.bookings.map(item => <option value={item.id} key={item.id}>{item.dogName} · {item.clientName}</option>)}</select></label>
@@ -157,9 +162,10 @@ export default function LiveStudio() {
           {audience === 'client' && !bookingId && <p className="helper">Select a saved client request to enable private viewing.</p>}
         </fieldset><p className="live-install">Add Bravo to your Home Screen for quick access. On iPhone: Share → Add to Home Screen.</p>
       </section><section className="live-camera-panel"><div className="live-camera-preview"><video ref={video} autoPlay muted playsInline aria-label="Your camera preview" className={facing === 'user' ? 'is-mirrored' : ''}/>{!preview && <div className="live-video-cover"><img src="/bravo-shield-192.png" alt="" width="72" height="72"/><h2>READY WHEN YOU ARE.</h2><button className="button" disabled={busy || !data || !!session} onClick={() => withAction(() => openCamera())}>Enable camera preview</button></div>}{session && <div className="live-video-top"><span className={localStatus === 'live' ? 'live-badge' : 'live-connection-state'}>{localStatus === 'live' ? <><i aria-hidden="true"/>LIVE</> : localStatus.toUpperCase()}</span><span className="live-timer">{liveDuration(session.startedAt, now)}</span></div>}</div>
+        <Notice error>{error}</Notice>
         <div className="live-camera-actions"><button disabled={busy || !preview} onClick={() => withAction(flip)}>Flip camera</button><button aria-pressed={audioOn} disabled={busy || (!!session && !preview)} onClick={() => withAction(toggleAudio)}>{audioOn ? 'Microphone on' : 'Microphone off'}</button></div>
         {session ? <><p className="live-current">{session.trainerName} · {session.dogName} · {viewerCount} {viewerCount === 1 ? 'viewer' : 'viewers'} · <strong>{session.audience === 'public' ? 'PUBLIC' : 'CLIENT ONLY'}</strong></p><button className="button live-stop" disabled={busy} onClick={() => withAction(() => end())}>{busy ? 'Ending…' : '■ End live session'}</button></> : <button className="button live-start" disabled={busy || !preview || !data?.configured || !(booking?.dogName || dogName.trim()) || (audience === 'client' && !bookingId) || (audience === 'public' && !consent)} onClick={() => withAction(start)}>{busy ? 'Connecting…' : '● Start live'}</button>}
-        <p className="live-phone-note">Direct phone streaming · no fixed viewer cap. Each viewer uses more of your phone’s upload connection, which can affect video quality. Keep this screen open and your phone unlocked. Calls, switching apps, or a weak signal can interrupt the camera.</p><p className="live-phone-note">Some networks cannot connect directly. Try Wi-Fi if a viewer cannot connect. Direct connections share network addresses with viewers; normal mobile data usage applies.</p>
+        <p className="live-phone-note">Wi-Fi or cellular data · no minimum speed requirement or fixed viewer cap. Video quality adapts to your connection. Each viewer uses more of your phone’s upload connection. Keep this screen open and your phone unlocked. Calls, switching apps, or a weak signal can interrupt the camera.</p><p className="live-phone-note">Some carriers, VPNs and firewalls block direct video connections and need a relay. Bravo currently has no relay configured. Direct connections share network addresses with viewers; normal mobile data usage applies.</p>
       </section></div>
       {!!activeSessions.length && <section className="panel live-studio-sessions"><h2>ACTIVE SESSIONS</h2>{activeSessions.map(item => <div key={item.id}><p><strong>{item.trainerName}</strong> · {item.dogName}<br/><span>{item.status === 'live' ? '● LIVE' : item.status.toUpperCase()} · {liveTime(item.startedAt)} CT · {liveDuration(item.startedAt, now)} · {item.audience === 'public' ? 'Public' : 'Client only'}</span></p><button disabled={busy} onClick={() => withAction(() => end(item.id))}>End session</button></div>)}</section>}
       <p><Link to="/live">Open the live viewing page →</Link></p>

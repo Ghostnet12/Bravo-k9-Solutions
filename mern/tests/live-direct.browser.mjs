@@ -27,6 +27,27 @@ try {
   const trainerContext = await chrome.newContext({ viewport: { width: 390, height: 1000 } });
   await trainerContext.addCookies([{ name: 'bravo_session', value: token, domain: '127.0.0.1', path: '/' }]);
   const phone = await trainerContext.newPage(), errors = [];
+  await phone.addInitScript(() => {
+    // Slow phone setup exceeds the 20-second abandoned-session lease. Keep
+    // real WebRTC camera frames; delay only the first health statistics read.
+    const NativePeer = window.RTCPeerConnection;
+    let healthReads = 0, healthDelay;
+    window.__testPeers = [];
+    window.RTCPeerConnection = class extends NativePeer {
+      constructor(config) { super(config); window.__testPeers.push(this); }
+      async getStats(...args) {
+        // Both sides must sample after the delay. Sampling the receiver before
+        // frames arrive would manufacture a stalled pipeline instead of slow setup.
+        if (healthReads++ < 2) { healthDelay ||= new Promise(resolve => setTimeout(resolve, 21000)); await healthDelay; }
+        const report = await super.getStats(...args);
+        // Negative fixture only: emulate a stalled publishing check, never
+        // manufacture positive frame counts for successful streaming tests.
+        if (window.__failPublication) return new Map([...report].map(([id, stat]) => [id, { ...stat, framesEncoded: 0, framesDecoded: 0 }]));
+        return report;
+      }
+    };
+    Object.defineProperty(navigator, 'connection', { configurable: true, value: { type: 'cellular', effectiveType: '2g', downlink: .05, saveData: true } });
+  });
   const controlFailures=[];
   phone.on('response',response=>{if(response.url().includes('/api/live')&&response.status()>=400)controlFailures.push({path:new URL(response.url()).pathname,status:response.status()});});
   phone.on('pageerror', e => errors.push(e.message));
@@ -54,7 +75,10 @@ try {
   await phone.waitForFunction(() => document.querySelector('.live-camera-preview video')?.srcObject?.getVideoTracks().some(t => t.readyState === 'live' && !t.muted));
   assert.deepEqual((await (await fetch(`${origin}/api/live`)).json()).announcements, [], 'preview never advertises LIVE');
   await phone.getByRole('button', { name: '● Start live' }).click();
-  await phone.getByRole('button', { name: '■ End live session' }).waitFor();
+  assert.equal(await LiveSession.countDocuments({ open: true }), 0, 'slow camera health setup does not consume a server session lease');
+  await phone.getByRole('button', { name: '■ End live session' }).waitFor({ timeout: 60000 });
+  console.log('PASS slow publisher setup beyond the stale timeout; cellular/save-data metadata never blocks Start');
+  assert.equal(await phone.evaluate(() => window.__testPeers.slice(0, 2).every(pc => pc.getConfiguration().iceServers.length === 2)), true, 'the publisher health check shares free STUN discovery with viewer connections');
   const record = await LiveSession.findOne({ open: true }); assert.equal(record.transport, 'direct'); assert.equal(record.status, 'live'); assert.ok(record.publication.framesEncoded > 0 && record.publication.framesDecoded > 0); assert.equal(record.trainingFocus, 'Field obedience');
   const homeContext = await chrome.newContext({ viewport: { width: 1440, height: 1000 } });
   const home = await homeContext.newPage(); await home.goto(origin);
@@ -77,6 +101,7 @@ try {
     console.log(`PASS real direct video frames: Chromium phone to ${name}, no viewer camera permission`);
   }
   await phone.getByText('4 viewers', { exact: false }).waitFor();
+  assert.equal(await phone.evaluate(() => window.__testPeers.flatMap(pc => pc.getSenders()).some(sender => sender.getParameters().encodings?.some(encoding => encoding.maxBitrate !== undefined))), false, 'no application bitrate ceiling on live connections');
   assert.equal(await LivePeer.countDocuments({ sessionId: record._id }), 4);
   for (const page of viewers) {
     const before = await page.locator('.live-video-stage video').evaluate(video => video.currentTime);
@@ -169,6 +194,16 @@ try {
   assert.equal(lostAnswerResponse, true);
   assert.deepEqual(errors, []);
   console.log('PASS lost-answer response recovery, microphone enable/disable, live camera switch, viewer count, local track cleanup, peer cleanup and remote shutdown');
+  const recordsBeforeFailure = await LiveSession.countDocuments({});
+  await phone.evaluate(() => { window.__failPublication = true; });
+  await phone.getByRole('button', { name: 'Enable camera preview' }).click();
+  await phone.getByRole('button', { name: '● Start live' }).click();
+  await phone.locator('.live-camera-panel').getByRole('alert').filter({ hasText: 'PUBLISH_CHECK' }).waitFor({ timeout: 40000 });
+  assert.equal(await LiveSession.countDocuments({}), recordsBeforeFailure, 'a failed local publishing check creates no live-session record');
+  assert.deepEqual((await (await fetch(`${origin}/api/live`)).json()).announcements, [], 'a stalled pipeline never advertises LIVE');
+  assert.equal(await phone.locator('[data-publisher-health]').count(), 0, 'the failed local receiver is cleaned up');
+  assert.deepEqual(errors, []);
+  console.log('PASS stalled publishing check shows its diagnostic beside the camera controls and creates no false LIVE state');
 } finally {
   await chrome?.close(); await safari?.close();
   if (server) await new Promise(resolve => server.close(resolve));
