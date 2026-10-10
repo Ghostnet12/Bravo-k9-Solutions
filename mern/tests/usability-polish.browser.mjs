@@ -79,8 +79,10 @@ try {
           await page.screenshot({ path: `test-results/polish-save-${engineName}-${access}.png`, fullPage: false });
           await feedback.getByRole('button', { name: 'Dismiss message' }).click();
           if (role === 'member') {
-            await page.getByRole('region', { name: 'Next visit' }).waitFor();
-            await page.locator('.account-actions').getByRole('link', { name: 'My schedule', exact: true }).click();
+            const overview = page.locator('.member-overview');
+            await overview.getByRole('heading', { name: 'Your next step.', exact: true }).waitFor();
+            await overview.getByText('Confirmed', { exact: true }).waitFor();
+            await overview.getByRole('link', { name: 'Manage Schedule', exact: true }).click();
           } else {
             await page.locator('.account-actions').getByRole('link', { name: 'Team schedule', exact: true }).click();
             const tabs = page.getByRole('navigation', { name: 'Desk sections' });
