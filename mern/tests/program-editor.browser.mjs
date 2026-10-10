@@ -32,7 +32,7 @@ try{for(const [name,engine] of Object.entries({chromium,webkit})){
  await page.getByLabel('Program photo or video').selectOption('video');await page.locator('.goal-proof video').waitFor();await page.reload();await page.locator('.goal-proof video').waitFor();
  await page.getByRole('button',{name:'Preview Dog walking',exact:true}).click();assert.equal(await page.getByLabel('Program photo or video').inputValue(),'automatic');
  await page.getByRole('button',{name:'Upload program video',exact:true}).click();await page.locator('.proof-video-dialog[open]').waitFor();await page.getByRole('button',{name:'Close video editor'}).click();
- await page.getByRole('button',{name:'Preview Aggression & handling',exact:true}).click();await page.getByLabel('Program photo or video').selectOption('photo');await page.getByAltText('Custom handling photo').waitFor();await page.getByLabel('Program photo or video').selectOption('automatic');await page.waitForFunction(()=>document.querySelector('.goal-consult img')?.getAttribute('src')==='/images/bravo-client-training.jpeg');
+ await page.getByRole('button',{name:'Preview Aggression concerns',exact:true}).click();await page.getByLabel('Program photo or video').selectOption('photo');await page.getByAltText('Custom handling photo').waitFor();await page.getByLabel('Program photo or video').selectOption('automatic');await page.waitForFunction(()=>document.querySelector('.goal-consult img')?.getAttribute('src')==='/images/bravo-client-training.jpeg');
  assert.ok(await page.getByRole('button',{name:'Edit photos & videos',exact:true}).isVisible());
  await page.screenshot({path:`test-results/program-editor-${name}-${width}-${administrator?'admin':'owner'}.png`,fullPage:false});
  }
