@@ -69,21 +69,20 @@ try {
         await page.getByRole('heading', { name: /Don’t take\s*our word for it\./ }).waitFor();
         const proofTop = await page.locator('#reviews').evaluate(element => element.offsetTop);
         const trainingTop = await page.locator('#training').evaluate(element => element.offsetTop);
-        assert.ok(proofTop > trainingTop, `${engineName}-${width}: proof follows the program and trainer story`);
+        assert.ok(proofTop > trainingTop, `${engineName}-${width}: proof follows training and pricing`);
         const accountReviews = page.locator('.home-proof-reviews article').filter({ hasText: 'Verified Bravo account' });
         assert.equal(await accountReviews.count(), reviews.length);
         for (const review of reviews) await accountReviews.getByText(review.authorName, { exact: true }).waitFor();
         assert.equal(await page.locator('.facebook-recommendations article').count(), 7);
         assert.equal(await page.locator('.facebook-recommendations-more[open]').count(), 0, 'additional reviews start collapsed');
-        assert.equal((await page.locator('.goal-choice').filter({ hasText: 'Specialized training' }).innerText()).includes('$200'), false, 'specialist goals do not inherit the standard monthly price');
+        assert.equal((await page.locator('.goal-choice').filter({ hasText: 'Advanced & working-dog goals' }).innerText()).includes('$200'), false, 'specialist goals do not inherit the standard monthly price');
         for (const author of ['Tamyra Borg', 'Waneta Malsom']) {
           const card = page.locator('.facebook-recommendations article').filter({ hasText: author });
           await card.getByText('Google review', { exact: true }).waitFor();
           await card.getByText(author, { exact: true }).waitFor();
         }
         assert.equal(await page.locator('.home-work-proof-grid article').count(), 3);
-        // Exercise the mobile/desktop outbound action without relying on Facebook
-        // availability in CI. Real video playback is checked separately on live pages.
+        // Exercise outbound actions without relying on Facebook availability.
         const reelIds = ['1850999522754029', '1068433732560103', '1079472767813329'];
         await context.route('https://www.facebook.com/**', route => route.fulfill({ contentType: 'text/html', body: '<title>Original video destination</title><p>Facebook destination fixture</p>' }));
         for (const reelId of reelIds) {
@@ -110,11 +109,10 @@ try {
         await page.screenshot({ path: `test-results/home-conversion-${engineName}-${width}.png`, fullPage: true });
         if (width === 390) {
           await page.goto(`${origin}/portal?program=training`, { waitUntil: 'networkidle' });
-          // Training opens the guided first-visit introduction. The fixed bar
-          // belongs to the full scheduler, reached through its visible control.
           await page.getByRole('heading', { name: 'Let’s start with your dog.' }).waitFor();
-          await page.getByText('Need a different starting point?', { exact: true }).click();
-          await page.getByRole('button', { name: 'Open the full scheduler', exact: true }).click();
+          const fullMonth = page.getByRole('button', { name: 'Plan my whole month', exact: true });
+          assert.ok(await fullMonth.isVisible(), 'whole-month entry is not hidden in a disclosure');
+          await fullMonth.click();
           const booking = await page.locator('.mobile-booking-bar').boundingBox();
           const access = await page.locator('.accessibility-tools').boundingBox();
           assert.ok(booking && access && access.y + access.height <= booking.y, `${engineName}: accessibility control overlaps booking bar`);
@@ -122,7 +120,7 @@ try {
           assert.deepEqual(errors, [], `${engineName}: booking runtime errors`);
           await page.screenshot({ path: `test-results/booking-controls-${engineName}-390.png`, fullPage: false });
         }
-        // Empty and unavailable live rosters must never retain named fallbacks.
+        // Empty and unavailable rosters must never retain named fallbacks.
         for (const roster of [[], null]) {
           publicTeam = roster;
           await page.goto(origin, { waitUntil: 'networkidle' });
@@ -133,6 +131,4 @@ try {
       }
     } finally { await browser.close(); }
   }
-} finally {
-  await new Promise(resolve => server.close(resolve));
-}
+} finally { await new Promise(resolve => server.close(resolve)); }
