@@ -6,13 +6,18 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { chromium, webkit } from 'playwright';
 const dist=fileURLToPath(new URL('../client/dist/',import.meta.url)),html=await readFile(`${dist}/bravo-shell.html`,'utf8');
-const app=express();app.use(express.static(dist));app.get('/{*path}',(_req,res)=>res.type('html').send(html));const server=app.listen(0,'127.0.0.1');await once(server,'listening');const origin=`http://127.0.0.1:${server.address().port}`;
+const app=express();
+// Keep the continuously polled feed on the native fixture server. A Playwright
+// fulfillment crossing document navigation can be reported as a WebKit access
+// control exception even though the old document was simply cancelled.
+app.get('/api/live',(_req,res)=>res.set('Cache-Control','no-store').json({sessions:[],announcements:[],availability:'available',serverTime:new Date().toISOString()}));
+app.use(express.static(dist));app.get('/{*path}',(_req,res)=>res.type('html').send(html));const server=app.listen(0,'127.0.0.1');await once(server,'listening');const origin=`http://127.0.0.1:${server.address().port}`;
 await mkdir('test-results',{recursive:true});
 try{for(const [name,engine]of Object.entries({chromium,webkit})){if(process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(name))continue;const browser=await engine.launch();try{for(const width of [390,1440]){
   const context=await browser.newContext({viewport:{width,height:900},hasTouch:true}),page=await context.newPage(),errors=[];let role='owner',entries={},failSave=false;
   page.on('pageerror',e=>errors.push(e.message));
   let discards=0;page.on('dialog',dialog=>{assert.equal(dialog.type(),'confirm');discards++;return dialog.accept();});
-  await page.route('**/api/**',async route=>{const path=new URL(route.request().url()).pathname;let status=200,json={services:[],team:[],reviews:[],images:{},clips:[],schedules:[],alerts:[],revision:0};
+  await page.route('**/api/**',async route=>{const path=new URL(route.request().url()).pathname;if(path==='/api/live')return route.continue();let status=200,json={services:[],team:[],reviews:[],images:{},clips:[],schedules:[],alerts:[],revision:0};
     if(path==='/api/auth/me')json={user:role?{id:'fixture',name:'Fixture',role}:null,services:[]};
     if(path==='/api/site-content')json={entries};
     if(path.startsWith('/api/site-content/')){const key=path.split('/').at(-1),body=route.request().postDataJSON();assert.ok(CONTENT_KEYS[key], `Unregistered publishing key: ${key}`);if(failSave){status=409;json={error:'Someone else changed this item. Reopen the editor.'};}else{const old=entries[key]||{revision:0,value:{}};assert.equal(body.expectedRevision,old.revision);entries[key]={value:body.undo?old.previous:body.value,previous:old.value,revision:old.revision+1,canUndo:true};json={entry:entries[key]};}}
