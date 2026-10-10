@@ -1,0 +1,79 @@
+/* Customer task paths. Keep the existing brand, editor hooks and staff workspace. */
+/* The background video has no native controls. Let the stable hero surface
+   receive presses rather than WebKit's changing native video hit targets.
+   The visible manager and text/link controls are siblings and remain interactive. */
+.cinema-hero .cinema-hero-media, .cinema-hero .cinema-hero-media video { pointer-events: none; }
+.app-header.bravo-nav .header-inner > .header-quick-action {
+  display: none; align-items: center; justify-content: center; min-height: 44px;
+  padding: 10px 15px; border-radius: 30px; background: var(--gold, #ba9a64);
+  color: #101010; font-size: 12px; font-weight: 700; line-height: 1.25;
+  text-decoration: none; white-space: nowrap; margin-left: auto; flex-shrink: 0;
+}
+.app-header.bravo-nav #bravo-navigation .nav-about { position: relative; margin: 0; border: 0; padding: 0; }
+.app-header.bravo-nav #bravo-navigation .nav-about > summary {
+  display: flex; align-items: center; gap: 8px; min-height: 44px; margin: 0; padding: 10px 0;
+  color: var(--cream, #f6f3ee); font-size: 12px; font-weight: 600; line-height: 1.4;
+  cursor: pointer; white-space: nowrap; list-style: none;
+}
+.app-header.bravo-nav #bravo-navigation .nav-about > summary::-webkit-details-marker { display: none; }
+.app-header.bravo-nav #bravo-navigation .nav-about > summary::after { content: ''; width: 6px; height: 6px; border: solid currentColor; border-width: 0 1px 1px 0; transform: rotate(45deg); }
+.app-header.bravo-nav #bravo-navigation .nav-about[open] > summary::after { transform: rotate(225deg); }
+.app-header.bravo-nav #bravo-navigation .nav-about-links {
+  position: absolute; z-index: 100; right: 0; top: 100%; width: 260px; max-width: 80vw;
+  padding: 10px; border: 1px solid var(--line, #ba9a6440); border-radius: 14px;
+  background: #101010; box-shadow: 0 12px 32px #0006;
+}
+.app-header.bravo-nav #bravo-navigation .nav-about-links a { display: flex; align-items: center; min-height: 44px; padding: 10px 12px; white-space: normal; }
+.app-header.bravo-nav #bravo-navigation a, .app-header.bravo-nav #bravo-navigation button { min-height: 44px; }
+.app-header.bravo-nav :is(a, button, summary):focus-visible,
+.training-service-links a:focus-visible, .goal-help a:focus-visible { outline: 2px solid var(--gold, #ba9a64); outline-offset: 4px; }
+.app-header.bravo-nav #bravo-navigation.is-open .nav-about { flex: 1 1 40%; }
+.app-header.bravo-nav #bravo-navigation.is-open .nav-about[open] { flex-basis: 100%; }
+.app-header.bravo-nav #bravo-navigation.is-open .nav-about > summary { padding: 10px 12px; font-size: 14px; }
+.app-header.bravo-nav #bravo-navigation #bravo-navigation .nav-about-links { position: static; }
+.app-header.bravo-nav #bravo-navigation.is-open .nav-about-links { position: static; width: 100%; max-width: none; box-shadow: none; }
+.app-header.bravo-nav #bravo-navigation.is-open .nav-about-links a { flex: none; }
+.training-service-links { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 24px; }
+.training-service-links a { display: inline-flex; align-items: center; min-height: 44px; padding: 10px 16px; border: 1px solid var(--line, #ba9a6440); border-radius: 24px; color: inherit; font-size: 14px; text-decoration: none; }
+.cinema-home .training-renewal-note { font-size: 14px; line-height: 1.6; }
+.cinema-home :is(#training, #specialist-training, #team, #reviews, #method) { scroll-margin-top: 120px; }
+.goal-help a { display: inline-flex; align-items: center; min-height: 44px; color: inherit; font-weight: 600; }
+.booking-returning { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 20px; padding-bottom: 12px; border-bottom: 1px solid var(--line, #ba9a6440); }
+.booking-returning a { display: inline-flex; align-items: center; min-height: 44px; }
+.first-visit-progress { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 0; margin: 20px 0; list-style: none; counter-reset: booking-step; }
+.first-visit-progress li { counter-increment: booking-step; padding: 12px; border: 1px solid var(--line, #ba9a6440); border-radius: 8px; font-size: 13px; line-height: 1.5; }
+.first-visit-progress li::before { content: counter(booking-step) '. '; }
+.first-visit-progress li[aria-current=step] { border-color: var(--gold, #ba9a64); color: var(--gold-light, #d2b57f); }
+.first-visit-intro .first-visit-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.first-visit-intro :is(input, select, textarea) { font-size: max(16px, 1rem); }
+.first-visit-intro .first-visit-actions :is(a, button) { min-height: 44px; }
+.booking-request-note { font-size: 14px; line-height: 1.6; margin-top: 16px; }
+@media (max-width: 1600px) {
+  .app-header.bravo-nav[data-signed-in=true] .header-inner > .header-quick-action { display: inline-flex; }
+  .app-header.bravo-nav[data-signed-in=true] .menu-toggle { margin-left: 10px; }
+  .app-header.bravo-nav[data-signed-in=true] #bravo-navigation .nav-workspace > .nav-book { display: none; }
+}
+@media (max-width: 1100px) {
+  .app-header.bravo-nav .header-inner > .header-quick-action { display: inline-flex; }
+  .app-header.bravo-nav .menu-toggle { margin-left: 10px; }
+  .app-header.bravo-nav #bravo-navigation .nav-workspace > .nav-book { display: none; }
+}
+@media (max-width: 600px) {
+  .first-visit-progress { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .first-visit-intro .first-visit-actions :is(a, button) { width: 100%; justify-content: center; }
+}
+@media (max-width: 430px) {
+  .app-header.bravo-nav .brand-lockup > span { display: none; }
+  .app-header.bravo-nav .header-inner > .header-quick-action { padding-inline: 12px; }
+}
+
+.member-overview { margin-block: 20px; }
+.member-overview h2 { margin-bottom: 12px; }
+.member-overview-date { font-size: clamp(18px, 3vw, 26px); }
+.member-overview-facts { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; margin: 20px 0; }
+.member-overview-facts dt { font-size: 13px; color: var(--muted); }
+.member-overview-facts dd { margin: 6px 0 0; overflow-wrap: anywhere; }
+.member-overview-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+.member-overview-actions a, .workshop-details .goal-actions a, .live-controls button { min-height: 44px; min-width: 44px; }
+@media(max-width:600px) { .member-overview-facts { grid-template-columns: 1fr; gap: 10px; } .member-overview-actions a { width: 100%; justify-content: center; } }
+@media print { .member-overview-actions { display:none; } }

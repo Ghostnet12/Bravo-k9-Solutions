@@ -124,7 +124,7 @@ try {
           await reload(); await page.getByRole('heading', { name: 'New Fixture Client’s schedule.', exact: true }).waitFor();
           assert.equal(await page.getByRole('heading', { name: 'Create your password.', exact: true }).count(), 0);
           await navigate(`${origin}/account`); await page.getByRole('heading', { name: 'Membership dates & renewal', exact: true }).waitFor();
-          await page.locator('main').getByRole('link', { name: 'My schedule', exact: true }).waitFor();
+          await page.locator('.member-overview').getByRole('link', { name: 'Manage Schedule', exact: true }).waitFor();
           await page.waitForLoadState('networkidle'); activeUser = operator; await navigate(`${origin}/admin?tab=people`); if (access !== 'staff') await page.locator('.owner-person > summary').click({ position: { x: 8, y: 20 } });
           assert.equal(await page.getByRole('button', { name: 'Create new temporary password', exact: true }).count(), 0);
           assert.deepEqual(errors, []); console.log(`${engineName} ${width} ${access}: create, copy, replace, name/email sign-in, required password setup and saved schedule passed`);

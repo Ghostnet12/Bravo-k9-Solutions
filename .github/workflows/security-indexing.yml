@@ -39,6 +39,7 @@ jobs:
       - run: npx playwright install --with-deps chromium webkit
       - name: Public pages without JavaScript and client sign-in on mobile
         run: |
+          node tests/route-focus.browser.mjs
           node tests/live-direct.browser.mjs
           node tests/live.browser.mjs
           node tests/access-reauth.browser.mjs
@@ -55,10 +56,10 @@ jobs:
           node tests/client-login.browser.mjs
           node tests/client-removal.browser.mjs
           node tests/mfa.browser.mjs
-      - name: Known dependency vulnerabilities (retry registry maintenance)
+      - name: Known locked dependency vulnerabilities (retry registry maintenance)
         run: |
           for attempt in 1 2 3; do
-            if npm audit --audit-level=moderate; then exit 0; fi
+            if npm audit --package-lock-only --audit-level=moderate; then exit 0; fi
             if [ "$attempt" -lt 3 ]; then sleep 15; fi
           done
           exit 1

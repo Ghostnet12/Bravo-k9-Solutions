@@ -79,10 +79,12 @@ function RouteBehavior() {
       else target?.focus({ preventScroll: true });
     }, 100);
     // A person may open the menu or an editor before deferred route focus runs.
-    // Their next interaction takes priority over moving focus to the page.
+    // Focus and autofill also take priority, even without pointer/key events.
     const cancelRouteFocus = () => clearTimeout(timer);
     document.addEventListener('pointerdown', cancelRouteFocus, { once: true, capture: true });
     document.addEventListener('keydown', cancelRouteFocus, { once: true, capture: true });
+    document.addEventListener('focusin', cancelRouteFocus, { once: true, capture: true });
+    document.addEventListener('input', cancelRouteFocus, { once: true, capture: true });
     const metadata = PAGE_METADATA[pathname] || NOT_FOUND_METADATA;
     document.title = metadata.title;
     function meta(selector, attributes) {
@@ -110,6 +112,8 @@ function RouteBehavior() {
       clearTimeout(timer);
       document.removeEventListener('pointerdown', cancelRouteFocus, true);
       document.removeEventListener('keydown', cancelRouteFocus, true);
+      document.removeEventListener('focusin', cancelRouteFocus, true);
+      document.removeEventListener('input', cancelRouteFocus, true);
     };
   }, [pathname, hash]);
   return null;

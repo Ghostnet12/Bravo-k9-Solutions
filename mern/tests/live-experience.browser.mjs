@@ -62,7 +62,11 @@ try {for(const [name,engine] of engines) {
   await page.locator('.home-ad-slide.is-active a').click();await page.waitForURL('**/dog-training');
   for (const path of ['/workshops','/live','/contact','/']) {
    if(path==='/') await page.locator('footer a[href="/"]').first().click();
-   else { await page.getByRole('button',{name:'Menu',exact:true}).click();await page.locator(`header nav a[href="${path}"]`).first().click(); }
+   else {
+    await page.getByRole('button',{name:'Menu',exact:true}).click();
+    if(path==='/contact') await page.locator('header .nav-about > summary').click();
+    await page.locator(`header nav a[href="${path}"]`).first().click();
+   }
    await page.waitForURL(`${origin}${path}`);
    if(path==='/contact') {
     sessions=[makeSession('sitewide','Sitewide trainer TEST')];await refresh();

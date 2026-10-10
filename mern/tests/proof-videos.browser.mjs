@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { randomBytes, createHash } from 'node:crypto';
 import mongoose from 'mongoose';
@@ -35,8 +35,22 @@ try {
         await ProofVideo.deleteMany({}); await MediaUpload.deleteMany({}); await MediaChunk.deleteMany({});
         const context = await browser.newContext({ viewport: { width, height: 900 }, isMobile: width === 390, hasTouch: width === 390 });
         await context.addCookies([{ name: 'bravo_session', value: tokens.owner, url: origin }]);
-        const page = await context.newPage(), errors = [];
-        page.on('pageerror', error => errors.push(error.message));
+        const page = await context.newPage(), errors = [], navigationDiagnostics = [];
+        // WebKit reports cancelled old-document polling as pageerror during
+        // reload/Back. Retain that exact same-origin diagnostic, while keeping
+        // every other pageerror and actual DOM error/rejection release-blocking.
+        page.on('pageerror', error => {
+          const knownPollCancellation = engineName === 'webkit'
+            && error.message.endsWith('/api/live due to access control checks.')
+            && error.message.includes(new URL(origin).host);
+          if (knownPollCancellation) navigationDiagnostics.push({ message: error.message, stack: error.stack, url: page.url() });
+          else errors.push(error.message);
+        });
+        await page.exposeFunction('recordProofRuntimeError', message => errors.push(message));
+        await page.addInitScript(() => {
+          window.addEventListener('error', event => { if (event instanceof ErrorEvent) void window.recordProofRuntimeError(event.error?.stack || event.message).catch(() => {}); });
+          window.addEventListener('unhandledrejection', event => { void window.recordProofRuntimeError(event.reason?.stack || event.reason?.message || String(event.reason)).catch(() => {}); });
+        });
         await page.addInitScript(() => { window.proofClicks = []; document.addEventListener('click', event => { window.proofClicks.push({ tag: event.target.tagName, label: event.target.getAttribute('aria-label'), text: event.target.textContent?.slice(0, 80) }); window.proofClicks = window.proofClicks.slice(-6); }, true); });
         const response = await page.goto(origin);
         await page.waitForFunction(() => document.querySelectorAll('[data-proof-video]').length === 3);
@@ -175,6 +189,7 @@ try {
         await page.reload();
         await linked.getByText('The Reel description can be edited later.', { exact: true }).waitFor();
         console.log(`${engineName}-${width}: Reel URL saved; same-tab navigation, Back and hold-to-edit passed`);
+        await writeFile(`test-results/proof-runtime-${engineName}-${width}.json`, JSON.stringify({ errors, navigationDiagnostics }, null, 2));
         assert.deepEqual(errors, []);
         await context.close();
 

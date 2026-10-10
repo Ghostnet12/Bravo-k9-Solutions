@@ -101,7 +101,11 @@ try {
           const menu = page.getByRole('button', { name: 'Menu', exact: true });
           await menu.click();
           const nav = page.getByRole('navigation', { name: 'Primary navigation' });
-          await nav.getByRole('link', { name: role === 'member' ? 'My schedule' : 'Team schedule', exact: true }).waitFor();
+          const task = page.locator('.header-quick-action');
+          await task.waitFor();
+          assert.equal(await task.innerText(), role === 'member' ? 'My Schedule' : 'Team schedule');
+          assert.equal(await task.getAttribute('href'), role === 'member' ? '/schedule' : '/admin?tab=schedule');
+          assert.equal(await nav.locator('.nav-book').isVisible(), false, 'the compact header keeps one visible primary task');
           await fits(page, `${role} menu/${width}`);
           await page.keyboard.press('Escape');
           assert.equal(await menu.getAttribute('aria-expanded'), 'false');
