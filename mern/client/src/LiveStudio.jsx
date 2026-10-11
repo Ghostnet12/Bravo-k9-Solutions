@@ -18,7 +18,7 @@ export default function LiveStudio() {
   const [audioOn, setAudioOn] = useState(false), [preview, setPreview] = useState(false), [busy, setBusy] = useState(false);
   const [viewerCount, setViewerCount] = useState(0);
   const [session, setSession] = useState(null), [status, setStatus] = useState('idle'), [error, setError] = useState('');
-  const video = useRef(null), stream = useRef(null), room = useRef(null), health = useRef(null), current = useRef(null), wakeLock = useRef(null), mounted = useRef(false), operation = useRef(false), cameraSwitch = useRef(0);
+  const video = useRef(null), stream = useRef(null), room = useRef(null), health = useRef(null), current = useRef(null), wakeLock = useRef(null), mounted = useRef(false), operation = useRef(false), cameraSwitch = useRef(0), probeAbort = useRef(null);
   const live = useLiveSessions();
   const activeSessions = live.sessions.filter(item => user?.role === 'owner' || item.trainerId === user?.id);
   const localStatus = status === 'live' && session?.liveUntil && Date.parse(session.liveUntil) <= Date.now() + live.offset ? 'reconnecting' : status;
@@ -27,10 +27,12 @@ export default function LiveStudio() {
   useEffect(() => {
     mounted.current = true;
     let timer;
+    const cancelPendingStart = () => { if (!current.current) { probeAbort.current?.abort(); stopStream(stream.current); } };
+    window.addEventListener('pagehide', cancelPendingStart);
     if (allowed) { load().catch(e => setError(e.message)); timer = setInterval(() => load().catch(() => {}), 15000); }
     return () => {
-      clearInterval(timer);
-      mounted.current = false; stopStream(stream.current); stream.current = null; room.current?.disconnect(); health.current?.disconnect(); wakeLock.current?.release();
+      clearInterval(timer); window.removeEventListener('pagehide', cancelPendingStart);
+      mounted.current = false; probeAbort.current?.abort(); stopStream(stream.current); stream.current = null; room.current?.disconnect(); health.current?.disconnect(); wakeLock.current?.release();
       if (current.current) fetch(`/api/live/${current.current.id}/end`, { method: 'POST', credentials: 'same-origin', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {});
       current.current = null;
     };
@@ -86,27 +88,45 @@ export default function LiveStudio() {
   }
   async function start() {
     if (!preview || !data?.configured) return;
-    const credentials = await api('/live', { method: 'POST', body: { audience, dogName: booking?.dogName || dogName, trainingFocus,
-      ...(bookingId ? { bookingId } : {}), publicConsent: audience === 'public' && consent } });
-    current.current = credentials.session;
+    const controller = new AbortController(); probeAbort.current?.abort(); probeAbort.current = controller;
+    let credentials;
     try {
-      if (!mounted.current) throw new Error('Broadcast cancelled.');
+      setStatus('checking');
+      // Verify real camera encoding/decoding BEFORE creating a server session.
+      // Modern browsers do not need a self-connection, hidden player or carrier
+      // hairpin routing just to verify that their camera can process frames.
+      const probe = await createPublisherHealth(() => stream.current, { signal: controller.signal });
+      if (!mounted.current || controller.signal.aborted) { await probe.disconnect(); throw new Error('Broadcast cancelled.'); }
+      health.current = probe;
+      if (!cameraReady(stream.current)) throw new Error('The camera is paused. Check the preview, then try Start live again.');
       setStatus('starting');
-      health.current = await createPublisherHealth(() => stream.current);
+      credentials = await api('/live', { method: 'POST', body: { audience, dogName: booking?.dogName || dogName, trainingFocus,
+        ...(bookingId ? { bookingId } : {}), publicConsent: audience === 'public' && consent } });
+      current.current = credentials.session;
+      if (!mounted.current || controller.signal.aborted) throw new Error('Broadcast cancelled.');
       room.current = createBroadcaster(credentials.session.id, () => stream.current, count => { if (mounted.current && current.current?.id === credentials.session.id) setViewerCount(count); });
       const result = await api(`/live/${credentials.session.id}/heartbeat`, { method: 'POST', body: { cameraReady: cameraReady(stream.current), publication: await health.current.sample() } });
-      if (!mounted.current) throw new Error('Broadcast cancelled.');
+      if (!mounted.current || controller.signal.aborted) throw new Error('Broadcast cancelled.');
       current.current = result.session; setSession({ ...result.session, serverTime: result.serverTime }); setStatus(result.session.status); refreshLive(); await load();
     } catch (e) {
-      await room.current?.disconnect(); health.current?.disconnect(); stopStream(stream.current); stream.current = null;
-      await api(`/live/${credentials.session.id}/end`, { method: 'POST', body: {} }).catch(() => {});
+      room.current?.disconnect(); room.current = null; await health.current?.disconnect(); health.current = null;
+      controller.abort();
+      if (credentials) await api(`/live/${credentials.session.id}/end`, { method: 'POST', body: {} }).catch(() => {});
       current.current = null;
-      if (mounted.current) { setPreview(false); await load(); }
+      if (mounted.current) {
+        setSession(null); setStatus('idle'); setViewerCount(0);
+        // A failed check must not discard a healthy preview or ask the trainer
+        // to end an already-closed/nonexistent session. Start live can retry.
+        const reusable = stream.current?.getVideoTracks().some(track => track.readyState === 'live');
+        setPreview(Boolean(reusable));
+        if (!reusable) { stopStream(stream.current); stream.current = null; }
+        refreshLive(); await load().catch(() => {});
+      }
       throw e;
     }
   }
   async function end(id = session?.id) {
-    if (id === current.current?.id) { current.current = null; stopStream(stream.current); stream.current = null; await room.current?.disconnect(); health.current?.disconnect(); setPreview(false); setSession(null); setViewerCount(0); setStatus('idle'); }
+    if (id === current.current?.id) { probeAbort.current?.abort(); current.current = null; stopStream(stream.current); stream.current = null; await room.current?.disconnect(); health.current?.disconnect(); setPreview(false); setSession(null); setViewerCount(0); setStatus('idle'); }
     try { await api(`/live/${id}/end`, { method: 'POST', body: {} }); }
     finally { refreshLive(); await load(); }
   }
@@ -115,13 +135,14 @@ export default function LiveStudio() {
     if (session) {
       const source = stream.current, broadcastId = current.current?.id;
       const previous = source.getVideoTracks()[0];
-      cameraSwitch.current = Date.now(); previous.stop();
+      cameraSwitch.current = Date.now(); await health.current?.disconnect(); health.current = null; previous.stop();
       try {
         const next = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: nextFacing }, width: { ideal: 960 }, height: { ideal: 540 }, frameRate: { ideal: 20, max: 24 } } });
         if (!mounted.current || current.current?.id !== broadcastId || stream.current !== source) { stopStream(next); return; }
         const track = next.getVideoTracks()[0];
         source.removeTrack(previous); source.addTrack(track);
-        await room.current.replaceTrack('video', track); await health.current.replaceTrack(track);
+        await room.current.replaceTrack('video', track);
+        health.current = await createPublisherHealth(() => source, { signal: probeAbort.current?.signal });
         video.current.srcObject = source; await video.current.play().catch(() => {});
       } finally { cameraSwitch.current = 0; }
     } else if (preview) await openCamera(nextFacing, audioOn);
@@ -158,7 +179,7 @@ export default function LiveStudio() {
         </fieldset><p className="live-install">Add Bravo to your Home Screen for quick access. On iPhone: Share → Add to Home Screen.</p>
       </section><section className="live-camera-panel"><div className="live-camera-preview"><video ref={video} autoPlay muted playsInline aria-label="Your camera preview" className={facing === 'user' ? 'is-mirrored' : ''}/>{!preview && <div className="live-video-cover"><img src="/bravo-shield-192.png" alt="" width="72" height="72"/><h2>READY WHEN YOU ARE.</h2><button className="button" disabled={busy || !data || !!session} onClick={() => withAction(() => openCamera())}>Enable camera preview</button></div>}{session && <div className="live-video-top"><span className={localStatus === 'live' ? 'live-badge' : 'live-connection-state'}>{localStatus === 'live' ? <><i aria-hidden="true"/>LIVE</> : localStatus.toUpperCase()}</span><span className="live-timer">{liveDuration(session.startedAt, now)}</span></div>}</div>
         <div className="live-camera-actions"><button disabled={busy || !preview} onClick={() => withAction(flip)}>Flip camera</button><button aria-pressed={audioOn} disabled={busy || (!!session && !preview)} onClick={() => withAction(toggleAudio)}>{audioOn ? 'Microphone on' : 'Microphone off'}</button></div>
-        {session ? <><p className="live-current">{session.trainerName} · {session.dogName} · {viewerCount} {viewerCount === 1 ? 'viewer' : 'viewers'} · <strong>{session.audience === 'public' ? 'PUBLIC' : 'CLIENT ONLY'}</strong></p><button className="button live-stop" disabled={busy} onClick={() => withAction(() => end())}>{busy ? 'Ending…' : '■ End live session'}</button></> : <button className="button live-start" disabled={busy || !preview || !data?.configured || !(booking?.dogName || dogName.trim()) || (audience === 'client' && !bookingId) || (audience === 'public' && !consent)} onClick={() => withAction(start)}>{busy ? 'Connecting…' : '● Start live'}</button>}
+        {session ? <><p className="live-current">{session.trainerName} · {session.dogName} · {viewerCount} {viewerCount === 1 ? 'viewer' : 'viewers'} · <strong>{session.audience === 'public' ? 'PUBLIC' : 'CLIENT ONLY'}</strong></p><button className="button live-stop" disabled={busy} onClick={() => withAction(() => end())}>{busy ? 'Ending…' : '■ End live session'}</button></> : <button className="button live-start" disabled={busy || !preview || !data?.configured || !(booking?.dogName || dogName.trim()) || (audience === 'client' && !bookingId) || (audience === 'public' && !consent)} onClick={() => withAction(start)}>{busy ? status === 'checking' ? 'Checking camera…' : 'Connecting…' : '● Start live'}</button>}
         <p className="live-phone-note">Direct phone streaming · no fixed viewer cap. Each viewer uses more of your phone’s upload connection, which can affect video quality. Keep this screen open and your phone unlocked. Calls, switching apps, or a weak signal can interrupt the camera.</p><p className="live-phone-note">Some networks cannot connect directly. Try Wi-Fi if a viewer cannot connect. Direct connections share network addresses with viewers; normal mobile data usage applies.</p>
       </section></div>
       {!!activeSessions.length && <section className="panel live-studio-sessions"><h2>ACTIVE SESSIONS</h2>{activeSessions.map(item => <div key={item.id}><p><strong>{item.trainerName}</strong> · {item.dogName}<br/><span>{item.status === 'live' ? '● LIVE' : item.status.toUpperCase()} · {liveTime(item.startedAt)} CT · {liveDuration(item.startedAt, now)} · {item.audience === 'public' ? 'Public' : 'Client only'}</span></p><button disabled={busy} onClick={() => withAction(() => end(item.id))}>End session</button></div>)}</section>}
@@ -166,3 +187,4 @@ export default function LiveStudio() {
     </>}
   </Page>;
 }
+
