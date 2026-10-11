@@ -185,7 +185,9 @@ export default function HomeAdCarousel() {
   }, [!!current]);
   async function openEditor() {
     if (!canEdit) return;
-    cancelHold(); suppressUntil.current = Date.now() + 1200;
+    // The modal may receive pointerup instead of the ad that started the hold.
+    // Release both gesture guards before handing control to the editor.
+    releaseGesture(true); tapTarget.current = null; suppressUntil.current = Date.now() + 1200;
     try { setCollection(await api('/site-ads')); } catch { /* Keep the current snapshot. */ }
     setEditing(true);
   }
