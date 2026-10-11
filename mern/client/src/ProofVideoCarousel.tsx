@@ -1,3 +1,5 @@
+import FieldStories from './FieldStories';
+import './field-experience.css';
 import { PROOF_TOPICS, proofMatches } from '../../shared/discovery';
 import { Editable } from './SiteContent';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
@@ -46,6 +48,7 @@ function VideoPlayer({ clip, onPlay }: { clip: ProofClip; onPlay: (video: HTMLVi
 }
 export default function ProofVideoCarousel({ initialTopic = 'all' }: { initialTopic?: string }) {
   const [topic, setTopic] = useState(initialTopic);
+  const [spotlight, setSpotlight] = useState(''), [storyJump, setStoryJump] = useState(0);
   const { user } = useBravo(), canEdit = isImageEditor(user) && !user?.mustChangePassword;
   const [clips, setClips] = useState<ProofClip[]>([]), [cursor, setCursor] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false), [loading, setLoading] = useState(false), [error, setError] = useState(''), [status, setStatus] = useState('');
@@ -117,7 +120,15 @@ export default function ProofVideoCarousel({ initialTopic = 'all' }: { initialTo
     if (video && event.clientY > video.getBoundingClientRect().bottom - 48) return;
     gesture.current = { x: event.clientX, y: event.clientY, pointer: event.pointerId, timer: setTimeout(() => { suppressUntil.current = Date.now() + 1000; if (clip) open(clip); else { cancelHold(); setToolsOpen(true); } }, 600) };
   }
+  useEffect(() => {
+    if (!spotlight) return;
+    const card = [...(rail.current?.querySelectorAll<HTMLElement>('[data-proof-video]') || [])].find(node => node.dataset.proofVideo === spotlight);
+    if (!card) return;
+    card.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
+    card.focus({ preventScroll: true });
+  }, [spotlight, storyJump]);
   return <Editable as="div" contentKey="proof-section" ref={root} className="home-work-proof" aria-labelledby="work-proof-title" data-site-image-ignore="" onPointerDown={event => { if ((event.target as Element).closest("dialog")) return; keyboardFocus.current = false; pointerHeld.current = true; if (!(event.target as Element).closest("[data-proof-video],button,a,input")) beginHold(event, null); }} onPointerUp={() => { pointerHeld.current = false; cancelHold(); setInteraction(value => value + 1); }} onPointerCancel={() => { pointerHeld.current = false; cancelHold(); setInteraction(value => value + 1); }} onPointerLeave={() => { pointerHeld.current = false; cancelHold(); }} onPointerMove={event => { if (gesture.current && Math.hypot(event.clientX - gesture.current.x, event.clientY - gesture.current.y) > 12) cancelHold(); }} onWheel={() => setInteraction(value => value + 1)} onKeyDownCapture={() => { keyboardFocus.current = true; }}>
+    <FieldStories clips={clips} onChoose={id => { root.current?.querySelectorAll('video').forEach(video => video.pause()); setTopic('all'); setPaused(true); setSpotlight(id); setStoryJump(value => value + 1); setStatus('Session selected in the video library. Use Play or the Facebook link to watch.'); }}/>
     <div className="home-work-proof-heading"><div><p className="eyebrow">WATCH THE WORK</p><Editable as="h3" contentKey="proof-title" canEditText id="work-proof-title">Training you can actually see.</Editable></div><Editable as="p" contentKey="proof-intro" canEditText>Watch Bravo working with dogs in real situations. Each video includes its own context.</Editable></div>
     {canEdit && <button type="button" data-proof-action="" onClick={()=>setToolsOpen(true)}>Manage training videos</button>}
     {(!loaded && loading) && <p role="status">Loading videos…</p>}
@@ -138,7 +149,7 @@ export default function ProofVideoCarousel({ initialTopic = 'all' }: { initialTo
         if (box.right <= bounds.left + 8 || box.left >= bounds.right - 8) video.pause();
       });
     }}>
-      {clips.filter(clip => proofMatches(clip, topic)).map(clip => <article key={clip.id} data-proof-video={clip.id} data-facebook-reel={clip.facebookUrl ? clip.id : undefined} data-proof-editable={canEdit || undefined} tabIndex={canEdit ? 0 : undefined} aria-keyshortcuts={canEdit ? 'F2' : undefined}
+      {clips.filter(clip => proofMatches(clip, topic)).map(clip => <article key={clip.id} data-proof-video={clip.id} data-facebook-reel={clip.facebookUrl ? clip.id : undefined} data-proof-editable={canEdit || undefined} tabIndex={canEdit ? 0 : spotlight === clip.id ? -1 : undefined} data-story-selected={spotlight === clip.id || undefined} aria-keyshortcuts={canEdit ? 'F2' : undefined}
         onPointerDownCapture={event => beginHold(event, clip)} onPointerUpCapture={cancelHold} onPointerCancelCapture={cancelHold}
         onPointerMoveCapture={event => { const hold = gesture.current; if (hold && (event.pointerId !== hold.pointer || Math.hypot(event.clientX - hold.x, event.clientY - hold.y) > 12)) cancelHold(); }}
         onContextMenu={event => { if (canEdit && !(event.target as Element).closest('[data-proof-action]')) { event.preventDefault(); suppressUntil.current = Date.now() + 1000; open(clip); } }}
@@ -154,3 +165,4 @@ export default function ProofVideoCarousel({ initialTopic = 'all' }: { initialTo
     {editing && canEdit && <Suspense fallback={<p role="status">Opening video editor…</p>}><Editor key={editing.id} clip={editing} onClose={closeEditor} onSaved={clip => { setClips(old => [...old.filter(item => item.id !== clip.id), clip].sort(compareProofVideos)); setStatus('Video and description published.'); closeEditor(); }} onRemoved={id => { setClips(old => old.filter(clip => clip.id !== id)); setStatus('Video removed from the carousel.'); closeEditor(); }}/></Suspense>}
   </Editable>;
 }
+

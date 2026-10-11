@@ -23,9 +23,10 @@ try {
       await context.tracing.start({screenshots:true,snapshots:true});
       // Finish mocked responses before navigation; preserve cancellation diagnostics.
       const pendingApi=new Set();let lastApi=0;
-      page.on('request',request=>{if(new URL(request.url()).pathname.startsWith('/api/')){pendingApi.add(request);lastApi=Date.now();}});
-      for(const name of ['requestfinished','requestfailed'])page.on(name,request=>{if(pendingApi.delete(request))lastApi=Date.now();});
-      async function settleApi(){const deadline=Date.now()+5000;while(pendingApi.size || Date.now()-lastApi<150){if(Date.now()>deadline)throw new Error('Mocked API requests did not settle');await new Promise(resolve=>setTimeout(resolve,25));}}
+      // Track the lifetime of the mocked responses themselves. Aborted old
+      // documents do not reliably emit requestfinished in every browser.
+      // Rendered-state assertions and runtime error listeners remain independent.
+      async function settleApi(){const deadline=Date.now()+5000;while(pendingApi.size || Date.now()-lastApi<150){if(Date.now()>deadline)throw new Error('Mocked API requests did not settle: '+JSON.stringify([...pendingApi].map(request=>({url:request.url(),type:request.resourceType()}))));await new Promise(resolve=>setTimeout(resolve,25));}}
       async function visit(url,options){await settleApi();return page.goto(url,{waitUntil:'domcontentloaded',...options});}
       async function reload(){await settleApi();return page.reload({waitUntil:'domcontentloaded'});}
       // Wait for the requested reactive state, not merely the prior button in
@@ -55,6 +56,8 @@ try {
       });
       page.on('dialog',dialog=>{confirmations++;return discard ? dialog.accept() : dialog.dismiss();});
       await context.route('**/api/**', async route => {
+        const request=route.request();pendingApi.add(request);lastApi=Date.now();
+        try {
         const url=new URL(route.request().url()), path=url.pathname, method=route.request().method();
         let json={};
         if(path==='/api/config')json={connected:true,paymentsReady:false,services:SERVICES,lessonLibrary:{open:false},schedule:{enabled:true,weekdays:[1,2,3,4,5],hours:['09:00']}};
@@ -77,6 +80,7 @@ try {
         if(path==='/api/course-interest'){signup=route.request().postDataJSON();json={ok:true};}
         if(path==='/api/availability')json={days:[]};
         await route.fulfill({json});
+        } finally {pendingApi.delete(request);lastApi=Date.now();}
       });
       try {
         for(const path of ['/','/dog-training','/behavior-assessment','/dog-walking','/workshops','/learn','/contact']){
@@ -99,15 +103,16 @@ try {
           ['Dog walking','$25','walking',null,'/dog-walking'],
           ['Aggression concerns','$400','aggression',null,'/behavior-assessment'],
         ]){
-          const card=page.getByRole('link',{name:label,exact:true});
+          const card=page.getByRole('button',{name:`Preview ${label}`,exact:true});
           assert.ok((await card.innerText()).includes(price),`${label} has its own service price`);
           const expected=`/portal?program=${program}${focus ? `&focus=${focus}` : ''}`;
           await selectGoal(label,expected);
           assert.ok((await page.locator('.goal-price').innerText()).includes(price));
-          assert.equal(await page.locator('.goal-result').getByRole('link',{name:'What’s included'}).getAttribute('href'),details);
-          assert.equal(await card.getAttribute('href'),details,'the service card explains the program before booking');
+          assert.equal(await page.locator('.goal-result').getByRole('link',{name:'Full program details →'}).getAttribute('href'),details);
+          assert.equal(await card.getAttribute('aria-pressed'),'true','the card selects the plan without navigation');
+          assert.equal(new URL(page.url()).pathname,'/');
           assert.equal(await page.locator('.goal-result .goal-actions .button').getAttribute('href'),expected);
-          await follow(card,details);
+          await follow(page.locator('.goal-program-link'),details);
           await visit(origin);await page.locator('.goal-proof figcaption').waitFor();await settleApi();
           const bookingAction=await selectGoal(label,expected);
           await follow(bookingAction,expected);
@@ -126,17 +131,17 @@ try {
           }
           await visit(origin);await page.locator('.goal-proof figcaption').waitFor();await settleApi();
         }
-        const specialistCard=page.getByRole('link',{name:'Advanced & working-dog goals',exact:true});
+        const specialistCard=page.getByRole('button',{name:'Preview Advanced & working-dog goals',exact:true});
         const specialistText=await specialistCard.innerText();
         assert.equal(specialistText.includes('$200'),false,'specialist card does not promise the standard monthly rate');
-        assert.match(specialistText,/Talk with Bravo/);assert.match(specialistText,/Scope & pricing are goal-specific/);
-        assert.equal(await specialistCard.getAttribute('href'),'/contact');
+        assert.match(specialistText,/Talk with Bravo/);assert.match(specialistText,/Individually scoped/);
+        assert.equal(await specialistCard.getAttribute('type'),'button');
         await selectGoal('Advanced & working-dog goals','/contact');
         assert.equal(await page.locator('.goal-result .goal-price').count(),0,'specialist preview has no standard membership price');
         assert.match(await page.locator('.goal-result').innerText(),/scoped individually/i);
         assert.equal(await page.locator('.goal-result .goal-actions .button').getAttribute('href'),'/contact');
         assert.equal(await page.locator('.goal-result').getByRole('link',{name:'Explore working-dog goals'}).getAttribute('href'),'/#specialist-training');
-        await follow(specialistCard,'/contact');await page.getByRole('heading',{name:'Talk to Bravo.',exact:true}).waitFor();
+        await follow(page.locator('.goal-result .goal-actions .button'),'/contact');await page.getByRole('heading',{name:'Talk to Bravo.',exact:true}).waitFor();
         await visit(origin);await page.locator('.goal-proof figcaption').waitFor();await settleApi();
         const proof=page.locator('.home-work-proof');await proof.getByRole('button',{name:'Working dogs',exact:true}).click();assert.equal(await proof.locator('article[data-proof-video]').count(),1);await proof.getByRole('button',{name:'All training',exact:true}).click();assert.equal(await proof.locator('article[data-proof-video]').count(),3);
         await visit(origin+'/learn');await page.getByLabel('Email address',{exact:true}).fill('visitor@example.test');await page.getByLabel('Email me once when Bravo online courses launch.').check();await page.getByRole('button',{name:'Request a launch update'}).click();await page.getByText('Your launch-update request is saved.',{exact:false}).waitFor();assert.equal(signup.consent,true);assert.equal(signup.email,'visitor@example.test');
@@ -195,3 +200,4 @@ try {
     }}finally{await browser.close();}
   }
 }finally{await new Promise(resolve=>server.close(resolve));}
+

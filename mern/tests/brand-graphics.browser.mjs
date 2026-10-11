@@ -39,8 +39,8 @@ try {
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width}: no page overflow`);
     const icons=await page.locator('.goal-choice-link').evaluateAll(links=>links.map(link=>{const s=getComputedStyle(link,'::before');return{mask:s.maskImage,events:s.pointerEvents,content:s.content,width:parseFloat(s.width)};}));
     assert.equal(icons.length,4);for(const icon of icons){assert.match(icon.mask,/graphics/);assert.equal(icon.events,'none');assert.equal(icon.content,'""');assert.ok(icon.width>=40);}
-    const expected=['/dog-training','/dog-walking','/behavior-assessment','/contact'];
-    assert.deepEqual(await page.locator('.goal-choice-link').evaluateAll(links=>links.map(link=>link.getAttribute('href'))),expected);
+    assert.equal(await page.locator('button.goal-choice-link').count(),4);
+    assert.equal(await page.locator('.goal-choice a').count(),0,'cards select a plan rather than mixing two actions');
     await page.getByRole('button',{name:'Preview Aggression concerns',exact:true}).click();
     assert.equal(await page.locator('.goal-result .goal-actions .button').getAttribute('href'),'/portal?program=aggression');
     await page.getByRole('button',{name:'Preview Pulling, jumping & puppy manners',exact:true}).click();
@@ -61,13 +61,14 @@ try {
   await page.evaluate(()=>document.documentElement.style.removeProperty('font-size'));
   await page.locator('.goal-choice-link').first().focus();
   assert.ok(await page.locator('.goal-choice-link').first().evaluate(el=>document.activeElement===el));
-  await page.keyboard.press('Enter');await page.waitForURL(origin+'/dog-training',{waitUntil:'domcontentloaded'});
+  await page.keyboard.press('Enter');assert.equal(new URL(page.url()).pathname,'/');
+  await page.locator('.goal-program-link').focus();await page.keyboard.press('Enter');await page.waitForURL(origin+'/dog-training',{waitUntil:'domcontentloaded'});
   await page.goto(origin,{waitUntil:'domcontentloaded'});await page.locator('.goal-result').waitFor();
   await page.evaluate(()=>document.documentElement.classList.add('access-reduced-motion'));
   assert.ok(await page.locator('.goal-choice-link').first().evaluate(el=>parseFloat(getComputedStyle(el,'::before').transitionDuration)<=0.00001 && getComputedStyle(el,'::before').transform==='none'));
   await page.evaluate(()=>document.documentElement.classList.add('access-high-contrast'));
   assert.equal(await page.locator('.goal-choice-link').first().evaluate(el=>getComputedStyle(el,'::before').display),'none');
-  assert.ok(await page.getByRole('link',{name:'Aggression concerns',exact:true}).count());
+  assert.ok(await page.getByRole('button',{name:'Preview Aggression concerns',exact:true}).count());
   await page.evaluate(()=>document.documentElement.classList.remove('access-high-contrast','access-reduced-motion'));
   await page.emulateMedia({forcedColors:'active'});
   assert.equal(await page.locator('#method').evaluate(el=>getComputedStyle(el,'::before').display),'none');
@@ -85,3 +86,4 @@ try {
   console.log(JSON.stringify({checks,errors,assetRequests:requests.length},null,2));
   await context.close();
 } finally {await browser.close();await new Promise(resolve=>server.close(resolve));}
+

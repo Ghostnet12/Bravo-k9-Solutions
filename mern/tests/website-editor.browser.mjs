@@ -64,6 +64,8 @@ try{for(const [engineName,engine] of Object.entries({chromium,webkit})){
    assert.equal(await page.locator('.home-status-banner').evaluate(el=>el.previousElementSibling.classList.contains('home-hero')),true);
    await hold(page.locator('#goal-tab-manners'));await content.waitFor();
    await content.getByLabel('Text',{exact:true}).fill('Everyday confidence');
+   await content.getByRole('button',{name:'Publish website changes',exact:true}).click();await content.waitFor({state:'hidden'});
+   await hold(page.locator('.goal-program-link'));await content.waitFor();
    await content.getByLabel('Edit this part').selectOption('goal-manners-choice');
    await content.getByLabel('Link address').fill('/portal?program=training&focus=puppy-foundations');
    await content.getByRole('button',{name:'Publish website changes',exact:true}).click();await content.waitFor({state:'hidden'});
@@ -89,8 +91,8 @@ try{for(const [engineName,engine] of Object.entries({chromium,webkit})){
    // Ordinary scrolling cancels a hold; the next tap must still navigate.
    await page.locator('#goal-tab-manners').scrollIntoViewIfNeeded();const box=await page.locator('#goal-tab-manners').boundingBox();await page.mouse.move(box.x+10,box.y+10);await page.mouse.down();await page.mouse.move(box.x+45,box.y+40);await page.waitForTimeout(750);await page.mouse.up();assert.equal(await page.locator('dialog[open]').count(),0);
    assert.equal(new URL(page.url()).pathname,'/','dragging an editable link must not navigate');
-   await page.locator('.goal-choice-link').first().click();await page.waitForURL(url=>url.pathname==='/portal');await page.waitForLoadState('networkidle');
-   role=null;await page.goto(origin);await page.waitForLoadState('networkidle');await page.locator('.goal-choice-link').first().click();await page.getByRole('heading',{name:'Let’s start with your dog.',exact:true}).waitFor();await page.getByLabel('Number of dogs',{exact:true}).fill('2');assert.match(await page.locator('.price-total').innerText(),/\$350/);assert.equal(new URL(page.url()).searchParams.get('focus'),'puppy-foundations');await page.waitForLoadState('networkidle');
+   await page.locator('.goal-choice-link').first().click();assert.equal(new URL(page.url()).pathname,'/');await page.locator('.goal-program-link').click();await page.waitForURL(url=>url.pathname==='/portal');await page.waitForLoadState('networkidle');
+   role=null;await page.goto(origin);await page.waitForLoadState('networkidle');await page.locator('.goal-choice-link').first().click();assert.equal(new URL(page.url()).pathname,'/');await page.locator('.goal-program-link').click();await page.getByRole('heading',{name:'Let’s start with your dog.',exact:true}).waitFor();await page.getByLabel('Number of dogs',{exact:true}).fill('2');assert.match(await page.locator('.price-total').innerText(),/\$350/);assert.equal(new URL(page.url()).searchParams.get('focus'),'puppy-foundations');await page.waitForLoadState('networkidle');
    // Complete normal link navigation before changing the next test account.
    for(const outsider of [null,'member','staff']){role=outsider;await page.goto(origin);await page.waitForLoadState('networkidle');await hold(page.locator('#goal-price-manners'));await page.waitForLoadState('networkidle');assert.equal(await page.locator('dialog[open]').count(),0);assert.equal(await page.getByRole('button',{name:'Edit page text & design'}).count(),0);}
    role=null;failConfig=true;
@@ -101,3 +103,4 @@ try{for(const [engineName,engine] of Object.entries({chromium,webkit})){
   }catch(error){await page.screenshot({path:`test-results/website-editor-failure-${engineName}-${width}.png`,fullPage:true});await writeFile(`test-results/website-editor-failure-${engineName}-${width}.json`,JSON.stringify({error:error.message,errors,browserDiagnostics,text:await page.locator('body').innerText()},null,2));throw error;}finally{await context.close();}
  }}finally{await browser.close();}
 }}finally{server.close();}
+
