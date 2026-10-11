@@ -53,9 +53,12 @@ export async function startCodecProbe(track, onSample = () => {}) {
       output(chunk, metadata) {
         if (stopped || !pending.has(chunk.timestamp)) return;
         try {
-          if (metadata.decoderConfig) decoder.configure(metadata.decoderConfig);
-          else if (decoder.state === 'unconfigured') decoder.configure({ codec: config.codec, codedWidth: 160, codedHeight: 90 });
+          if (decoder.state === 'unconfigured') decoder.configure({ ...(metadata.decoderConfig || { codec: config.codec, codedWidth: 160, codedHeight: 90 }), optimizeForLatency: true });
           framesEncoded++; decoder.decode(chunk);
+          // Every probe frame is an independent keyframe. Explicitly drain the
+          // tiny batch; hardware codecs may otherwise buffer more frames than
+          // this health probe intentionally allows outstanding.
+          void decoder.flush().catch(() => { if (!stopped) fail('The camera video could not be decoded. Try Start live again.'); });
         } catch { fail('The camera video could not be decoded. Try Start live again.'); }
       },
       error() { fail('The camera video could not be encoded. Try Start live again.'); },
@@ -77,6 +80,7 @@ export async function startCodecProbe(track, onSample = () => {}) {
             const input = new VideoFrame(canvas, { timestamp: frame.timestamp });
             try { pending.add(input.timestamp); encoder.encode(input, { keyFrame: true }); }
             finally { input.close(); }
+            await encoder.flush();
           } finally { frame.close(); }
         }
       } catch { if (!stopped) fail('Camera frame processing stopped. Try Start live again.'); }
