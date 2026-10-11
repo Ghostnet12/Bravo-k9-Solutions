@@ -1,4 +1,5 @@
 import { randomUUID, randomBytes, createHash } from 'node:crypto';
+import { issueLiveNetwork, liveRelayStatus } from './live-network.js';
 import { z } from 'zod';
 import { LiveSession, LivePeer, User, Booking, AuditEvent, Notification } from './models.js';
 import { transaction } from './db.js';
@@ -104,7 +105,7 @@ export function liveRoutes(app) {
     }).select('dogName userId visits staffId staffIds').populate({ path: 'userId', model: User, select: 'name blocked removedAt' }).sort({ updatedAt: -1 }).limit(150).lean();
     const snapshot = await liveSnapshot(req.user);
     const sessions = snapshot.sessions.filter(row => req.user.role === 'owner' || row.trainerId === String(req.user._id));
-    res.json({ configured: liveConfigured(), transport: 'direct', viewerLimit: null, serverTime: new Date(),
+    res.json({ configured: liveConfigured(), relayStatus: liveRelayStatus(), transport: 'direct', viewerLimit: null, serverTime: new Date(),
       bookings: bookings.filter(b => b.userId && !b.userId.blocked && !b.userId.removedAt).map(b => ({ id: String(b._id), dogName: b.dogName,
         clientName: b.userId.name, visits: b.visits })), sessions: sessions.map(s => ({ ...s, mine: s.trainerId === String(req.user._id) })) });
   });
@@ -157,6 +158,25 @@ export function liveRoutes(app) {
       userId: session.clientId, staff: false, body: `${session.trainerName} is live with ${session.dogName}.`, href: `/live?session=${session._id}`, createdAt: new Date(),
     } }, { upsert: true });
     res.json({ session: liveSummary(updated, req.user), peers: await peersForTrainer(updated), serverTime: new Date() });
+  });
+  // Network configuration must arrive BEFORE the browser gathers its offer
+  // or answer. Public viewers need neither an account nor a paid membership.
+  app.post('/api/live/:id/network', ready, rateLimit('live-network', 24, 60000), async (req, res) => {
+    const { role } = z.object({ role: z.enum(['viewer', 'publisher']) }).strict().parse(req.body);
+    const publishing = role === 'publisher';
+    if (publishing && !req.user) throw fail('Sign in to broadcast.', 401);
+    if (publishing && !['staff', 'owner'].includes(req.user.role)) throw fail('Trainer access is required.', 403);
+    const authorize = async () => {
+      const session = await accessible(req, { publishing });
+      if (publishing && String(session.trainerId) !== String(req.user._id)) throw fail('Only the broadcasting trainer may request publishing credentials.', 403);
+      if (sessionState(session) !== 'live' || !await activeTrainer(session)) throw fail('This session is not broadcasting right now.', 410);
+      if (req.user && !await User.exists({ _id: req.user._id, blocked: false, removedAt: null, credentialVersion: req.user.credentialVersion || { $in: [0, null] } })) throw fail('Your account changed. Sign in again.', 403);
+    };
+    await authorize();
+    const network = await issueLiveNetwork();
+    // A provider response cannot resurrect access revoked while it was pending.
+    await authorize();
+    res.set('Cache-Control', 'private, no-store').json(network);
   });
   app.post('/api/live/:id/watch', ready, rateLimit('live-watch', 12, 60000), async (req, res) => {
     const { offer } = z.object({ offer: description('offer') }).strict().parse(req.body);
@@ -213,3 +233,4 @@ export function liveRoutes(app) {
     res.json({ ok: true });
   });
 }
+
