@@ -1,4 +1,5 @@
 import { api } from './api';
+import { createLocalPublisherHealth } from './publisher-health';
 
 export const DIRECT_ICE = [{ urls: 'stun:stun.cloudflare.com:3478' }];
 export const DIRECT_FAILURE = 'This network could not make a direct connection. Try Wi-Fi or a different network. Bravo does not use a paid video relay.';
@@ -131,17 +132,27 @@ export function createViewer(sessionId, onStream, onState, onError) {
   };
 }
 
-// Browser-local WebRTC loopback verifies advancing encoded AND decoded camera
-// frames before discovery. This is media-pipeline health, not proof of cellular
-// reachability. Actual viewers still negotiate their own direct connections.
-export async function createPublisherHealth(getStream) {
+// Prefer genuine local codec output so publishing does not require same-device
+// ICE or a hidden video renderer. Older browsers retain the WebRTC fallback.
+// Neither health path proves reachability to a remote viewer; viewers negotiate
+// their own direct connections and retain the existing authorization boundaries.
+export async function createPublisherHealth(getStream, options = {}) {
+  try { return await createLocalPublisherHealth(getStream, options); }
+  catch (error) {
+    if (options.signal?.aborted || error.name !== 'NotSupportedError') throw error;
+    return createLoopbackHealth(getStream, options);
+  }
+}
+async function createLoopbackHealth(getStream, { signal } = {}) {
   const sender = new RTCPeerConnection({ iceServers: [] }), receiver = new RTCPeerConnection({ iceServers: [] });
   const id = crypto.randomUUID(); let closed = false;
   const sink = document.createElement('video'); sink.muted = true; sink.autoplay = true; sink.playsInline = true;
   sink.setAttribute('aria-hidden', 'true'); sink.setAttribute('data-publisher-health', '');
   sink.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;left:0;top:0'; document.body.append(sink);
   receiver.ontrack = event => { sink.srcObject = new MediaStream([event.track]); sink.play().catch(() => {}); };
-  const disconnect = () => { closed = true; sender.close(); receiver.close(); sink.srcObject = null; sink.remove(); };
+  const disconnect = () => { if (closed) return; closed = true; sender.close(); receiver.close(); sink.srcObject = null; sink.remove(); signal?.removeEventListener('abort', disconnect); };
+  signal?.addEventListener('abort', disconnect, { once: true });
+  if (signal?.aborted) disconnect();
   const sample = async () => {
     if (closed) throw new Error('Publisher stopped.');
     const [outgoing, incoming] = await Promise.all([sender.getStats(), receiver.getStats()]);
@@ -151,6 +162,7 @@ export async function createPublisherHealth(getStream) {
     return { id, framesEncoded, framesDecoded };
   };
   try {
+    if (closed) throw Object.assign(new Error('Broadcast cancelled.'), { name: 'AbortError' });
     const track = getStream()?.getVideoTracks()[0]; if (!track) throw new Error('Enable the camera first.');
     const videoSender = sender.addTrack(track);
     await sender.setLocalDescription(await sender.createOffer());
@@ -163,6 +175,6 @@ export async function createPublisherHealth(getStream) {
       if (health.framesEncoded > 1 && health.framesDecoded > 1) return { sample, disconnect, replaceTrack: track => videoSender.replaceTrack(track) };
       await new Promise(resolve => setTimeout(resolve, 150));
     }
-    throw new Error('The camera is not publishing video frames. End the session and try again.');
+    throw new Error('The compatible camera check could not complete. Keep this tab open and try Start live again. If it repeats, try Safari or Chrome on another network.');
   } catch (error) { disconnect(); throw error; }
 }
