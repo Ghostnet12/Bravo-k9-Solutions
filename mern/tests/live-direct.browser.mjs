@@ -55,7 +55,7 @@ try {
   assert.deepEqual((await (await fetch(`${origin}/api/live`)).json()).announcements, [], 'preview never advertises LIVE');
   await phone.getByRole('button', { name: '● Start live' }).click();
   await phone.getByRole('button', { name: '■ End live session' }).waitFor();
-  const record = await LiveSession.findOne({ open: true }); assert.equal(record.transport, 'direct'); assert.equal(record.status, 'live'); assert.ok(record.publication.framesEncoded > 0 && record.publication.framesDecoded > 0); assert.equal(record.trainingFocus, 'Field obedience');
+  const record = await LiveSession.findOne({ open: true }); assert.equal(record.transport, 'direct'); assert.equal(record.status, 'live'); assert.equal(record.publication.kind, 'camera'); assert.ok(record.publication.framesCaptured >= 2); assert.equal(record.publication.framesEncoded, undefined); assert.equal(record.publication.framesDecoded, undefined); assert.equal(record.trainingFocus, 'Field obedience');
   const homeContext = await chrome.newContext({ viewport: { width: 1440, height: 1000 } });
   const home = await homeContext.newPage(); await home.goto(origin);
   await home.locator('.hero-live li').waitFor();

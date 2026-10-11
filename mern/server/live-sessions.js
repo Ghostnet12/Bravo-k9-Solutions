@@ -1,3 +1,4 @@
+import { publicationInput, publicationAdvances } from '../shared/live-publication.js';
 import { randomUUID, randomBytes, createHash } from 'node:crypto';
 import { z } from 'zod';
 import { LiveSession, LivePeer, User, Booking, AuditEvent, Notification } from './models.js';
@@ -142,12 +143,8 @@ export function liveRoutes(app) {
     const session = await accessible(req, { publishing: true });
     if (String(session.trainerId) !== String(req.user._id)) throw fail('Only the broadcasting trainer can keep this session live.', 403);
     if (!await activeTrainer(session)) { await closeSession(session); throw fail('Your account changed. Start a new session after signing in.', 403); }
-    const { cameraReady, publication } = z.object({ cameraReady: z.boolean(), publication: z.object({
-      id: z.uuid(), framesEncoded: z.number().int().nonnegative().safe(), framesDecoded: z.number().int().nonnegative().safe(),
-    }).strict().optional() }).strict().parse(req.body);
-    const prior = session.publication;
-    const advancing = publication && publication.framesEncoded > 0 && publication.framesDecoded > 0 &&
-      (prior?.id !== publication.id || (publication.framesEncoded > prior.framesEncoded && publication.framesDecoded > prior.framesDecoded));
+    const { cameraReady, publication } = z.object({ cameraReady: z.boolean(), publication: publicationInput.optional() }).strict().parse(req.body);
+    const advancing = publicationAdvances(publication, session.publication);
     const publishing = cameraReady && !!advancing;
     const updated = await LiveSession.findOneAndUpdate({ _id: session._id, open: true, status: { $in: ['starting', 'live', 'reconnecting'] } },
       { $set: { status: publishing ? 'live' : session.startedAt ? 'reconnecting' : 'starting', lastSeenAt: new Date(),

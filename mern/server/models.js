@@ -106,7 +106,7 @@ const liveSessionSchema = new Schema({
   dogName: String, trainingFocus: String, clientId: id, bookingId: id, audience: { type: String, enum: ['public', 'client'], required: true },
   roomName: { type: String, required: true, unique: true }, publisherIdentity: String,
   open: { type: Boolean, default: true }, status: { type: String, enum: ['starting', 'live', 'reconnecting', 'ending', 'ended'] },
-  startedAt: Date, lastSeenAt: Date, lastPublishedAt: Date, publication: { id: String, framesEncoded: Number, framesDecoded: Number }, endedAt: Date, publicConsentAt: Date,
+  startedAt: Date, lastSeenAt: Date, lastPublishedAt: Date, publication: { id: String, kind: { type: String, enum: ['camera'] }, framesCaptured: Number, framesEncoded: Number, framesDecoded: Number }, endedAt: Date, publicConsentAt: Date,
   transport: String, signalingRevision: { type: Number, default: 0 },
 }, { timestamps: true });
 liveSessionSchema.index({ trainerId: 1 }, { unique: true, partialFilterExpression: { open: true } });

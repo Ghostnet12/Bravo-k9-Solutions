@@ -1,0 +1,42 @@
+name: Bravo phone live publishing
+on:
+  pull_request:
+    branches: [bravo-mern]
+    paths: ['mern/**', '.github/workflows/live-phone.yml']
+  push:
+    branches: [bravo-mern]
+    paths: ['mern/**', '.github/workflows/live-phone.yml']
+permissions:
+  contents: read
+concurrency:
+  group: bravo-phone-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  camera-and-viewer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: mern
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: mern/package-lock.json
+      - run: npm ci --include=dev --ignore-scripts
+      - run: npm run lint && npm run build && npm test
+      - run: node --test tests/live-camera.integration.js tests/live.integration.js
+      - run: npm install --ignore-scripts --no-save --package-lock=false playwright@1.63.0
+      - run: npx playwright install --with-deps chromium webkit
+      - name: Both browser engines publish and receive actual video
+        run: node tests/live-phone-start.browser.mjs
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: live-phone-evidence
+          path: mern/test-results/live-phone-*.png
+          retention-days: 7

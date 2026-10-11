@@ -2,7 +2,7 @@ import { api } from './api';
 
 export const DIRECT_ICE = [{ urls: 'stun:stun.cloudflare.com:3478' }];
 export const DIRECT_FAILURE = 'This network could not make a direct connection. Try Wi-Fi or a different network. Bravo does not use a paid video relay.';
-export const cameraReady = stream => !!stream?.getVideoTracks().some(track => track.readyState === 'live' && track.enabled && !track.muted);
+export { cameraReady, createPublisherHealth } from './live-capture-health';
 export function stopStream(stream) { stream?.getTracks().forEach(track => track.stop()); }
 export async function gatherDescription(pc) {
   if (pc.iceGatheringState !== 'complete') await new Promise(resolve => {
@@ -51,7 +51,7 @@ export function createBroadcaster(sessionId, getStream, onCount) {
         if (!sender.track) continue;
         const parameters = sender.getParameters();
         if (parameters.encodings?.length) {
-          parameters.encodings.forEach(encoding => { encoding.maxBitrate = sender.track.kind === 'video' ? 700000 : 48000; });
+          parameters.encodings.forEach(encoding => { encoding.maxBitrate = sender.track.kind === 'video' ? 450000 : 32000; });
           await sender.setParameters(parameters).catch(() => {});
         }
       }
@@ -131,38 +131,3 @@ export function createViewer(sessionId, onStream, onState, onError) {
   };
 }
 
-// Browser-local WebRTC loopback verifies advancing encoded AND decoded camera
-// frames before discovery. This is media-pipeline health, not proof of cellular
-// reachability. Actual viewers still negotiate their own direct connections.
-export async function createPublisherHealth(getStream) {
-  const sender = new RTCPeerConnection({ iceServers: [] }), receiver = new RTCPeerConnection({ iceServers: [] });
-  const id = crypto.randomUUID(); let closed = false;
-  const sink = document.createElement('video'); sink.muted = true; sink.autoplay = true; sink.playsInline = true;
-  sink.setAttribute('aria-hidden', 'true'); sink.setAttribute('data-publisher-health', '');
-  sink.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;left:0;top:0'; document.body.append(sink);
-  receiver.ontrack = event => { sink.srcObject = new MediaStream([event.track]); sink.play().catch(() => {}); };
-  const disconnect = () => { closed = true; sender.close(); receiver.close(); sink.srcObject = null; sink.remove(); };
-  const sample = async () => {
-    if (closed) throw new Error('Publisher stopped.');
-    const [outgoing, incoming] = await Promise.all([sender.getStats(), receiver.getStats()]);
-    let framesEncoded = 0, framesDecoded = 0;
-    outgoing.forEach(stat => { if (stat.type === 'outbound-rtp' && (stat.kind === 'video' || stat.mediaType === 'video')) framesEncoded += stat.framesEncoded || 0; });
-    incoming.forEach(stat => { if (stat.type === 'inbound-rtp' && (stat.kind === 'video' || stat.mediaType === 'video')) framesDecoded += stat.framesDecoded || 0; });
-    return { id, framesEncoded, framesDecoded };
-  };
-  try {
-    const track = getStream()?.getVideoTracks()[0]; if (!track) throw new Error('Enable the camera first.');
-    const videoSender = sender.addTrack(track);
-    await sender.setLocalDescription(await sender.createOffer());
-    await receiver.setRemoteDescription(await gatherDescription(sender));
-    await receiver.setLocalDescription(await receiver.createAnswer());
-    await sender.setRemoteDescription(await gatherDescription(receiver));
-    const until = Date.now() + 10000;
-    while (!closed && Date.now() < until) {
-      const health = await sample();
-      if (health.framesEncoded > 1 && health.framesDecoded > 1) return { sample, disconnect, replaceTrack: track => videoSender.replaceTrack(track) };
-      await new Promise(resolve => setTimeout(resolve, 150));
-    }
-    throw new Error('The camera is not publishing video frames. End the session and try again.');
-  } catch (error) { disconnect(); throw error; }
-}
