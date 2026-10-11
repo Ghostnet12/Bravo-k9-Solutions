@@ -1,11 +1,14 @@
+import './bravo-motion.css';
+import useStoryRail from './useStoryRail';
 import { Editable } from './SiteContent';
 import { publishedFieldStories } from '../../shared/field-experience';
 export default function FieldStories({ clips, onChoose }) {
   const stories = publishedFieldStories(clips);
+  const { rail, position, overflow, go, handlers } = useStoryRail(stories.map(story => story.key));
   if (!stories.length) return null;
   return <section id="field-stories" className="field-stories" aria-labelledby="field-stories-title" data-proof-action="">
-    <div className="field-stories-heading"><div><Editable as="p" contentKey="field-stories-eyebrow" canEditText className="cinema-eyebrow">BRAVO FIELD STORIES</Editable><Editable as="h3" contentKey="field-stories-title" canEditText id="field-stories-title">Real sessions. A closer look.</Editable></div><Editable as="p" contentKey="field-stories-intro" canEditText>Meet the work behind the results. Start with a session, then see what to notice.</Editable></div>
-    <div className="field-story-grid">{stories.map(story => <article key={story.key} className="field-story-card">
+    <div className="field-stories-heading" data-reveal=""><div><Editable as="p" contentKey="field-stories-eyebrow" canEditText className="cinema-eyebrow">BRAVO FIELD STORIES</Editable><Editable as="h3" contentKey="field-stories-title" canEditText id="field-stories-title">Real sessions. A closer look.</Editable></div><Editable as="p" contentKey="field-stories-intro" canEditText>Meet the work behind the results. Start with a session, then see what to notice.</Editable></div>
+    <div ref={rail} id="field-story-rail" className="field-story-grid" role="region" aria-label="Browse Bravo Field Stories" tabIndex={0} {...handlers}>{stories.map(story => <article key={story.key} className="field-story-card" data-reveal="">
       <button className="field-story-image" type="button" onClick={() => onChoose(story.clip.id)} aria-label={`View session: ${story.clip.title}`}>
         {story.clip.poster ? <img src={story.clip.poster} alt="" loading="lazy" width="480" height="320" data-site-image-ignore=""/> : <img src="/bravo-shield-192.png" alt="" width="192" height="192" loading="lazy" data-site-image-ignore=""/>}<span aria-hidden="true">View session ↗</span>
       </button>
@@ -14,5 +17,10 @@ export default function FieldStories({ clips, onChoose }) {
         <small>{story.clip.facebookUrl ? 'Opens the original Facebook Reel from the library below.' : 'Recorded Bravo session · play it in the library below.'}</small>
       </div>
     </article>)}</div>
+    {stories.length > 1 && <div className="field-story-controls" hidden={!overflow} data-proof-action="">
+      <button type="button" onClick={() => go(-1)} disabled={position === 0} aria-controls="field-story-rail" aria-label="Previous Field Story">← <span>Previous</span></button>
+      <p role="status" aria-live="polite"><span className="sr-only">Field Story </span>{position + 1} of {stories.length}</p>
+      <button type="button" onClick={() => go(1)} disabled={position === stories.length - 1} aria-controls="field-story-rail" aria-label="Next Field Story"><span>Next</span> →</button>
+    </div>}
   </section>;
 }

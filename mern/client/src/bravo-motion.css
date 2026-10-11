@@ -1,0 +1,57 @@
+/* Public motion only: no route, form, payment or media-player transitions. */
+:is(.cinema-home,.hunting-page){--motion-ease:cubic-bezier(.2,.7,.2,1);--motion-glow:186,154,100}
+.cinema-home :is(.goal-choice,.field-story-card,.cinema-button,.goal-actions>.button),.hunting-page :is(.hunting-goal-options button,.field-actions>.button,.hunting-goals>.button){position:relative;isolation:isolate}
+.cinema-home :is(.field-story-card,.goal-choice){overflow:visible}
+.cinema-home .field-story-image{border-radius:14px 14px 0 0}
+.cinema-home :is(.goal-choice,.field-story-card,.cinema-button,.goal-actions>.button)::after,.hunting-page :is(.hunting-goal-options button,.field-actions>.button,.hunting-goals>.button)::after{
+ content:"";position:absolute;inset:auto 10% -3px;height:2px;z-index:-1;border-radius:50%;box-shadow:0 8px 24px 8px rgba(var(--motion-glow),.45);opacity:.24;pointer-events:none;transition:opacity 180ms var(--motion-ease)
+}
+.cinema-home .goal-choice[data-selected=true]::after,.hunting-page .hunting-goal-options button[aria-pressed=true]::after{opacity:.85}
+.cinema-home :is(.goal-choice,.field-story-card,.cinema-button,.goal-actions>.button):focus-within::after,.hunting-page :is(.hunting-goal-options button,.field-actions>.button,.hunting-goals>.button):focus-visible::after{opacity:.9}
+.cinema-home .cinema-portrait{box-shadow:0 14px 32px -16px rgba(var(--motion-glow),.4)}
+.cinema-home .cinema-hero-copy{position:relative;isolation:isolate}
+.cinema-home .cinema-hero-copy::before{content:"";position:absolute;inset:-35px -18px;z-index:-1;pointer-events:none;background:radial-gradient(ellipse at 32% 60%,rgba(var(--motion-glow),.12),transparent 67%)}
+.hunting-page .hunting-hero-media{box-shadow:0 20px 55px -30px rgba(var(--motion-glow),.48)}
+.cinema-home .goal-result[data-plan-changed]{animation:bravo-plan-in 220ms var(--motion-ease)}
+@keyframes bravo-plan-in{from{opacity:.35;transform:translateY(6px)}to{opacity:1;transform:none}}
+.bravo-home.cinema-home[data-motion=on] [data-reveal],.hunting-motion[data-motion=on] [data-reveal]{opacity:0;transform:translateY(12px);transition:opacity 320ms var(--motion-ease),transform 320ms var(--motion-ease);transition-delay:var(--reveal-delay,0ms)}
+.bravo-home.cinema-home[data-motion=on] [data-reveal].is-revealed,.hunting-motion[data-motion=on] [data-reveal].is-revealed{opacity:1;transform:none}
+.bravo-home.cinema-home[data-motion=on] :is(.field-story-card,.cinema-team-grid>article),.hunting-motion[data-motion=on] .hunting-process-grid>article{transition-duration:360ms}
+.cinema-home :is(.field-story-card,.cinema-team-grid>article):nth-child(2),.hunting-page .hunting-process-grid>article:nth-child(2){--reveal-delay:50ms}
+.cinema-home :is(.field-story-card,.cinema-team-grid>article):nth-child(3),.hunting-page .hunting-process-grid>article:nth-child(3){--reveal-delay:100ms}
+.bravo-home.cinema-home[data-motion=on] [data-reveal]:is(:focus-within,.is-focus-revealed),.hunting-motion[data-motion=on] [data-reveal]:is(:focus-within,.is-focus-revealed){opacity:1;transform:none;transition:none}
+
+.cinema-home .field-story-grid{padding:8px 6px 30px;margin-inline:-6px;min-width:0}
+.cinema-home .field-story-controls{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 0}
+.cinema-home .field-story-controls[hidden]{display:none}
+.cinema-home .field-story-controls button{min-height:44px;min-width:44px;padding:10px 14px;border:1px solid #ba9a6466;border-radius:24px;background:#171715;color:#ead6b3;font:inherit;font-size:13px}
+.cinema-home .field-story-controls button:disabled{opacity:.45;cursor:default}
+.cinema-home .field-story-controls p{margin:0;font-size:12px;color:#cec7b9;white-space:nowrap}
+.cinema-home .field-story-grid:focus-visible{outline:2px solid #e6c58c;outline-offset:4px}
+@media(max-width:650px){
+ .cinema-home .field-story-grid{display:grid;grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:86%;gap:16px;overflow-x:auto;scroll-snap-type:x proximity;scroll-padding-inline:6px;overscroll-behavior-x:contain;touch-action:auto;align-items:start;scrollbar-width:thin;scrollbar-color:#ba9a6466 #101010}
+ .cinema-home .field-story-card{scroll-snap-align:start;min-width:0}
+}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){
+ .cinema-home :is(.goal-choice,.field-story-card,.cinema-button,.goal-actions>.button):hover::after,.hunting-page :is(.hunting-goal-options button,.field-actions>.button,.hunting-goals>.button):hover::after{opacity:.85}
+ .cinema-home .field-story-image img{transition:transform 180ms var(--motion-ease)}
+ .cinema-home .field-story-image:hover img{transform:translateY(-2px)}
+}
+@media(prefers-reduced-motion:no-preference){.cinema-home .goal-select:active,.hunting-page .hunting-goal-options button:active{transform:translateY(1px)}}
+html:is(.access-reduced-motion,.a11y-reduce-motion) :is(.cinema-home,.hunting-page) :is([data-reveal],.goal-result,.goal-select,.field-story-image img,.hunting-goal-options button){animation:none!important;transition:none!important;transform:none!important;opacity:1!important;scroll-behavior:auto!important}
+html:is(.access-reduced-motion,.a11y-reduce-motion) :is(.cinema-home,.hunting-page) ::after{transition:none!important}
+@media(prefers-reduced-motion:reduce){
+ :is(.cinema-home,.hunting-page) :is([data-reveal],.goal-result,.goal-select,.field-story-image img,.hunting-goal-options button){animation:none!important;transition:none!important;transform:none!important;opacity:1!important;scroll-behavior:auto!important}
+ :is(.cinema-home,.hunting-page) ::after{transition:none!important}
+}
+html.access-high-contrast :is(.cinema-home,.hunting-page) :is(.goal-choice,.field-story-card,.cinema-button,.goal-actions>.button,.hunting-goal-options button,.field-actions>.button,.hunting-goals>.button)::after,html.access-high-contrast .cinema-home .cinema-hero-copy::before{display:none}
+@media(forced-colors:active){
+ :is(.cinema-home,.hunting-page) :is(.goal-choice,.field-story-card,.cinema-button,.goal-actions>.button,.hunting-goal-options button,.field-actions>.button,.hunting-goals>.button)::after,.cinema-home .cinema-hero-copy::before{display:none}
+ .cinema-home .field-story-controls button{border-color:ButtonText}
+}
+
+/* Horizontal ad swipes are explicit; vertical scrolling and pinch zoom stay native. */
+.home-ad-dock .home-ad-carousel{touch-action:pan-y pinch-zoom}
+.home-ad-dock::before{content:"";position:absolute;left:10%;right:10%;top:-1px;height:2px;background:linear-gradient(90deg,transparent,#ba9a64,transparent);box-shadow:0 -3px 14px #ba9a6444;pointer-events:none}
+html.access-high-contrast .home-ad-dock::before{display:none}
+@media(forced-colors:active){.home-ad-dock::before{display:none}}
