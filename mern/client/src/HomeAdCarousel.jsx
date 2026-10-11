@@ -1,3 +1,5 @@
+import './bravo-motion.css';
+import { horizontalSwipe } from '../../shared/bravo-motion';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from './Link';
@@ -141,7 +143,8 @@ export default function HomeAdCarousel() {
   const canEdit = isImageEditor(user) && !user?.mustChangePassword;
   const [collection, setCollection] = useState(initialCollection), [activeId, setActiveId] = useState(''), [editing, setEditing] = useState(false), [expanded, setExpanded] = useState(null);
   const [paused, setPaused] = useState(false), [reduced, setReduced] = useState(false), [focused, setFocused] = useState(false), [obscured, setObscured] = useState(false), [keyboard, setKeyboard] = useState(false);
-  const hold = useRef(null), origin = useRef(null), suppressUntil = useRef(0), dock = useRef(null);
+  const hold = useRef(null), origin = useRef(null), suppressUntil = useRef(0), dock = useRef(null), tapTarget = useRef(null);
+  const [gesturing, setGesturing] = useState(false);
   const cancelHold = () => { clearTimeout(hold.current); hold.current = null; };
   useEffect(() => {
     let live = true, loading = false;
@@ -167,13 +170,13 @@ export default function HomeAdCarousel() {
   const visibleSlides = slides.filter((_ad, index) => index === activeIndex || index === (activeIndex + 1) % slides.length || index === (activeIndex + slides.length - 1) % slides.length);
   useEffect(() => { if (currentId && currentId !== activeId) setActiveId(currentId); }, [currentId, activeId]);
   const rotationKey = slides.map(ad => ad.id).join('|');
-  const stopped = paused || reduced || editing || !!expanded || focused || obscured || keyboard;
+  const stopped = paused || reduced || editing || !!expanded || focused || obscured || keyboard || gesturing;
   useEffect(() => {
     if (slides.length < 2 || stopped) return;
     const ids = rotationKey.split('|');
-    const timer = setInterval(() => setActiveId(id => ids[(Math.max(0, ids.indexOf(id)) + 1) % ids.length]), Math.max(3, collection.settings?.autoplaySeconds || 7) * 1000);
+    const timer = setInterval(() => { if (!origin.current) setActiveId(id => ids[(Math.max(0, ids.indexOf(id)) + 1) % ids.length]); }, Math.max(3, collection.settings?.autoplaySeconds || 7) * 1000);
     return () => clearInterval(timer);
-  }, [rotationKey, slides.length, stopped, collection.settings?.autoplaySeconds]);
+  }, [rotationKey, slides.length, stopped, collection.settings?.autoplaySeconds, activeId]);
   useLayoutEffect(() => {
     if (!current || !dock.current) { document.documentElement.style.removeProperty('--ad-dock-height'); return; }
     const measure = () => document.documentElement.style.setProperty('--ad-dock-height', `${Math.ceil(dock.current.getBoundingClientRect().height)}px`);
@@ -186,26 +189,71 @@ export default function HomeAdCarousel() {
     try { setCollection(await api('/site-ads')); } catch { /* Keep the current snapshot. */ }
     setEditing(true);
   }
+  function moveAd(direction) {
+    const ids = slides.map(ad => ad.id);
+    if (ids.length > 1) setActiveId(id => ids[(Math.max(0, ids.indexOf(id)) + direction + ids.length) % ids.length]);
+  }
+  function releaseGesture(cancelled = false) {
+    cancelHold();
+    if (origin.current && cancelled) suppressUntil.current = Math.max(suppressUntil.current, Date.now() + 500);
+    origin.current = null; setGesturing(false);
+  }
+  function beginGesture(event) {
+    if (event.isPrimary === false) { releaseGesture(true); return; }
+    if (event.button !== 0) return;
+    cancelHold(); tapTarget.current = null; suppressUntil.current = 0;
+    origin.current = { x: event.clientX, y: event.clientY, pointer: event.pointerId, id: currentId, moved: false, held: false };
+    setGesturing(true);
+    if (canEdit) hold.current = setTimeout(() => {
+      const start = origin.current;
+      if (!start || start.moved) return;
+      start.held = true; void openEditor();
+    }, 650);
+  }
+  function moveGesture(event) {
+    const start = origin.current;
+    if (!start) return;
+    if (event.pointerId !== start.pointer) { releaseGesture(true); return; }
+    if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > 12) { start.moved = true; cancelHold(); }
+  }
+  function endGesture(event) {
+    const start = origin.current;
+    if (start && event.pointerId === start.pointer) {
+      const direction = horizontalSwipe(event.clientX - start.x, event.clientY - start.y);
+      const moved = start.moved || Math.hypot(event.clientX - start.x, event.clientY - start.y) > 12;
+      if (moved && !start.held && start.id === currentId && direction) moveAd(direction);
+      if (moved || start.held || start.id !== currentId) suppressUntil.current = Math.max(suppressUntil.current, Date.now() + 500);
+      else tapTarget.current = { id: start.id, at: Date.now() };
+    }
+    releaseGesture();
+  }
+  useEffect(() => {
+    const cancel = () => releaseGesture(true);
+    window.addEventListener('blur', cancel); window.addEventListener('pagehide', cancel);
+    document.addEventListener('visibilitychange', cancel);
+    return () => { window.removeEventListener('blur', cancel); window.removeEventListener('pagehide', cancel); document.removeEventListener('visibilitychange', cancel); };
+  }, []);
   const publish = data => { setCollection(data); window.dispatchEvent(new Event('bravo-ads-changed')); };
   if (typeof document === 'undefined') return null;
   return <>
     <Accessibility>
+      {slides.length > 1 && <><button type="button" onClick={() => moveAd(-1)}>Previous advertisement</button><button type="button" onClick={() => moveAd(1)}>Next advertisement</button></>}
       {current && <button type="button" aria-pressed={paused || reduced} onClick={() => { setPaused(!(paused || reduced)); if (reduced) setReduced(false); }}>{paused || reduced ? 'Resume advertisements' : 'Pause advertisements'}</button>}
       {current && !current.live && <button type="button" onClick={() => setExpanded(current)}>Expand advertisement</button>}
       {canEdit && <button type="button" onClick={openEditor}>Manage advertisements</button>}
     </Accessibility>
     {current && createPortal(<aside ref={dock} className="home-ad-dock" data-keyboard={keyboard || undefined} data-obscured={obscured || undefined} aria-label="Bravo announcements and promotions">
       <section className="home-ad-carousel" data-site-image-ignore="" data-ad-editable={canEdit || undefined}
-        onPointerDown={event => { if (!canEdit || event.button !== 0 || event.isPrimary === false) return; origin.current = { x: event.clientX, y: event.clientY }; cancelHold(); hold.current = setTimeout(openEditor, 650); }}
-        onPointerMove={event => { if (origin.current && Math.hypot(event.clientX - origin.current.x, event.clientY - origin.current.y) > 12) cancelHold(); }}
-        onPointerUp={cancelHold} onPointerCancel={cancelHold} onPointerLeave={cancelHold}
+        onPointerDown={beginGesture} onPointerMove={moveGesture} onPointerUp={endGesture}
+        onPointerCancel={() => releaseGesture(true)} onPointerLeave={event => { if (event.pointerType === 'mouse') releaseGesture(true); }}
+        onDragStart={event => event.preventDefault()}
         onContextMenu={event => { if (canEdit) event.preventDefault(); }}
         onFocusCapture={() => setFocused(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}
-        onClickCapture={event => { if (Date.now() < suppressUntil.current) { event.preventDefault(); event.stopPropagation(); } }}>
+        onClickCapture={event => { const intent = tapTarget.current; tapTarget.current = null; const changed = event.detail !== 0 && intent && Date.now() - intent.at < 1000 && intent.id !== currentId; if (Date.now() < suppressUntil.current || changed) { event.preventDefault(); event.stopPropagation(); } }}>
         <div className="home-ad-frame"><div className="home-ad-track">{visibleSlides.map(ad => {
           const selected = ad.id === current.id;
           const art = ad.live ? <span className="ad-live-creative"><span className="live-badge"><i aria-hidden="true"/>LIVE</span><strong>BRAVO LIVE</strong><span className="ad-live-trainer">{ad.title}</span><small>{ad.audience === 'client' ? 'Client session' : 'Real training. Right now.'}</small></span> : ad.workshop ? <span className="ad-workshop-creative"><AdMedia ad={ad} playing={selected && !stopped}/><span className="ad-workshop-schedule">{ad.workshop.dateLabel || 'Workshop announcement'}{ad.workshop.date && ad.workshop.time && <small>{ad.workshop.time} · Central</small>}</span></span> : <AdMedia ad={ad} playing={selected && !stopped}/>;
-          return <article className={`home-ad-slide${selected ? ' is-active' : ''}`} key={ad.id} aria-hidden={!selected || undefined} inert={!selected}>
+          return <article className={`home-ad-slide${selected ? ' is-active' : ''}`} key={ad.id} data-ad-id={ad.id} aria-hidden={!selected || undefined} inert={!selected}>
             {ad.link ? <Link href={ad.link} aria-label={ad.title}>{art}</Link> : <button type="button" className="ad-art-button" onClick={() => setExpanded(ad)} aria-label={`View advertisement: ${ad.title}`}>{art}</button>}
           </article>;
         })}</div></div>

@@ -8,10 +8,11 @@ export default function useCinematicMotion(root) {
     if (!node) return;
     const preference = matchMedia('(prefers-reduced-motion: reduce)');
     let frame = 0;
-    const reduced = () => preference.matches || document.documentElement.classList.contains('access-reduced-motion');
+    const reduced = () => preference.matches || document.documentElement.matches('.access-reduced-motion,.a11y-reduce-motion');
     const render = () => {
       frame = 0;
-      node.dataset.motion = reduced() ? 'off' : 'on';
+      node.dataset.motion = reduced() || !observer ? 'off' : 'on';
+      if (reduced()) node.querySelectorAll('[data-reveal]').forEach(reveal);
       const hero = node.querySelector('.cinema-hero');
       if (hero) {
         const progress = reduced() ? 0 : Math.max(0, Math.min(1, -hero.getBoundingClientRect().top / hero.offsetHeight));
@@ -25,18 +26,26 @@ export default function useCinematicMotion(root) {
       }
     };
     const schedule = () => { if (!frame) frame = requestAnimationFrame(render); };
-    const observer = new IntersectionObserver(entries => {
-      for (const entry of entries) if (entry.isIntersecting) {
-        entry.target.classList.add('is-revealed'); observer.unobserve(entry.target);
+    const reveal = element => { element.classList.add('is-revealed'); observer?.unobserve(element); };
+    const observer = typeof IntersectionObserver === 'function' ? new IntersectionObserver(entries => {
+      for (const entry of entries) if (entry.isIntersecting) reveal(entry.target);
+    }, { threshold: 0.08 }) : null;
+    const observe = element => { if (reduced() || !observer || element.classList.contains('is-revealed')) reveal(element); else observer.observe(element); };
+    node.querySelectorAll('[data-reveal]').forEach(observe);
+    const focus = event => {
+      let element = event.target instanceof Element ? event.target.closest('[data-reveal]') : null;
+      while (element && node.contains(element)) {
+        element.classList.add('is-focus-revealed'); reveal(element);
+        element = element.parentElement?.closest('[data-reveal]');
       }
-    }, { threshold: 0.08 });
-    node.querySelectorAll('[data-reveal]').forEach(element => observer.observe(element));
+    };
+    node.addEventListener('focusin', focus);
     // Team records arrive after the initial render and replace fallback nodes.
     const additions = new MutationObserver(records => {
       for (const record of records) for (const added of record.addedNodes) {
         if (!(added instanceof Element)) continue;
-        if (added.matches('[data-reveal]')) observer.observe(added);
-        added.querySelectorAll('[data-reveal]').forEach(element => observer.observe(element));
+        if (added.matches('[data-reveal]')) observe(added);
+        added.querySelectorAll('[data-reveal]').forEach(observe);
       }
     });
     additions.observe(node, { childList: true, subtree: true });
@@ -47,7 +56,8 @@ export default function useCinematicMotion(root) {
     window.addEventListener('resize', schedule);
     render();
     return () => {
-      cancelAnimationFrame(frame); observer.disconnect(); additions.disconnect(); accessibility.disconnect();
+      cancelAnimationFrame(frame); observer?.disconnect(); additions.disconnect();
+      node.removeEventListener('focusin', focus); node.dataset.motion = 'off'; accessibility.disconnect();
       preference.removeEventListener('change', schedule);
       window.removeEventListener('scroll', schedule); window.removeEventListener('resize', schedule);
     };
