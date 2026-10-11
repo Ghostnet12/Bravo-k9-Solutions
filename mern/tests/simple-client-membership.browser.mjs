@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import express from 'express';
 import { once } from 'node:events';
-import { readFile, mkdir } from 'node:fs/promises';
+import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { chromium, webkit } from 'playwright';
 import { DateTime } from 'luxon';
@@ -20,11 +20,21 @@ try {
     try {
       for (const width of [320, 390, 1440]) {
         const context = await browser.newContext({ viewport: { width, height: 844 }, isMobile: width < 700 }), page = await context.newPage();
-        let client, membership, booking, term, createdBody, calendarBody; const errors = [];
-        page.on('pageerror', e => errors.push(e.message)); page.on('dialog', dialog => dialog.accept());
+        let client, membership, booking, term, createdBody, calendarBody, reloading = false;
+        const errors = [], browserDiagnostics = [];
+        page.on('pageerror', e => browserDiagnostics.push({ message: e.message, reloading })); page.on('dialog', dialog => dialog.accept());
+        // WebKit can report cancelled old-document requests as pageerror during
+        // reload. Keep those diagnostics and independently fail real JS errors
+        // and unhandled promises, matching the other browser regression suites.
+        await page.exposeFunction('recordSimpleClientRuntimeError', message => errors.push(message));
+        await page.addInitScript(() => {
+          window.addEventListener('error', event => { if (event instanceof ErrorEvent) void window.recordSimpleClientRuntimeError(event.error?.stack || event.message).catch(() => {}); });
+          window.addEventListener('unhandledrejection', event => { void window.recordSimpleClientRuntimeError(event.reason?.stack || event.reason?.message || String(event.reason)).catch(() => {}); });
+        });
         await page.route('**/api/**', async route => {
           const url = new URL(route.request().url()), path = url.pathname, method = route.request().method(); let json = {};
           if (path === '/api/config') json = { connected: true, paymentsReady: false, services: SERVICES, schedule: { enabled: true, weekdays: [1, 2, 3, 4, 5], hours: ['09:00', '10:00'] } };
+          else if (path === '/api/live') json = { sessions: [], announcements: [] };
           else if (path === '/api/auth/me') json = { user: { ...david, isPrimaryOwner: true }, services: [], membership: { active: false } };
           else if (path === '/api/notifications') json = { items: [] };
           else if (path === '/api/site-images') json = { images: {} };
@@ -76,17 +86,25 @@ try {
           await setup.locator('.saved-calendar button.has-visits').first().waitFor();
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
           await page.screenshot({ path: `test-results/simple-client-${engineName}-${width}.png`, fullPage: true });
-          await page.reload(); await page.locator('.owner-person > summary').click({ position: { x: 8, y: 20 } });
+          reloading = true; await page.reload(); reloading = false;
+          await page.locator('.owner-person > summary').click({ position: { x: 8, y: 20 } });
           const person = page.locator('.owner-person'); assert.match(await person.locator(':scope > summary').innerText(), /MEMBER/);
           assert.equal(await person.getByRole('button', { name: 'Make Member', exact: true }).count(), 0);
           const email = person.getByLabel('Email', { exact: true }); assert.equal(await email.isEnabled(), true); await email.fill('later@example.test');
           await person.getByRole('button', { name: 'Save profile & access', exact: true }).click();
           await person.getByText('Profile and access saved.', { exact: false }).waitFor();
           assert.equal(client.email, 'later@example.test'); await person.getByRole('button', { name: 'Create new temporary password', exact: true }).waitFor();
-          assert.deepEqual(errors, []); console.log(`${engineName} ${width}: two required names → member → trainer → 10 AM schedule → later email passed`);
+          const live = await page.evaluate(async () => { const response = await fetch('/api/live'); return { status: response.status, body: await response.json() }; });
+          assert.deepEqual(live, { status: 200, body: { sessions: [], announcements: [] } }, 'live status remains readable after reload');
+          assert.deepEqual(errors, []);
+          assert.deepEqual(browserDiagnostics.filter(item => !(engineName === 'webkit' && item.reloading && item.message.endsWith(`${new URL(origin).host}/api/live due to access control checks.`))), [], 'all other browser diagnostics remain failures');
+          console.log(`${engineName} ${width}: two required names → member → trainer → 10 AM schedule → later email passed`);
         } catch (error) {
           await page.screenshot({ path: `test-results/simple-client-failure-${engineName}-${width}.png`, fullPage: true }); console.log(await page.locator('body').innerText()); throw error;
-        } finally { await context.close(); }
+        } finally {
+          await writeFile(`test-results/simple-client-diagnostics-${engineName}-${width}.json`, JSON.stringify({ errors, browserDiagnostics }, null, 2));
+          await context.close();
+        }
       }
     } finally { await browser.close(); }
   }
