@@ -9,5 +9,5 @@ self.onmessage = async ({ data }) => {
     const result = await startCodecProbe(data.track, publication => { if (active) self.postMessage({ type: 'sample', publication }); });
     if (!active) { await result.disconnect(); return; }
     probe = result; self.postMessage({ type: 'ready', publication: probe.sample() });
-  } catch (error) { if (active) self.postMessage({ type: 'error', name: error.name, message: error.message }); }
+  } catch (error) { if (active) self.postMessage({ type: 'error', name: error.name, message: error.message, diagnostic: error.diagnostic }); }
 };

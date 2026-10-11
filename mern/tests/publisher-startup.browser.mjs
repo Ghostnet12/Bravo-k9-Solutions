@@ -22,7 +22,7 @@ try { for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
   try { for (const width of [390, 1440]) {
     const context = await browser.newContext({ viewport: { width, height: 900 } });
     await context.addInitScript(() => {
-      window.fixtureCapturePaused = false; window.fixtureSources = []; window.fixtureClones = []; window.fixtureSelfConnections = 0;
+      window.fixtureCapturePaused = false; window.fixtureWorkerErrors = []; window.fixtureSources = []; window.fixtureClones = []; window.fixtureSelfConnections = 0;
       const nativeClone = MediaStreamTrack.prototype.clone;
       MediaStreamTrack.prototype.clone = function() { const clone = nativeClone.call(this); window.fixtureClones.push(clone); return clone; };
       MediaDevices.prototype.getUserMedia = async function fixtureGetUserMedia() {
@@ -37,6 +37,8 @@ try { for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
         return stream;
       };
       window.fixtureCameraInstalled = navigator.mediaDevices.getUserMedia.name === 'fixtureGetUserMedia';
+      const NativeWorker = window.Worker;
+      window.Worker = class extends NativeWorker { constructor(...args) { super(...args); this.addEventListener('message', ({ data }) => { if (data.type === 'error') window.fixtureWorkerErrors.push(data); }); } };
       const NativePC = window.RTCPeerConnection;
       window.RTCPeerConnection = class extends NativePC {
         constructor(config) {
@@ -115,7 +117,7 @@ try { for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
       await page.screenshot({ path: `test-results/publisher-startup-${engineName}-${width}.png` });
       evidence.push({ engine: engineName, width, passed: ['fresh-frame requirement', 'no self-connection', 'no server session on failed check', 'retry preserves camera and form', 'real encode/decode counters', 'camera switch', 'cleanup'], applicationRequests: 'isolated fixtures only' });
       console.log('PASS', engineName, width, 'startup without self-ICE, real encoded/decoded frames, failed-start retry and camera cleanup');
-    } catch (error) { console.log('DIAGNOSTICS', engineName, width, { createCount, publications, errors, body: (await page.locator('main').innerText()).slice(0,2200) }); await page.screenshot({ path: `test-results/publisher-failure-${engineName}-${width}.png` }); throw error; }
+    } catch (error) { console.log('CAMERA_PIPELINE', await page.evaluate(() => ({worker: window.fixtureWorkerErrors, source: window.fixtureSources.map(s=>s.getTracks().map(t=>({state:t.readyState,muted:t.muted,enabled:t.enabled}))), preview: (()=>{const v=document.querySelector('.live-camera-preview video');return {paused:v.paused,currentTime:v.currentTime,readyState:v.readyState}})()}))); console.log('DIAGNOSTICS', engineName, width, { createCount, publications, errors, body: (await page.locator('main').innerText()).slice(0,2200) }); await page.screenshot({ path: `test-results/publisher-failure-${engineName}-${width}.png` }); throw error; }
     finally { await context.close(); }
   } } finally { await browser.close(); }
 } } finally { await writeFile('test-results/publisher-startup-results.json', JSON.stringify(evidence, null, 2)); await new Promise(resolve => server.close(resolve)); }

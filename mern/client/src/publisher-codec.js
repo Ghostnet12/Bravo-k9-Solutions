@@ -6,6 +6,7 @@ export async function startCodecProbe(track, onSample = () => {}) {
   if (!codecProbeSupported()) { track.stop(); throw unsupported(); }
   let stopped = false, failure, reader, encoder, decoder, readyTimer;
   let framesEncoded = 0, framesDecoded = 0, lastTimestamp = -Infinity;
+  let captured = 0, submitted = 0, firstSourceTimestamp = null, lastSourceTimestamp = null;
   const pending = new Set(), id = crypto.randomUUID();
   let resolveReady, rejectReady;
   const ready = new Promise((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
@@ -65,12 +66,13 @@ export async function startCodecProbe(track, onSample = () => {}) {
     });
     encoder.configure(config);
     reader = new MediaStreamTrackProcessor({ track, maxBufferSize: 1 }).readable.getReader();
-    readyTimer = setTimeout(() => fail('No fresh camera frames arrived. Keep this tab open, check the camera preview, then try Start live again.'), 8000);
+    readyTimer = setTimeout(() => fail(Object.assign(new Error('No fresh camera frames arrived. Keep this tab open, check the camera preview, then try Start live again.'), { diagnostic: { captured, submitted, framesEncoded, framesDecoded, firstSourceTimestamp, lastSourceTimestamp, muted: track.muted, enabled: track.enabled, readyState: track.readyState } })), 8000);
     void (async () => {
       try {
         while (!stopped) {
           const { value: frame, done } = await reader.read();
           if (done) { if (!stopped) fail('The camera stopped. Enable camera preview and try again.'); return; }
+          captured++; firstSourceTimestamp ??= frame.timestamp; lastSourceTimestamp = frame.timestamp;
           try {
             // Source timestamps advance only for new camera frames. Limit work
             // to four tiny frames/sec; queues and retained frames stay bounded.
@@ -78,7 +80,7 @@ export async function startCodecProbe(track, onSample = () => {}) {
             lastTimestamp = frame.timestamp;
             context.drawImage(frame, 0, 0, 160, 90);
             const input = new VideoFrame(canvas, { timestamp: frame.timestamp });
-            try { pending.add(input.timestamp); encoder.encode(input, { keyFrame: true }); }
+            try { submitted++; pending.add(input.timestamp); encoder.encode(input, { keyFrame: true }); }
             finally { input.close(); }
             await encoder.flush();
           } finally { frame.close(); }
