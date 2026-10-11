@@ -1,10 +1,10 @@
 /* Public motion only: no route, form, payment or media-player transitions. */
 :is(.cinema-home,.hunting-page){--motion-ease:cubic-bezier(.2,.7,.2,1);--motion-glow:186,154,100}
 .cinema-home :is(.goal-choice,.field-story-card,.cinema-button,.goal-actions>.button),.hunting-page :is(.hunting-goal-options button,.field-actions>.button,.hunting-goals>.button){position:relative;isolation:isolate}
-.cinema-home .field-story-card{overflow:visible}
+.cinema-home :is(.field-story-card,.goal-choice){overflow:visible}
 .cinema-home .field-story-image{border-radius:14px 14px 0 0}
 .cinema-home :is(.goal-choice,.field-story-card,.cinema-button,.goal-actions>.button)::after,.hunting-page :is(.hunting-goal-options button,.field-actions>.button,.hunting-goals>.button)::after{
- content:"";position:absolute;inset:48% 12px -4px;z-index:-1;border-radius:inherit;box-shadow:0 12px 27px 3px rgba(var(--motion-glow),.4);opacity:.24;pointer-events:none;transition:opacity 180ms var(--motion-ease)
+ content:"";position:absolute;inset:auto 10% -3px;height:2px;z-index:-1;border-radius:50%;box-shadow:0 8px 24px 8px rgba(var(--motion-glow),.45);opacity:.24;pointer-events:none;transition:opacity 180ms var(--motion-ease)
 }
 .cinema-home .goal-choice[data-selected=true]::after,.hunting-page .hunting-goal-options button[aria-pressed=true]::after{opacity:.85}
 .cinema-home :is(.goal-choice,.field-story-card,.cinema-button,.goal-actions>.button):focus-within::after,.hunting-page :is(.hunting-goal-options button,.field-actions>.button,.hunting-goals>.button):focus-visible::after{opacity:.9}
