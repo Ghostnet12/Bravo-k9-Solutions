@@ -33,13 +33,15 @@ export async function startCodecProbe(track, onSample = () => {}) {
   };
   try {
     let config;
-    for (const codec of ['avc1.42001e', 'vp8']) {
-      const candidate = { codec, width: 160, height: 90, bitrate: 80000, framerate: 4, latencyMode: 'realtime', ...(codec.startsWith('avc1') ? { avc: { format: 'annexb' } } : {}) };
-      const supported = await Promise.all([VideoEncoder.isConfigSupported(candidate), VideoDecoder.isConfigSupported({ codec, codedWidth: 160, codedHeight: 90 })]).catch(() => []);
+    // Prefer a tiny software-friendly probe. A browser can advertise hardware
+    // AVC support without emitting frames; the real viewer codec is unchanged.
+    for (const codec of ['vp8', 'avc1.42001e']) {
+      const candidate = { codec, width: 160, height: 96, bitrate: 80000, framerate: 4, latencyMode: 'realtime', ...(codec.startsWith('avc1') ? { avc: { format: 'annexb' } } : {}) };
+      const supported = await Promise.all([VideoEncoder.isConfigSupported(candidate), VideoDecoder.isConfigSupported({ codec, codedWidth: 160, codedHeight: 96 })]).catch(() => []);
       if (supported.length === 2 && supported.every(result => result.supported)) { config = candidate; break; }
     }
     if (!config) throw unsupported();
-    const canvas = new OffscreenCanvas(160, 90), context = canvas.getContext('2d', { alpha: false });
+    const canvas = new OffscreenCanvas(160, 96), context = canvas.getContext('2d', { alpha: false });
     if (!context) throw unsupported();
     decoder = new VideoDecoder({
       output(frame) {
@@ -56,9 +58,8 @@ export async function startCodecProbe(track, onSample = () => {}) {
         encodedOutputs++; lastEncodedTimestamp = chunk.timestamp;
         if (stopped || !pending.has(chunk.timestamp)) return;
         try {
-          if (decoder.state === 'unconfigured') decoder.configure({ ...(metadata.decoderConfig || { codec: config.codec, codedWidth: 160, codedHeight: 90 }), optimizeForLatency: true });
+          if (decoder.state === 'unconfigured') decoder.configure({ ...(metadata.decoderConfig || { codec: config.codec, codedWidth: 160, codedHeight: 96 }), optimizeForLatency: true });
           framesEncoded++; decoder.decode(chunk);
-          // Independent keyframes can be drained without waiting for a batch.
           void decoder.flush().catch(() => { if (!stopped) fail('The camera video could not be decoded. Try Start live again.'); });
         } catch { fail('The camera video could not be decoded. Try Start live again.'); }
       },
@@ -66,7 +67,7 @@ export async function startCodecProbe(track, onSample = () => {}) {
     });
     encoder.configure(config);
     reader = new MediaStreamTrackProcessor({ track, maxBufferSize: 1 }).readable.getReader();
-    readyTimer = setTimeout(() => fail(Object.assign(new Error('No fresh camera frames arrived. Keep this tab open, check the camera preview, then try Start live again.'), { diagnostic: { captured, submitted, framesEncoded, framesDecoded, firstSourceTimestamp, lastSourceTimestamp, encodedOutputs, decodedOutputs, lastInputTimestamp, lastEncodedTimestamp, lastDecodedTimestamp, muted: track.muted, enabled: track.enabled, readyState: track.readyState } })), 8000);
+    readyTimer = setTimeout(() => fail(Object.assign(new Error(captured ? 'Camera video processing stalled. Keep this tab open and try Start live again.' : 'No fresh camera frames arrived. Keep this tab open, check the camera preview, then try Start live again.'), { diagnostic: { captured, submitted, framesEncoded, framesDecoded, firstSourceTimestamp, lastSourceTimestamp, encodedOutputs, decodedOutputs, lastInputTimestamp, lastEncodedTimestamp, lastDecodedTimestamp, muted: track.muted, enabled: track.enabled, readyState: track.readyState } })), 8000);
     void (async () => {
       try {
         while (!stopped) {
@@ -81,7 +82,7 @@ export async function startCodecProbe(track, onSample = () => {}) {
             const arrival = performance.now();
             if (stopped || track.muted || !track.enabled || arrival - lastAdmission < 250 || pending.size >= 2 || encoder.encodeQueueSize > 1 || decoder.decodeQueueSize > 1) continue;
             lastAdmission = arrival;
-            context.drawImage(frame, 0, 0, 160, 90);
+            context.drawImage(frame, 0, 0, 160, 96);
             const input = new VideoFrame(canvas, { timestamp: Math.round(arrival * 1000), duration: 250000 });
             lastInputTimestamp = input.timestamp;
             try { submitted++; pending.add(input.timestamp); encoder.encode(input, { keyFrame: true }); }
