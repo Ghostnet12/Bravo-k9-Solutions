@@ -25,7 +25,7 @@ try { for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
       window.fixtureCapturePaused = false; window.fixtureSources = []; window.fixtureClones = []; window.fixtureSelfConnections = 0;
       const nativeClone = MediaStreamTrack.prototype.clone;
       MediaStreamTrack.prototype.clone = function() { const clone = nativeClone.call(this); window.fixtureClones.push(clone); return clone; };
-      navigator.mediaDevices.getUserMedia = async () => {
+      MediaDevices.prototype.getUserMedia = async function fixtureGetUserMedia() {
         const canvas = document.createElement('canvas'); canvas.width = 640; canvas.height = 360;
         const ctx = canvas.getContext('2d'); let frame = 0;
         ctx.fillRect(0, 0, 640, 360);
@@ -36,6 +36,7 @@ try { for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
         }, 67);
         return stream;
       };
+      window.fixtureCameraInstalled = navigator.mediaDevices.getUserMedia.name === 'fixtureGetUserMedia';
       const NativePC = window.RTCPeerConnection;
       window.RTCPeerConnection = class extends NativePC {
         constructor(config) {
@@ -80,6 +81,7 @@ try { for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
     page.on('response', response => { if (response.url().includes('/api/') && !response.headers()['content-type']?.includes('application/json')) console.log('UNEXPECTED_API_RESPONSE', response.url(), response.status(), response.headers()['content-type']); });
     try {
       await page.goto(origin + '/live/studio');
+      assert.ok(await page.evaluate(() => window.fixtureCameraInstalled && navigator.mediaDevices.getUserMedia.name === 'fixtureGetUserMedia'), 'synthetic camera is installed in the application realm');
       await page.getByLabel('Dog’s name').fill('Fixture Dog');
       await page.getByRole('radio', { name: /PUBLIC LIVE/ }).check();
       await page.getByRole('checkbox', { name: /I have permission/ }).check();
