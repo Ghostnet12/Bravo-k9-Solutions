@@ -92,7 +92,9 @@ try { for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
       await page.evaluate(() => { window.fixtureCapturePaused = true; });
       await page.waitForTimeout(400);
       await page.getByRole('button', { name: '● Start live', exact: true }).click();
-      await page.getByRole('alert').filter({ hasText: /fresh camera frames|camera check timed out/ }).waitFor();
+      // Depending on whether an initial queued frame reaches the processor, a
+      // paused source reports no new frames or incomplete frame processing.
+      await page.getByRole('alert').filter({ hasText: /fresh camera frames|camera check timed out|Camera video processing stalled/ }).waitFor();
       assert.equal(createCount, 0, 'failed camera check never creates a server session');
       assert.equal(await page.getByRole('button', { name: 'Enable camera preview' }).count(), 0, 'healthy camera is kept for retry');
       assert.equal(await page.getByLabel('Dog’s name').inputValue(), 'Fixture Dog');
