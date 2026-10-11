@@ -70,3 +70,7 @@
 .cinema-home .goal-select[data-site-content-key="goal-walks-selector"] { --bravo-service-icon: url('/graphics/leash.svg'); }
 .cinema-home .goal-select[data-site-content-key="goal-handling-selector"] { --bravo-service-icon: url('/graphics/assessment.svg'); }
 .cinema-home .goal-select[data-site-content-key="goal-specialist-selector"] { --bravo-service-icon: url('/graphics/compass.svg'); }
+
+/* Keep every label readable on the selected gold card. */
+.cinema-home .goal-choices .goal-select[aria-pressed=true] { background: #ba9a64; color: #101010; }
+.cinema-home .goal-choices .goal-select[aria-pressed=true] :is(.goal-tab-price small,.goal-select-hint) { color: #101010; }
