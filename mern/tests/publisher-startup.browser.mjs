@@ -8,6 +8,10 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { chromium, webkit } from 'playwright';
 import { SERVICES } from '../shared/catalog.js';
 const app = express(), dist = path.resolve('client/dist');
+let handleApi = (_req, res) => res.status(503).json({ error: 'No isolated fixture installed.' });
+// Serve synthetic API responses over real HTTP: worker and WebKit subresource
+// requests must not fall through to the SPA document when interception differs.
+app.use('/api', express.json(), (req, res) => handleApi(req, res));
 app.use(express.static(dist)); app.get('/{*rest}', (_req, res) => res.sendFile(path.join(dist, 'bravo-shell.html')));
 const server = app.listen(0, '127.0.0.1'); await once(server, 'listening');
 const origin = `http://127.0.0.1:${server.address().port}`, evidence = [];
@@ -44,32 +48,36 @@ try { for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
       };
     });
     let createCount = 0, endCount = 0, record, prior, publications = [];
-    await context.route('**/*', route => {
-      const req = route.request(), url = new URL(req.url());
-      if (url.origin !== origin || req.resourceType() === 'media') return route.abort();
-      if (!url.pathname.startsWith('/api/')) return route.continue();
+    handleApi = (req, res) => {
+      const url = new URL(req.originalUrl, origin);
       let data = { entries: {}, images: {}, ads: [], clips: [], team: [], items: [], alerts: [], bookings: [], notifications: [] };
       if (url.pathname === '/api/config') data = { connected: true, paymentsReady: false, services: SERVICES, lessonLibrary: { open: false } };
       else if (url.pathname === '/api/auth/me') data = { user: { id: 'fixture-owner', name: 'Fixture Trainer', role: 'owner', isPrimaryOwner: true }, services: [], membership: { active: false } };
       else if (url.pathname === '/api/live/studio') data = { configured: true, bookings: [], sessions: record ? [record] : [] };
-      else if (url.pathname === '/api/live' && req.method() === 'GET') data = { sessions: record?.status === 'live' ? [record] : [], announcements: [], availability: 'available', serverTime: new Date().toISOString() };
-      else if (url.pathname === '/api/live' && req.method() === 'POST') {
+      else if (url.pathname === '/api/live' && req.method === 'GET') data = { sessions: record?.status === 'live' ? [record] : [], announcements: [], availability: 'available', serverTime: new Date().toISOString() };
+      else if (url.pathname === '/api/live' && req.method === 'POST') {
         createCount++; prior = null;
         record = { id: 'fixture-' + createCount, trainerId: 'fixture-owner', trainerName: 'Fixture Trainer', dogName: 'Fixture Dog', audience: 'public', status: 'starting' };
         data = { session: record, transport: 'direct' };
       } else if (url.pathname.endsWith('/heartbeat')) {
-        const body = req.postDataJSON(), p = body.publication;
+        const body = req.body, p = body.publication;
         assert.ok(p && Number.isSafeInteger(p.framesEncoded) && Number.isSafeInteger(p.framesDecoded));
         const advancing = p.framesEncoded > 0 && p.framesDecoded > 0 && (!prior || prior.id !== p.id || p.framesEncoded > prior.framesEncoded && p.framesDecoded > prior.framesDecoded);
         if (body.cameraReady && advancing) { prior = p; record.status = 'live'; record.startedAt ||= new Date().toISOString(); record.liveUntil = new Date(Date.now() + 8000).toISOString(); }
         else record.status = 'reconnecting';
         publications.push({ ...p }); data = { session: record, peers: [], serverTime: new Date().toISOString() };
       } else if (url.pathname.endsWith('/end')) { endCount++; record = null; data = { ended: true }; }
-      else assert.ok(['GET','HEAD'].includes(req.method()) || url.pathname.includes('telemetry'), 'unexpected application write: ' + url.pathname);
-      return route.fulfill({ json: data });
+      else assert.ok(['GET','HEAD'].includes(req.method) || url.pathname.includes('telemetry'), 'unexpected application write: ' + url.pathname);
+      return res.json(data);
+    };
+    await context.route('**/*', route => {
+      const req = route.request(), url = new URL(req.url());
+      if (url.origin !== origin || req.resourceType() === 'media') return route.abort();
+      return route.continue();
     });
     const page = await context.newPage(), errors = []; page.setDefaultTimeout(18000);
     page.on('pageerror', error => errors.push(error.message));
+    page.on('response', response => { if (response.url().includes('/api/') && !response.headers()['content-type']?.includes('application/json')) console.log('UNEXPECTED_API_RESPONSE', response.url(), response.status(), response.headers()['content-type']); });
     try {
       await page.goto(origin + '/live/studio');
       await page.getByLabel('Dog’s name').fill('Fixture Dog');
