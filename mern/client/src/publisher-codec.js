@@ -5,12 +5,12 @@ const unsupported = () => Object.assign(new Error('This browser needs the compat
 export async function startCodecProbe(track, onSample = () => {}) {
   if (!codecProbeSupported()) { track.stop(); throw unsupported(); }
   let stopped = false, failure, reader, encoder, decoder, readyTimer;
-  let framesEncoded = 0, framesDecoded = 0, lastTimestamp = -Infinity;
+  let framesEncoded = 0, framesDecoded = 0, lastAdmission = -Infinity;
   let captured = 0, submitted = 0, firstSourceTimestamp = null, lastSourceTimestamp = null;
+  let encodedOutputs = 0, decodedOutputs = 0, lastInputTimestamp = null, lastEncodedTimestamp = null, lastDecodedTimestamp = null;
   const pending = new Set(), id = crypto.randomUUID();
   let resolveReady, rejectReady;
   const ready = new Promise((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
-  // A reader can fail before the caller begins awaiting readiness.
   void ready.catch(() => {});
   const sample = () => {
     if (failure) throw failure;
@@ -44,6 +44,7 @@ export async function startCodecProbe(track, onSample = () => {}) {
     decoder = new VideoDecoder({
       output(frame) {
         const timestamp = frame.timestamp; frame.close();
+        decodedOutputs++; lastDecodedTimestamp = timestamp;
         if (stopped || !pending.delete(timestamp)) return;
         framesDecoded++; onSample(sample());
         if (framesEncoded >= 2 && framesDecoded >= 2) { clearTimeout(readyTimer); resolveReady(); }
@@ -52,13 +53,12 @@ export async function startCodecProbe(track, onSample = () => {}) {
     });
     encoder = new VideoEncoder({
       output(chunk, metadata) {
+        encodedOutputs++; lastEncodedTimestamp = chunk.timestamp;
         if (stopped || !pending.has(chunk.timestamp)) return;
         try {
           if (decoder.state === 'unconfigured') decoder.configure({ ...(metadata.decoderConfig || { codec: config.codec, codedWidth: 160, codedHeight: 90 }), optimizeForLatency: true });
           framesEncoded++; decoder.decode(chunk);
-          // Every probe frame is an independent keyframe. Explicitly drain the
-          // tiny batch; hardware codecs may otherwise buffer more frames than
-          // this health probe intentionally allows outstanding.
+          // Independent keyframes can be drained without waiting for a batch.
           void decoder.flush().catch(() => { if (!stopped) fail('The camera video could not be decoded. Try Start live again.'); });
         } catch { fail('The camera video could not be decoded. Try Start live again.'); }
       },
@@ -66,7 +66,7 @@ export async function startCodecProbe(track, onSample = () => {}) {
     });
     encoder.configure(config);
     reader = new MediaStreamTrackProcessor({ track, maxBufferSize: 1 }).readable.getReader();
-    readyTimer = setTimeout(() => fail(Object.assign(new Error('No fresh camera frames arrived. Keep this tab open, check the camera preview, then try Start live again.'), { diagnostic: { captured, submitted, framesEncoded, framesDecoded, firstSourceTimestamp, lastSourceTimestamp, muted: track.muted, enabled: track.enabled, readyState: track.readyState } })), 8000);
+    readyTimer = setTimeout(() => fail(Object.assign(new Error('No fresh camera frames arrived. Keep this tab open, check the camera preview, then try Start live again.'), { diagnostic: { captured, submitted, framesEncoded, framesDecoded, firstSourceTimestamp, lastSourceTimestamp, encodedOutputs, decodedOutputs, lastInputTimestamp, lastEncodedTimestamp, lastDecodedTimestamp, muted: track.muted, enabled: track.enabled, readyState: track.readyState } })), 8000);
     void (async () => {
       try {
         while (!stopped) {
@@ -74,12 +74,16 @@ export async function startCodecProbe(track, onSample = () => {}) {
           if (done) { if (!stopped) fail('The camera stopped. Enable camera preview and try again.'); return; }
           captured++; firstSourceTimestamp ??= frame.timestamp; lastSourceTimestamp = frame.timestamp;
           try {
-            // Source timestamps advance only for new camera frames. Limit work
-            // to four tiny frames/sec; queues and retained frames stay bounded.
-            if (stopped || track.muted || !track.enabled || !Number.isFinite(frame.timestamp) || frame.timestamp - lastTimestamp < 250000 || pending.size >= 2 || encoder.encodeQueueSize > 1 || decoder.decodeQueueSize > 1) continue;
-            lastTimestamp = frame.timestamp;
+            // A processor read supplies an actual source frame. Some WebKit
+            // sources stamp every frame zero: timestamps cannot reject them.
+            // The clock only limits work AFTER a read; it never creates frames
+            // or increments publication counters. Queues stay bounded.
+            const arrival = performance.now();
+            if (stopped || track.muted || !track.enabled || arrival - lastAdmission < 250 || pending.size >= 2 || encoder.encodeQueueSize > 1 || decoder.decodeQueueSize > 1) continue;
+            lastAdmission = arrival;
             context.drawImage(frame, 0, 0, 160, 90);
-            const input = new VideoFrame(canvas, { timestamp: frame.timestamp });
+            const input = new VideoFrame(canvas, { timestamp: Math.round(arrival * 1000), duration: 250000 });
+            lastInputTimestamp = input.timestamp;
             try { submitted++; pending.add(input.timestamp); encoder.encode(input, { keyFrame: true }); }
             finally { input.close(); }
             await encoder.flush();
