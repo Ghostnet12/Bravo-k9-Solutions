@@ -32,6 +32,7 @@ const publicPageLoaders = {
   '/live': () => import('./LivePage'),
   '/workshops': () => import('./WorkshopPage'),
   '/dog-training': () => import('./DogTrainingPage'),
+  '/hunting-dog-training': () => import('./HuntingPage'),
   '/behavior-assessment': () => import('./BehaviorAssessmentPage'),
   '/media-rights': () => import('./MediaRightsPage'),
   '/learn': () => import('./LearnPage'),
@@ -48,6 +49,7 @@ function publicPage(path) {
 }
 const WorkshopPage = publicPage('/workshops');
 const DogTrainingPage = publicPage('/dog-training');
+const HuntingPage = publicPage('/hunting-dog-training');
 const BehaviorAssessmentPage = publicPage('/behavior-assessment');
 const MediaRightsPage = publicPage('/media-rights');
 const SchedulePage = lazy(() => import('./SchedulePage'));
@@ -125,7 +127,7 @@ class ErrorBoundary extends React.Component {
   render() { return this.state.error ? <Page title="Let’s get you back on track."><p>The page couldn’t load. Your saved bookings are not affected.</p><a className="button" href="/">Reload Bravo</a></Page> : this.props.children; }
 }
 function BookingRoute() { const location = useLocation(); return <BookingPage key={location.search}/>; }
-function App() { return <BrowserRouter><AppProvider><LiveStatusProvider><SiteContentProvider><a className="skip-link" href="#main-content">Skip to main content</a><RouteBehavior/><SiteTelemetry/><SiteSoundtrack/><ErrorBoundary><Suspense fallback={<Page title="Opening Bravo…"><p role="status">Loading your page.</p></Page>}><PasswordSetupGate><Routes><Route path="/live" element={<LivePage/>}/><Route path="/live/studio" element={<LiveStudio/>}/><Route path="/schedule" element={<SchedulePage/>}/><Route path="/reset-password" element={<ResetPasswordPage/>}/><Route path="/" element={<Home/>}/><Route path="/workshops" element={<WorkshopPage/>}/><Route path="/dog-training" element={<DogTrainingPage/>}/><Route path="/behavior-assessment" element={<BehaviorAssessmentPage/>}/><Route path="/dog-walking" element={<DogWalkingPage/>}/><Route path="/portal" element={<BookingRoute/>}/><Route path="/account" element={<AccountPage/>}/><Route path="/learn" element={<LearnPage/>}/><Route path="/community" element={<CommunityPage/>}/><Route path="/contact" element={<ContactPage/>}/><Route path="/admin" element={<AdminPage/>}/><Route path="/accessibility" element={<AccessibilityPage/>}/><Route path="/media-rights" element={<MediaRightsPage/>}/><Route path="*" element={<NotFoundPage/>}/></Routes></PasswordSetupGate></Suspense></ErrorBoundary><HomeAdCarousel/><SiteImageTools/></SiteContentProvider></LiveStatusProvider></AppProvider></BrowserRouter>; }
+function App() { return <BrowserRouter><AppProvider><LiveStatusProvider><SiteContentProvider><a className="skip-link" href="#main-content">Skip to main content</a><RouteBehavior/><SiteTelemetry/><SiteSoundtrack/><ErrorBoundary><Suspense fallback={<Page title="Opening Bravo…"><p role="status">Loading your page.</p></Page>}><PasswordSetupGate><Routes><Route path="/live" element={<LivePage/>}/><Route path="/live/studio" element={<LiveStudio/>}/><Route path="/schedule" element={<SchedulePage/>}/><Route path="/reset-password" element={<ResetPasswordPage/>}/><Route path="/" element={<Home/>}/><Route path="/workshops" element={<WorkshopPage/>}/><Route path="/dog-training" element={<DogTrainingPage/>}/><Route path="/hunting-dog-training" element={<HuntingPage/>}/><Route path="/behavior-assessment" element={<BehaviorAssessmentPage/>}/><Route path="/dog-walking" element={<DogWalkingPage/>}/><Route path="/portal" element={<BookingRoute/>}/><Route path="/account" element={<AccountPage/>}/><Route path="/learn" element={<LearnPage/>}/><Route path="/community" element={<CommunityPage/>}/><Route path="/contact" element={<ContactPage/>}/><Route path="/admin" element={<AdminPage/>}/><Route path="/accessibility" element={<AccessibilityPage/>}/><Route path="/media-rights" element={<MediaRightsPage/>}/><Route path="*" element={<NotFoundPage/>}/></Routes></PasswordSetupGate></Suspense></ErrorBoundary><HomeAdCarousel/><SiteImageTools/></SiteContentProvider></LiveStatusProvider></AppProvider></BrowserRouter>; }
 const start = () => createRoot(document.getElementById('root')).render(<React.StrictMode><App/></React.StrictMode>);
 const initialPath = window.location.pathname;
 if (publicPageLoaders[initialPath]) {

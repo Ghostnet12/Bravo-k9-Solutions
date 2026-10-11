@@ -1,3 +1,4 @@
+import ContactInterest from './ContactInterest';
 import { publicTrainerName } from '../../shared/discovery';
 import { Editable } from './SiteContent';
 import { useEffect, useState } from 'react';
@@ -9,6 +10,7 @@ export default function ContactPage() {
   const [team, setTeam] = useState([]), [error, setError] = useState('');
   useEffect(() => { let live=true; api('/team').then(data => {if(live)setTeam(data.team);}).catch(e => {if(live)setError(e.message);}); const published=event=>setTeam(people=>people.map(person=>person.id===event.detail.id?event.detail:person));window.addEventListener('bravo-team-published',published);return()=>{live=false;window.removeEventListener('bravo-team-published',published);}; }, []);
   return <Page title="Talk to Bravo." eyebrow="ABERDEEN, SOUTH DAKOTA" intro="Training questions, an upcoming visit, or your account—reach the right person without hunting through the site.">
+    <ContactInterest/>
     <Notice error>{error}</Notice>
     <Editable as="section" contentKey="contactpage-1" className="panel prose"><Editable as="h2" contentKey="contactpage-2" canEditText>Mobile service in Aberdeen, South Dakota.</Editable><Editable as="p" contentKey="contactpage-3"><Editable as="span" contentKey="copy-contactpage-1" canEditText>Bravo K9 Solutions comes to you for </Editable><Editable as={Link} contentKey="contactpage-4" canEditLink canEditText to="/dog-training">private dog training</Editable><Editable as="span" contentKey="copy-contactpage-2" canEditText> and offers </Editable><Editable as={Link} contentKey="contactpage-5" canEditLink canEditText to="/dog-walking">professional dog walking</Editable><Editable as="span" contentKey="copy-contactpage-3" canEditText>. Call </Editable><Editable as="a" contentKey="contactpage-6" canEditLink canEditText href="tel:+16058242767">(605) 824-2767</Editable><Editable as="span" contentKey="copy-contactpage-4" canEditText> to discuss your dog, confirm service at your location or get help choosing a program.</Editable></Editable><Editable as="p" contentKey="contactpage-7" canEditText>Visits are by appointment. The booking calendar shows available times; your request needs Bravo’s confirmation.</Editable></Editable>
     <Editable as="div" contentKey="contactpage-8" className="contact-grid">
@@ -19,3 +21,4 @@ export default function ContactPage() {
     </Editable>
   </Page>;
 }
+

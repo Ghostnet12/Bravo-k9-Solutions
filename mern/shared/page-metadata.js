@@ -1,5 +1,6 @@
 export const SITE_ORIGIN = 'https://bravounleashed.com';
 export const PAGE_METADATA = {
+  '/hunting-dog-training': { title: 'Hunting Dog Training in Aberdeen, SD | Bravo K9 Solutions', description: 'Discuss hunting-dog training goals with Bravo in Aberdeen, South Dakota. Explore field obedience, recall and retrieving goals, suitability and individually scoped plans.', label: 'Hunting dog training', service: 'Individually scoped hunting dog training' },
   '/live': { title: 'Bravo Live | Real Dog Training, Right Now', description: 'Watch live dog training with Bravo K9 Solutions. Real dogs, real sessions, real progress.', label: 'Live cams' },
   '/live/studio': { title: 'Go Live | Bravo Trainer Studio', description: 'Start a public or client-only Bravo training session from your phone.', private: true },
   '/': { title: 'Mobile Dog Training in Aberdeen, SD | Bravo K9 Solutions', description: 'Private, in-home dog training and professional dog walking in Aberdeen, South Dakota. Build everyday skills with Bravo K9 Solutions. We come to you.', label: 'Home' },

@@ -4,7 +4,7 @@ import { renderSiteContent } from './content-html.js';
 import { loadSiteContent } from './site-content-store.js';
 import { connectDb } from './db.js';
 import { effectiveServices } from './services.js';
-export const publicPagePaths=['live','workshops','dog-training','behavior-assessment','dog-walking','learn','contact','accessibility','media-rights'].map(path=>'/' + path);
+export const publicPagePaths=['live','workshops','dog-training','hunting-dog-training','behavior-assessment','dog-walking','learn','contact','accessibility','media-rights'].map(path=>'/' + path);
 const pages=new Set(publicPagePaths.map(path=>path.slice(1)));
 export async function publicPageHandler(req,res) {
   const path=String(req.query?.path || req.path || '').replace(/^\//,'');
@@ -12,3 +12,4 @@ export async function publicPageHandler(req,res) {
   const [html,entries,workshop,catalog]=await Promise.all([readFile(new URL(`../client/dist/${path}.html`,import.meta.url),'utf8'),loadSiteContent().catch(()=>({})),path === 'workshops' ? loadPublicWorkshop().catch(()=>null) : undefined,connectDb().then(()=>effectiveServices({includeDisabled:true,readOnly:true})).catch(()=>undefined)]);
   res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control','private, no-store');res.statusCode=200;res.end(renderSiteContent(html,entries,workshop,catalog));
 }
+

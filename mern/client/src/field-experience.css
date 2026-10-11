@@ -1,0 +1,76 @@
+/* Bravo public field experience. Scoped; no global navigation or form resets. */
+.cinema-home .field-goal-guide { max-width: 680px; margin: 14px 0 26px; line-height: 1.7; color: #ccc7bd; }
+.cinema-home .goal-choices .goal-select { display: flex; flex-direction: column; gap: 12px; width: 100%; height: 100%; min-height: 215px; margin: 0; padding: 24px; border: 0; border-radius: 16px; background: transparent; text-align: left; white-space: normal; color: inherit; font: inherit; cursor: pointer; }
+.cinema-home .goal-choices .goal-select > span:first-of-type { font-weight: 700; font-size: 16px; line-height: 1.45; }
+.cinema-home .goal-choices .goal-select .goal-tab-price { margin: 0; font-size: 15px; line-height: 1.5; }
+.cinema-home .goal-choices .goal-select .goal-tab-price small { display: block; font-size: 12px; font-weight: 400; color: #ccc7bd; }
+.cinema-home .goal-choices .goal-select-hint { display: block; margin-top: auto; font-size: 12px; color: #d8b781; }
+.cinema-home .goal-choice[data-selected=true] { outline: 2px solid var(--gold, #ba9a64); outline-offset: 2px; background: #ba9a6412; }
+.cinema-home .goal-help { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 18px; }
+.cinema-home .goal-help a { min-height: 44px; }
+.cinema-home #goal-result { scroll-margin-top: 110px; }
+.cinema-home #goal-result .goal-program-link { display: inline-flex; align-items: center; min-height: 44px; }
+.field-stories { margin: 0 0 56px; padding: 30px 0; border-bottom: 1px solid #ba9a643d; }
+.field-stories-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+.field-stories-heading h3 { font-family: 'Bebas Neue', sans-serif; font-size: clamp(32px,4vw,52px); line-height: 1.08; margin: 8px 0 0; font-weight: 400; }
+.field-stories-heading > p { max-width: 340px; color: #ccc7bd; line-height: 1.6; }
+.field-story-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 22px; }
+.field-story-card { min-width: 0; border: 1px solid #ba9a6433; border-radius: 14px; overflow: clip; background: #171715; }
+.field-story-image { display: block; position: relative; width: 100%; padding: 0; border: 0; aspect-ratio: 3 / 2; overflow: hidden; cursor: pointer; background: #101010; }
+.field-story-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.field-story-image > span { position: absolute; right: 12px; bottom: 12px; padding: 11px 14px; background: #101010ee; color: #f4e6ce; border: 1px solid #ba9a6466; border-radius: 30px; font-size: 12px; }
+.field-story-copy { padding: 22px; }
+.field-story-copy .cinema-eyebrow { font-size: 10px; letter-spacing: .14em; }
+.field-story-copy h4 { margin: 12px 0; font-size: 20px; line-height: 1.25; }
+.field-story-note { font-size: 14px; line-height: 1.7; color: #ccc7bd; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.field-story-copy details { border-top: 1px solid #ba9a6433; margin-top: 18px; padding-top: 4px; }
+.field-story-copy summary { min-height: 44px; padding: 13px 0; color: #d8b781; font-size: 13px; cursor: pointer; line-height: 1.5; }
+.field-story-copy details p { font-size: 14px; line-height: 1.7; }
+.field-story-copy > small { display: block; color: #aaa69f; font-size: 11px; line-height: 1.6; margin-top: 14px; }
+.home-work-proof [data-story-selected=true] { outline: 2px solid #ba9a64; outline-offset: 3px; }
+.field-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 22px; margin: 24px 0; }
+.field-actions :is(a,button) { min-height: 44px; }
+.hunting-page { padding-bottom: 70px; }
+.hunting-page .app-page-title h1 { font-size: clamp(48px,7vw,92px); font-family: 'Bebas Neue',sans-serif; line-height: 1; }
+.hunting-page .app-page-title { margin-bottom: 32px; }
+.hunting-hero { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(24px,5vw,64px); align-items: center; padding: 35px 0 60px; }
+.hunting-hero h2 { font-family: 'Bebas Neue',sans-serif; font-weight: 400; font-size: clamp(34px,4vw,60px); line-height: 1.06; margin: 16px 0 20px; }
+.hunting-hero p { max-width: 580px; line-height: 1.75; }
+.hunting-hero .helper { color: #c7c2b7; font-size: 13px; }
+.hunting-hero-media { border: 1px solid #ba9a6455; border-radius: 18px; overflow: clip; background: #161614 url('/graphics/field-lines.svg') center / cover; }
+.hunting-hero-media > img { display: block; width: 100%; height: auto; object-fit: contain; }
+.hunting-mark { display: flex; min-height: 350px; padding: 40px; align-items: center; justify-content: center; gap: 30px; }
+.hunting-mark img { width: 90px; height: 90px; }
+.hunting-mark span { font: 48px/1 'Bebas Neue',sans-serif; color: #ba9a64; }
+.hunting-goals { scroll-margin-top: 120px; background: #171715; border-color: #ba9a6455; padding: clamp(22px,4vw,44px); }
+.hunting-goals h2, .hunting-process > h2, .hunting-faq > h2, .contact-interest h2 { font: 400 clamp(30px,4vw,46px)/1.1 'Bebas Neue',sans-serif; }
+.hunting-goals > p { max-width: 720px; line-height: 1.7; }
+.hunting-goal-options { display: flex; flex-wrap: wrap; gap: 12px; margin: 26px 0 12px; }
+.hunting-goal-options button { min-height: 48px; padding: 12px 18px; border: 1px solid #ba9a6466; border-radius: 28px; background: #101010; color: #f0e9dd; text-align: left; line-height: 1.5; }
+.hunting-goal-options button[aria-pressed=true] { background: #ba9a64; color: #101010; font-weight: 700; }
+.hunting-selection { min-height: 28px; font-size: 14px; color: #d8b781; }
+.hunting-process { padding: 56px 0; }
+.hunting-process-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 28px; margin-top: 28px; }
+.hunting-step { font: 44px/1 'Bebas Neue',sans-serif; color: #ba9a64; }
+.hunting-process-grid h3 { font-size: 20px; margin: 16px 0 10px; }
+.hunting-process-grid p { line-height: 1.7; font-size: 15px; color: #ccc7bd; }
+.hunting-faq { padding: clamp(22px,4vw,44px); }
+.hunting-faq details { border-bottom: 1px solid #ba9a6433; padding: 10px 0; }
+.hunting-faq summary { cursor: pointer; min-height: 44px; padding: 12px 0; font-weight: 600; }
+.hunting-faq details p { max-width: 760px; line-height: 1.8; }
+.contact-interest { border-color: #ba9a6477; background: #171715; margin-bottom: 26px; }
+.contact-interest p { max-width: 780px; line-height: 1.7; }
+:is(.field-stories,.hunting-page,.contact-interest) :is(a,button,summary):focus-visible, .cinema-home .goal-select:focus-visible { outline: 3px solid #e6c58c; outline-offset: 4px; }
+@media(max-width:900px) { .field-story-grid { gap: 14px; } .field-story-copy { padding: 16px; } .hunting-hero { grid-template-columns: 1fr; } .hunting-hero-media { max-width: 750px; } }
+@media(max-width:650px) { .cinema-home .goal-choices { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; } .cinema-home .goal-choices .goal-select { padding: 16px; min-height: 220px; } .cinema-home .goal-choices .goal-select > span:first-of-type { font-size: 14px; } .field-stories-heading { display: block; } .field-story-grid { grid-template-columns: 1fr; } .field-story-card { display: grid; grid-template-columns: 1fr; } .field-story-image { aspect-ratio: 16/9; } .hunting-process-grid { grid-template-columns: 1fr; gap: 24px; } .hunting-process-grid article { border-bottom: 1px solid #ba9a6433; padding-bottom: 20px; } .hunting-mark { min-height: 260px; padding: 24px; } }
+@media(prefers-reduced-motion:reduce) { .field-story-image, .hunting-goal-options button { transition: none; } }
+@media(forced-colors:active) { .field-story-card,.hunting-goals,.hunting-hero-media { border: 1px solid CanvasText; } .hunting-goal-options button[aria-pressed=true],.cinema-home .goal-choice[data-selected=true] { outline: 2px solid Highlight; } }
+
+.cinema-home .goal-select[data-site-content-key="goal-manners-selector"] { --bravo-service-icon: url('/graphics/companion.svg'); }
+.cinema-home .goal-select[data-site-content-key="goal-walks-selector"] { --bravo-service-icon: url('/graphics/leash.svg'); }
+.cinema-home .goal-select[data-site-content-key="goal-handling-selector"] { --bravo-service-icon: url('/graphics/assessment.svg'); }
+.cinema-home .goal-select[data-site-content-key="goal-specialist-selector"] { --bravo-service-icon: url('/graphics/compass.svg'); }
+
+/* Keep every label readable on the selected gold card. */
+.cinema-home .goal-choices .goal-select[aria-pressed=true] { background: #ba9a64; color: #101010; }
+.cinema-home .goal-choices .goal-select[aria-pressed=true] :is(.goal-tab-price small,.goal-select-hint) { color: #101010; }

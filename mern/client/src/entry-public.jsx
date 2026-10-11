@@ -7,6 +7,7 @@ import { StaticRouter } from 'react-router-dom';
 import { AppProvider } from './context';
 import Home from './Home';
 import DogTrainingPage from './DogTrainingPage';
+import HuntingPage from './HuntingPage';
 import BehaviorAssessmentPage from './BehaviorAssessmentPage';
 import DogWalkingPage from './DogWalkingPage';
 import LearnPage from './LearnPage';
@@ -15,9 +16,10 @@ import AccessibilityPage from './AccessibilityPage';
 import MediaRightsPage from './MediaRightsPage';
 import NotFoundPage from './NotFoundPage';
 
-const pages = { '/live': LivePage, '/workshops': WorkshopPage, '/': Home, '/dog-training': DogTrainingPage, '/behavior-assessment': BehaviorAssessmentPage, '/dog-walking': DogWalkingPage, '/learn': LearnPage, '/contact': ContactPage, '/accessibility': AccessibilityPage, '/media-rights': MediaRightsPage, '/404': NotFoundPage };
+const pages = { '/live': LivePage, '/workshops': WorkshopPage, '/': Home, '/dog-training': DogTrainingPage, '/hunting-dog-training': HuntingPage, '/behavior-assessment': BehaviorAssessmentPage, '/dog-walking': DogWalkingPage, '/learn': LearnPage, '/contact': ContactPage, '/accessibility': AccessibilityPage, '/media-rights': MediaRightsPage, '/404': NotFoundPage };
 export function renderPublicPage(route) {
   const Component = pages[route];
   if (!Component) throw new Error(`No public component for ${route}`);
   return renderToString(<StaticRouter location={route}><AppProvider><a className="skip-link" href="#main-content">Skip to main content</a><Component/></AppProvider></StaticRouter>);
 }
+
