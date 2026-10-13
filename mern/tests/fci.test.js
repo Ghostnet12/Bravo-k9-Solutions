@@ -3,8 +3,16 @@ import assert from 'node:assert/strict';
 import { officialFCIUrl, cleanFCIItems } from '../shared/fci.js';
 import { withFCICampaign, FCI_AD } from '../shared/site-ads.js';
 import { parseFCIAnnouncements, fetchFCIAnnouncements } from '../server/fci-source.js';
-import { loadFCIUpdates, fciSnapshot, fciCronHandler } from '../server/fci-updates.js';
+import { loadFCIUpdates, fciSnapshot, fciCronHandler, nextFCIRefresh } from '../server/fci-updates.js';
 const item = { url: 'https://www.fci.be/en/News-123.html', title: 'Verified news', date: '2026-10-06' };
+test('page reads cannot push refresh beyond the next daily cron', () => {
+  for (const [now, next] of [
+    ['2026-10-13T13:05:00Z', '2026-10-14T13:00:00.000Z'],
+    ['2026-10-13T12:59:00Z', '2026-10-13T13:00:00.000Z'],
+    ['2026-10-13T13:00:00Z', '2026-10-14T13:00:00.000Z'],
+    ['2026-12-31T23:59:00Z', '2027-01-01T13:00:00.000Z'],
+  ]) assert.equal(nextFCIRefresh(new Date(now)).toISOString(), next);
+});
 test('FCI links reject executable URLs, credentials, ports and lookalike hosts', () => {
   for (const url of ['javascript:alert(1)', '//evil.test/en/a.html', 'https://www.fci.be.evil.test/en/a.html', 'https://user@fci.be/en/a.html', 'https://fci.be:8443/en/a.html', 'http://fci.be/en/a.html', 'https://fci.be/medias/script.js']) assert.equal(officialFCIUrl(url), null, url);
   assert.equal(officialFCIUrl('/en/News-123.html#x'), item.url);

@@ -6,6 +6,12 @@ import { fetchFCIAnnouncements } from './fci-source.js';
 export const FCIUpdates = mongoose.models.BravoFCIUpdates || mongoose.model('BravoFCIUpdates', new mongoose.Schema({
   _id: String, items: [mongoose.Schema.Types.Mixed], lastSuccessAt: Date, lastAttemptAt: Date, nextAttemptAt: Date, status: String,
 }));
+export function nextFCIRefresh(now) {
+  const next = new Date(now);
+  next.setUTCHours(13, 0, 0, 0);
+  if (next <= now) next.setUTCDate(next.getUTCDate() + 1);
+  return next;
+}
 export function fciSnapshot(row) {
   return { items: cleanFCIItems(row?.items), source: FCI_HOME, lastSuccessAt: row?.lastSuccessAt || null,
     refreshHours: 24, stale: !row?.lastSuccessAt || Date.now() - new Date(row.lastSuccessAt).getTime() > FCI_REFRESH_MS || row.status !== 'ok',
@@ -15,7 +21,7 @@ export async function loadFCIUpdates({ Model = FCIUpdates, connect = connectDb, 
   await connect();
   // Dedicated cache only. No customer, membership, or advertisement writes.
   await Model.updateOne({ _id: 'announcements' }, { $setOnInsert: { items: [], nextAttemptAt: new Date(0) } }, { upsert: true });
-  const claimed = await Model.findOneAndUpdate({ _id: 'announcements', nextAttemptAt: { $lte: now } }, { $set: { lastAttemptAt: now, nextAttemptAt: new Date(now.getTime() + FCI_REFRESH_MS) } }, { returnDocument: 'after' }).lean();
+  const claimed = await Model.findOneAndUpdate({ _id: 'announcements', nextAttemptAt: { $lte: now } }, { $set: { lastAttemptAt: now, nextAttemptAt: nextFCIRefresh(now) } }, { returnDocument: 'after' }).lean();
   if (claimed) {
     try {
       const items = cleanFCIItems(await fetchSource());
