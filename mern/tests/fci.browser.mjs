@@ -47,7 +47,9 @@ try {
         await page.locator('.fci-news-card').first().focus();
         assert.equal(await page.locator('.fci-news-card').first().evaluate(el => document.activeElement === el), true);
         await page.screenshot({ path: `test-results/fci-${name}-${width}.png`, fullPage: true });
-        await page.goto(origin + '/');
+        await page.locator('.fci-news-card').first().waitFor();
+        await page.getByRole('link', { name: '← Back to Bravo' }).click();
+        await page.waitForURL(origin + '/');
         const intro = page.locator('.home-fci-card');
         await intro.waitFor();
         assert.equal(await intro.getAttribute('href'), '/fci-support');
@@ -57,7 +59,9 @@ try {
         await page.screenshot({ path: `test-results/fci-home-${name}-${width}.png` });
         await intro.focus(); await page.keyboard.press('Enter');
         await page.waitForURL('**/fci-support');
-        await page.goto(origin + '/');
+        await page.locator('.fci-news-card').first().waitFor();
+        await page.getByRole('link', { name: '← Back to Bravo' }).click();
+        await page.waitForURL(origin + '/');
         const toggle = page.locator('.menu-toggle');
         if (await toggle.isVisible()) await toggle.click();
         const menuLink = page.locator('#bravo-navigation .nav-explore > a[href="/fci-support"]');
@@ -65,7 +69,9 @@ try {
         await menuLink.click();
         await page.waitForURL('**/fci-support');
         if (await toggle.isVisible()) assert.equal(await toggle.getAttribute('aria-expanded'), 'false', 'menu closes after navigation');
-        await page.goto(origin + '/');
+        await page.locator('.fci-news-card').first().waitFor();
+        await page.getByRole('link', { name: '← Back to Bravo' }).click();
+        await page.waitForURL(origin + '/');
         const ad = page.locator('.home-ad-slide.is-active a[href="/fci-support"]');
         await ad.waitFor(); await ad.focus(); await page.keyboard.press('Enter');
         await page.waitForURL('**/fci-support');
