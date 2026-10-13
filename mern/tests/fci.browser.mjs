@@ -1,0 +1,61 @@
+import assert from 'node:assert/strict';
+import express from 'express';
+import { once } from 'node:events';
+import { readFile, mkdir } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { chromium, webkit } from 'playwright';
+const dist = fileURLToPath(new URL('../client/dist/', import.meta.url));
+const app = express(); app.use(express.static(dist));
+app.get('/{*path}', async (req, res) => res.type('html').send(await readFile(`${dist}/${req.path === '/fci-support' ? 'fci-support' : 'bravo-shell'}.html`, 'utf8')));
+const server = app.listen(0, '127.0.0.1'); await once(server, 'listening');
+const origin = `http://127.0.0.1:${server.address().port}`;
+await mkdir('test-results', { recursive: true });
+try {
+  for (const [name, engine] of Object.entries({ chromium, webkit })) {
+    const browser = await engine.launch();
+    try {
+      for (const width of [375, 390, 430, 768, 1440]) {
+        const context = await browser.newContext({ viewport: { width, height: 960 }, reducedMotion: 'reduce' });
+        const page = await context.newPage(); const errors = [];
+        page.on('pageerror', error => errors.push(error.message));
+        await page.route('**/api/**', async route => {
+          const path = new URL(route.request().url()).pathname;
+          let json = { services: [], team: [], images: {}, reviews: [], schedules: [], clips: [], count: 0 };
+          if (path === '/api/auth/me') json = { user: null, services: [] };
+          if (path === '/api/site-ads') json = { revision: 0, settings: { autoplaySeconds: 7 }, ads: [{ id: 'fci-support-bravo', title: 'FCI Support', src: '/images/fci-official-identity.jpeg', creative: 'fci', link: '/fci-support', enabled: true }] };
+          if (path === '/api/fci-updates') json = { items: Array.from({ length: 5 }, (_, index) => ({ title: `Official canine health announcement ${index + 1}`, url: `https://www.fci.be/en/News-${index + 1}.html`, date: '2026-10-06' })).concat([{ title: 'Unsafe link', url: 'javascript:alert(1)' }]), lastSuccessAt: new Date().toISOString(), stale: false };
+          if (path === '/api/live') json = { sessions: [], announcements: [], availability: 'available' };
+          if (path === '/api/site-banner') json = { revision: 0, alerts: [], settings: {} };
+          if (path === '/api/site-content') json = { entries: {} };
+          await route.fulfill({ json });
+        });
+        await page.goto(origin + '/fci-support');
+        await page.locator('.fci-news-card').first().waitFor();
+        await page.evaluate(() => document.fonts.ready);
+        assert.equal(await page.locator('h1').count(), 1);
+        assert.equal(await page.locator('.fci-cards>a').count(), 4);
+        assert.equal(await page.locator('.fci-news-card').count(), 5);
+        assert.equal(await page.getByText('Unsafe link').count(), 0);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, `${name} ${width}: no overflow`);
+        assert.equal(await page.locator('a a').count(), 0, 'no nested links');
+        assert.equal(await page.locator('.fci-footer-address').evaluate(el => el.previousElementSibling.classList.contains('footer-facebook')), true);
+        assert.match(await page.locator('.fci-footer-address').innerText(), /Place Albert 1er, 13/);
+        const broken = await page.locator('.fci-page img, .fci-ad-creative img').evaluateAll(images => images.filter(i => i.complete && !i.naturalWidth).map(i => i.src));
+        assert.deepEqual(broken, []);
+        await page.getByRole('button', { name: 'Next FCI announcements' }).click();
+        assert.ok(await page.locator('.fci-news-rail').evaluate(el => el.scrollLeft > 0));
+        await page.locator('.fci-news-card').first().focus();
+        assert.equal(await page.locator('.fci-news-card').first().evaluate(el => document.activeElement === el), true);
+        await page.screenshot({ path: `test-results/fci-${name}-${width}.png`, fullPage: true });
+        await page.goto(origin + '/');
+        const ad = page.locator('.home-ad-slide.is-active a[href="/fci-support"]');
+        await ad.waitFor(); await ad.focus(); await page.keyboard.press('Enter');
+        await page.waitForURL('**/fci-support');
+        await page.getByRole('heading', { name: 'GLOBAL STANDARDS. STRONGER DOGS.' }).waitFor();
+        assert.deepEqual(errors, [], `${name} ${width}: browser errors`);
+        console.log(`FCI ${name} ${width}: layout, branding, footer, safe news, keyboard and ad navigation passed`);
+        await context.close();
+      }
+    } finally { await browser.close(); }
+  }
+} finally { await new Promise(resolve => server.close(resolve)); }

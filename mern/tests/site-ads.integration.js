@@ -20,6 +20,26 @@ test('sitewide ads are public but mutations are owner-only, durable and conflict
       await Session.create({tokenHash:createHash('sha256').update(token).digest('hex'),userId:user._id,expiresAt:new Date(Date.now()+3600000)});
       cookies[name]=`bravo_session=${token}`;
     }
+    // Verify the new campaign is present for an existing un-migrated collection.
+    const { SiteAdCollection: CampaignCollection } = await import('../server/site-ads.js');
+    const campaign = (await request(app).get('/api/site-ads').expect(200)).body;
+    assert.equal(campaign.ads.filter(ad => ad.id === 'fci-support-bravo').length, 1);
+    assert.equal(campaign.ads.find(ad => ad.id === 'fci-support-bravo').creative, 'fci');
+    const campaignWrite = (method, path, body) => request(app)[method](path).set('Origin', process.env.APP_ORIGIN).set('Cookie', cookies.owner).send(body);
+    const fci = campaign.ads.find(ad => ad.id === 'fci-support-bravo');
+    const hidden = await campaignWrite('put', '/api/site-ads/fci-support-bravo', { expectedRevision: 0, title: fci.title, alt: fci.alt, link: fci.link, enabled: false }).expect(200);
+    assert.equal(hidden.body.ads.find(ad => ad.id === fci.id).enabled, false);
+    const order = hidden.body.ads.map(ad => ad.id).reverse();
+    const reorderedCampaign = await campaignWrite('put', '/api/site-ads', { expectedRevision: 1, ids: order, settings: { autoplaySeconds: 7 } }).expect(200);
+    assert.deepEqual(reorderedCampaign.body.ads.map(ad => ad.id), order);
+    const replacedCampaign = await campaignWrite('put', '/api/site-ads/fci-support-bravo', { expectedRevision: 2, title: fci.title, alt: fci.alt, link: fci.link, enabled: true, image: { filename: 'replacement.png', contentType: 'image/png', data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Wl9sAAAAASUVORK5CYII=' } }).expect(200);
+    assert.equal(replacedCampaign.body.ads.find(ad => ad.id === fci.id).creative, undefined);
+    await campaignWrite('delete', '/api/site-ads/fci-support-bravo', { expectedRevision: 3 }).expect(200);
+    assert.equal((await request(app).get('/api/site-ads').expect(200)).body.ads.some(ad => ad.id === fci.id), false);
+    await CampaignCollection.deleteMany({});
+    // Existing carousel regressions use the pre-campaign fixture deliberately.
+    // A persisted removal must remain absent on every subsequent read and write.
+    await CampaignCollection.create({ _id: 'home', ads: DEFAULT_HOME_ADS.map(ad => ({...ad})), fciCampaignVersion: 1, revision: 0 });
     const initial=await request(app).get('/api/site-ads').expect(200);
     assert.equal(initial.body.revision,0); assert.equal(initial.body.ads[0].id,DEFAULT_HOME_ADS[0].id);
     const { Workshop }=await import('../server/workshop-store.js');

@@ -11,6 +11,8 @@ import { isImageEditor } from '../../shared/site-images.js';
 import { DEFAULT_AD_CAROUSEL } from '../../shared/site-ads.js';
 import { optimizeSitePhoto } from './site-image-editor.js';
 import './home-ad-carousel.css';
+import './fci-support.css';
+import FCIPromotion from './FCIPromotion';
 
 const initialCollection = () => ({ revision: 0, settings: { ...DEFAULT_AD_CAROUSEL }, ads: [] });
 
@@ -128,7 +130,7 @@ function AdMedia({ ad, playing }) {
     return () => { window.removeEventListener('pagehide', release); window.removeEventListener('pageshow', resume); release(); };
   }, [ad.videoSrc]);
   useEffect(() => { shouldPlay.current = playing; const element = video.current; if (!element) return; if (playing) element.play().catch(() => {}); else element.pause(); }, [playing, ad.videoSrc]);
-  return ad.videoSrc ? <video ref={video} src={ad.videoSrc} poster={ad.src || undefined} muted loop playsInline preload="none" aria-label={ad.alt || ad.title}/> : <img src={ad.src} width="1320" height="510" loading="eager" draggable="false" alt={ad.alt || ad.title}/>;
+  return ad.creative === 'fci' ? <FCIPromotion/> : ad.videoSrc ? <video ref={video} src={ad.videoSrc} poster={ad.src || undefined} muted loop playsInline preload="none" aria-label={ad.alt || ad.title}/> : <img src={ad.src} width="1320" height="510" loading="eager" draggable="false" alt={ad.alt || ad.title}/>;
 }
 function ExpandedAd({ ad, close }) {
   const dialog = useRef(null);

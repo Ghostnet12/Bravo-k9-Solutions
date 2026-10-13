@@ -38,6 +38,22 @@ try {
         await page.waitForFunction(({label,expected})=>
           [...document.querySelectorAll('.goal-preview')].some(el=>el.getAttribute('aria-label')===`Preview ${label}`&&el.getAttribute('aria-pressed')==='true')
           && document.querySelector('.goal-result .goal-actions .button')?.getAttribute('href')===expected,{label,expected});
+        // Goal selection schedules a smooth scroll on the next animation frame.
+        // WebKit can briefly report a stable link between scroll ticks and then
+        // move it between pointerdown and pointerup. Wait for the real motion to
+        // finish; do not disable animation, force clicks or relax navigation checks.
+        await page.evaluate(() => new Promise((resolve, reject) => {
+          const started = performance.now(); let lastPosition = '', stableSince = started;
+          function sample(now) {
+            const box = document.querySelector('.goal-result .goal-actions .button')?.getBoundingClientRect();
+            const position = box ? [window.scrollY, box.x, box.y, box.width, box.height].map(value => Math.round(value * 10)).join(':') : '';
+            if (!position || position !== lastPosition) { lastPosition = position; stableSince = now; }
+            if (position && now - stableSince >= 250) return resolve();
+            if (now - started > 5000) return reject(new Error('Selected plan did not settle after scrolling'));
+            requestAnimationFrame(sample);
+          }
+          requestAnimationFrame(sample);
+        }));
         return page.locator('.goal-result .goal-actions .button').and(page.locator(`a[href="${expected}"]`));
       }
       async function follow(link, destination) {
