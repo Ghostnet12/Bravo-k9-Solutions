@@ -11,10 +11,11 @@ import { identify, requireUser, requireOwner, sameOrigin, rateLimit } from './au
 import { requestError } from './errors.js';
 import { CHUNK_SIZE, validMediaHeader, sendUploadedMedia } from './media.js';
 import { SITE_IMAGE_MAX_BYTES } from '../shared/site-images.js';
-import { cloneDefaultAds, DEFAULT_AD_CAROUSEL, normalizeAdSettings, safeAdLink, resolveAdDestination, SITE_AD_ID } from '../shared/site-ads.js';
+import { withFCICampaign, FCI_AD, DEFAULT_AD_CAROUSEL, normalizeAdSettings, safeAdLink, resolveAdDestination, SITE_AD_ID } from '../shared/site-ads.js';
 
 export const SiteAdCollection = mongoose.models.BravoSiteAds || mongoose.model('BravoSiteAds', new mongoose.Schema({
   _id: String,
+  fciCampaignVersion: Number,
   ads: [mongoose.Schema.Types.Mixed],
   settings: mongoose.Schema.Types.Mixed,
   revision: { type: Number, default: 0 },
@@ -46,9 +47,10 @@ const orderInput = z.object({
 }).strict();
 
 const connect = async (_req, _res, next) => { await connectDb(); next(); };
-const storedAds = row => row ? (Array.isArray(row.ads) ? row.ads : []).map(ad => ({ ...ad })) : cloneDefaultAds();
+const storedAds = withFCICampaign;
 const publicAd = (ad, video) => ({
   id: ad.id,
+  creative: ad.id === FCI_AD.id && ad.image === FCI_AD.image && !ad.uploadId && !ad.videoId ? 'fci' : undefined,
   title: ad.title || '',
   alt: ad.alt || '',
   link: resolveAdDestination(ad),
@@ -106,6 +108,7 @@ async function writeCollection(req, operation) {
     const result = await operation({ ads, current, session });
     const row = current || new SiteAdCollection({ _id: 'home' });
     row.ads = result.ads;
+    row.fciCampaignVersion = 1;
     row.settings = result.settings || row.settings || DEFAULT_AD_CAROUSEL;
     row.revision = (current?.revision || 0) + 1;
     row.updatedBy = req.user._id;

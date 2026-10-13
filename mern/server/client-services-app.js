@@ -1,3 +1,4 @@
+import { fciUpdatesHandler, fciCronHandler } from './fci-updates.js';
 import { issueRecovery, completeRecovery } from './account-recovery.js';
 import { readLessonLibrary } from './lesson-library.js';
 import siteAdsRouter from './site-ads.js';
@@ -52,6 +53,8 @@ app.get('/api/admin/site-health', ...session, requireUser, (req, _res, next) => 
   next();
 }, monitoringSummary);
 app.use('/api/site-ads', siteAdsRouter);
+app.get('/api/fci-updates', fciUpdatesHandler);
+app.get('/api/cron/fci-updates', fciCronHandler);
 app.get('/api/health/ready', async (_req, res) => {
   res.set('Cache-Control', 'no-store');
   try {

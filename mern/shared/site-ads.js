@@ -49,3 +49,12 @@ export function normalizeAdSettings(value = {}) {
 export function cloneDefaultAds() {
   return DEFAULT_HOME_ADS.map(ad => ({ ...ad }));
 }
+
+// A virtual campaign joins the existing collection once. Saving any edit marks
+// the migration complete, including removal; deleted campaigns never respawn.
+export const FCI_AD = Object.freeze({ id: 'fci-support-bravo', title: 'FCI Support · Global Standards. Stronger Dogs.', alt: 'Discover the FCI Support Initiative at Bravo K9 Solutions. Learn more.', link: '/fci-support', image: '/images/fci-official-identity.jpeg', enabled: true });
+export function withFCICampaign(row) {
+  const ads = row ? (Array.isArray(row.ads) ? row.ads : []).map(ad => ({ ...ad })) : cloneDefaultAds();
+  if (!row?.fciCampaignVersion && !ads.some(ad => ad.id === FCI_AD.id || ad.link === FCI_AD.link)) ads.push({ ...FCI_AD });
+  return ads;
+}
