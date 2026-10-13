@@ -28,6 +28,7 @@ import TrainerScheduleCard, { useLiveTrainerSchedules } from './TrainerScheduleC
 import LessonOffers from './LessonOffers';
 import './trainer-schedules.css';
 import './home-polish.css';
+import './home-fci.css';
 import './field-experience.css';
 
 const secondary = ['walking', 'aggression'];
@@ -79,6 +80,18 @@ export default function Home() {
       <div className="cinema-shell site-media-tools-slot site-media-tools-slot--home" data-site-media-tools=""/>
 
       <GoalFinder review={recommendations[0] || null}/>
+      <section className="home-fci cinema-shell" aria-labelledby="home-fci-title">
+        <Link href="/fci-support" className="home-fci-card" aria-labelledby="home-fci-title home-fci-action">
+          <div className="home-fci-identity"><img src="/images/fci-official-identity.jpeg" width="796" height="240" loading="lazy" alt="Fédération Cynologique Internationale — for pedigree dogs worldwide"/></div>
+          <div className="home-fci-copy">
+            <p className="cinema-eyebrow">BRAVO’S FCI SUPPORT INITIATIVE</p>
+            <h2 id="home-fci-title">Global standards.<br/><span>Stronger dogs.</span></h2>
+            <p>Discover international breed standards, responsible breeding, canine health, and the latest official FCI announcements.</p>
+            <span className="home-fci-action" id="home-fci-action">Explore FCI Support <span aria-hidden="true">↗</span></span>
+            <small>An independent Bravo initiative. No official FCI affiliation or endorsement.</small>
+          </div>
+        </Link>
+      </section>
       <Editable as="section" contentKey="copy-home-24" id="training" className="cinema-programs cinema-shell" aria-labelledby="program-title">
         <div className="cinema-section-heading" data-reveal=""><div><Editable as="p" contentKey="copy-home-25" canEditText className="cinema-eyebrow">FIND YOUR STARTING POINT</Editable><Editable as="h2" contentKey="cinema-program-title" canEditText id="program-title">Training &amp;<br/><span>pricing.</span></Editable></div><Editable as={Link} contentKey="copy-home-26" canEditText canEditLink href="/dog-training" className="cinema-link">How training works <span aria-hidden="true">↗</span></Editable></div>
         <nav className="training-service-links" aria-label="Training options">
