@@ -1,0 +1,16 @@
+import { useEffect, useState } from 'react';
+import { Header, Footer } from './ui';
+import './fci-support.css';
+const resources=[
+{title:'FCI Breed Standards',detail:'Explore internationally published breed standards and breed groups.',href:'https://www.fci.be/en/Nomenclature/'},
+{title:'Health & Welfare',detail:'Learn about canine health, welfare, and responsible breeding.',href:'https://www.fci.be/en/'},
+{title:'International Community',detail:'Explore FCI members, activities and international events.',href:'https://www.fci.be/en/'}
+];
+export default function FCISupportPage(){
+ const [news,setNews]=useState([]);
+ useEffect(()=>{let active=true;fetch('/api/fci-updates').then(r=>r.ok?r.json():Promise.reject()).then(data=>{if(active)setNews(Array.isArray(data.items)?data.items:[])}).catch(()=>{});return()=>{active=false}},[]);
+ return <><Header/><main id="main-content" tabIndex={-1} className="fci-page">
+ <section className="fci-hero"><div className="fci-hero-inner"><div className="fci-kicker">BRAVO K9 SOLUTIONS · INTERNATIONAL CANINE EDUCATION</div><div className="fci-brand">FCI <span>Fédération Cynologique Internationale</span></div><h1>GLOBAL STANDARDS.<br/><em>STRONGER DOGS.</em></h1><p>Bravo K9 Solutions supports responsible breeding, canine welfare, breed preservation and access to international canine standards.</p><a className="fci-button" href="https://www.fci.be/en/" target="_blank" rel="noopener noreferrer">Visit the official FCI website ↗</a></div></section>
+ <section className="fci-body"><div className="fci-intro"><img src="/images/bravo-logo.webp" alt="Bravo K9 Solutions" /><div><div className="fci-kicker">TRUST. TRAIN. DEPLOY.</div><h2>FCI SUPPORT</h2><p>We believe knowledge of breed heritage, responsible breeding and the welfare of dogs helps create a stronger canine community. Explore these resources from the Fédération Cynologique Internationale.</p></div></div><div className="fci-cards">{resources.map(item=><a key={item.title} href={item.href} target="_blank" rel="noopener noreferrer"><span aria-hidden="true">✦</span><h3>{item.title}</h3><p>{item.detail}</p><small>Explore on FCI.be ↗</small></a>)}</div>
+ <section className="fci-news"><div><div className="fci-kicker">OFFICIAL SOURCE · FCI.BE</div><h2>LATEST FROM FCI</h2><p>Explore official announcements and updates. News links open the original FCI website.</p></div><div className="fci-news-grid">{news.length?news.map(item=><a key={item.url} href={item.url} target="_blank" rel="noopener noreferrer"><small>{item.date||'FCI announcement'}</small><h3>{item.title}</h3><span>Read on FCI.be ↗</span></a>):<a href="https://www.fci.be/en/" target="_blank" rel="noopener noreferrer"><h3>Browse the latest official FCI announcements</h3><p>Visit FCI.be for current news, events and notices.</p><span>Visit FCI.be ↗</span></a>}</div></section><p className="fci-disclaimer">Independent statement of support. Bravo K9 Solutions is not presented as an official FCI member, partner, certifying body or endorsed organization.</p></section></main><Footer/></>;
+}
