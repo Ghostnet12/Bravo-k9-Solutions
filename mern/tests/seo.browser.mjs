@@ -67,7 +67,7 @@ try {
         }
         if (width === 390) {
           await page.goto(origin);
-          const price = page.locator('.cinema-training-card .cinema-price');
+          const price = page.locator('.conversion-price');
           await price.waitFor();
           assert.match(await price.innerText(), /\$200/);
           assert.match(await page.locator('.cinema-hero .cinema-eyebrow').innerText(), /Aberdeen/i);

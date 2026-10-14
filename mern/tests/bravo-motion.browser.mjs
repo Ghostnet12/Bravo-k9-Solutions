@@ -46,7 +46,8 @@ try{
  for(const width of [320,390,768,1440]){
   const {context,page}=await setup(width);
   try{
-   await page.goto(origin,{waitUntil:'domcontentloaded'});await page.locator('.goal-select').first().waitFor();await page.evaluate(()=>document.fonts.ready);
+   await page.goto(origin,{waitUntil:'domcontentloaded'});await page.locator('h1').waitFor();await page.evaluate(()=>document.fonts.ready);
+   if(width>700){
    await position(page,'#find-training');
    await page.locator('.goal-select').nth(2).click();
    assert.equal(await page.locator('.goal-result').count(),1);
@@ -58,6 +59,10 @@ try{
    const glow=await page.locator('.goal-choice[data-selected=true]').evaluate(el=>({pointer:getComputedStyle(el,'::after').pointerEvents,shadow:getComputedStyle(el,'::after').boxShadow}));
    assert.equal(glow.pointer,'none');assert.notEqual(glow.shadow,'none');
    await page.locator('#find-training').screenshot({path:`test-results/motion-goals-${width}.png`});
+   }else{
+    assert.equal(await page.locator('.goal-finder').isVisible(),false);
+    assert.equal(await page.locator('.conversion-goal').filter({hasText:'Aggression'}).getAttribute('href'),'/portal?program=aggression');
+   }
    await position(page,'#field-stories');await page.locator('.field-story-card').first().waitFor();
    const rail=page.locator('#field-story-rail');
    if(width<=650){
@@ -82,7 +87,7 @@ try{
    assert.ok(await page.locator(`[data-proof-video="${clips[0].id}"]`).evaluate(el=>el===document.activeElement));
    assert.ok(await page.locator('.proof-video-carousel video').evaluateAll(videos=>videos.every(v=>v.paused)));
    await page.evaluate(()=>document.documentElement.classList.add('access-reduced-motion'));
-   await page.locator('.goal-select').first().click();
+   if(width>700) await page.locator('.goal-select').first().click();
    assert.equal(await page.locator('.goal-result').evaluate(el=>getComputedStyle(el).animationName),'none');
    assert.ok(await page.locator('[data-reveal]').evaluateAll(nodes=>nodes.every(el=>getComputedStyle(el).opacity==='1')));
    await page.emulateMedia({reducedMotion:'reduce',forcedColors:'active'});

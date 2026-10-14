@@ -272,7 +272,7 @@ export function mountSiteImages({ canEdit = false } = {}) {
     // Cinematic layers can receive the pointer instead of their background photo.
     // Only the uncovered image area edits media; text and controls retain their own gestures.
     const hero = target.closest('.cinema-hero,[data-site-photo-surface]');
-    if (hero && !target.closest('button,input,textarea,select,[data-site-content-text]') && (!target.closest('a') || target.closest('a') === hero)) {
+    if (hero && !target.closest('button,input,textarea,select,.cinema-hero-copy,p,h1,h2,h3,[data-site-content-text]') && (!target.closest('a') || target.closest('a') === hero)) {
       const image = hero.querySelector('img[data-site-image-key]'), rect = image?.getBoundingClientRect();
       if (rect && records.has(image) && event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) return image;
     }

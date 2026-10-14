@@ -35,6 +35,7 @@ try {
   await page.evaluate(()=>document.fonts.ready);
   for(const width of [320,390,768,1440]) {
     await page.setViewportSize({width,height:1000});
+    if(width>700){
     await page.locator('#find-training').scrollIntoViewIfNeeded();
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width}: no page overflow`);
     const icons=await page.locator('.goal-choice-link').evaluateAll(links=>links.map(link=>{const s=getComputedStyle(link,'::before');return{mask:s.maskImage,events:s.pointerEvents,content:s.content,width:parseFloat(s.width)};}));
@@ -44,10 +45,15 @@ try {
     await page.getByRole('button',{name:'Preview Aggression concerns',exact:true}).click();
     assert.equal(await page.locator('.goal-result .goal-actions .button').getAttribute('href'),'/portal?program=aggression');
     await page.getByRole('button',{name:'Preview Pulling, jumping & puppy manners',exact:true}).click();
+    }else{
+      assert.equal(await page.locator('.conversion-goal').count(),4);
+      assert.equal(await page.locator('.goal-finder').isVisible(),false);
+      assert.equal(await page.locator('.conversion-goal').filter({hasText:'Aggression'}).getAttribute('href'),'/portal?program=aggression');
+    }
     await page.locator('#method').scrollIntoViewIfNeeded();
     const signature=await page.locator('.cinema-method-signature').innerText();assert.match(signature,/Trust/);assert.match(signature,/Train/);assert.match(signature,/Deploy/);
     assert.equal(await page.locator('.cinema-method-signature > span').count(),3);
-    for(const section of ['#find-training','#method','#specialist-training','#team']) {
+    for(const section of [width>700?'#find-training':'.conversion-discovery','#method','#specialist-training','#team']) {
       await page.locator(section).scrollIntoViewIfNeeded();
       await page.waitForTimeout(200);
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${section}/${width}: no overflow`);
@@ -59,6 +65,7 @@ try {
   await page.evaluate(()=>document.documentElement.style.fontSize='200%');
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'enlarged text fits');
   await page.evaluate(()=>document.documentElement.style.removeProperty('font-size'));
+  await page.setViewportSize({width:768,height:1000});
   await page.locator('.goal-choice-link').first().focus();
   assert.ok(await page.locator('.goal-choice-link').first().evaluate(el=>document.activeElement===el));
   await page.keyboard.press('Enter');assert.equal(new URL(page.url()).pathname,'/');

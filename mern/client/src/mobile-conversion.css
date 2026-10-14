@@ -115,11 +115,11 @@
  .cinema-home.conversion-home .cinema-film{background:#080808}
  .cinema-home.conversion-home .cinema-hero-still{object-fit:contain;object-position:center}
  .cinema-home.conversion-home .cinema-hero-shade{background:none}
- .cinema-home.conversion-home .cinema-hero-copy{position:static;padding-top:14px;min-height:66.6667vw;box-sizing:border-box;display:flex;flex-direction:column;align-items:flex-start}
+ .cinema-home.conversion-home .cinema-hero-copy{position:relative;padding-top:14px;min-height:66.6667vw;box-sizing:border-box;display:flex;flex-direction:column;align-items:flex-start}
  .cinema-home.conversion-home .cinema-hero-copy .cinema-eyebrow{max-width:48%;font-size:8px;margin-bottom:8px}
  .cinema-home.conversion-home .cinema-hero h1{max-width:50%;font-size:clamp(25px,7.2vw,38px);line-height:1;margin-bottom:8px}
  .cinema-home.conversion-home .cinema-hero-intro{max-width:48%;font-size:clamp(9px,2.5vw,11px);line-height:1.45;margin:0}
- .cinema-home.conversion-home .polish-hero-actions{position:absolute;top:calc(74px + 66.6667vw + 8px);left:16px;right:16px;margin:0;padding:0;width:auto;max-width:none;gap:8px}
+ .cinema-home.conversion-home .polish-hero-actions{position:absolute;top:calc(66.6667vw + 8px);left:0;right:0;margin:0;padding:0;width:auto;max-width:none;gap:8px}
  .cinema-home.conversion-home .polish-hero-actions .cinema-link{justify-self:center;font-size:12px}
 }
 
@@ -127,3 +127,6 @@
  .cinema-home.conversion-home .cinema-hero-media{inset:74px 0 0}
  .cinema-home.conversion-home .cinema-hero-still{object-fit:contain;object-position:right top}
 }
+
+/* Give multiline editable copy a continuous hit area, including line spacing. */
+.cinema-hero-intro>[data-site-content-text]{display:block;pointer-events:auto}
