@@ -74,7 +74,7 @@ export function MobileDiscovery() {
     </Editable>
   </section>;
 }
-export function MobileHomeNav() {
+export function MobileHomeNav({ staticFallback = false }) {
   const location = useLocation();
   function returnToAnchor(event, id) {
     if (location.pathname !== '/' || location.hash !== `#${id}`) return;
@@ -94,7 +94,7 @@ export function MobileHomeNav() {
     <Link to={bookingPath} className="mobile-home-book" onClick={() => trackVisit('sticky_booking_clicked')}><span aria-hidden="true">▦</span>{user ? 'Schedule' : 'Book now'}</Link>
     <Link to="/live"><span aria-hidden="true">▷</span>Live cams</Link>
     <Link to="/#client-reviews" onClick={event => returnToAnchor(event, 'client-reviews')}><span aria-hidden="true">☆</span>Reviews</Link>
-    <button type="button" onClick={openMenu} aria-controls="bravo-navigation"><span aria-hidden="true">☰</span>More</button>
+    {staticFallback ? <Link to="/contact"><span aria-hidden="true">☰</span>Contact</Link> : <button type="button" onClick={openMenu} aria-controls="bravo-navigation"><span aria-hidden="true">☰</span>More</button>}
   </nav>;
 }
 export function ConversionFAQ() {
