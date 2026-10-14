@@ -8,7 +8,7 @@ import {chromium,webkit} from 'playwright';
 import {SERVICES} from '../shared/catalog.js';
 const dist=fileURLToPath(new URL('../client/dist/',import.meta.url)),html=await readFile(`${dist}/bravo-shell.html`,'utf8');
 const app=express();app.use(express.static(dist));app.get('/{*path}',(_req,res)=>res.type('html').send(html));const server=app.listen(0,'127.0.0.1');await once(server,'listening');const origin=`http://127.0.0.1:${server.address().port}`;await mkdir('test-results',{recursive:true});
-try {for(const [engineName,engine]of Object.entries({chromium,webkit})){const browser=await engine.launch();try{for(const width of [390,1440]){
+try {for(const [engineName,engine]of Object.entries({chromium,webkit})){if(process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(engineName))continue;const browser=await engine.launch();try{for(const width of [390,1440]){
  const context=await browser.newContext({viewport:{width,height:900},hasTouch:true}),page=await context.newPage(),errors=[];let signedIn=false, trainingDisabled=false, trainerFull=false, noSlots=false, actor='member';const writes=[],savedRequests=[];
  await page.addInitScript(()=>{window.__renderErrors=[];window.addEventListener('error',event=>window.__renderErrors.push({message:event.message,stack:event.error?.stack,cause:event.error?.cause?.message,causeStack:event.error?.cause?.stack,url:location.href}));window.addEventListener('error',event=>console.error('Render cause:',event.error?.cause?.message,event.error?.cause?.stack||event.error?.stack));});
  page.on('pageerror',e=>errors.push(e.message));
@@ -36,9 +36,11 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){const br
   await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
   assert.equal(await page.locator('.home-hero-image').evaluate(el=>getComputedStyle(el).objectFit),'contain');
   assert.match(await page.locator('h1').innerText(), /REAL DOGS.\s*REAL CONTROL/i);
-  assert.ok(await page.locator('.cinema-price').isVisible());
+  const visiblePrice=page.locator(width<=700?'.conversion-price':'.goal-price');
+  assert.ok(await visiblePrice.isVisible());
+  assert.match(await visiblePrice.innerText(), /\$200/);
   assert.ok(await page.getByText('Personalized training built around your dog. No treats or toys as the foundation. Real-world results.',{exact:true}).isVisible());
-  assert.ok(await page.getByText(/Up to one hour per day. Monday–Friday./).isVisible());
+  assert.ok(await page.getByText(width<=700?'Up to one hour per scheduled training day':'Private visits. Monday–Friday, up to one hour per day. We come to you in Aberdeen.',{exact:true}).isVisible());
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth + 1),'homepage fits viewport');
   await page.evaluate(()=>document.documentElement.style.fontSize='200%');
   const enlargedFits=await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth + 1);
@@ -47,7 +49,7 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){const br
   await page.screenshot({path:`test-results/authentic-home-${engineName}-${width}.png`});
   assert.equal(await page.locator('[data-site-content-key="home-53"] .review-stars').count(),0);
   assert.equal(await page.locator('.facebook-recommendations .review-stars[aria-label="5 out of 5 stars"]').count(),6);assert.equal(await page.locator('.banner-track').evaluate(el=>getComputedStyle(el).animationName),'none');
-  await page.getByRole('link',{name:/Start with private training/}).click();await page.getByRole('heading',{name:'Let’s start with your dog.',exact:true}).waitFor();
+  await page.getByRole('link',{name:'BOOK YOUR FIRST SESSION',exact:true}).click();await page.getByRole('heading',{name:'Let’s start with your dog.',exact:true}).waitFor();
   assert.equal(await page.getByText('IMPORTANT APPOINTMENT NOTICE',{exact:true}).count(),0);assert.equal(await page.getByRole('heading',{name:'Build your schedule',exact:true}).count(),0);
   await page.getByLabel('Dog’s name',{exact:true}).fill('Biscuit');await page.getByLabel('Number of dogs',{exact:true}).fill('2');await page.getByLabel('What would you like help with?',{exact:true}).selectOption('hunting-dog');await page.getByLabel('Anything you’d like your trainer to know? (optional)',{exact:true}).fill('Jumps when visitors arrive.');await page.waitForFunction(()=>document.querySelector('textarea[aria-label="Anything you’d like your trainer to know? (optional)"]')?.value==='Jumps when visitors arrive.');
   assert.ok((await page.locator('.first-visit-intro .price-total').innerText()).includes('$300/month'));

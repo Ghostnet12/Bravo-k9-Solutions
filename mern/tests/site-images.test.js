@@ -15,6 +15,7 @@ test('image keys reject traversal and unsafe URL contents', () => {
 test('source keys cannot redirect to external or private account resources', () => {
   const origin = 'https://bravounleashed.com';
   assert.equal(sourceImageKey('/images/bravo-logo-small.webp', origin), null);
+  assert.equal(sourceImageKey('/images/mobile-bravo-cinematic.webp', origin), 'asset-mobile-bravo-cinematic.webp');
   assert.equal(sourceImageKey('/images/training-education.webp', origin), 'asset-training-education.webp');
   assert.equal(sourceImageKey('/api/lessons/heel/image', origin), 'lesson-heel');
   for (const path of ['https://example.com/images/a.webp', '//example.com/images/a.webp', 'data:image/svg+xml,<svg/>', '/api/auth/me', '/images/../../api/auth/me']) assert.equal(sourceImageKey(path, origin), null);

@@ -269,6 +269,13 @@ export function mountSiteImages({ canEdit = false } = {}) {
     const target = event.target instanceof Element ? event.target : null;
     if (!target || target.closest('[data-site-image-editor],[data-site-image-ignore],.home-hero-gallery')) return null;
     const direct = target.closest('img[data-site-image-key],video[data-site-image-key]'); if (direct && records.has(direct)) return direct;
+    // Cinematic layers can receive the pointer instead of their background photo.
+    // Only the uncovered image area edits media; text and controls retain their own gestures.
+    const hero = target.closest('.cinema-hero,[data-site-photo-surface]');
+    if (hero && !target.closest('button,input,textarea,select,.cinema-hero-copy,p,h1,h2,h3,[data-site-content-text]') && (!target.closest('a') || target.closest('a') === hero)) {
+      const image = hero.querySelector('img[data-site-image-key]'), rect = image?.getBoundingClientRect();
+      if (rect && records.has(image) && event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) return image;
+    }
     if (target.closest('button,input,textarea,select,summary,a,[role="button"],[data-site-content-key]')) return null;
     return [...records.keys()].reverse().find(element => { const r = element.getBoundingClientRect(); return element.parentElement?.contains(target) && event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top && event.clientY <= r.bottom; }) || null;
   }

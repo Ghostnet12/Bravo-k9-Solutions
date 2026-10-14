@@ -99,3 +99,12 @@ body:has(.home-ad-dock) .media-rights-toast{bottom:calc(var(--ad-dock-height) + 
 @media(max-width:700px){.home-ad-dock .home-ad-carousel{height:110px}}
 
 .ad-compact-art{display:flex;position:relative;isolation:isolate;width:100%;height:100%;align-items:center;justify-content:center;gap:24px;overflow:hidden}.home-ad-dock .ad-compact-art .ad-ambient{position:absolute;inset:0;z-index:-1;background-size:cover;background-position:center;opacity:.12}.home-ad-dock .ad-compact-art .ad-complete-art{width:auto;max-width:60%;object-fit:contain;background:transparent}.ad-compact-title{font-family:'Bebas Neue',sans-serif;color:#e5c38b;font-size:clamp(22px,3vw,40px);line-height:1.1}.ad-compact-title small{display:block;font-family:Montserrat,sans-serif;font-size:12px;color:white;margin-top:8px}@media(max-width:700px){.ad-compact-title{display:none}.home-ad-dock .ad-compact-art .ad-complete-art{max-width:100%;width:100%}}
+
+/* Fill the dock edge to edge with the actual advertisement artwork. */
+.home-ad-dock .ad-compact-art{display:block}
+.home-ad-dock .ad-ambient,.home-ad-dock .ad-compact-title{display:none}
+.home-ad-dock .home-ad-slide .ad-complete-art{display:block;width:100%;max-width:none;height:100%;object-fit:cover;object-position:center}
+
+@media(min-width:701px){
+ .home-ad-dock .ad-compact-title{display:flex;position:absolute;inset:0 auto 0 0;justify-content:center;max-width:65%;padding:12px 40px 12px 24px;background:linear-gradient(90deg,#101010f5 70%,#10101000);text-shadow:0 1px 5px #000}
+}

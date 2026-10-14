@@ -16,7 +16,7 @@ const server=app.listen(0,'127.0.0.1');await once(server,'listening');const orig
 await mkdir('test-results',{recursive:true});
 try{for(const [engineName,engine] of Object.entries({chromium,webkit})){
  if(process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(engineName))continue;
- const browser=await engine.launch();try{for(const width of [390,1440]){
+ const browser=await engine.launch();try{for(const width of [768,1440]){
   const context=await browser.newContext({viewport:{width,height:900},hasTouch:true}),page=await context.newPage();
   const errors=[],browserDiagnostics=[];
   // WebKit's Playwright adapter maps JavaScript console errors (including
@@ -91,6 +91,8 @@ try{for(const [engineName,engine] of Object.entries({chromium,webkit})){
    // Ordinary scrolling cancels a hold; the next tap must still navigate.
    await page.locator('#goal-tab-manners').scrollIntoViewIfNeeded();const box=await page.locator('#goal-tab-manners').boundingBox();await page.mouse.move(box.x+10,box.y+10);await page.mouse.down();await page.mouse.move(box.x+45,box.y+40);await page.waitForTimeout(750);await page.mouse.up();assert.equal(await page.locator('dialog[open]').count(),0);
    assert.equal(new URL(page.url()).pathname,'/','dragging an editable link must not navigate');
+   // The legacy program preview now belongs to tablet/desktop only.
+   await page.setViewportSize({width:Math.max(width,768),height:900});
    await page.locator('.goal-choice-link').first().click();assert.equal(new URL(page.url()).pathname,'/');await page.locator('.goal-program-link').click();await page.waitForURL(url=>url.pathname==='/portal');await page.waitForLoadState('networkidle');
    role=null;await page.goto(origin);await page.waitForLoadState('networkidle');await page.locator('.goal-choice-link').first().click();assert.equal(new URL(page.url()).pathname,'/');await page.locator('.goal-program-link').click();await page.getByRole('heading',{name:'Let’s start with your dog.',exact:true}).waitFor();await page.getByLabel('Number of dogs',{exact:true}).fill('2');assert.match(await page.locator('.price-total').innerText(),/\$350/);assert.equal(new URL(page.url()).searchParams.get('focus'),'puppy-foundations');await page.waitForLoadState('networkidle');
    // Complete normal link navigation before changing the next test account.

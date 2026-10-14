@@ -62,10 +62,30 @@ try {
     const adHeight = await page.locator('.home-ad-dock').evaluate(el=>el.getBoundingClientRect().height);
     assert.ok(adHeight <= (width <= 700 ? 121 : 151), `compact ad ${width}: ${adHeight}`);
     const barrier = await page.locator(width <= 700 ? '.mobile-home-nav' : '.home-ad-dock').boundingBox(); if(barrier) assert.ok(box.y+box.height<=barrier.y, `booking under dock ${width}: ${JSON.stringify({box,barrier})}`);
+    if(width<=700){
+     const art=await page.locator('.cinema-hero-still').boundingBox();
+     assert.ok(box.y>=art.y+art.height,'hero booking sits below the complete dog image');
+     const more=page.locator('.mobile-home-nav button[aria-controls="bravo-navigation"]');
+     await more.click();assert.equal(await more.getAttribute('aria-expanded'),'true');
+     await more.click();assert.equal(await more.getAttribute('aria-expanded'),'false');
+     await more.focus();await page.keyboard.press('Enter');assert.equal(await more.getAttribute('aria-expanded'),'true');
+     await more.press('Escape');assert.equal(await more.getAttribute('aria-expanded'),'false');
+    }
+    assert.equal(await page.locator('.ad-complete-art').evaluate(el=>getComputedStyle(el).objectFit),'cover');
+    assert.equal(await page.locator('.ad-complete-art').evaluate(el=>Math.round(el.getBoundingClientRect().width)),width);
     assert.match(await book.getAttribute('href'),/portal/);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`overflow ${width}`);
     await page.screenshot({path:`test-results/polish-${name}-${width}.png`});
     if(width===390){
+     const image=page.locator('.cinema-hero-still');
+     await page.waitForFunction(()=>document.querySelector('.cinema-hero-still')?.hasAttribute('data-site-image-editable'));
+     const bounds=await image.boundingBox();
+     await page.mouse.move(bounds.x+bounds.width*.85,bounds.y+bounds.height*.35);await page.mouse.down();
+     await page.getByRole('dialog',{name:'Edit this photo',exact:true}).waitFor();await page.mouse.up();
+     await page.getByRole('button',{name:'Close media editor'}).click();
+     await image.focus();await page.keyboard.press('F2');
+     await page.getByRole('dialog',{name:'Edit this photo',exact:true}).waitFor();
+     await page.getByRole('button',{name:'Close media editor'}).click();
      await page.waitForFunction(()=>document.querySelector('[data-site-soundtrack]')?.dataset.policyTested === 'true');
      await page.getByText('ABERDEEN, SOUTH DAKOTA — WE COME TO YOU.', {exact:true}).click();
      await page.waitForFunction(()=>!document.querySelector('[data-site-soundtrack]').paused);

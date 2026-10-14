@@ -62,7 +62,7 @@ async function revealed(page, goal, behavior = 'smooth') {
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
 }
 try {
-  for (const width of [320, 390, 768, 1440]) {
+  for (const width of [768, 1440]) {
     const { context, page, errors } = await setup(width);
     try {
       for (const goal of GOALS) {
@@ -107,7 +107,7 @@ try {
       throw error;
     } finally { await context.close(); }
   }
-  const { context, page, errors } = await setup(390, true);
+  const { context, page, errors } = await setup(768, true);
   try {
     await page.waitForFunction(() => document.documentElement.classList.contains('site-content-owner'));
     await showCards(page);

@@ -69,7 +69,7 @@ export default function Home() {
     <Header/>
     <Editable as="main" contentKey="copy-home-1" id="main-content" tabIndex={-1}>
       <section className="home-hero cinema-hero" aria-labelledby="home-title">
-        <div className="cinema-hero-media"><div className="cinema-film"><img className="cinema-hero-still" src="/images/mobile-bravo-cinematic.webp" width="1024" height="1536" alt="" fetchPriority="high"/><div className="cinema-hero-shade" aria-hidden="true"/></div></div>
+        <div className="cinema-hero-media"><div className="cinema-film"><img className="cinema-hero-still" src="/images/mobile-bravo-cinematic.webp" width="1536" height="1024" alt="Bravo cinematic dog portrait" fetchPriority="high"/><div className="cinema-hero-shade" aria-hidden="true"/></div></div>
         <div className="cinema-hero-copy cinema-shell">
           <Editable as="p" contentKey="polish-hero-location" canEditText className="cinema-eyebrow">ABERDEEN, SOUTH DAKOTA — WE COME TO YOU.</Editable>
           <h1 id="home-title"><Editable as="span" contentKey="conversion-hero-title" canEditText>REAL DOGS.<br/><em>REAL CONTROL.</em></Editable></h1>
@@ -82,19 +82,18 @@ export default function Home() {
       <ConversionTrust/>
       <HomeBanner/>
       <MobileDiscovery/>
-      <div data-site-service="training" className="home-service-strip cinema-service-strip"><span><Editable as="span" contentKey="copy-home-6" canEditText>Private training · </Editable><CatalogPrice/><Editable as="span" contentKey="copy-home-7" canEditText>/month · one dog · We come to you.</Editable></span><Editable as="a" contentKey="copy-home-8" canEditText canEditLink href="tel:+16058242767">Let’s talk <span>(605) 824-2767</span></Editable></div>
       <div className="cinema-shell site-media-tools-slot site-media-tools-slot--home" data-site-media-tools=""/>
 
       <HomeSectionOrder>
-      <GoalFinder key="goals" review={recommendations[0] || null}/>
+      <GoalFinder key="goals"/>
       <section key="fci" className="home-fci cinema-shell" aria-labelledby="home-fci-title">
         <Link href="/fci-support" className="home-fci-card" aria-labelledby="home-fci-title home-fci-action">
           <div className="home-fci-identity"><img src="/images/fci-official-identity.jpeg" width="796" height="240" loading="lazy" alt="Fédération Cynologique Internationale — for pedigree dogs worldwide"/></div>
           <div className="home-fci-copy">
-            <p className="cinema-eyebrow">BRAVO’S FCI SUPPORT INITIATIVE</p>
-            <h2 id="home-fci-title">Global standards.<br/><span>Stronger dogs.</span></h2>
-            <p>Discover international breed standards, responsible breeding, canine health, and the latest official FCI announcements.</p>
-            <span className="home-fci-action" id="home-fci-action">Explore FCI Support <span aria-hidden="true">↗</span></span>
+            <Editable as="p" contentKey="home-fci-eyebrow" canEditText className="cinema-eyebrow">BRAVO’S FCI SUPPORT INITIATIVE</Editable>
+            <Editable as="h2" contentKey="home-fci-title" canEditText id="home-fci-title">Global standards.<br/><span>Stronger dogs.</span></Editable>
+            <Editable as="p" contentKey="home-fci-description" canEditText>Discover international breed standards, responsible breeding, canine health, and the latest official FCI announcements.</Editable>
+            <Editable as="span" contentKey="home-fci-action" canEditText className="home-fci-action" id="home-fci-action">Explore FCI Support <span aria-hidden="true">↗</span></Editable>
             <small>An independent Bravo initiative. No official FCI affiliation or endorsement.</small>
           </div>
         </Link>
@@ -118,7 +117,7 @@ export default function Home() {
       <Editable as="section" key="reviews" contentKey="copy-home-42" id="reviews" className="cinema-proof" aria-labelledby="reviews-title"><div className="cinema-shell">
         <div className="cinema-proof-intro" data-reveal=""><img src="/images/bravo-logo-small.webp" width="64" height="72" alt="" data-site-image-ignore=""/><Editable as="p" contentKey="copy-home-43" canEditText className="cinema-eyebrow">PROOF IN THE WORK</Editable><Editable as="h2" contentKey="cinema-proof-title" canEditText id="reviews-title">Don’t take<br/><span>our word for it.</span></Editable><Editable as="p" contentKey="copy-home-44" canEditText>Watch real sessions. Read what clients noticed at home.</Editable></div>
         <ProofVideoCarousel/>
-        <Link href="/portal?program=training" className="conversion-proof-book mobile-conversion conversion-button">Book your first session →</Link>
+
         <FacebookRecommendations reviews={recommendations}/>
         {reviews.reviews.length > 0 && <div className="cinema-account-reviews"><p>{reviews.average}<Editable as="span" contentKey="copy-home-45" canEditText> out of 5 · </Editable>{reviews.count}<Editable as="span" contentKey="copy-home-46" canEditText> verified Bravo account </Editable>{reviews.count === 1 ? 'review' : 'reviews'}</p><div className="review-grid home-proof-reviews">{reviews.reviews.slice(0, 3).map(review => <Editable as="article" contentKey="copy-home-47" className="panel" key={review._id}><ReviewStars rating={review.rating}/><ReviewPreview body={review.body} author={review.authorName}/><strong>{review.authorName}</strong><Editable as="small" contentKey="copy-home-48" >{review.editedByOwner ? 'Bravo account review · edited by owner' : 'Verified Bravo account'}</Editable></Editable>)}</div></div>}
         <Editable as={Link} contentKey="copy-home-49" canEditText canEditLink className="cinema-link" href="/account#your-review">Share your experience <span aria-hidden="true">↗</span></Editable>
