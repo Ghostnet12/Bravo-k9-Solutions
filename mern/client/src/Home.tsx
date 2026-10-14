@@ -66,7 +66,6 @@ export default function Home() {
     return () => { live = false; observer.disconnect(); window.removeEventListener('bravo-team-published', published); };
   }, []);
   return <div ref={root} className="bravo-home cinema-home conversion-home">
-    <link rel="preload" as="image" href="/images/mobile-bravo-cinematic.webp"/>
     <Header/>
     <Editable as="main" contentKey="copy-home-1" id="main-content" tabIndex={-1}>
       <section className="home-hero cinema-hero" aria-labelledby="home-title">
