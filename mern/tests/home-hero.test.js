@@ -106,8 +106,8 @@ test('site uses a persistent soundtrack on every route with no public hero playb
     readFile(new URL('../client/public/audio/built-for-the-real-world.m4a', import.meta.url)),
   ]);
   assert.match(main, /<SiteSoundtrack\/>/);
-  assert.match(soundtrack, /loop preload="none"/);
-  assert.match(soundtrack, /window\.addEventListener\('load'/);
+  assert.match(soundtrack, /preload="none"/);
+  assert.match(soundtrack, /load: loaded/);
   assert.doesNotMatch(soundtrack, /pathname === '\/'/);
   assert.match(soundtrack, /const shouldPlay = \(\) => enabled\.current && !document\.hidden/);
   assert.match(soundtrack, /bravo-site-soundtrack-position/);

@@ -1,103 +1,88 @@
 import { useLocation } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
-import { SITE_SOUNDTRACK_SRC, SITE_SOUNDTRACK_TITLE, SITE_SOUNDTRACK_VOLUME } from '../../shared/site-soundtrack.js';
-
-const storageKey = 'bravo-accessibility-preferences';
-const positionKey = 'bravo-site-soundtrack-position';
-
-function musicEnabled() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
-    return saved.siteMusic !== false;
-  } catch {
-    return true;
-  }
-}
-
-function rememberedPosition() {
-  try {
-    const value = Number(sessionStorage.getItem(positionKey));
-    return Number.isFinite(value) && value >= 0 ? value : 0;
-  } catch {
-    return 0;
-  }
-}
-
+import { DEFAULT_MUSIC, playableTracks } from '../../shared/music-playlist.js';
+import { api } from './api';
+const storageKey = 'bravo-accessibility-preferences', positionKey = 'bravo-site-soundtrack-position', preferenceKey = 'bravo-music-preferences';
+function read(key, store = localStorage) { try { return JSON.parse(store.getItem(key) || '{}'); } catch { return {}; } }
+function write(key, value, store = localStorage) { try { store.setItem(key, JSON.stringify(value)); } catch { /* Storage may be unavailable. */ } }
 export default function SiteSoundtrack() {
-  const audio = useRef(null), enabled = useRef(true), liveRoute = useRef(false), audioFocus = useRef(false);
+  const audio = useRef(null), enabled = useRef(true), liveRoute = useRef(false);
   const { pathname } = useLocation();
   liveRoute.current = pathname === '/live' || pathname.startsWith('/live/');
   useEffect(() => { window.dispatchEvent(new Event('bravo-live-audio-focus')); }, [pathname]);
-  const publicHost = location.hostname === 'bravounleashed.com' || location.hostname === 'www.bravounleashed.com' || location.hostname.endsWith('.vercel.app');
-
   useEffect(() => {
-    if (!publicHost) return;
     const element = audio.current;
-    if (!element) return;
-    enabled.current = musicEnabled();
-    element.volume = SITE_SOUNDTRACK_VOLUME;
-
-    const remember = () => {
-      try {
-        if (Number.isFinite(element.currentTime) && element.currentTime >= 0) sessionStorage.setItem(positionKey, String(element.currentTime));
-      } catch {
-        // Playback still works when session storage is unavailable.
-      }
-    };
-    const restore = () => {
-      const position = rememberedPosition();
-      if (position <= 0) return;
-      if (Number.isFinite(element.duration) && element.duration > 0) element.currentTime = position % element.duration;
-      else element.currentTime = position;
-    };
-    const shouldPlay = () => enabled.current && !document.hidden && !liveRoute.current && !audioFocus.current;
+    let playlist = DEFAULT_MUSIC, tracks = playableTracks(playlist), index = 0, active = true, focus = false, ready = false, autoplayBlocked = false;
+    const failed = new Set(), media = new Set(), preferences = read(preferenceKey), remembered = read(positionKey, sessionStorage);
+    enabled.current = read(storageKey).siteMusic !== false && preferences.paused !== true;
+    element.volume = Number.isFinite(preferences.volume) ? Math.max(0, Math.min(1, preferences.volume)) : .72;
+    element.muted = preferences.muted === true;
+    const status = () => window.dispatchEvent(new CustomEvent('bravo-music-status', { detail: { playing: !element.paused, muted: element.muted, volume: element.volume, title: tracks[index]?.title || '', available: tracks.length > failed.size } }));
+    const persist = () => write(preferenceKey, { paused: !enabled.current, volume: element.volume, muted: element.muted });
+    const remember = () => write(positionKey, { id: tracks[index]?.id, time: element.currentTime }, sessionStorage);
+    const shouldPlay = () => enabled.current && !document.hidden && ready && !liveRoute.current && !focus && !media.size && tracks.length > failed.size;
     const attempt = () => {
-      if (!shouldPlay()) { element.pause(); return; }
-      if (!element.getAttribute('src')) {
-        element.src = SITE_SOUNDTRACK_SRC;
-        element.load();
-        element.addEventListener('loadedmetadata', restore, { once: true });
-      }
-      element.play().catch(() => {
-        // iPhone/Safari and some Chrome settings block audible autoplay until
-        // the visitor makes a real gesture. Retrying below is the browser-safe
-        // path; the soundtrack still applies to every route.
-      });
+      if (!active) return;
+      for (const item of media) if (!item.isConnected || item.paused || item.ended) media.delete(item);
+      if (!shouldPlay()) { element.pause(); status(); return; }
+      if (element.getAttribute('src') !== tracks[index].src) { element.src = tracks[index].src; element.load(); }
+      element.play().then(() => { autoplayBlocked = false; status(); }).catch(error => { autoplayBlocked = error.name === 'NotAllowedError'; status(); });
     };
-    const gesture = () => attempt();
-    const visibility = () => attempt();
-    const preference = event => {
-      enabled.current = event.detail?.enabled !== false;
-      if (enabled.current) attempt();
-      else element.pause();
+    const next = () => {
+      if (tracks.length <= failed.size) { element.pause(); status(); return; }
+      do { index = (index + 1) % tracks.length; } while (failed.has(tracks[index].id));
+      element.removeAttribute('src'); attempt(); status();
     };
-
-    let startTimer = 0;
-    const loaded = () => { startTimer = window.setTimeout(attempt, 0); };
-    if (document.readyState === 'complete') loaded();
-    else window.addEventListener('load', loaded, { once: true });
-
-    document.addEventListener('pointerdown', gesture, true);
-    document.addEventListener('keydown', gesture, true);
+    const error = () => { if (tracks[index]) failed.add(tracks[index].id); next(); };
+    const restore = () => { if (remembered.id === tracks[index]?.id && Number.isFinite(remembered.time) && remembered.time > 0 && element.duration > remembered.time) { element.currentTime = remembered.time; remembered.time = 0; } };
+    const publish = data => {
+      const currentId = ready ? tracks[index]?.id : null;
+      ready = true; playlist = data; tracks = playableTracks(data); failed.clear();
+      const found = tracks.findIndex(t => t.id === currentId); index = found >= 0 ? found : 0;
+      if (!tracks.length) { element.pause(); element.removeAttribute('src'); element.load(); }
+      attempt(); status();
+    };
+    const refresh = () => { if (!document.hidden) api('/site-music').then(data => {
+      if (!active) return;
+      if (!ready || data.revision > playlist.revision) publish(data);
+      else if (failed.size) { failed.clear(); element.removeAttribute('src'); attempt(); status(); }
+    }).catch(() => {}); };
+    const published = event => publish(event.detail);
+    const preference = event => { enabled.current = event.detail?.enabled !== false; persist(); attempt(); };
+    const command = event => {
+      const { action, value } = event.detail;
+      if (action === 'toggle') { enabled.current = element.paused; write(storageKey, { ...read(storageKey), siteMusic: enabled.current }); window.dispatchEvent(new CustomEvent('bravo-music-preference', { detail: { enabled: enabled.current } })); }
+      if (action === 'mute') element.muted = !element.muted;
+      if (action === 'volume') element.volume = Math.max(0, Math.min(1, value));
+      if (action === 'next') next();
+      if (action !== 'status') { persist(); attempt(); } status();
+    };
+    const audioFocus = event => { focus = event.detail?.active === true; attempt(); };
+    const mediaChange = event => {
+      const target = event.target;
+      if (!(target instanceof HTMLMediaElement) || target === element) return;
+      if (!target.paused && !target.ended && !target.muted && target.volume > 0) media.add(target); else media.delete(target);
+      attempt();
+    };
+    const visibility = () => { for (const item of media) if (!item.isConnected || item.paused) media.delete(item); attempt(); refresh(); };
+    const loaded = () => { refresh(); attempt(); };
+    // Retry policy-blocked playback during ordinary activation, without racing the explicit music buttons.
+    const gesture = event => { if (autoplayBlocked && element.paused && !event.target?.closest?.('.music-panel, .music-editor')) attempt(); };
+    const windowEvents = { load: loaded, online: refresh, pointerdown: gesture, keydown: gesture, 'bravo-music-command': command, 'bravo-music-published': published, 'bravo-site-music': preference, 'bravo-audio-focus': audioFocus, 'bravo-live-audio-focus': visibility, pagehide: remember };
+    const audioEvents = { ended: next, error, loadedmetadata: restore, play: status, pause: status };
+    for (const [name, handler] of Object.entries(windowEvents)) window.addEventListener(name, handler);
+    for (const [name, handler] of Object.entries(audioEvents)) element.addEventListener(name, handler);
     document.addEventListener('visibilitychange', visibility);
-    window.addEventListener('pagehide', remember);
-    const focus = event => { audioFocus.current = event.detail?.active === true; attempt(); };
-    window.addEventListener('bravo-audio-focus', focus);
-    window.addEventListener('bravo-site-music', preference);
-    window.addEventListener('bravo-live-audio-focus', attempt);
+    for (const name of ['play', 'pause', 'ended', 'volumechange']) document.addEventListener(name, mediaChange, true);
+    if (document.readyState === 'complete') loaded();
+    const timer = setInterval(refresh, 60000); status();
     return () => {
-      remember();
-      window.removeEventListener('load', loaded);
-      window.clearTimeout(startTimer);
-      document.removeEventListener('pointerdown', gesture, true);
-      document.removeEventListener('keydown', gesture, true);
+      active = false; remember(); element.pause(); clearInterval(timer);
+      for (const [name, handler] of Object.entries(windowEvents)) window.removeEventListener(name, handler);
+      for (const [name, handler] of Object.entries(audioEvents)) element.removeEventListener(name, handler);
       document.removeEventListener('visibilitychange', visibility);
-      window.removeEventListener('pagehide', remember);
-      window.removeEventListener('bravo-audio-focus', focus);
-      window.removeEventListener('bravo-site-music', preference);
-      window.removeEventListener('bravo-live-audio-focus', attempt);
+      for (const name of ['play', 'pause', 'ended', 'volumechange']) document.removeEventListener(name, mediaChange, true);
     };
-  }, [publicHost]);
-
-  return <audio ref={audio} loop preload="none" aria-label={SITE_SOUNDTRACK_TITLE} data-site-soundtrack="" />;
+  }, []);
+  return <audio ref={audio} preload="none" aria-label="Bravo music playlist" data-site-soundtrack=""/>;
 }

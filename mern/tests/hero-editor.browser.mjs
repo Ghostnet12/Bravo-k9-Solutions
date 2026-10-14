@@ -51,17 +51,15 @@ try {
       const copyDialog = page.getByRole('dialog', { name: 'Edit website section', exact: true });
       async function holdAt(x, y) { await page.mouse.move(x, y); await page.mouse.down(); await page.waitForTimeout(800); await page.mouse.up(); }
       async function editCopy(text) {
-        const copyKey = width <= 700 ? 'conversion-hero-intro' : 'cinema-hero-intro';
+        const copyKey = 'conversion-hero-intro';
         const intro = page.locator(`[data-site-content-key="${copyKey}"]`);
-        const other = page.locator(`.cinema-hero-intro .${width <= 700 ? 'conversion-desktop' : 'conversion-mobile'}`);
-        const originalOther = await other.textContent();
         await intro.scrollIntoViewIfNeeded(); await page.waitForTimeout(350);
         const box = await intro.boundingBox(); await holdAt(box.x + 20, box.y + 10);
         await copyDialog.waitFor(); await copyDialog.getByLabel('Text', { exact: true }).fill(text);
         await copyDialog.getByRole('button', { name: 'Publish website changes', exact: true }).click();
         await copyDialog.waitFor({ state: 'hidden' });
         assert.equal((await SiteContent.findById(copyKey).lean()).value.text, text);
-        assert.equal(await other.textContent(), originalOther, 'editing one breakpoint must preserve the other variant');
+        assert.equal(await intro.textContent(), text, 'shared hero copy updates for every breakpoint');
       }
       try {
         await page.goto(origin); await page.waitForLoadState('networkidle');

@@ -70,7 +70,9 @@ try {
           // Server-rendered cards can appear before the signed-in editing
           // controls hydrate, especially after returning from an external page.
           await card.and(page.locator('[data-proof-editable="true"]')).waitFor();
-          await page.waitForLoadState('networkidle');
+          // Media streams and background refreshes may keep requests active.
+          // The editable marker above proves hydration; network idle does not.
+          await card.getByRole('heading').waitFor({ state: 'visible' });
           await card.scrollIntoViewIfNeeded();
           // Scrolling and CSS snap can emit one final scroll event, which
           // intentionally cancels a hold. Start the gesture after it settles.

@@ -28,7 +28,7 @@ const scope = id => `${mediaScope}:${id}`;
 const publicClip = row => {
   const original = defaultFor(row._id);
   const facebookUrl = row.uploadId ? null : normalizeFacebookReelUrl(row.facebookUrl || original?.facebookUrl);
-  return { id: row._id, title: row.title, description: row.description, order: row.order, revision: row.revision,
+  return { id: row._id, title: row.title?.replace(/It[’']s not to late/g, 'It’s not too late'), description: row.description, order: row.order, revision: row.revision,
     fit: row.fit || 'contain', sound: row.sound === true || (!row.sound && original?.sound === true), src: row.uploadId ? (mediaScope === 'hero-film' && heroRendition(row)) || `${apiPath}/${row._id}/video?v=${row.revision}` : original?.src || null,
     poster: row.uploadId ? row.hasPoster ? (mediaScope === 'hero-film' && heroPosterRendition(row)) || `${apiPath}/${row._id}/poster?v=${row.revision}` : null : (!facebookUrl && original?.src) || facebookUrl === original?.facebookUrl ? original?.poster || null : null, facebookUrl };
 };

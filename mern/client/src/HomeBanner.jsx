@@ -84,7 +84,7 @@ export default function HomeBanner() {
   const freshWeather = weather && now.getTime() - Date.parse(weather.observedAt) <= 7200000 ? weather : null;
   const settings = { ...DEFAULT_BANNER, ...saved?.settings };
   const weatherText = settings.weatherOverride || (freshWeather ? `${freshWeather.temperature}°F · ${freshWeather.description} · observed ${localTime(new Date(freshWeather.observedAt))}` : '');
-  const alerts = (saved?.alerts || []).filter(text => !isLiveAnnouncement(text));
+  const alerts = (saved?.alerts || []).map(text => text.replace(/All alerts and important information will be displayed here\.?/gi, '').trim()).filter(text => text && !isLiveAnnouncement(text));
   const activeTrainers = live.announcements.filter(item => item.status === 'live');
   const items = [
     ...(activeTrainers.length ? [{ label: 'LIVE', text: activeTrainers.map(item => `${item.trainerName}${item.audience === 'client' ? ' · Client session' : ''}`).join(' / ') }] : []),

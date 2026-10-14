@@ -130,7 +130,7 @@ function AdMedia({ ad, playing }) {
     return () => { window.removeEventListener('pagehide', release); window.removeEventListener('pageshow', resume); release(); };
   }, [ad.videoSrc]);
   useEffect(() => { shouldPlay.current = playing; const element = video.current; if (!element) return; if (playing) element.play().catch(() => {}); else element.pause(); }, [playing, ad.videoSrc]);
-  return ad.creative === 'fci' ? <FCIPromotion/> : ad.videoSrc ? <video ref={video} src={ad.videoSrc} poster={ad.src || undefined} muted loop playsInline preload="none" aria-label={ad.alt || ad.title}/> : <img src={ad.src} width="1320" height="510" loading="eager" draggable="false" alt={ad.alt || ad.title}/>;
+  return ad.creative === 'fci' ? <FCIPromotion/> : ad.videoSrc ? <video ref={video} src={ad.videoSrc} poster={ad.src || undefined} muted loop playsInline preload="none" aria-label={ad.alt || ad.title}/> : <span className="ad-compact-art"><span className="ad-ambient" style={{ backgroundImage: `url(${JSON.stringify(ad.src)})` }} aria-hidden="true"/><img className="ad-complete-art" src={ad.src} width="1320" height="510" loading="eager" draggable="false" alt={ad.alt || ad.title}/><span className="ad-compact-title">{ad.title}<small>Explore Bravo →</small></span></span>;
 }
 function ExpandedAd({ ad, close }) {
   const dialog = useRef(null);

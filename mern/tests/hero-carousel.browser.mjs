@@ -63,6 +63,8 @@ try { for (const [name, engine] of Object.entries({ chromium, webkit })) {
   assert.equal(await activeVideo.evaluate(v=>v.muted),false,'first sound-button tap turns sound on instead of immediately muting again');
   await page.waitForTimeout(3400);assert.ok(await activeVideo.evaluate(v=>v.currentTime>3 && !v.paused),'video plays beyond photo interval');
   await page.waitForFunction(()=>{const v=document.querySelector('.hero-video video');return v && v.paused;},null,{timeout:8000});
+  // The ended handler decodes the next image before committing the slide.
+  await page.waitForFunction(()=>document.querySelector('.hero-photo-slide')?.getAttribute('aria-hidden')==='false',null,{timeout:2500});
   assert.equal(await page.locator('.hero-photo-slide').first().getAttribute('aria-hidden'),'false','advance after video ends');
   await page.emulateMedia({reducedMotion:'reduce'});await page.waitForTimeout(650);const reduced=await track.evaluate(el=>el.scrollLeft);await page.waitForTimeout(3200);assert.equal(await track.evaluate(el=>el.scrollLeft),reduced);
   // An unavailable slide and slow download must never replace a visible photo with blank space.

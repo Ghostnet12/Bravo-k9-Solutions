@@ -1,3 +1,5 @@
+import MusicPanel from './MusicPanel';
+import './music.css';
 "use client";
 
 import Link from "./Link";
@@ -29,6 +31,12 @@ export default function AccessibilityTools({ children }: { children?: ReactNode 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const toolsRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const update = (event: Event) => setPreferences(current => ({ ...current, siteMusic: (event as CustomEvent).detail.enabled }));
+    window.addEventListener('bravo-music-preference', update);
+    return () => window.removeEventListener('bravo-music-preference', update);
+  }, []);
 
   useEffect(() => {
     const restorePreferences = window.setTimeout(() => {
@@ -73,7 +81,7 @@ export default function AccessibilityTools({ children }: { children?: ReactNode 
   useEffect(() => {
     if (!open) return;
     function closeFromOutside(event: PointerEvent) {
-      if (!toolsRef.current?.contains(event.target as Node)) setOpen(false);
+      if (!(event.target as Element)?.closest?.(".music-editor") && !toolsRef.current?.contains(event.target as Node)) setOpen(false);
     }
     document.addEventListener("pointerdown", closeFromOutside);
     return () => document.removeEventListener("pointerdown", closeFromOutside);
@@ -111,6 +119,7 @@ export default function AccessibilityTools({ children }: { children?: ReactNode 
         <button type="button" aria-pressed={preferences.highContrast} onClick={() => toggle("highContrast", "High contrast")}>High contrast <span>{preferences.highContrast ? "On" : "Off"}</span></button>
         <button type="button" aria-pressed={preferences.reducedMotion} onClick={() => toggle("reducedMotion", "Reduced motion")}>Reduce motion <span>{preferences.reducedMotion ? "On" : "Off"}</span></button>
         <button type="button" aria-pressed={preferences.siteMusic} onClick={() => toggle("siteMusic", "Site music")}>Site music <span>{preferences.siteMusic ? "On" : "Off"}</span></button>
+        <MusicPanel/>
         {children}
         <Link href="/accessibility">Accessibility statement</Link>
         <Link href="/learn#accessible-media">Captions & transcripts</Link>

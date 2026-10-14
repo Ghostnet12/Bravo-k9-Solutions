@@ -49,7 +49,7 @@ try {
         await page.goto(origin, { waitUntil: 'networkidle' });
         assert.equal(await page.locator('.cinema-film video').count(), 0);
         await page.waitForFunction(()=>document.querySelector('.cinema-hero-still')?.naturalWidth>0);
-        const heroBooking = await page.locator('.cinema-hero').getByRole('link', { name: width === 390 ? /Book your first session/i : /Book training/ }).boundingBox();
+        const heroBooking = await page.locator('.cinema-hero').getByRole('link', { name: /Book your first session/i }).boundingBox();
         assert.ok(heroBooking && heroBooking.y > 0 && heroBooking.y + heroBooking.height <= (width === 390 ? 844 : 1000), 'hero booking is immediately visible');
         assert.equal(await page.locator('.cinema-film-controls').count(), 0, 'hero playback controls are intentionally hidden');
         assert.equal(await page.getByRole('button', { name: 'Pause training film', exact: true }).count(), 0);
