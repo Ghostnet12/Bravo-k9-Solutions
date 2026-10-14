@@ -2,6 +2,8 @@
 import { CONTENT_KEYS as BASE_CONTENT_KEYS } from './site-content-base-keys.js';
 export const CONTENT_KEYS = {
   ...BASE_CONTENT_KEYS,
+  "polish-hero-location": {"text": true},
+  "polish-hero-explore": {"text": true, "link": true},
   "conversion-hero-title": {"text": true},
   "conversion-hero-intro": {"text": true},
   "mobile-hero-book": {"text": true, "link": true},

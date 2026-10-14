@@ -48,7 +48,7 @@ try {
    if (width <= 700) {
     assert.ok(await page.locator('.brand-lockup').first().isVisible());
     const brandBox = await page.locator('.brand-lockup').first().boundingBox(); assert.ok(brandBox.x >= 0 && brandBox.x + brandBox.width <= width);
-    const hero = page.locator('.conversion-hero-actions').getByRole('link', { name: /Book your first session/i });
+    const hero = page.locator('.polish-hero-actions').getByRole('link', { name: /Book your first session/i });
     const box = await hero.boundingBox(), nav = await page.locator('.mobile-home-nav').boundingBox();
     assert.ok(box.y > 0 && box.y + box.height < nav.y, 'hero action immediately visible above sticky controls');
     const dock = await page.locator('.home-ad-dock').boundingBox(); assert.ok(nav.y + nav.height <= dock.y + 1, 'booking navigation stays above advertisement');

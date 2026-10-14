@@ -20,6 +20,7 @@ import { createHomepageHandler } from './homepage.js';
 import proofVideoRouter, { createProofVideoRouter } from './proof-videos.js';
 import heroCarouselRouter from './hero-carousel.js';
 import siteBannerRouter from './site-banner.js';
+import siteMusicRouter from './site-music.js';
 import siteAdsRouter from './site-ads.js';
 import { DEFAULT_HERO_FILM } from '../shared/hero-film.js';
 import { heroRendition, heroPosterRendition } from './hero-rendition.js';
@@ -164,6 +165,7 @@ app.use('/api/hero-videos', createProofVideoRouter({ VideoModel: HeroVideo, defa
 app.use('/api/hero-carousel', heroCarouselRouter);
 app.use('/api/site-banner', siteBannerRouter);
 app.use('/api/site-ads', siteAdsRouter);
+app.use('/api/site-music', siteMusicRouter);
 app.use('/api/site-content', siteContentRouter);
 app.get(['/api/public-page', ...publicPagePaths], publicPageHandler);
 // Close the old upload/delete/publish routes too, not just the inline editor.

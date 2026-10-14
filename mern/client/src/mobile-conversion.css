@@ -96,3 +96,10 @@
  .conversion-trust svg{color:#d5b06f}
  .conversion-goal p{font-size:10px}
 }
+
+/* Shared hero message and booking hierarchy across phone and desktop. */
+.cinema-home.conversion-home .cinema-hero h1{font-family:'Bebas Neue',sans-serif;letter-spacing:.015em;line-height:.98;font-size:clamp(60px,7.5vw,110px);color:#BA9A64}
+.cinema-home.conversion-home .cinema-hero h1 em{font-style:normal;color:#fff}
+.polish-hero-actions{display:flex;flex-wrap:wrap;align-items:center;gap:24px}.polish-hero-actions .conversion-button{background:#BA9A64;color:#101010}
+.cinema-home.conversion-home .cinema-hero-intro{max-width:460px}
+@media(max-width:700px){.cinema-home.conversion-home .cinema-hero h1{font-size:clamp(42px,10vw,68px)}.polish-hero-actions{display:grid;gap:12px;max-width:330px}.polish-hero-actions .cinema-link{min-height:44px;display:flex;align-items:center}.cinema-home.conversion-home .cinema-hero-intro{max-width:290px}.polish-hero-actions .conversion-button{font-size:15px;padding:12px 14px}}
