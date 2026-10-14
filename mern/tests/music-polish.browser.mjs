@@ -49,6 +49,8 @@ try {
     });
     await page.goto(origin); const book=page.locator('.polish-hero-actions a').first(); await book.waitFor(); await page.screenshot({path:'test-results/polish-debug.png'});
     const box=await book.boundingBox(); assert.ok(box.y>=0&&box.y+box.height<=height,`booking ${width}: ${JSON.stringify(box)}`);
+    const adHeight = await page.locator('.home-ad-dock').evaluate(el=>el.getBoundingClientRect().height);
+    assert.ok(adHeight <= (width <= 700 ? 121 : 151), `compact ad ${width}: ${adHeight}`);
     const barrier = await page.locator(width <= 700 ? '.mobile-home-nav' : '.home-ad-dock').boundingBox(); if(barrier) assert.ok(box.y+box.height<=barrier.y, `booking under dock ${width}: ${JSON.stringify({box,barrier})}`);
     assert.match(await book.getAttribute('href'),/portal/);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`overflow ${width}`);

@@ -24,7 +24,7 @@ html { scroll-padding-top: 96px; }
   .app-header.bravo-nav #bravo-navigation .nav-workspace>.nav-book{display:inline-flex!important}
   /* Booking already provides the same actions inline. Keep a single fixed bar. */
   body:has(.mobile-home-nav) .mobile-booking-bar{position:static;margin-top:20px}
-  body:has(.mobile-home-nav) .home-ad-dock .home-ad-carousel{height:clamp(100px,38.6364vw,170px)}
+  body:has(.mobile-home-nav) .home-ad-dock .home-ad-carousel{height:110px}
   body:has(.mobile-home-nav) .accessibility-tools{bottom:calc(var(--ad-dock-height,0px) + 80px + env(safe-area-inset-bottom))!important}
   body:has(.mobile-home-nav) .action-feedback,body:has(.mobile-home-nav) .media-rights-toast{bottom:calc(var(--ad-dock-height,0px) + 80px + env(safe-area-inset-bottom))}
   #client-reviews{scroll-margin-top:0}
