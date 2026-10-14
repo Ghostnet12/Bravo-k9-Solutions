@@ -51,9 +51,10 @@ try{for(const [engineName,engine]of Object.entries({chromium,webkit})){
    const move=page.getByRole('region',{name:'Move credit',exact:true});await move.getByRole('button',{name:'Move credit',exact:true}).click();
    assert.equal(await move.getByLabel('Include weekends',{exact:true}).isChecked(),false);
    assert.equal(await move.getByLabel('Note (optional)',{exact:true}).getAttribute('required'),null);
-   await move.getByLabel('Move credit to',{exact:true}).fill('2026-09-26');await move.getByRole('button',{name:'Save credit',exact:true}).click();
+   // Commit the native date picker before activating Save in WebKit.
+   await move.getByLabel('Move credit to',{exact:true}).fill('2026-09-26');await move.getByLabel('Move credit to',{exact:true}).press('Tab');assert.equal(await move.getByLabel('Move credit to',{exact:true}).inputValue(),'2026-09-26');await move.getByRole('button',{name:'Save credit',exact:true}).click();
    await move.getByText('Turn on Include weekends to move a credit to Saturday or Sunday.',{exact:true}).waitFor();
-   await move.getByLabel('Move credit to',{exact:true}).fill('2026-09-21');await move.getByRole('button',{name:'Save credit',exact:true}).click();
+   await move.getByLabel('Move credit to',{exact:true}).fill('2026-09-21');await move.getByLabel('Move credit to',{exact:true}).press('Tab');assert.equal(await move.getByLabel('Move credit to',{exact:true}).inputValue(),'2026-09-21');await move.getByRole('button',{name:'Save credit',exact:true}).click();
    await page.getByText('Credit moved to 2026-09-21.',{exact:true}).waitFor();
    assert.equal(lastMove.note,'');assert.equal(lastMove.includeWeekends,false);assert.equal(booking.visits.length,2);assert.equal(term.creditedDays,1);
    // The success notice precedes the asynchronous calendar refresh.
@@ -71,7 +72,7 @@ try{for(const [engineName,engine]of Object.entries({chromium,webkit})){
    assert.equal(booking.visits.length,0);assert.equal(booking.cancelledVisits.length,2);assert.deepEqual(credits[1].creditDates,['2026-09-22','2026-09-23']);
    await page.getByRole('button',{name:'Add or Cancel Date',exact:true}).click();await page.getByText('Checking available times…').waitFor({state:'hidden'});
    await editGrid.getByRole('button',{name:name('2026-09-22')}).click();await move.getByRole('button',{name:'Move credit',exact:true}).click();
-   await move.getByLabel('Move credit to',{exact:true}).fill('2026-10-01');await move.scrollIntoViewIfNeeded();
+   await move.getByLabel('Move credit to',{exact:true}).fill('2026-10-01');await move.getByLabel('Move credit to',{exact:true}).press('Tab');assert.equal(await move.getByLabel('Move credit to',{exact:true}).inputValue(),'2026-10-01');await move.scrollIntoViewIfNeeded();
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.screenshot({path:`test-results/move-credit-${engineName}-${access}.png`});
    await move.getByRole('button',{name:'Save credit',exact:true}).click();await page.getByText('Credit moved to 2026-10-01.',{exact:true}).waitFor();
    assert.match(page.url(),/month=2026-10/);assert.equal(await grid.getByRole('button',{name:name('2026-10-01')}).getAttribute('aria-pressed'),'true');assert.equal(term.creditedDays,3);
