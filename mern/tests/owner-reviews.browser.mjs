@@ -61,10 +61,13 @@ try {
         assert.ok((await publicHtml()).includes('Browser Test Client')); await page.getByLabel('Removed reviews', { exact: true }).uncheck();
         const first = page.getByRole('article', { name: 'Review by Tamyra Borg', exact: true });
         page.once('dialog', dialog => dialog.accept()); await first.getByRole('button', { name: 'Remove review', exact: true }).click(); await first.waitFor({ state: 'hidden' });
-        const html = await publicHtml(); assert.ok(!html.includes('Tamyra Borg'), 'removed imported reviews disappear from both SSR placements and the bootstrap snapshot');
+        const html = await publicHtml(); assert.ok(!html.includes('Tamyra Borg'), 'removed imported reviews disappear from public HTML and the bootstrap snapshot');
         await page.goto(origin); await page.locator('.facebook-recommendations article').filter({ hasText: 'Sherrie Humphries' }).waitFor({ state: 'attached' });
         assert.equal(await page.getByText('Tamyra Borg', { exact: true }).count(), 0);
-        assert.ok((await page.locator('.goal-early-review').innerText()).includes('Waneta Malsom'));
+        assert.equal(await page.locator('.goal-early-review').isVisible(), false, 'no duplicate review teaser');
+        const retainedReview = page.locator('.facebook-recommendations article').filter({ hasText: 'Waneta Malsom' });
+        await retainedReview.waitFor({ state: 'attached' });
+        assert.equal(await retainedReview.count(), 1, 'the next published review remains in the client-review section');
         assert.equal(await page.locator('.facebook-recommendations article').filter({ hasText: 'Sherrie Humphries' }).locator('.review-stars').count(), 0);
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
         for (const who of ['administrator', 'staff', 'member']) {
