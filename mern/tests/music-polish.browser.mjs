@@ -59,9 +59,9 @@ try {
     });
     await page.goto(origin); const book=page.locator('.polish-hero-actions a').first(); await book.waitFor(); await page.screenshot({path:'test-results/polish-debug.png'});
     const box=await book.boundingBox(); assert.ok(box.y>=0&&box.y+box.height<=height,`booking ${width}: ${JSON.stringify(box)}`);
-    const adHeight = await page.locator('.home-ad-dock').evaluate(el=>el.getBoundingClientRect().height);
-    assert.ok(adHeight <= (width <= 700 ? 121 : 151), `compact ad ${width}: ${adHeight}`);
-    const barrier = await page.locator(width <= 700 ? '.mobile-home-nav' : '.home-ad-dock').boundingBox(); if(barrier) assert.ok(box.y+box.height<=barrier.y, `booking under dock ${width}: ${JSON.stringify({box,barrier})}`);
+    assert.equal(await page.locator('.home-ad-dock').count(),0,'public ads removed');
+    const barrier = width<=700 ? await page.locator('.mobile-home-nav').boundingBox() : null;
+    if(barrier) assert.ok(box.y+box.height<=barrier.y, 'booking clears navigation');
     if(width<=700){
      const art=await page.locator('.cinema-hero-still').boundingBox();
      assert.ok(box.y>=art.y+art.height,'hero booking sits below the complete dog image');
@@ -71,11 +71,15 @@ try {
      await more.focus();await page.keyboard.press('Enter');assert.equal(await more.getAttribute('aria-expanded'),'true');
      await more.press('Escape');assert.equal(await more.getAttribute('aria-expanded'),'false');
     }
-    assert.equal(await page.locator('.ad-complete-art').evaluate(el=>getComputedStyle(el).objectFit),'cover');
-    assert.equal(await page.locator('.ad-complete-art').evaluate(el=>Math.round(el.getBoundingClientRect().width)),width);
     assert.match(await book.getAttribute('href'),/portal/);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`overflow ${width}`);
     await page.screenshot({path:`test-results/polish-${name}-${width}.png`});
+    await page.getByRole('link',{name:'EXPLORE TRAINING',exact:true}).click();
+    await page.waitForFunction(()=>{const target=document.querySelector('#training');const top=target?.getBoundingClientRect().top;return top>=74 && top<150;}).catch(async error=>{console.error('Anchor geometry',width,await page.evaluate(()=>({url:location.href,top:document.querySelector('#training')?.getBoundingClientRect().top,padding:getComputedStyle(document.documentElement).scrollPaddingTop,margin:getComputedStyle(document.querySelector('#training')).scrollMarginTop})));throw error;});
+    assert.equal(await page.locator('#training').count(),1,'one training anchor across screen sizes');
+    assert.ok(await page.locator(width<=700?'.conversion-price':'.goal-price').isVisible(),'primary training price is the destination');
+    assert.match(await page.locator('#training h2:visible').first().evaluate(el=>getComputedStyle(el).fontFamily),/Bebas Neue/);
+    await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));
     if(width===390){
      const image=page.locator('.cinema-hero-still');
      await page.waitForFunction(()=>document.querySelector('.cinema-hero-still')?.hasAttribute('data-site-image-editable'));

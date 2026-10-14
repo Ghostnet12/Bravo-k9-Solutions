@@ -23,7 +23,7 @@ await mkdir('test-results',{recursive:true});
 const startedAt=new Date(Date.now()-14*60000).toISOString();
 const makeSession=(id,trainerName,audience='public')=>({id,trainerId:id,trainerName,dogName:`Test dog ${id}`,trainingFocus:'Test field obedience',audience,status:'live',startedAt});
 try {for(const [name,engine] of engines) {
- const browser=await engine.launch(name==='chromium'?{channel:'chrome'}:{});
+ const browser=await engine.launch(name==='chromium'?(process.env.BRAVO_CHROMIUM_PATH?{executablePath:process.env.BRAVO_CHROMIUM_PATH}:{channel:'chrome'}):{});
  let evidencePage;const pendingRequests=new Set(),failedRequests=[],errors=[];
  try {
   const context=await browser.newContext({viewport:{width:390,height:900}}),page=await context.newPage();
@@ -48,68 +48,29 @@ try {for(const [name,engine] of engines) {
    res.json(json);
   };
   const refresh=()=>page.evaluate(()=>window.dispatchEvent(new Event('bravo-live-changed')));
-  await page.goto(origin);await page.locator('.home-ad-dock').waitFor();
-  await page.waitForResponse(r=>r.url().endsWith('/api/live'));
-  assert.equal(await page.locator('.hero-live').count(),0);assert.equal(await page.locator('.ad-live-creative').count(),0);
+  await page.goto(origin,{waitUntil:'networkidle'});
+  assert.equal(await page.locator('.home-ad-dock').count(),0);
+  assert.equal(await page.locator('.hero-live').count(),0);
   assert.ok(!(await page.locator('.home-status-banner').innerText()).includes('Bravo is live now'));
-  const ad=page.locator('.home-ad-dock video');
-  await page.waitForFunction(()=>document.querySelector('.home-ad-dock video')?.currentTime>0.3);
-  await page.evaluate(()=>{window.__ad=document.querySelector('.home-ad-dock video');window.__adTime=window.__ad.currentTime;window.scrollTo({top:document.body.scrollHeight,behavior:"instant"});window.dispatchEvent(new Event('bravo-ads-changed'));});
-  await page.waitForFunction(()=>!window.__ad.paused && (window.__ad.currentTime>window.__adTime+0.3 || window.__adTime>window.__ad.duration-0.5 && window.__ad.currentTime<window.__adTime));
-  assert.equal(await ad.evaluate(el=>el===window.__ad && el.muted && getComputedStyle(el).objectFit==='cover'),true);
-  assert.equal(await page.locator('.home-ad-dock .ad-dock-controls').count(),0);
-  // Follow the artwork, then site navigation, without replacing the ad player.
-  await page.locator('.home-ad-slide.is-active a').click();await page.waitForURL('**/dog-training');
-  for (const path of ['/workshops','/live','/contact','/']) {
-   if(path==='/') await page.locator('footer a[href="/"]').first().click();
-   else {
-    await page.getByRole('button',{name:'Menu',exact:true}).click();
-    if(path==='/contact') await page.locator('header .nav-about > summary').click();
-    await page.locator(`header nav a[href="${path}"]`).first().click();
-   }
-   await page.waitForURL(`${origin}${path}`);
-   if(path==='/contact') {
-    sessions=[makeSession('sitewide','Sitewide trainer TEST')];await refresh();
-    await page.waitForFunction(()=>!!document.querySelector('.ad-live-creative'));
-    await page.waitForTimeout(9000);
-    assert.equal(await page.locator('.ad-live-creative').count(),1,'live promotions stay fresh beyond the lease on other pages');
-    sessions=[];await refresh();await page.waitForFunction(()=>!document.querySelector('.ad-live-creative'));
-   }
-   await page.waitForFunction(()=>document.querySelector('.home-ad-dock video')===window.__ad && !window.__ad.paused);
-   assert.equal(await page.locator('.home-ad-dock').count(),1,'one dock survives route changes');
-   const before=await ad.evaluate(el=>el.currentTime);
-   // Looping across the clip's end also proves playback has advanced.
-   await page.waitForFunction(time=>{const video=document.querySelector('.home-ad-dock video');return !video.paused && (video.currentTime>time+0.2 || time>video.duration-0.5 && video.currentTime<time);},before,{timeout:10000});
+  for(const path of ['/workshops','/live','/contact','/']){
+   await page.goto(origin+path,{waitUntil:'domcontentloaded'});
+   await page.locator('footer').waitFor();
+   assert.equal(await page.locator('.home-ad-dock').count(),0,'no ads or ad videos across routes');
    await page.evaluate(()=>window.scrollTo({top:document.body.scrollHeight,behavior:'instant'}));
-   assert.ok(await page.evaluate(()=>document.querySelector('footer').getBoundingClientRect().bottom<=document.querySelector('.home-ad-dock').getBoundingClientRect().top+2),'route footer clears dock');
+   assert.ok(await page.evaluate(()=>document.querySelector('footer').getBoundingClientRect().bottom<=document.querySelector('.mobile-home-nav').getBoundingClientRect().top+2),'footer clears bottom navigation');
   }
-  const layout=await page.evaluate(()=>{const dock=document.querySelector('.home-ad-dock').getBoundingClientRect(),footer=document.querySelector('footer').getBoundingClientRect(),floating=document.querySelector('.accessibility-tools')?.getBoundingClientRect();return {bottom:dock.bottom,height:dock.height,footer:footer.bottom,top:dock.top,floating:floating?.bottom,reserved:parseFloat(getComputedStyle(document.querySelector('#root')).paddingBottom),screen:innerHeight};});
-  assert.ok(Math.abs(layout.bottom-layout.screen)<2);assert.ok(layout.reserved>=layout.height);assert.ok(layout.footer<=layout.top+2);if(layout.floating)assert.ok(layout.floating<layout.top);
-  await page.setViewportSize({width:844,height:390});
-  await page.evaluate(()=>window.scrollTo({top:document.body.scrollHeight,behavior:'instant'}));
-  await page.waitForFunction(()=>parseFloat(getComputedStyle(document.querySelector('#root')).paddingBottom)===Math.ceil(document.querySelector('.home-ad-dock').getBoundingClientRect().height));
-  const landscape=await page.evaluate(()=>{const dock=document.querySelector('.home-ad-dock').getBoundingClientRect();return {height:dock.height,top:dock.top,footer:document.querySelector('footer').getBoundingClientRect().bottom,floating:document.querySelector('.accessibility-tools').getBoundingClientRect().bottom,overflow:document.documentElement.scrollWidth>innerWidth+1};});
-  assert.ok(landscape.height<=75 && landscape.footer<=landscape.top+2 && landscape.floating<landscape.top && !landscape.overflow,'landscape dock leaves reading space and reachable footer/controls');
-  assert.equal(await ad.evaluate(el=>el===window.__ad),true,'orientation preserves the video element');
-  await page.setViewportSize({width:390,height:900});
-  await page.getByRole('button',{name:'Accessibility',exact:true}).click();
-  await page.getByRole('button',{name:'Pause advertisements',exact:true}).click();assert.equal(await ad.evaluate(el=>el.paused),true);
-  await page.getByRole('button',{name:'Resume advertisements',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('.home-ad-dock video').paused);
-  await page.getByRole('button',{name:'Expand advertisement'}).click();await page.locator('.ad-expanded[open]').waitFor();
-  assert.equal(await page.locator('.home-ad-dock').isVisible(),false);await page.getByRole('button',{name:'Close advertisement ×'}).click();await page.locator('.home-ad-dock').waitFor({state:'visible'});
-  assert.equal(await page.getByRole('button',{name:'Close accessibility options'}).isVisible(),false,'outside dialog interaction closes the options panel');
-  await page.evaluate(()=>document.activeElement?.blur());
+  await page.evaluate(()=>scrollTo(0,0));
   sessions=[makeSession('one','David · TEST')];await refresh();await page.locator('.hero-live').waitFor();
   assert.equal(await page.locator('.hero-live li').count(),1);assert.equal(await page.locator('.hero-live li a').getAttribute('href'),'/live?session=one');
   sessions.push(makeSession('two','Ashley · TEST'));await refresh();await page.waitForFunction(()=>document.querySelectorAll('.hero-live li').length===2);
-  assert.equal(await page.locator('.ad-live-creative').count(),2);
+  assert.equal(await page.locator('.ad-live-creative').count(),0,'live links remain in hero without reintroducing ads');
   // Explicitly label screenshots: isolated fixtures, not production on-air claims.
   await page.evaluate(()=>{const label=document.createElement('div');label.id='evidence-label';label.textContent='TEST DATA · isolated browser verification';label.style.cssText='position:fixed;top:0;left:0;z-index:9999;padding:4px 10px;background:#101010;color:#fff;font:11px sans-serif;border:1px solid #ba9a64';document.body.append(label);});
   for(const width of [320,390,768,1440]) {
    await page.setViewportSize({width,height:1000});await page.evaluate(()=>window.scrollTo({top:0,behavior:"instant"}));
    await page.waitForTimeout(300);
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${name} ${width} horizontal overflow`);
-   const geometry=await page.locator('.hero-live').evaluate(el=>{const badge=el.getBoundingClientRect(),nav=document.querySelector('header').getBoundingClientRect(),dock=document.querySelector('.home-ad-dock').getBoundingClientRect();return {top:badge.top,bottom:badge.bottom,nav:nav.bottom,dock:dock.top};});
+   const geometry=await page.locator('.hero-live').evaluate(el=>{const badge=el.getBoundingClientRect(),nav=document.querySelector('header').getBoundingClientRect(),bottomNav=document.querySelector('.mobile-home-nav');return {top:badge.top,bottom:badge.bottom,nav:nav.bottom,dock:bottomNav?.getBoundingClientRect().height ? bottomNav.getBoundingClientRect().top : innerHeight};});
    assert.ok(geometry.top>=geometry.nav-1,`${name} ${width} hero badge clear of navigation`);assert.ok(geometry.bottom<geometry.dock,`${name} ${width} badge clear of dock`);
    await page.screenshot({path:`test-results/bravo-hero-dock-TEST-${name}-${width}.png`});
   }
@@ -131,7 +92,7 @@ try {for(const [name,engine] of engines) {
   assert.equal(await page.evaluate(()=>performance.getEntriesByType('navigation')[0].type),'reload');
   assert.equal(new URL(page.url()).searchParams.get('session'),'two');
   await page.waitForFunction(()=>document.querySelector('.live-player-caption h2')?.textContent.includes('Ashley'));assert.match(await page.locator('.live-player-caption h2').innerText(),/Ashley/i);assert.match(await page.locator('.live-video-top .live-timer').innerText(),/^00:1[4-9]:/);
-  await page.locator('.home-ad-dock').waitFor();
+  assert.equal(await page.locator('.home-ad-dock').count(),0);
   assert.match(await page.locator('.live-player-caption').innerText(),/Central Time/);
   for(const width of [390,768,1440]){
    await page.setViewportSize({width,height:1000});await page.evaluate(()=>window.scrollTo({top:0,behavior:"instant"}));
@@ -146,16 +107,16 @@ try {for(const [name,engine] of engines) {
   }
   sessions=[];await refresh();await page.getByRole('heading',{name:'OUT IN THE FIELD.'}).waitFor();await page.getByRole('region',{name:'Recorded Bravo training'}).waitFor();
   await page.setViewportSize({width:390,height:900});
-  await page.goto(`${origin}/portal?program=walking`);await page.locator('.mobile-booking-bar').waitFor();await page.locator('.home-ad-dock').waitFor();
-  assert.ok(await page.evaluate(()=>{const bar=document.querySelector('.mobile-booking-bar').getBoundingClientRect(),dock=document.querySelector('.home-ad-dock').getBoundingClientRect(),access=document.querySelector('.accessibility-tools').getBoundingClientRect();const nav=document.querySelector('.mobile-home-nav').getBoundingClientRect();return nav.bottom<=dock.top+1 && access.bottom<nav.top && getComputedStyle(document.querySelector('.mobile-booking-bar')).position==='static';}),'booking action and accessibility control clear the dock');
+  await page.goto(`${origin}/portal?program=walking`);await page.locator('.mobile-booking-bar').waitFor();
+  assert.ok(await page.evaluate(()=>{const access=document.querySelector('.accessibility-tools').getBoundingClientRect(),nav=document.querySelector('.mobile-home-nav').getBoundingClientRect();return nav.bottom<=innerHeight+1 && access.bottom<nav.top && getComputedStyle(document.querySelector('.mobile-booking-bar')).position==='static';}),'booking action and accessibility clear persistent navigation');
   await page.locator('.mobile-booking-bar a').click();
   assert.equal(new URL(page.url()).hash,'#choose-dates','mobile booking action remains usable');
-  await page.goto(origin);await page.locator('.home-ad-dock').waitFor();await page.emulateMedia({reducedMotion:'reduce'});await page.getByRole('button',{name:'Accessibility',exact:true}).click();await page.getByRole('button',{name:'Resume advertisements',exact:true}).waitFor();
-  assert.equal(await page.locator('.home-ad-dock video').evaluate(el=>el.paused),true);
-  const resume=page.getByRole('button',{name:'Resume advertisements',exact:true});await page.keyboard.press('Tab');await resume.focus();assert.ok(await resume.evaluate(el=>getComputedStyle(el).outlineStyle!=='none'));
-  ads=ads.map(ad=>({...ad,enabled:false}));await page.evaluate(()=>window.dispatchEvent(new Event('bravo-ads-changed')));await page.waitForFunction(()=>!document.querySelector('.home-ad-dock'));
-  assert.ok(await page.evaluate(()=>{const nav=document.querySelector('.mobile-home-nav').getBoundingClientRect();return parseFloat(getComputedStyle(document.querySelector('#root')).paddingBottom)>=nav.height && parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ad-dock-height'))===0;}),'hiding advertisements removes only ad spacing and preserves mobile navigation clearance');
-  assert.deepEqual(errors,[]);console.log(`PASS ${name}: offline/one/two/rename/stop/private/unavailable, persistent elapsed, 320–1440px framing, dock media continuity/footer/floating controls/dialogs, pause, keyboard focus, reduced motion, hidden collection`);
+  await page.goto(origin,{waitUntil:'networkidle'});await page.emulateMedia({reducedMotion:'reduce'});
+  const access=page.getByRole('button',{name:'Accessibility',exact:true});await access.focus();
+  assert.ok(await access.evaluate(el=>getComputedStyle(el).outlineStyle!=='none'));
+  assert.equal(await page.locator('.home-ad-dock').count(),0);
+  assert.ok(await page.evaluate(()=>{const nav=document.querySelector('.mobile-home-nav').getBoundingClientRect();return parseFloat(getComputedStyle(document.querySelector('#root')).paddingBottom)>=nav.height && parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ad-dock-height'))===0;}),'no ad spacing remains and mobile navigation clearance is preserved');
+  assert.deepEqual(errors,[]);console.log(`PASS ${name}: offline/one/two/rename/stop/private/unavailable, persistent elapsed, 320–1440px framing, ad-free routes/footer/floating controls, keyboard focus and reduced motion`);
   await context.close();
  }catch(error){
   console.log('Request diagnostics',{pending:[...pendingRequests],failed:failedRequests,errors});

@@ -51,7 +51,7 @@ try {
     const hero = page.locator('.polish-hero-actions').getByRole('link', { name: /Book your first session/i });
     const box = await hero.boundingBox(), nav = await page.locator('.mobile-home-nav').boundingBox();
     assert.ok(box.y > 0 && box.y + box.height < nav.y, 'hero action immediately visible above sticky controls');
-    const dock = await page.locator('.home-ad-dock').boundingBox(); assert.ok(nav.y + nav.height <= dock.y + 1, 'booking navigation stays above advertisement');
+    assert.equal(await page.locator('.home-ad-dock').count(),0); assert.ok(Math.abs(nav.y+nav.height-page.viewportSize().height)<2, 'navigation sits at the phone bottom without ad space');
     const access = await page.locator('.accessibility-tools').boundingBox(); assert.ok(access.y + access.height <= nav.y, 'accessibility stays above navigation');
     assert.equal(await hero.getAttribute('href'), '/portal?program=training');
     assert.equal(await page.locator('.conversion-goal').count(), 4);
@@ -71,7 +71,7 @@ try {
     await page.getByRole('heading', {name:'Let’s start with your dog.'}).waitFor();
     assert.equal(await page.locator('.mobile-home-nav').count(), 1, 'navigation persists on booking');
     await page.locator('.mobile-home-nav').getByRole('link', {name:'Reviews',exact:true}).click();
-    await page.waitForFunction(() => { const r=document.querySelector('#client-reviews')?.getBoundingClientRect(); return r && r.top >= 74 && r.top < 150; });
+    await page.waitForFunction(() => { const r=document.querySelector('#client-reviews')?.getBoundingClientRect(); return r && r.top >= 74 && r.top < 150; }).catch(async error=>{console.error('Review geometry',width,await page.evaluate(()=>({top:document.querySelector('#client-reviews')?.getBoundingClientRect().top,padding:getComputedStyle(document.documentElement).scrollPaddingTop,margin:getComputedStyle(document.querySelector('#client-reviews')).scrollMarginTop})));throw error;});
     await page.locator('.mobile-home-nav').getByRole('link', {name:/Book now/}).click();
     await page.getByRole('button', {name:'Plan my entire month',exact:true}).waitFor();
     if (width === 390) {
@@ -91,9 +91,9 @@ try {
       await more.click();await more.click();
       assert.equal(await page.locator('.app-header .menu-toggle').getAttribute('aria-expanded'),'false');
       await page.evaluate(()=>scrollTo(0,400));
-      const chrome = await page.evaluate(()=>{const h=document.querySelector('.app-header'), n=document.querySelector('.mobile-home-nav'), a=document.querySelector('.home-ad-dock');return {left:h.getBoundingClientRect().left,right:h.getBoundingClientRect().right,top:h.getBoundingClientRect().top,nav:n.getBoundingClientRect().bottom,ad:a.getBoundingClientRect().top};});
+      const chrome = await page.evaluate(()=>{const h=document.querySelector('.app-header'), n=document.querySelector('.mobile-home-nav');return {left:h.getBoundingClientRect().left,right:h.getBoundingClientRect().right,top:h.getBoundingClientRect().top,nav:n.getBoundingClientRect().bottom,screen:innerHeight};});
       assert.ok(Math.abs(chrome.left)<1 && Math.abs(chrome.right-width)<1 && Math.abs(chrome.top)<1, 'full-width header stays fixed across routes');
-      assert.ok(chrome.nav<=chrome.ad+1, 'shared navigation clears ads');
+      assert.ok(Math.abs(chrome.nav-chrome.screen)<2, 'shared navigation stays at the viewport bottom');
     }
     await page.locator('.mobile-home-nav').getByRole('link',{name:'Reviews',exact:true}).click();
     await page.waitForFunction(()=>{const r=document.querySelector('#client-reviews')?.getBoundingClientRect();return r && r.top>=74 && r.top<150;});

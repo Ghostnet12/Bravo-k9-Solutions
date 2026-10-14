@@ -13,7 +13,7 @@ import { mountSiteImages } from './site-image-editor.js';
 import { isImageEditor } from '../../shared/site-images.js';
 import Home from './Home';
 import { MobileHomeNav } from './MobileConversion';
-import HomeAdCarousel from './HomeAdCarousel';
+import { AdvertisementManagement } from './HomeAdCarousel';
 import AccessibilityPage from './AccessibilityPage';
 import NotFoundPage from './NotFoundPage';
 import { Page } from './ui';
@@ -77,7 +77,12 @@ function RouteBehavior() {
   useEffect(() => {
     history.scrollRestoration = 'manual';
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    const timer = setTimeout(() => {
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      // Heading fonts can change section heights after the route mounts.
+      // Align hash destinations only after that layout settles.
+      if (hash && document.fonts) await document.fonts.ready;
+      if (cancelled) return;
       let anchor = hash.slice(1);
       try { anchor = decodeURIComponent(anchor); } catch { /* Malformed links must not crash navigation. */ }
       const target = hash ? document.getElementById(anchor) : document.getElementById('main-content');
@@ -86,7 +91,7 @@ function RouteBehavior() {
     }, 100);
     // A person may open the menu or an editor before deferred route focus runs.
     // Focus and autofill also take priority, even without pointer/key events.
-    const cancelRouteFocus = () => clearTimeout(timer);
+    const cancelRouteFocus = () => { cancelled = true; clearTimeout(timer); };
     document.addEventListener('pointerdown', cancelRouteFocus, { once: true, capture: true });
     document.addEventListener('keydown', cancelRouteFocus, { once: true, capture: true });
     document.addEventListener('focusin', cancelRouteFocus, { once: true, capture: true });
@@ -115,7 +120,7 @@ function RouteBehavior() {
       schema.textContent = JSON.stringify(data);
     } else schema?.remove();
     return () => {
-      clearTimeout(timer);
+      cancelRouteFocus();
       document.removeEventListener('pointerdown', cancelRouteFocus, true);
       document.removeEventListener('keydown', cancelRouteFocus, true);
       document.removeEventListener('focusin', cancelRouteFocus, true);
@@ -131,7 +136,7 @@ class ErrorBoundary extends React.Component {
   render() { return this.state.error ? <Page title="Let’s get you back on track."><p>The page couldn’t load. Your saved bookings are not affected.</p><a className="button" href="/">Reload Bravo</a></Page> : this.props.children; }
 }
 function BookingRoute() { const location = useLocation(); return <BookingPage key={location.search}/>; }
-function App() { return <BrowserRouter><AppProvider><LiveStatusProvider><SiteContentProvider><a className="skip-link" href="#main-content">Skip to main content</a><RouteBehavior/><SiteTelemetry/><SiteSoundtrack/><ErrorBoundary><Suspense fallback={<Page title="Opening Bravo…"><p role="status">Loading your page.</p></Page>}><PasswordSetupGate><Routes><Route path="/live" element={<LivePage/>}/><Route path="/live/studio" element={<LiveStudio/>}/><Route path="/schedule" element={<SchedulePage/>}/><Route path="/reset-password" element={<ResetPasswordPage/>}/><Route path="/" element={<Home/>}/><Route path="/workshops" element={<WorkshopPage/>}/><Route path="/dog-training" element={<DogTrainingPage/>}/><Route path="/hunting-dog-training" element={<HuntingPage/>}/><Route path="/behavior-assessment" element={<BehaviorAssessmentPage/>}/><Route path="/dog-walking" element={<DogWalkingPage/>}/><Route path="/portal" element={<BookingRoute/>}/><Route path="/account" element={<AccountPage/>}/><Route path="/learn" element={<LearnPage/>}/><Route path="/community" element={<CommunityPage/>}/><Route path="/contact" element={<ContactPage/>}/><Route path="/fci-support" element={<FCISupportPage/>}/><Route path="/admin" element={<AdminPage/>}/><Route path="/accessibility" element={<AccessibilityPage/>}/><Route path="/media-rights" element={<MediaRightsPage/>}/><Route path="*" element={<NotFoundPage/>}/></Routes></PasswordSetupGate></Suspense></ErrorBoundary><HomeAdCarousel/><MobileHomeNav/><SiteImageTools/></SiteContentProvider></LiveStatusProvider></AppProvider></BrowserRouter>; }
+function App() { return <BrowserRouter><AppProvider><LiveStatusProvider><SiteContentProvider><a className="skip-link" href="#main-content">Skip to main content</a><RouteBehavior/><SiteTelemetry/><SiteSoundtrack/><ErrorBoundary><Suspense fallback={<Page title="Opening Bravo…"><p role="status">Loading your page.</p></Page>}><PasswordSetupGate><Routes><Route path="/live" element={<LivePage/>}/><Route path="/live/studio" element={<LiveStudio/>}/><Route path="/schedule" element={<SchedulePage/>}/><Route path="/reset-password" element={<ResetPasswordPage/>}/><Route path="/" element={<Home/>}/><Route path="/workshops" element={<WorkshopPage/>}/><Route path="/dog-training" element={<DogTrainingPage/>}/><Route path="/hunting-dog-training" element={<HuntingPage/>}/><Route path="/behavior-assessment" element={<BehaviorAssessmentPage/>}/><Route path="/dog-walking" element={<DogWalkingPage/>}/><Route path="/portal" element={<BookingRoute/>}/><Route path="/account" element={<AccountPage/>}/><Route path="/learn" element={<LearnPage/>}/><Route path="/community" element={<CommunityPage/>}/><Route path="/contact" element={<ContactPage/>}/><Route path="/fci-support" element={<FCISupportPage/>}/><Route path="/admin" element={<AdminPage/>}/><Route path="/accessibility" element={<AccessibilityPage/>}/><Route path="/media-rights" element={<MediaRightsPage/>}/><Route path="*" element={<NotFoundPage/>}/></Routes></PasswordSetupGate></Suspense></ErrorBoundary><AdvertisementManagement/><MobileHomeNav/><SiteImageTools/></SiteContentProvider></LiveStatusProvider></AppProvider></BrowserRouter>; }
 const start = () => createRoot(document.getElementById('root')).render(<React.StrictMode><App/></React.StrictMode>);
 const initialPath = window.location.pathname;
 if (publicPageLoaders[initialPath]) {

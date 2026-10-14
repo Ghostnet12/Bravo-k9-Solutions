@@ -80,7 +80,8 @@ try {
   await page.emulateMedia({forcedColors:'active'});
   assert.equal(await page.locator('#method').evaluate(el=>getComputedStyle(el,'::before').display),'none');
   await page.emulateMedia({forcedColors:'none'});
-  await page.locator('.home-ad-slide.is-active').getByRole('link',{name:'Workshop fixture',exact:true}).click();
+  assert.equal(await page.locator('.home-ad-dock').count(),0);
+  await page.locator('a[href="/workshops"]:visible').first().click();
   await page.waitForURL(origin+'/workshops',{waitUntil:'domcontentloaded'});
   await page.goto(origin+'/portal?program=training',{waitUntil:'domcontentloaded'});
   await page.getByRole('button',{name:'Plan my entire month',exact:true}).waitFor();
@@ -88,7 +89,7 @@ try {
   assert.equal(await page.locator('.cinema-home').count(),0,'graphics scope does not leak into booking');
   assert.equal(await page.getByLabel('Dog’s name',{exact:true}).inputValue(),'Graphics regression');
   assert.deepEqual(errors,[]);assert.ok(requests.length>=9);assert.ok(requests.every(r=>r.status===200));
-  checks.push('Keyboard navigation, 200% text, reduced-motion, contrast modes, ad link and booking entry passed');
+  checks.push('Keyboard navigation, 200% text, reduced-motion, contrast modes, workshop navigation and booking entry passed');
   await writeFile('test-results/graphics-checks.json',JSON.stringify({checks,errors,assetRequests:requests},null,2));
   console.log(JSON.stringify({checks,errors,assetRequests:requests.length},null,2));
   await context.close();
