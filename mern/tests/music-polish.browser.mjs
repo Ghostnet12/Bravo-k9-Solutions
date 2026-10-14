@@ -84,6 +84,8 @@ try {
     assert.equal(await page.locator('#training').count(),1,'one training anchor across screen sizes');
     assert.ok(await page.locator(width<=700?'.conversion-price':'.goal-price').isVisible(),'primary training price is the destination');
     assert.match(await page.locator('#training h2:visible').first().evaluate(el=>getComputedStyle(el).fontFamily),/Bebas Neue/);
+    // A real scroll gesture ends the route's brief layout stabilization.
+    await page.mouse.wheel(0,-10000);
     await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));
     if(width===390){
      const image=page.locator('.cinema-hero-still');
