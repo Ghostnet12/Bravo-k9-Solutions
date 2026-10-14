@@ -8,7 +8,7 @@
  .cinema-home.conversion-home #main-content>section,.cinema-home.conversion-home #main-content>div{order:20}
  .cinema-home.conversion-home #main-content>.cinema-hero{order:0}
  .cinema-home.conversion-home #main-content>.conversion-trust{order:1}
- .cinema-home.conversion-home #main-content>.home-status-banner{order:2}
+ .cinema-home.conversion-home #main-content>.home-status-banner,.cinema-home.conversion-home #main-content>.home-live-status{order:2}
  .cinema-home.conversion-home #main-content>.conversion-opening{order:3}
  .cinema-home.conversion-home #main-content>#reviews{order:4}
  .cinema-home.conversion-home #main-content>#team{order:5}
