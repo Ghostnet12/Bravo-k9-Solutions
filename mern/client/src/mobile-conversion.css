@@ -8,7 +8,7 @@
  .cinema-home.conversion-home #main-content>section,.cinema-home.conversion-home #main-content>div{order:20}
  .cinema-home.conversion-home #main-content>.cinema-hero{order:0}
  .cinema-home.conversion-home #main-content>.conversion-trust{order:1}
- .cinema-home.conversion-home #main-content>.home-status-banner{order:2}
+ .cinema-home.conversion-home #main-content>.home-status-banner,.cinema-home.conversion-home #main-content>.home-live-status{order:2}
  .cinema-home.conversion-home #main-content>.conversion-opening{order:3}
  .cinema-home.conversion-home #main-content>#reviews{order:4}
  .cinema-home.conversion-home #main-content>#team{order:5}
@@ -110,7 +110,7 @@
 @media(max-width:700px){
  .cinema-home.conversion-home .goal-finder,
  .cinema-home.conversion-home .home-training-offer{display:none}
- .cinema-home.conversion-home .cinema-hero{padding:74px 0 130px;min-height:0}
+ .cinema-home.conversion-home .cinema-hero{padding:74px 0 18px;min-height:0}
  .cinema-home.conversion-home .cinema-hero-media{inset:74px 0 auto;height:66.6667vw;z-index:0}
  .cinema-home.conversion-home .cinema-film{background:#080808}
  .cinema-home.conversion-home .cinema-hero-still{object-fit:contain;object-position:center}
@@ -119,8 +119,9 @@
  .cinema-home.conversion-home .cinema-hero-copy .cinema-eyebrow{max-width:48%;font-size:8px;margin-bottom:8px}
  .cinema-home.conversion-home .cinema-hero h1{max-width:50%;font-size:clamp(25px,7.2vw,38px);line-height:1;margin-bottom:8px}
  .cinema-home.conversion-home .cinema-hero-intro{max-width:48%;font-size:clamp(9px,2.5vw,11px);line-height:1.45;margin:0}
- .cinema-home.conversion-home .polish-hero-actions{position:absolute;top:calc(66.6667vw + 8px);left:0;right:0;margin:0;padding:0;width:auto;max-width:none;gap:8px}
- .cinema-home.conversion-home .polish-hero-actions .cinema-link{justify-self:center;font-size:12px}
+ .cinema-home.conversion-home .polish-hero-actions{position:relative;top:auto;left:auto;right:auto;margin:14px 0 0;padding:0;width:60%;max-width:330px;gap:8px}
+ .cinema-home.conversion-home .polish-hero-actions .cinema-link{justify-self:start;justify-content:center;width:88%;min-height:44px;box-sizing:border-box;border:1px solid #d5b06f;border-radius:5px;background:#08080899;font-size:clamp(10px,2.6vw,12px);padding:8px}
+ .cinema-home.conversion-home .polish-hero-actions .conversion-button{width:100%;box-sizing:border-box;font-size:clamp(12px,3.2vw,15px);gap:8px;padding:10px 8px}
 }
 
 @media(min-width:701px){

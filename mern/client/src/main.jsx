@@ -76,26 +76,47 @@ function RouteBehavior() {
   const { pathname, hash } = useLocation();
   useEffect(() => {
     history.scrollRestoration = 'manual';
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (!hash) window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     let cancelled = false;
+    let frame = 0;
+    let anchor = hash.slice(1);
+    try { anchor = decodeURIComponent(anchor); } catch { /* Malformed links must not crash navigation. */ }
+    const alignAnchor = () => {
+      if (cancelled || !hash) return;
+      const target = document.getElementById(anchor);
+      if (target?.tagName === 'DETAILS') target.open = true;
+      target?.scrollIntoView({ behavior: 'instant' });
+    };
+    const scheduleAlignment = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(alignAnchor);
+    };
+    // A route can mount before fonts, reviews, and proof media settle.
+    // Keep its destination aligned briefly instead of first jumping to the hero.
+    const layout = hash ? new ResizeObserver(scheduleAlignment) : null;
+    layout?.observe(document.body);
+    const additions = hash ? new MutationObserver(scheduleAlignment) : null;
+    additions?.observe(document.getElementById('root'), { childList: true, subtree: true });
+    alignAnchor();
     const timer = setTimeout(async () => {
-      // Heading fonts can change section heights after the route mounts.
-      // Align hash destinations only after that layout settles.
       if (hash && document.fonts) await document.fonts.ready;
       if (cancelled) return;
-      let anchor = hash.slice(1);
-      try { anchor = decodeURIComponent(anchor); } catch { /* Malformed links must not crash navigation. */ }
-      const target = hash ? document.getElementById(anchor) : document.getElementById('main-content');
-      if (hash) { if (target?.tagName === 'DETAILS') target.open = true; target?.scrollIntoView({ behavior: 'instant' }); }
-      else target?.focus({ preventScroll: true });
+      if (hash) alignAnchor();
+      else document.getElementById('main-content')?.focus({ preventScroll: true });
     }, 100);
-    // A person may open the menu or an editor before deferred route focus runs.
-    // Focus and autofill also take priority, even without pointer/key events.
-    const cancelRouteFocus = () => { cancelled = true; clearTimeout(timer); };
-    document.addEventListener('pointerdown', cancelRouteFocus, { once: true, capture: true });
-    document.addEventListener('keydown', cancelRouteFocus, { once: true, capture: true });
-    document.addEventListener('focusin', cancelRouteFocus, { once: true, capture: true });
-    document.addEventListener('input', cancelRouteFocus, { once: true, capture: true });
+    const stopAlignment = () => {
+      cancelled = true; clearTimeout(timer); cancelAnimationFrame(frame);
+      layout?.disconnect(); additions?.disconnect();
+    };
+    const deadline = setTimeout(stopAlignment, 5000);
+    // A navigation link receiving focus is part of the same tap, not a request
+    // to abandon its destination. New gestures and form/editor focus take over.
+    const cancelRouteFocus = event => {
+      if (hash && event?.type === 'focusin' && event.target.closest?.('a[href]')) return;
+      stopAlignment();
+    };
+    const events = ['pointerdown', 'keydown', 'focusin', 'input', 'wheel', 'touchmove'];
+    events.forEach(type => document.addEventListener(type, cancelRouteFocus, { capture: true, passive: true }));
     const metadata = PAGE_METADATA[pathname] || NOT_FOUND_METADATA;
     document.title = metadata.title;
     function meta(selector, attributes) {
@@ -120,11 +141,8 @@ function RouteBehavior() {
       schema.textContent = JSON.stringify(data);
     } else schema?.remove();
     return () => {
-      cancelRouteFocus();
-      document.removeEventListener('pointerdown', cancelRouteFocus, true);
-      document.removeEventListener('keydown', cancelRouteFocus, true);
-      document.removeEventListener('focusin', cancelRouteFocus, true);
-      document.removeEventListener('input', cancelRouteFocus, true);
+      stopAlignment(); clearTimeout(deadline);
+      events.forEach(type => document.removeEventListener(type, cancelRouteFocus, true));
     };
   }, [pathname, hash]);
   return null;

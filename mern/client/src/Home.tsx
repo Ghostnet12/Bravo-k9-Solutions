@@ -1,5 +1,5 @@
 import LiveBanner from './LiveBanner';
-import { ConversionTrust, MobileDiscovery, ConversionFAQ, HomeSectionOrder } from './MobileConversion';
+import { ConversionTrust, MobileDiscovery, ConversionFAQ, HomeSectionOrder, useCompactLayout } from './MobileConversion';
 import { trackVisit } from './telemetry';
 import './mobile-conversion.css';
 import { initialRecommendations } from './review-state';
@@ -41,6 +41,7 @@ const portraits: Record<string, string> = { 'David Northrop': 'david-northrop', 
 
 export default function Home() {
   const root = useRef(null);
+  const compact = useCompactLayout();
   useCinematicMotion(root);
   const [hero] = useState(() => getSiteImages()[HOME_HERO_KEY]);
   const { config, user } = useBravo();
@@ -74,13 +75,14 @@ export default function Home() {
           <Editable as="p" contentKey="polish-hero-location" canEditText className="cinema-eyebrow">ABERDEEN, SOUTH DAKOTA — WE COME TO YOU.</Editable>
           <h1 id="home-title"><Editable as="span" contentKey="conversion-hero-title" canEditText>REAL DOGS.<br/><em>REAL CONTROL.</em></Editable></h1>
           <p className="cinema-hero-intro"><Editable as="span" contentKey="conversion-hero-intro" canEditText>Personalized training built around your dog. No treats or toys as the foundation. Real-world results.</Editable></p>
-          <LiveBanner/>
+          {!compact && <LiveBanner/>}
           <div className="polish-hero-actions"><Editable as={Link} contentKey="mobile-hero-book" canEditText canEditLink href="/portal?program=training" className="cinema-button conversion-button" onClick={() => trackVisit('hero_booking_clicked')}>BOOK YOUR FIRST SESSION <span aria-hidden="true">→</span></Editable><Editable as="a" contentKey="polish-hero-explore" canEditText canEditLink href="#training" className="cinema-link">EXPLORE TRAINING <span aria-hidden="true">→</span></Editable></div>
         </div>
         <div className="cinema-hero-baseline cinema-shell"><Editable as="span" contentKey="copy-home-4" canEditText>REAL DOGS. REAL LIFE. BRAVO.</Editable><Editable as="a" contentKey="copy-home-5" canEditText canEditLink href="#method" aria-label="Discover the Bravo approach">SCROLL TO DISCOVER <span aria-hidden="true">↓</span></Editable></div>
       </section>
       <ConversionTrust/>
       <HomeBanner/>
+      {compact && <div className="home-live-status cinema-shell"><LiveBanner/></div>}
       <div id="training" className="home-primary-training"><MobileDiscovery/><GoalFinder/></div>
       <div className="cinema-shell site-media-tools-slot site-media-tools-slot--home" data-site-media-tools=""/>
 
