@@ -14,6 +14,7 @@ const subscribeCompact = notify => {
 };
 const compactSnapshot = () => matchMedia(compactQuery).matches;
 const serverSnapshot = () => false;
+export const useCompactLayout = () => useSyncExternalStore(subscribeCompact, compactSnapshot, serverSnapshot);
 const mobileSectionOrder = ['reviews', 'team', 'method', 'goals', 'training', 'story', 'dogs', 'workshops', 'fci', 'online'];
 // Keep keyboard and screen-reader order aligned with the mobile visual order.
 // Stable React keys preserve each section's media and editor state when resizing.
