@@ -1,4 +1,4 @@
-export const FUNNEL_STAGES = ['visit', 'goal_selected', 'booking_started', 'trainer_step', 'visit_step', 'review_step'];
+export const FUNNEL_STAGES = ['visit', 'goal_selected', 'booking_started', 'trainer_step', 'visit_step', 'review_step', 'hero_booking_clicked', 'sticky_booking_clicked', 'pricing_viewed', 'pricing_booking_clicked', 'dog_step_completed', 'trainer_step_completed', 'visit_step_completed'];
 // Only fixed labels cross the monitoring boundary. Never accept URL parameters,
 // messages, form fields, account identifiers, or arbitrary event properties.
 export const CHANNELS = ['direct', 'search', 'social', 'referral'];

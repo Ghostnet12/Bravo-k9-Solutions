@@ -54,6 +54,7 @@ export function Header() {
   return <Editable as="header" contentKey="ui-1" ref={header} className="app-header bravo-nav" data-signed-in={Boolean(user)} onKeyDown={handleEscape}>
     <Editable as="div" contentKey="ui-2" className="header-inner">
       <Brand/>
+      <a className="conversion-header-phone" href="tel:+16058242767" aria-label="Call Bravo at (605) 824-2767">☎ <span>(605) 824-2767</span></a>
       <NavLink className="header-quick-action" to={primaryPath}>{primaryLabel}</NavLink>
       <Editable as="button" contentKey="ui-3" ref={menuButton} type="button" className="menu-toggle" aria-expanded={menuOpen} aria-controls="bravo-navigation" onClick={() => { if (menuOpen) closeMenu(); else setMenuOpen(true); }}>
         <span className="menu-lines" aria-hidden="true"><i/><i/></span>{menuOpen ? 'Close' : 'Menu'}

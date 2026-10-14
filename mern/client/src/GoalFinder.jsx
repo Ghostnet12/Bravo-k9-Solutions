@@ -41,7 +41,7 @@ export default function GoalFinder({ review = null }) {
   useEffect(() => { let current = true; api('/proof-videos').then(data => { if (current) setClips(Array.isArray(data.clips) ? data.clips : []); }).catch(() => {}); return () => { current = false; }; }, []);
   return <Editable as="section" contentKey="copy-goalfinder-1" className="goal-finder cinema-shell" id="find-training" aria-labelledby="goal-title">
     <Editable as="p" contentKey="goal-eyebrow" canEditText className="cinema-eyebrow">YOUR DOG. YOUR STARTING POINT.</Editable>
-    <Editable as="h2" contentKey="discovery-goal-title" canEditText id="goal-title">What does your dog struggle with?</Editable>
+    <Editable as="h2" contentKey="discovery-goal-title" canEditText id="goal-title">Explore Bravo’s training options.</Editable>
     <Editable as="p" contentKey="field-goal-guide" canEditText className="field-goal-guide">Choose what brings you here. See a starting point below—no quiz, no account needed.</Editable>
     <div className="goal-choices" role="group" aria-label="Choose a training goal">{GOALS.map(item => {
       const price = (config?.services?.length ? config.services : SERVICES).find(service => service.id === item.program);

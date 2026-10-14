@@ -76,7 +76,7 @@ try {
   await page.locator('.home-ad-slide.is-active').getByRole('link',{name:'Workshop fixture',exact:true}).click();
   await page.waitForURL(origin+'/workshops',{waitUntil:'domcontentloaded'});
   await page.goto(origin+'/portal?program=training',{waitUntil:'domcontentloaded'});
-  await page.getByRole('button',{name:'Plan my whole month',exact:true}).waitFor();
+  await page.getByRole('button',{name:'Plan my entire month',exact:true}).waitFor();
   await page.getByLabel('Dog’s name',{exact:true}).fill('Graphics regression');
   assert.equal(await page.locator('.cinema-home').count(),0,'graphics scope does not leak into booking');
   assert.equal(await page.getByLabel('Dog’s name',{exact:true}).inputValue(),'Graphics regression');
