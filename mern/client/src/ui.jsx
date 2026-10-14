@@ -54,7 +54,7 @@ export function Header() {
   return <Editable as="header" contentKey="ui-1" ref={header} className="app-header bravo-nav" data-signed-in={Boolean(user)} onKeyDown={handleEscape}>
     <Editable as="div" contentKey="ui-2" className="header-inner">
       <Brand/>
-      <a className="conversion-header-phone" href="tel:+16058242767" aria-label="Call Bravo at (605) 824-2767">☎ <span>(605) 824-2767</span></a>
+      <a className="conversion-header-phone" href="tel:+16058242767" aria-label="Call Bravo at (605) 824-2767"><svg viewBox="0 0 24 24" width="23" height="23" fill="#BA9A64" aria-hidden="true" focusable="false" style={{verticalAlign:"middle",marginRight:8}}><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.25 1.01l-2.2 2.2Z"/></svg><span>(605) 824-2767</span></a>
       <NavLink className="header-quick-action" to={primaryPath}>{primaryLabel}</NavLink>
       <Editable as="button" contentKey="ui-3" ref={menuButton} type="button" className="menu-toggle" aria-expanded={menuOpen} aria-controls="bravo-navigation" onClick={() => { if (menuOpen) closeMenu(); else setMenuOpen(true); }}>
         <span className="menu-lines" aria-hidden="true"><i/><i/></span>{menuOpen ? 'Close' : 'Menu'}
