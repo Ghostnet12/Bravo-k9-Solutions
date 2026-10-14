@@ -86,13 +86,17 @@ export function MobileHomeNav({ staticFallback = false }) {
   const bookingPath = staff ? '/admin?tab=schedule' : user ? '/schedule' : '/portal?program=training';
   const [menuOpen, setMenuOpen] = useState(false);
   useEffect(() => {
+    const sync = event => setMenuOpen(event.detail.open === true);
+    window.addEventListener('bravo-navigation-state', sync);
+    setMenuOpen(document.querySelector('.app-header .menu-toggle')?.getAttribute('aria-expanded') === 'true');
+    return () => window.removeEventListener('bravo-navigation-state', sync);
+  }, []);
+  function closeOnEscape(event) {
     const menu = document.querySelector('.app-header .menu-toggle');
-    if (!menu) return;
-    const sync = () => setMenuOpen(menu.getAttribute('aria-expanded') === 'true');
-    const observer = new MutationObserver(sync);
-    observer.observe(menu, { attributes: true, attributeFilter: ['aria-expanded'] });
-    sync(); return () => observer.disconnect();
-  }, [location.pathname, staticFallback]);
+    if (event.key === 'Escape' && menu?.getAttribute('aria-expanded') === 'true') {
+      event.preventDefault(); menu.click();
+    }
+  }
   function openMenu() {
     const menu = document.querySelector('.app-header .menu-toggle');
     menu?.click();
@@ -102,7 +106,7 @@ export function MobileHomeNav({ staticFallback = false }) {
     <Link to={bookingPath} className="mobile-home-book" onClick={() => trackVisit('sticky_booking_clicked')}><span aria-hidden="true">▦</span>{user ? 'Schedule' : 'Book now'}</Link>
     <Link to="/live"><span aria-hidden="true">▷</span>Live cams</Link>
     <Link to="/#client-reviews" onClick={event => returnToAnchor(event, 'client-reviews')}><span aria-hidden="true">☆</span>Reviews</Link>
-    {staticFallback ? <Link to="/contact"><span aria-hidden="true">☰</span>Contact</Link> : <button type="button" data-navigation-toggle="" onClick={openMenu} aria-expanded={menuOpen} aria-controls="bravo-navigation"><span aria-hidden="true">☰</span>More</button>}
+    {staticFallback ? <Link to="/contact"><span aria-hidden="true">☰</span>Contact</Link> : <button type="button" data-navigation-toggle="" onClick={openMenu} onKeyDown={closeOnEscape} aria-expanded={menuOpen} aria-controls="bravo-navigation"><span aria-hidden="true">☰</span>More</button>}
   </nav>;
 }
 export function ConversionFAQ() {

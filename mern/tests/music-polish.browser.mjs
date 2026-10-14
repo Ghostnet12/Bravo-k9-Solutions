@@ -69,7 +69,7 @@ try {
      await more.click();assert.equal(await more.getAttribute('aria-expanded'),'true');
      await more.click();assert.equal(await more.getAttribute('aria-expanded'),'false');
      await more.focus();await page.keyboard.press('Enter');assert.equal(await more.getAttribute('aria-expanded'),'true');
-     await page.locator('.app-header .menu-toggle').press('Escape');assert.equal(await more.getAttribute('aria-expanded'),'false');
+     await more.press('Escape');assert.equal(await more.getAttribute('aria-expanded'),'false');
     }
     assert.equal(await page.locator('.ad-complete-art').evaluate(el=>getComputedStyle(el).objectFit),'cover');
     assert.equal(await page.locator('.ad-complete-art').evaluate(el=>Math.round(el.getBoundingClientRect().width)),width);

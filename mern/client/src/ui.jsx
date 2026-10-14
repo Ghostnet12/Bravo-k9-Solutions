@@ -1,6 +1,6 @@
 import { lessonLibraryVisible } from '../../shared/lesson-library';
 import { Editable } from './SiteContent';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import Brand from './Brand';
 import { PAGE_METADATA } from '../../shared/page-metadata';
@@ -28,6 +28,7 @@ export function Header() {
     finally { setSigningOut(false); }
   }
   useEffect(() => { setMenuOpen(false); if (about.current) about.current.open = false; }, [pathname, search, hash]);
+  useLayoutEffect(() => { window.dispatchEvent(new CustomEvent('bravo-navigation-state', { detail: { open: menuOpen } })); }, [menuOpen]);
   useEffect(() => {
     const expanded = matchMedia(`(min-width: ${user ? 1601 : 1101}px)`);
     const closeExpandedMenu = () => { if (expanded.matches) setMenuOpen(false); };

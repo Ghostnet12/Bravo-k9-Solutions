@@ -83,6 +83,13 @@ try {
     for (const route of ['/contact','/fci-support','/account','/portal']) {
       await page.goto(origin+route, {waitUntil:'networkidle'});
       await page.locator('.mobile-home-nav').waitFor();
+      const more=page.locator('.mobile-home-nav button[aria-controls="bravo-navigation"]');
+      await more.click();
+      assert.equal(await more.getAttribute('aria-expanded'),'true','cold/lazy route header stays synchronized');
+      await more.press('Escape');
+      assert.equal(await more.getAttribute('aria-expanded'),'false');
+      await more.click();await more.click();
+      assert.equal(await page.locator('.app-header .menu-toggle').getAttribute('aria-expanded'),'false');
       await page.evaluate(()=>scrollTo(0,400));
       const chrome = await page.evaluate(()=>{const h=document.querySelector('.app-header'), n=document.querySelector('.mobile-home-nav'), a=document.querySelector('.home-ad-dock');return {left:h.getBoundingClientRect().left,right:h.getBoundingClientRect().right,top:h.getBoundingClientRect().top,nav:n.getBoundingClientRect().bottom,ad:a.getBoundingClientRect().top};});
       assert.ok(Math.abs(chrome.left)<1 && Math.abs(chrome.right-width)<1 && Math.abs(chrome.top)<1, 'full-width header stays fixed across routes');
