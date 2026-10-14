@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { Children, useEffect, useRef, useSyncExternalStore } from 'react';
 import { Link } from 'react-router-dom';
 import { Editable } from './SiteContent';
 import CatalogPrice from './CatalogPrice';
@@ -6,6 +6,22 @@ import { useBravo } from './context';
 import { SERVICES } from '../../shared/catalog';
 import { trackVisit } from './telemetry';
 
+const compactQuery = '(max-width: 700px)';
+const subscribeCompact = notify => {
+  const query = matchMedia(compactQuery);
+  query.addEventListener('change', notify);
+  return () => query.removeEventListener('change', notify);
+};
+const compactSnapshot = () => matchMedia(compactQuery).matches;
+const serverSnapshot = () => false;
+const mobileSectionOrder = ['reviews', 'team', 'method', 'goals', 'training', 'story', 'dogs', 'workshops', 'fci', 'online'];
+// Keep keyboard and screen-reader order aligned with the mobile visual order.
+// Stable React keys preserve each section's media and editor state when resizing.
+export function HomeSectionOrder({ children }) {
+  const compact = useSyncExternalStore(subscribeCompact, compactSnapshot, serverSnapshot);
+  const sections = Children.toArray(children);
+  return compact ? sections.sort((a, b) => mobileSectionOrder.indexOf(a.key.split('$').at(-1)) - mobileSectionOrder.indexOf(b.key.split('$').at(-1))) : sections;
+}
 export const MOBILE_GOALS = [
   { id: 'manners', title: 'Pulling & jumping', copy: 'Everyday obedience and better control.', image: '/images/obedience-real-world.webp', href: '/portal?program=training&focus=basic-obedience', service: 'training' },
   { id: 'reactivity', title: 'Aggression & reactivity', copy: 'Start with a separate two-trainer assessment.', image: '/images/protection-training.webp', href: '/portal?program=aggression', service: 'aggression' },

@@ -21,10 +21,11 @@ const team = [
   { id: 'ashley', name: 'Ashley Northrop', role: 'staff', title: 'Trainer & Pitbull Specialist', bio: 'Fixture profile.' },
 ];
 let publicTeam = team;
+let trainingCents = 20000;
 const app = express();
 app.get('/api/proof-videos', (_req, res) => res.json({ clips: DEFAULT_PROOF_VIDEOS, nextCursor: null }));
 app.get('/api/site-ads', (_req, res) => res.json({ revision: 0, settings: { autoplaySeconds: 7 }, ads: [{ id: 'fci-support-bravo', title: 'FCI Support', src: '/images/fci-official-identity.jpeg', creative: 'fci', link: '/fci-support', enabled: true }] }));
-app.get('/api/config', (_req, res) => res.json({ connected: false, paymentsReady: false, services: SERVICES, schedule: { enabled: false, weekdays: [1,2,3,4,5], hours: [] } }));
+app.get('/api/config', (_req, res) => res.json({ connected: false, paymentsReady: false, services: SERVICES.map(service => service.id === 'training' ? { ...service, cents: trainingCents } : service), schedule: { enabled: false, weekdays: [1,2,3,4,5], hours: [] } }));
 app.get('/api/auth/me', (_req, res) => res.json({ user: null, services: [], membership: { active: false } }));
 app.get('/api/site-images', (_req, res) => res.json({ images: {} }));
 app.get('/api/team', (_req, res) => publicTeam === null ? res.status(503).json({ error: 'Fixture team unavailable' }) : res.json({ team: publicTeam }));
@@ -54,6 +55,7 @@ try {
     const access = await page.locator('.accessibility-tools').boundingBox(); assert.ok(access.y + access.height <= nav.y, 'accessibility stays above navigation');
     assert.equal(await hero.getAttribute('href'), '/portal?program=training');
     assert.equal(await page.locator('.conversion-goal').count(), 4);
+    assert.ok(await page.evaluate(() => !!(document.querySelector('#reviews').compareDocumentPosition(document.querySelector('.goal-finder')) & Node.DOCUMENT_POSITION_FOLLOWING)), 'keyboard reading order follows mobile visual order');
     assert.equal(await page.locator('.conversion-goal').filter({hasText:'Aggression'}).getAttribute('href'), '/portal?program=aggression');
     await page.screenshot({ path:`test-results/mobile-first-${engineName}-${width}.png` });
     await page.locator('.conversion-opening').scrollIntoViewIfNeeded();
@@ -68,6 +70,10 @@ try {
     await page.getByRole('heading', {name:'Let’s start with your dog.'}).waitFor();
     assert.equal(await page.locator('.mobile-home-nav').count(), 0);
     await page.getByRole('button', {name:'Plan my entire month',exact:true}).waitFor();
+    if (width === 390) {
+      trainingCents = 27500; await page.goto(origin, {waitUntil:'networkidle'});
+      assert.match(await page.locator('.conversion-price').innerText(), /\$275/); trainingCents = 20000;
+    }
    }
    assert.deepEqual(errors, []); await page.close();
   }} finally { await browser.close(); }

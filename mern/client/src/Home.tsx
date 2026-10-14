@@ -1,5 +1,5 @@
 import LiveBanner from './LiveBanner';
-import { ConversionTrust, MobileDiscovery, MobileHomeNav, ConversionFAQ } from './MobileConversion';
+import { ConversionTrust, MobileDiscovery, MobileHomeNav, ConversionFAQ, HomeSectionOrder } from './MobileConversion';
 import { trackVisit } from './telemetry';
 import './mobile-conversion.css';
 import { initialRecommendations } from './review-state';
@@ -86,8 +86,9 @@ export default function Home() {
       <div data-site-service="training" className="home-service-strip cinema-service-strip"><span><Editable as="span" contentKey="copy-home-6" canEditText>Private training · </Editable><CatalogPrice/><Editable as="span" contentKey="copy-home-7" canEditText>/month · one dog · We come to you.</Editable></span><Editable as="a" contentKey="copy-home-8" canEditText canEditLink href="tel:+16058242767">Let’s talk <span>(605) 824-2767</span></Editable></div>
       <div className="cinema-shell site-media-tools-slot site-media-tools-slot--home" data-site-media-tools=""/>
 
-      <GoalFinder review={recommendations[0] || null}/>
-      <section className="home-fci cinema-shell" aria-labelledby="home-fci-title">
+      <HomeSectionOrder>
+      <GoalFinder key="goals" review={recommendations[0] || null}/>
+      <section key="fci" className="home-fci cinema-shell" aria-labelledby="home-fci-title">
         <Link href="/fci-support" className="home-fci-card" aria-labelledby="home-fci-title home-fci-action">
           <div className="home-fci-identity"><img src="/images/fci-official-identity.jpeg" width="796" height="240" loading="lazy" alt="Fédération Cynologique Internationale — for pedigree dogs worldwide"/></div>
           <div className="home-fci-copy">
@@ -99,7 +100,7 @@ export default function Home() {
           </div>
         </Link>
       </section>
-      <Editable as="section" contentKey="copy-home-24" id="training" className="cinema-programs cinema-shell" aria-labelledby="program-title">
+      <Editable as="section" key="training" contentKey="copy-home-24" id="training" className="cinema-programs cinema-shell" aria-labelledby="program-title">
         <div className="cinema-section-heading" data-reveal=""><div><Editable as="p" contentKey="copy-home-25" canEditText className="cinema-eyebrow">FIND YOUR STARTING POINT</Editable><Editable as="h2" contentKey="cinema-program-title" canEditText id="program-title">Training &amp;<br/><span>pricing.</span></Editable></div><Editable as={Link} contentKey="copy-home-26" canEditText canEditLink href="/dog-training" className="cinema-link">How training works <span aria-hidden="true">↗</span></Editable></div>
         <nav className="training-service-links" aria-label="Training options">
           <Link href="/dog-training">Everyday obedience</Link>
@@ -115,7 +116,7 @@ export default function Home() {
         <details id="specialist-training" open className="cinema-details cinema-specialists"><Editable as="summary" contentKey="copy-home-37" canEditText>Specialist and working-dog programs <span aria-hidden="true">+</span></Editable><Editable as="p" contentKey="copy-home-38" canEditText>Specialist and working-dog goals are scoped individually. Contact Bravo to discuss suitability, preparation, and pricing.</Editable><div>{['Service Dogs', 'Law Enforcement', 'Executive Protection', 'Search & Rescue', 'Hunting Dog Training'].map((name, index) => <Editable as={Link} contentKey={`home-specialist-${index}`} canEditText canEditLink key={name} href={index === 4 ? '/hunting-dog-training' : '/contact'}>{name}<span aria-hidden="true">↗</span></Editable>)}</div></details>
       </Editable>
 
-      <Editable as="section" contentKey="copy-home-42" id="reviews" className="cinema-proof" aria-labelledby="reviews-title"><div className="cinema-shell">
+      <Editable as="section" key="reviews" contentKey="copy-home-42" id="reviews" className="cinema-proof" aria-labelledby="reviews-title"><div className="cinema-shell">
         <div className="cinema-proof-intro" data-reveal=""><img src="/images/bravo-logo-small.webp" width="64" height="72" alt="" data-site-image-ignore=""/><Editable as="p" contentKey="copy-home-43" canEditText className="cinema-eyebrow">PROOF IN THE WORK</Editable><Editable as="h2" contentKey="cinema-proof-title" canEditText id="reviews-title">Don’t take<br/><span>our word for it.</span></Editable><Editable as="p" contentKey="copy-home-44" canEditText>Watch real sessions. Read what clients noticed at home.</Editable></div>
         <ProofVideoCarousel/>
         <Link href="/portal?program=training" className="conversion-proof-book mobile-conversion conversion-button">Book your first session →</Link>
@@ -124,19 +125,19 @@ export default function Home() {
         <Editable as={Link} contentKey="copy-home-49" canEditText canEditLink className="cinema-link" href="/account#your-review">Share your experience <span aria-hidden="true">↗</span></Editable>
       </div></Editable>
 
-      <Editable as="section" contentKey="copy-home-39" id="team" className="cinema-team" aria-labelledby="team-title"><div className="cinema-shell">
+      <Editable as="section" key="team" contentKey="copy-home-39" id="team" className="cinema-team" aria-labelledby="team-title"><div className="cinema-shell">
         <div className="cinema-section-heading" data-reveal=""><div><Editable as="p" contentKey="copy-home-40" canEditText className="cinema-eyebrow">MEET THE BRAVO TEAM</Editable><Editable as="h2" contentKey="cinema-team-title" canEditText id="team-title">The people<br/><span>behind the work.</span></Editable></div><Editable as="p" contentKey="copy-home-41" canEditText>Meet the trainers your dog will actually work with.</Editable></div>
         <div className="home-team-grid cinema-team-grid">{team.map(person => <Editable as="article" contentKey={`trainer-${['david','ashley','janet'].includes(person.profileKey) ? person.profileKey : 'other'}-card`} data-site-trainer={person.id} key={person.id || person.name} data-reveal=""><div className="cinema-portrait"><img src={person.image || `/images/${portraits[person.name] || 'bravo-logo-small'}.webp`} data-site-image-key={person.imageKey || `team-${(person.name === 'Ashley Leverock' ? 'Ashley Northrop' : person.name).toLowerCase().replaceAll(' ', '-')}`} width="1000" height="1400" loading="lazy" alt={`${person.name}, ${person.title}`}/></div><div className="home-person cinema-person"><p className="cinema-eyebrow">{person.title}</p><h3>{person.profileKey ? person.name : publicTrainerName(person.name)}</h3><details className="cinema-details"><summary>Meet {person.name.split(' ')[0]} <span aria-hidden="true">+</span></summary><TrainerIntroduction person={person}/>{person.id && <><details className="home-availability"><summary>View {person.name.split(' ')[0]}’s working hours</summary><TrainerScheduleCard person={person} live={liveSchedules}/></details><Link className="cinema-link" href={`/portal?program=training&trainer=${encodeURIComponent(person.id)}`}>Request a visit with {person.name.split(' ')[0]} →</Link></>}</details></div></Editable>)}</div>
       </div></Editable>
 
-      <Editable as="section" contentKey="copy-home-9" id="method" className="cinema-intro cinema-shell" aria-labelledby="method-title" data-reveal="">
+      <Editable as="section" key="method" contentKey="copy-home-9" id="method" className="cinema-intro cinema-shell" aria-labelledby="method-title" data-reveal="">
         <Editable as="p" contentKey="copy-home-10" canEditText className="cinema-eyebrow">THE BRAVO APPROACH</Editable>
         <Editable as="h2" contentKey="cinema-method-title" canEditText id="method-title">Understand the dog.<br/><span>Build from there.</span></Editable>
         <Editable as="p" contentKey="cinema-method-copy" canEditText>We start with the dog in front of us—their personality, instincts, and environment. Then we build trust through clear, consistent communication.</Editable>
         <div className="cinema-method-signature"><Editable as="span" contentKey="copy-home-11" canEditText>Trust.</Editable><Editable as="span" contentKey="copy-home-12" canEditText>Train.</Editable><Editable as="span" contentKey="copy-home-13" canEditText>Deploy.</Editable></div>
       </Editable>
 
-      <Editable as="section" contentKey="copy-home-14" className="cinema-story" data-step="0" aria-labelledby="real-world-title">
+      <Editable as="section" key="story" contentKey="copy-home-14" className="cinema-story" data-step="0" aria-labelledby="real-world-title">
         <div className="cinema-story-stage">
           <img src="/images/bravo-client-training.jpeg" width="828" height="1121" loading="lazy" alt="A Bravo dog practicing calm behavior alongside its trainer in a busy store"/>
           <div className="cinema-story-shade" aria-hidden="true"/>
@@ -148,7 +149,7 @@ export default function Home() {
         </div>
       </Editable>
 
-      <Editable as="section" contentKey="copy-home-18" id="dogs" className="cinema-dogs cinema-shell" aria-labelledby="dogs-title">
+      <Editable as="section" key="dogs" contentKey="copy-home-18" id="dogs" className="cinema-dogs cinema-shell" aria-labelledby="dogs-title">
         <div className="cinema-section-heading" data-reveal=""><div><Editable as="p" contentKey="copy-home-19" canEditText className="cinema-eyebrow">ONE STANDARD. DIFFERENT DOGS.</Editable><Editable as="h2" contentKey="cinema-dogs-title" canEditText id="dogs-title">Different dogs.<br/><span>Different starting points.</span></Editable></div><Editable as="p" contentKey="copy-home-20" canEditText>The standard stays clear.<br/>The approach adapts to the dog.</Editable></div>
         <div className="cinema-dog-gallery home-hero-authentic">
           <HeroPhotoCarousel><img className="home-hero-image" src={hero?.src || HOME_HERO_SOURCE} width="828" height="1121" loading="lazy" fetchPriority="low" alt={hero?.framed ? hero.alt : HOME_HERO_ALT} style={hero?.framed ? framingStyle(hero) : undefined} data-site-image-original={HOME_HERO_SOURCE} data-site-image-original-alt={HOME_HERO_ALT} data-site-media-original-styles='{"objectFit":"","objectPosition":"","transform":"","transformOrigin":"","clipPath":""}'/></HeroPhotoCarousel>
@@ -156,10 +157,11 @@ export default function Home() {
         </div>
       </Editable>
 
-      <Editable as="section" contentKey="copy-home-50" id="workshops" className="cinema-events" aria-labelledby="workshops-title"><div className="cinema-shell cinema-section-heading" data-reveal=""><div><Editable as="p" contentKey="copy-home-51" canEditText className="cinema-eyebrow">MORE WAYS TO LEARN</Editable><Editable as="h2" contentKey="cinema-workshops-title" canEditText id="workshops-title">Come. Learn.<br/><span>Go further.</span></Editable></div><Editable as="p" contentKey="copy-home-52" canEditText>Hands-on workshops and upcoming Bravo education.</Editable></div><div className="cinema-shell"><WorkshopDetails compact/></div></Editable>
+      <Editable as="section" key="workshops" contentKey="copy-home-50" id="workshops" className="cinema-events" aria-labelledby="workshops-title"><div className="cinema-shell cinema-section-heading" data-reveal=""><div><Editable as="p" contentKey="copy-home-51" canEditText className="cinema-eyebrow">MORE WAYS TO LEARN</Editable><Editable as="h2" contentKey="cinema-workshops-title" canEditText id="workshops-title">Come. Learn.<br/><span>Go further.</span></Editable></div><Editable as="p" contentKey="copy-home-52" canEditText>Hands-on workshops and upcoming Bravo education.</Editable></div><div className="cinema-shell"><WorkshopDetails compact/></div></Editable>
 
-      <Editable as="section" contentKey="copy-home-53" id="online" className="cinema-online" aria-labelledby="online-title"><div className="cinema-shell cinema-online-inner"><div data-reveal=""><Editable as="p" contentKey="copy-home-54" canEditText className="cinema-eyebrow">BRAVO. ANYWHERE.</Editable><Editable as="h2" contentKey="cinema-online-title" canEditText id="online-title">Learn from Bravo.<br/><span>Wherever you are.</span></Editable><Editable as="p" contentKey="cinema-online-copy" canEditText>Dog-training education from David and Ashley—what to do, why it matters, and how to practice it at home.</Editable>{lessonsOpen ? <Editable as={Link} contentKey="copy-home-55" canEditText canEditLink href="/learn" className="cinema-button cinema-button-light">Explore online lessons <span aria-hidden="true">↗</span></Editable> : <Editable as={Link} contentKey="copy-home-56" canEditText canEditLink href="/learn" className="cinema-button cinema-button-light">Online courses · Coming soon →</Editable>}</div><div className="cinema-learning-visual" data-reveal=""><div className="home-lesson-preview"><img src="/images/training-education.webp" width="1600" height="900" loading="lazy" alt="A handler demonstrating clear communication with a dog"/></div><div className="cinema-learning-caption"><img src="/images/bravo-logo-small.webp" width="42" height="48" alt="" data-site-image-ignore=""/><Editable as="span" contentKey="copy-home-57" canEditText>Learn.<br/><strong>Practice. Repeat.</strong></Editable></div></div></div>{lessonsOpen && <details className="cinema-shell cinema-details"><Editable as="summary" contentKey="copy-home-58" canEditText>Online lesson options</Editable><LessonOffers/></details>}</Editable>
+      <Editable as="section" key="online" contentKey="copy-home-53" id="online" className="cinema-online" aria-labelledby="online-title"><div className="cinema-shell cinema-online-inner"><div data-reveal=""><Editable as="p" contentKey="copy-home-54" canEditText className="cinema-eyebrow">BRAVO. ANYWHERE.</Editable><Editable as="h2" contentKey="cinema-online-title" canEditText id="online-title">Learn from Bravo.<br/><span>Wherever you are.</span></Editable><Editable as="p" contentKey="cinema-online-copy" canEditText>Dog-training education from David and Ashley—what to do, why it matters, and how to practice it at home.</Editable>{lessonsOpen ? <Editable as={Link} contentKey="copy-home-55" canEditText canEditLink href="/learn" className="cinema-button cinema-button-light">Explore online lessons <span aria-hidden="true">↗</span></Editable> : <Editable as={Link} contentKey="copy-home-56" canEditText canEditLink href="/learn" className="cinema-button cinema-button-light">Online courses · Coming soon →</Editable>}</div><div className="cinema-learning-visual" data-reveal=""><div className="home-lesson-preview"><img src="/images/training-education.webp" width="1600" height="900" loading="lazy" alt="A handler demonstrating clear communication with a dog"/></div><div className="cinema-learning-caption"><img src="/images/bravo-logo-small.webp" width="42" height="48" alt="" data-site-image-ignore=""/><Editable as="span" contentKey="copy-home-57" canEditText>Learn.<br/><strong>Practice. Repeat.</strong></Editable></div></div></div>{lessonsOpen && <details className="cinema-shell cinema-details"><Editable as="summary" contentKey="copy-home-58" canEditText>Online lesson options</Editable><LessonOffers/></details>}</Editable>
 
+      </HomeSectionOrder>
       <ConversionFAQ/>
       <Editable as="section" contentKey="copy-home-59" className="cinema-close cinema-shell" aria-labelledby="booking-title" data-reveal=""><Editable as="p" contentKey="copy-home-60" canEditText className="cinema-eyebrow">READY WHEN YOU ARE.</Editable><Editable as="h2" contentKey="cinema-close-title" canEditText id="booking-title">Start with<br/><span>your dog.</span></Editable><Editable as="p" contentKey="copy-home-61" canEditText>Tell us what you’re seeing. We’ll help you choose the right first step.</Editable><div className="cinema-actions"><Editable as={Link} contentKey="copy-home-62" canEditText canEditLink href="/portal?program=training" className="cinema-button">Book training <span aria-hidden="true">↗</span></Editable><Editable as="a" contentKey="copy-home-63" canEditText canEditLink href="tel:+16058242767" className="cinema-link">Talk to Bravo</Editable></div><Editable as="span" contentKey="copy-home-64" canEditText className="cinema-close-location">ABERDEEN, SOUTH DAKOTA · WE COME TO YOU</Editable></Editable>
     </Editable><Footer/><MobileHomeNav/>
