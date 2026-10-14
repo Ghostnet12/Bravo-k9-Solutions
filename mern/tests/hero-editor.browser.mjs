@@ -78,13 +78,17 @@ try {
         await playlistDialog.waitFor({ state: 'hidden' });
       }
       async function editCopy(text) {
-        const intro = page.locator('.cinema-hero-intro');
+        const copyKey = width <= 700 ? 'conversion-hero-intro' : 'cinema-hero-intro';
+        const intro = page.locator(`[data-site-content-key="${copyKey}"]`);
+        const other = page.locator(`.cinema-hero-intro .${width <= 700 ? 'conversion-desktop' : 'conversion-mobile'}`);
+        const originalOther = await other.textContent();
         await intro.scrollIntoViewIfNeeded(); await page.waitForTimeout(350);
         const box = await intro.boundingBox(); await holdAt(box.x + 20, box.y + 10);
         await copyDialog.waitFor(); await copyDialog.getByLabel('Text', { exact: true }).fill(text);
         await copyDialog.getByRole('button', { name: 'Publish website changes', exact: true }).click();
         await copyDialog.waitFor({ state: 'hidden' });
-        assert.equal((await SiteContent.findById('cinema-hero-intro').lean()).value.text, text);
+        assert.equal((await SiteContent.findById(copyKey).lean()).value.text, text);
+        assert.equal(await other.textContent(), originalOther, 'editing one breakpoint must preserve the other variant');
       }
       try {
         await page.goto(origin); await page.getByRole('button', { name: 'Manage hero videos', exact: true }).waitFor(); await page.waitForLoadState('networkidle');

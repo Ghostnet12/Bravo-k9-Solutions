@@ -31,7 +31,7 @@
  .cinema-home.conversion-home .menu-toggle{min-width:44px;border:0;padding:8px;background:transparent;font-size:0;min-height:44px}.cinema-home.conversion-home .menu-lines{width:23px}.cinema-home.conversion-home .menu-lines i{background:#fff}
  .cinema-home.conversion-home .app-header:has(nav.is-open){position:fixed;max-height:calc(100dvh - var(--ad-dock-height) - 70px);overflow:auto}
  .cinema-home.conversion-home .app-header nav.is-open{max-height:calc(100dvh - var(--ad-dock-height) - 165px)}
- .cinema-home.conversion-home .cinema-hero{height:auto;min-height:0;max-height:none;padding:108px 0 30px;display:block;background:#080808;isolation:isolate}
+ .cinema-home.conversion-home .cinema-hero{height:auto;min-height:540px;max-height:none;padding:108px 0 30px;display:block;background:#080808;isolation:isolate}
  .cinema-home.conversion-home .cinema-hero-copy{padding:0;width:calc(100% - 32px);margin:auto;transform:none!important;opacity:1!important;position:relative;z-index:2}
  .cinema-home.conversion-home .cinema-hero .cinema-eyebrow{max-width:210px;font-size:9px;line-height:1.6;letter-spacing:.16em;color:#dfbd81;margin:0 0 10px}
  .cinema-home.conversion-home .cinema-hero h1{font-size:clamp(38px,10.5vw,62px);line-height:.98;margin:0 0 12px;color:#d7b576;max-width:85%;letter-spacing:0}
@@ -89,7 +89,7 @@
 @media(max-width:700px){.cinema-home.conversion-home .app-header .brand-lockup>span{display:flex}.cinema-home.conversion-home .app-header .brand-lockup{flex:1;min-width:0}.cinema-home.conversion-home .app-header .menu-toggle{margin-left:0}.cinema-home.conversion-home .app-header .brand-lockup strong{color:#dcb778;font-size:18px}.cinema-home.conversion-home .app-header .brand-lockup small{font-size:6px}.cinema-home.conversion-home .app-header .header-inner{gap:6px}.cinema-home.conversion-home .app-header .conversion-header-phone{font-size:9px}.cinema-home.conversion-home [data-reveal]{opacity:1;transform:none}.cinema-home.conversion-home .cinema-section-heading{margin-bottom:24px}}
 
 @media(max-width:700px){
- .cinema-home.conversion-home .app-header.bravo-nav .menu-toggle{font-size:0;border:0;background:none;padding:8px;min-width:38px;border-radius:0}
+ .cinema-home.conversion-home .app-header.bravo-nav .menu-toggle{font-size:0;border:0;background:none;padding:8px;min-width:44px;border-radius:0}
  .cinema-home.conversion-home .app-header.bravo-nav .menu-lines i{width:24px;height:2px}
  .cinema-home.conversion-home .app-header.bravo-nav .header-inner{padding:8px 0}
  .cinema-home.conversion-home .app-header .brand-lockup small:after{content:'TRUST. TRAIN. DEPLOY.';display:block;font-size:5px;letter-spacing:.15em;margin-top:4px;color:#ba9a64}

@@ -39,7 +39,7 @@ try{
    await page.goto(origin);await page.locator('[data-ad-editable]').waitFor();
    const carousel=page.locator('.home-ad-carousel');
    assert.equal(await carousel.evaluate(el=>!!el.closest('.home-ad-dock')),true);
-   assert.equal(await page.locator('.home-status-banner').evaluate(el=>el.previousElementSibling.classList.contains('home-hero')),true);
+   assert.equal(await page.locator('.home-status-banner').evaluate(el=>el.previousElementSibling.classList.contains('conversion-trust')),true);
    await page.getByRole('button',{name:'Edit information banner',exact:true}).waitFor();
    assert.equal(await carousel.locator('.ad-dock-controls').count(),0,'no buttons cover ad artwork');
    await page.getByRole('button',{name:'Accessibility',exact:true}).click();

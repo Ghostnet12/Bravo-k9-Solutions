@@ -60,7 +60,7 @@ test('owner monitoring and server-authoritative booking funnel', { timeout: 1800
     await t.test('conversion events deduplicate and abandoned sessions require elapsed time without a saved request', async () => {
       const abandoned = { token: randomUUID(), channel: 'direct', stage: 'booking_started' };
       await call(null, 'post', '/api/telemetry/visit', abandoned).expect(204);
-      for (const stage of ['hero_booking_clicked', 'pricing_viewed', 'dog_step_completed', 'trainer_step_completed', 'visit_step_completed']) {
+      for (const stage of ['homepage_viewed', 'hero_booking_clicked', 'pricing_viewed', 'dog_step_completed', 'trainer_step_completed', 'visit_step_completed']) {
         for (let i = 0; i < 2; i++) await call(null, 'post', '/api/telemetry/visit', { ...abandoned, stage }).expect(204);
       }
       assert.equal((await report()).body.totals.abandoned, 0);
