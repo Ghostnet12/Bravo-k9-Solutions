@@ -74,7 +74,8 @@ try {
           assert.match(await page.locator('h1').evaluate(el => getComputedStyle(el).fontFamily), route === '/' && width <= 700 ? /Bebas Neue/ : /Montserrat/);
           await fits(page, `${route}/${width}`);
           if (route === '/') {
-            await page.waitForFunction(() => { const film = document.querySelector('.cinema-film video'); return film?.autoplay && film.muted && film.playsInline && !film.paused && film.currentTime > 0; });
+            await page.waitForFunction(() => document.querySelector('.cinema-hero-still')?.naturalWidth > 0);
+            assert.equal(await page.locator('.cinema-film video').count(), 0);
             assert.equal(await page.locator('.cinema-film-controls').count(), 0, 'hero has no public playback buttons');
             for (const selector of ['.cinema-training-card', '.cinema-team', '.cinema-events', '.cinema-learning-caption', '.bravo-footer']) await darkSurface(page.locator(selector), selector);
             const headingColor = await page.locator('.cinema-program-copy h3').evaluate(el => getComputedStyle(el).color.match(/\d+/g).map(Number));
@@ -101,11 +102,11 @@ try {
           const menu = page.getByRole('button', { name: 'Menu', exact: true });
           await menu.click();
           const nav = page.getByRole('navigation', { name: 'Primary navigation' });
-          const task = page.locator('.header-quick-action');
+          const task = width <= 700 ? nav.locator('.nav-book') : page.locator('.header-quick-action');
           await task.waitFor();
           assert.equal(await task.innerText(), role === 'member' ? 'My Schedule' : 'Team schedule');
           assert.equal(await task.getAttribute('href'), role === 'member' ? '/schedule' : '/admin?tab=schedule');
-          assert.equal(await nav.locator('.nav-book').isVisible(), false, 'the compact header keeps one visible primary task');
+          assert.equal(await nav.locator('.nav-book').isVisible(), width <= 700, 'the compact header keeps one visible primary task');
           await fits(page, `${role} menu/${width}`);
           await page.keyboard.press('Escape');
           assert.equal(await menu.getAttribute('aria-expanded'), 'false');
@@ -117,28 +118,7 @@ try {
         assert.deepEqual(errors, [], `${engineName}/${width}: no runtime errors`);
         await context.close();
       }
-      // Simulate an autoplay policy that unlocks on the first real interaction.
-      const recovery = await browser.newContext({ viewport: { width: 390, height: 844 } });
-      await recovery.addInitScript(() => {
-        let unlocked = false;
-        const play = HTMLMediaElement.prototype.play;
-        HTMLMediaElement.prototype.play = function () {
-          return this.closest('.cinema-film') && !unlocked ? Promise.reject(new DOMException('Fixture autoplay blocked', 'NotAllowedError')) : play.call(this);
-        };
-        document.addEventListener('play', event => { if (event.target.closest?.('.cinema-film') && !unlocked) event.target.pause(); }, true);
-        document.addEventListener('pointerdown', () => { unlocked = true; }, { capture: true, once: true });
-      });
-      const page = await recovery.newPage(); await fixtures(page);
-      await page.goto(origin, { waitUntil: 'networkidle' });
-      await page.waitForFunction(() => { const v = document.querySelector('.cinema-film video'); return v?.readyState >= 3 && v.paused; });
-      await page.locator('h1').click();
-      await page.waitForFunction(() => { const v = document.querySelector('.cinema-film video'); return !v.paused && v.currentTime > 0; });
-      assert.equal(await page.locator('.cinema-film-controls').count(), 0, 'autoplay recovery does not reintroduce hero buttons');
-      await page.emulateMedia({ reducedMotion: 'reduce' });
-      await page.reload({ waitUntil: 'networkidle' });
-      assert.equal(await page.locator('.cinema-film video').evaluate(v => v.paused), true, 'reduced motion suppresses autoplay');
-      await recovery.close();
-      console.log(`PASS ${engineName}: dark public/workspace surfaces, mobile navigation, resize, native autoplay and policy recovery`);
+      console.log(`PASS ${engineName}: dark public/workspace surfaces, mobile navigation, resize, static hero`);
     } finally { await browser.close(); }
   }
 } finally { await new Promise(resolve => server.close(resolve)); }

@@ -98,11 +98,12 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})){
    await page.getByRole('button',{name:'Menu',exact:true}).click();
    const nav=page.getByRole('navigation',{name:'Primary navigation',exact:true});
    assert.equal(await nav.locator('button').last().innerText(),'Sign out');
-   const scheduleAction=page.locator('header > .header-inner > .header-quick-action');
+   const scheduleAction=nav.locator('.nav-book');
    assert.ok(await scheduleAction.isVisible());
    assert.equal(await scheduleAction.innerText(),access==='member'?'My Schedule':'Team schedule');
    assert.equal(await scheduleAction.getAttribute('href'),access==='member'?'/schedule':'/admin?tab=schedule');
-   assert.equal(await nav.locator('.nav-book').isVisible(),false);
+   assert.equal(await nav.locator('.nav-book').isVisible(),true);
+   {assert.equal(await page.locator('.mobile-home-book').getAttribute('href'),access==='member'?'/schedule':'/admin?tab=schedule');}
    if(access==='member'){
     assert.equal(await nav.getByRole('link',{name:'Message Bravo',exact:true}).getAttribute('href'),'/community?tab=direct');
    }else{

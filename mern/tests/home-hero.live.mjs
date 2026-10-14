@@ -24,10 +24,10 @@ for (const [name, engine, width] of [['webkit', webkit, 390], ['chromium', chrom
     await page.addInitScript(() => {
       window.heroSamples = [];
       const sample = () => {
-        const video = document.querySelector('video[data-hero-film]'), hero = document.querySelector('.cinema-hero');
+        const video = document.querySelector('.cinema-hero-still'), hero = document.querySelector('.cinema-hero');
         if (video && hero) {
           const box = hero.getBoundingClientRect();
-          window.heroSamples.push({ source: video.querySelector('source')?.getAttribute('src'), height: box.height, top: box.top + scrollY });
+          window.heroSamples.push({ source: video.getAttribute('src'), height: box.height, top: box.top + scrollY });
         }
         if (!window.stopHeroSamples) requestAnimationFrame(sample);
       };
@@ -35,26 +35,22 @@ for (const [name, engine, width] of [['webkit', webkit, 390], ['chromium', chrom
     });
     try {
       await page.goto(origin, { waitUntil: 'domcontentloaded' });
-      await page.waitForFunction(() => { const v = document.querySelector('video[data-hero-film]'); return v?.muted && v.playsInline && !v.paused && v.currentTime > 0; }, {}, { timeout: 45000 });
+      await page.waitForFunction(() => document.querySelector('.cinema-hero-still')?.naturalWidth > 0, {}, { timeout: 45000 });
       await page.waitForTimeout(1000);
       const state = await page.evaluate(() => {
         window.stopHeroSamples = true;
-        const v = document.querySelector('video[data-hero-film]');
-        const published = JSON.parse(document.querySelector('meta[name="bravo-hero-film"]').content);
-        const playlist = Array.isArray(published) ? published : [published];
-        return { hero: playlist[0], playlist, samples: window.heroSamples, playback: { src: v.currentSrc, muted: v.muted, inline: v.playsInline, paused: v.paused, time: v.currentTime } };
+        const image = document.querySelector('.cinema-hero-still');
+        return { src: image.getAttribute('src'), samples: window.heroSamples };
       });
-      assert.equal(await page.locator('video[data-hero-film]').count(), 1);
-      assert.ok(state.playlist.length > 0, 'The published hero playlist has an opening video');
+      assert.equal(await page.locator('video[data-hero-film]').count(), 0);
+      assert.equal(state.src, '/images/mobile-bravo-cinematic.webp');
       assert.ok(state.samples.length > 5);
-      assert.deepEqual([...new Set(state.samples.map(row => row.source))], [state.hero.src]);
-      assert.equal(new URL(state.playback.src).pathname, new URL(state.hero.src, origin).pathname);
       for (const key of ['height', 'top']) assert.ok(Math.max(...state.samples.map(row => row[key])) - Math.min(...state.samples.map(row => row[key])) < 1, `Live ${name} ${width}: ${key} shifted`);
       assert.deepEqual(errors, []);
       await page.screenshot({ path: `test-results/live-${name}-${width}.png` });
       await writeFile(`test-results/live-${name}-${width}.json`, JSON.stringify({ ...state, errors }, null, 2));
-      results.push({ browser: name, width, revision: state.hero.revision, playback: state.playback });
-      console.log(`PASS LIVE ${name} ${width}: published hero revision ${state.hero.revision}, stable layout and muted inline autoplay`);
+      results.push({ browser: name, width, src: state.src });
+      console.log(`PASS LIVE ${name} ${width}: cinematic still, stable layout and no hero video`);
     } catch (error) {
       await page.screenshot({ path: `test-results/live-failure-${name}-${width}.png` });
       await writeFile(`test-results/live-failure-${name}-${width}.json`, JSON.stringify({ error: error.message, errors }));

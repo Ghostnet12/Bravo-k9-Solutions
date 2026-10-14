@@ -9,7 +9,7 @@ const ReviewCard = ({ review }) => <article className="panel">
 
 export default function FacebookRecommendations({ reviews = [] }) {
   const featured = reviews.slice(0, 3), more = reviews.slice(3);
-  return <div className="facebook-recommendations" data-public-reviews="" aria-labelledby={reviews.length ? 'facebook-recommendations-title' : undefined}>
+  return <div className="facebook-recommendations" id="client-reviews" tabIndex={-1} data-public-reviews="" aria-labelledby={reviews.length ? 'facebook-recommendations-title' : undefined}>
     {reviews.length > 0 && <>
       <h3 id="facebook-recommendations-title">What our clients say</h3>
       <p className="facebook-recommendations-intro">Shared by Bravo clients.</p>

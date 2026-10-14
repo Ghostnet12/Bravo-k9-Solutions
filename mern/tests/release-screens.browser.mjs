@@ -44,12 +44,13 @@ for(const role of ['guest','member','staff','owner']) {
  });
  const page=await context.newPage();page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));
  try {
-  await page.goto(origin);await page.locator('.header-quick-action').waitFor();
+  await page.goto(origin);await page.locator('.app-header').waitFor();
   if(role!=='guest')await page.waitForFunction(()=>document.querySelector('.app-header')?.dataset.signedIn==='true');
   for(const width of [320,390,768]) {
    await page.setViewportSize({width,height:900});
-   assert.ok(await page.locator('.header-quick-action').isVisible());
-   assert.ok(await page.locator('.header-quick-action').evaluate(el=>el.getBoundingClientRect().height>=44));
+   const task=page.locator(width<=700?'.mobile-home-book':'.header-quick-action');
+   assert.ok(await task.isVisible());
+   assert.ok(await task.evaluate(el=>el.getBoundingClientRect().height>=44));
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${role}/${width}: home fits`);
   }
   await page.setViewportSize({width:390,height:844});await page.locator('.menu-toggle').click();

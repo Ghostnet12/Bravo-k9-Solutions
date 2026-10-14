@@ -48,35 +48,8 @@ try {
       });
       await page.addInitScript(()=>{window.heroPointerEvents=[];for(const type of ['pointerdown','pointerup','pointermove','pointercancel','pointerleave','scroll','blur'])document.addEventListener(type,event=>{window.heroPointerEvents.push({type,pointer:event.pointerType,target:event.target?.className,x:event.clientX,y:event.clientY});window.heroPointerEvents=window.heroPointerEvents.slice(-30);},true);});
       page.on('request', request => { if (/bravo-real-world\.(mp4|webm)|bravo-film-poster\.webp/.test(request.url())) retiredRequests.push(request.url()); });
-      const film = page.locator('.cinema-film video');
-      const videoDialog = page.getByRole('dialog', { name: 'Edit hero video', exact: true });
-      const playlistDialog = page.getByRole('dialog', { name: 'Manage hero videos', exact: true });
       const copyDialog = page.getByRole('dialog', { name: 'Edit website section', exact: true });
       async function holdAt(x, y) { await page.mouse.move(x, y); await page.mouse.down(); await page.waitForTimeout(800); await page.mouse.up(); }
-      async function holdFilm() {
-        // Hit the actual visible hero, including its overlaid background layers.
-        await page.evaluate(()=>document.fonts.ready);
-        const point = await page.locator('.cinema-hero').evaluate(hero => {
-          const box = hero.getBoundingClientRect();
-          for (let y = Math.max(170, box.top + 170); y < Math.min(innerHeight - 120, box.bottom - 120); y += 30) {
-            for (let x = 15; x < innerWidth - 15; x += 40) {
-              const target = document.elementFromPoint(x, y);
-              if (hero.contains(target) && !target.closest('button,a,[data-site-content-text=true],dialog')) return { x, y };
-            }
-          }
-          throw new Error('No visible hero film surface');
-        });
-        await holdAt(point.x, point.y); await playlistDialog.waitFor();
-      }
-      async function editOpening() {
-        await playlistDialog.getByRole('button', { name: /Bravo training film/ }).click();
-        await videoDialog.waitFor();
-      }
-      async function closePlaylist() {
-        await playlistDialog.waitFor();
-        await playlistDialog.getByRole('button', { name: 'Close hero video playlist', exact: true }).click();
-        await playlistDialog.waitFor({ state: 'hidden' });
-      }
       async function editCopy(text) {
         const copyKey = width <= 700 ? 'conversion-hero-intro' : 'cinema-hero-intro';
         const intro = page.locator(`[data-site-content-key="${copyKey}"]`);
@@ -91,86 +64,21 @@ try {
         assert.equal(await other.textContent(), originalOther, 'editing one breakpoint must preserve the other variant');
       }
       try {
-        await page.goto(origin); await page.getByRole('button', { name: 'Manage hero videos', exact: true }).waitFor(); await page.waitForLoadState('networkidle');
-        await holdFilm(); await editOpening();
-        assert.equal(await videoDialog.getByLabel('Choose video from files').count(), 1);
-        assert.equal(await videoDialog.getByLabel('Facebook Reel URL', { exact: true }).count(), 0);
-        await videoDialog.getByLabel('Choose video from files').setInputFiles(fixture);
-        await videoDialog.getByLabel('Description', { exact: true }).fill('Owner uploaded opening film.');
-        assert.equal(await videoDialog.getByRole('checkbox', { name: /Prefer sound for this video/ }).count(), 0, 'hero video sound follows the site soundtrack instead of per-video controls');
-        const publish = videoDialog.getByRole('button', { name: 'Publish changes', exact: true });
-        await publish.click(); await videoDialog.waitFor({ state: 'hidden', timeout: 30000 }); await closePlaylist();
-        assert.equal((await HeroFilm.findById('opening').lean()).description, 'Owner uploaded opening film.');
-        await page.waitForFunction(() => { const video = document.querySelector('.cinema-film video'); return video.currentSrc.includes('/api/hero-film/opening/video') && !video.paused && video.currentTime > 0; });
+        await page.goto(origin); await page.waitForLoadState('networkidle');
+        assert.equal(await page.locator('.cinema-film video').count(), 0);
+        await page.waitForFunction(() => document.querySelector('.cinema-hero-still')?.naturalWidth > 0);
         await editCopy('Owner saved homepage copy.');
-        retiredRequests.length = 0;
         await page.reload(); await page.waitForLoadState('networkidle');
         assert.equal((await page.locator('.cinema-hero-intro').innerText()).trim(), 'Owner saved homepage copy.');
-        assert.ok((await film.evaluate(video => video.currentSrc)).includes('/api/hero-film/opening/video'));
-        assert.deepEqual(retiredRequests, [], 'reload never downloads the retired opening film or poster');
         await signIn('administrator'); await page.reload(); await page.waitForLoadState('networkidle');
-        await page.getByRole('button', { name: 'Manage hero videos', exact: true }).click(); await playlistDialog.waitFor(); await editOpening();
-        await videoDialog.getByLabel('Description', { exact: true }).fill('Administrator updated opening film.');
-        await videoDialog.getByRole('button', { name: 'Publish changes', exact: true }).click(); await videoDialog.waitFor({ state: 'hidden' }); await closePlaylist();
         await editCopy('Administrator saved homepage copy.');
-        await page.getByRole('button', { name: 'Manage hero videos', exact: true }).click(); await playlistDialog.waitFor();
-        await playlistDialog.getByRole('button', { name: 'Add hero video', exact: true }).click();
-        const addDialog = page.getByRole('dialog', { name: 'Add hero video', exact: true });
-        await addDialog.getByLabel('Choose video from files').setInputFiles(fixture);
-        await addDialog.getByLabel('Video title', { exact: true }).fill('Secondary hero fixture');
-        await addDialog.getByRole('button', { name: 'Publish video', exact: true }).click();
-        await addDialog.waitFor({ state: 'hidden', timeout: 30000 }); await playlistDialog.waitFor();
-        const removeSecondary = playlistDialog.getByRole('button', { name: 'Remove Secondary hero fixture', exact: true });
-        assert.equal(await removeSecondary.isVisible(), true, 'secondary video has a visible Remove button');
-        await playlistDialog.getByRole('button', { name: /Secondary hero fixture.*Fill frame/ }).click();
-        await videoDialog.waitFor();
-        assert.equal(await videoDialog.getByRole('button', { name: 'Remove video', exact: true }).isVisible(), true);
-        await videoDialog.getByRole('button', { name: 'Close video editor', exact: true }).click(); await playlistDialog.waitFor();
-        page.once('dialog', dialog => dialog.dismiss()); await removeSecondary.click();
-        assert.equal(await HeroFilm.countDocuments({ deleted: false }), 2, 'cancelling keeps the video');
-        page.once('dialog', dialog => dialog.accept()); await removeSecondary.click();
-        await removeSecondary.waitFor({ state: 'hidden' });
-        assert.equal(await HeroFilm.countDocuments({ deleted: false }), 1, 'confirmed removal persists');
-        assert.equal(await playlistDialog.locator('.hero-film-remove').count(), 0, 'the last video cannot be removed');
-        await closePlaylist();
         await signIn(null); const response = await page.reload(); await page.waitForLoadState('networkidle');
-        assert.ok((await response.text()).includes('Administrator saved homepage copy.'), 'public server render uses persisted copy');
+        assert.ok((await response.text()).includes('Administrator saved homepage copy.'));
         assert.equal((await page.locator('.cinema-hero-intro').innerText()).trim(), 'Administrator saved homepage copy.');
-        assert.equal(await film.getAttribute('aria-label'), 'Administrator updated opening film.');
-        await page.waitForFunction(() => { const video = document.querySelector('.cinema-film video'); return video.muted && video.playsInline && !video.paused && video.currentTime > 0; });
-        assert.equal(await page.locator('.cinema-film-controls').count(), 0, 'public hero playback buttons stay removed');
-        assert.equal(await page.getByRole('button', { name: 'Manage hero videos', exact: true }).count(), 0);
-        const noScript = await browser.newContext({ javaScriptEnabled: false, viewport: { width, height: 900 } });
-        try {
-          const visitor = await noScript.newPage(); await visitor.goto(origin);
-          assert.match(await visitor.locator('.cinema-film video source').first().getAttribute('src'), /^\/api\/hero-film\/opening\/video\?v=2$/);
-          assert.equal((await visitor.locator('.cinema-hero-intro').innerText()).trim(), 'Administrator saved homepage copy.');
-        } finally { await noScript.close(); }
-        const paginationRows = Array.from({ length: 30 }, (_, i) => ({
-          _id: `page-fixture-${String(i).padStart(2, '0')}`,
-          title: `Paged hero ${i + 1}`, description: 'Pagination fixture', fit: 'cover', sound: false,
-          order: 100 + i, revision: 1, uploadId: `page-upload-${i}`, hasPoster: false, deleted: false,
-        }));
-        await HeroFilm.insertMany(paginationRows);
-        const pagedHeroRequests = [];
-        const recordHeroPage = request => {
-          const url = new URL(request.url());
-          if (url.pathname === '/api/hero-film' && url.searchParams.has('after')) pagedHeroRequests.push(url.href);
-        };
-        page.on('request', recordHeroPage);
-        await page.reload(); await page.waitForLoadState('networkidle');
-        const position = page.locator('.cinema-film .sr-only');
-        await position.waitFor({ state: 'attached' });
-        assert.match(await position.innerText(), /^Hero video 1 of 31:/, 'client hydration keeps the complete paginated hero playlist');
-        assert.ok(pagedHeroRequests.length >= 1, 'initial hero refresh follows nextCursor instead of truncating at 24 clips');
-        page.off('request', recordHeroPage);
-        await HeroFilm.deleteMany({ _id: { $regex: '^page-fixture-' } });
-        await page.reload(); await page.waitForLoadState('networkidle');
+        assert.equal(await page.locator('.cinema-film video').count(), 0);
         await page.screenshot({ path: `test-results/hero-editor-published-${engineName}-${width}.png` });
-        await signIn('staff'); await page.reload(); await page.waitForLoadState('networkidle');
-        assert.equal(await page.getByRole('button', { name: 'Manage hero videos', exact: true }).count(), 0);
         assert.deepEqual(errors, []);
-        console.log(`PASS ${engineName}/${width}: real hold, upload, database save, owner/admin copy, reload, public SSR and muted autoplay`);
+        console.log(`PASS ${engineName}/${width}: image hero, owner/admin copy, database persistence and public SSR`);
       } catch (error) {
         await page.screenshot({ path: `test-results/hero-editor-failure-${engineName}-${width}.png`, fullPage: true });
         await writeFile(`test-results/hero-editor-failure-${engineName}-${width}.json`, JSON.stringify({ error: error.message, errors, browserDiagnostics, pointers:await page.evaluate(()=>window.heroPointerEvents), body: await page.locator('body').innerText() }, null, 2));

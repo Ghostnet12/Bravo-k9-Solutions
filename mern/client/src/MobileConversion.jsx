@@ -1,5 +1,5 @@
 import { Children, useEffect, useRef, useSyncExternalStore } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Editable } from './SiteContent';
 import CatalogPrice from './CatalogPrice';
 import { useBravo } from './context';
@@ -74,18 +74,27 @@ export function MobileDiscovery() {
     </Editable>
   </section>;
 }
-export function MobileHomeNav() {
+export function MobileHomeNav({ staticFallback = false }) {
+  const location = useLocation();
+  function returnToAnchor(event, id) {
+    if (location.pathname !== '/' || location.hash !== `#${id}`) return;
+    const target = document.getElementById(id);
+    if (target) { event.preventDefault(); target.scrollIntoView({ behavior: 'instant' }); target.focus({ preventScroll: true }); }
+  }
+  const { user } = useBravo();
+  const staff = ['owner', 'staff'].includes(user?.role);
+  const bookingPath = staff ? '/admin?tab=schedule' : user ? '/schedule' : '/portal?program=training';
   function openMenu() {
     const menu = document.querySelector('.app-header .menu-toggle');
     if (menu?.getAttribute('aria-expanded') !== 'true') menu?.click();
     menu?.focus();
   }
   return <nav className="mobile-home-nav mobile-conversion" aria-label="Quick navigation">
-    <a href="#home-title" aria-label="Home"><span aria-hidden="true">⌂</span>Home</a>
-    <Link to="/portal?program=training" className="mobile-home-book" onClick={() => trackVisit('sticky_booking_clicked')}><span aria-hidden="true">▦</span>Book now</Link>
+    <Link to="/#home-title" aria-label="Home" onClick={event => returnToAnchor(event, 'home-title')}><span aria-hidden="true">⌂</span>Home</Link>
+    <Link to={bookingPath} className="mobile-home-book" onClick={() => trackVisit('sticky_booking_clicked')}><span aria-hidden="true">▦</span>{user ? 'Schedule' : 'Book now'}</Link>
     <Link to="/live"><span aria-hidden="true">▷</span>Live cams</Link>
-    <a href="#reviews"><span aria-hidden="true">☆</span>Reviews</a>
-    <button type="button" onClick={openMenu} aria-controls="bravo-navigation"><span aria-hidden="true">☰</span>More</button>
+    <Link to="/#client-reviews" onClick={event => returnToAnchor(event, 'client-reviews')}><span aria-hidden="true">☆</span>Reviews</Link>
+    {staticFallback ? <Link to="/contact"><span aria-hidden="true">☰</span>Contact</Link> : <button type="button" onClick={openMenu} aria-controls="bravo-navigation"><span aria-hidden="true">☰</span>More</button>}
   </nav>;
 }
 export function ConversionFAQ() {

@@ -7,6 +7,7 @@ import { renderToString } from 'react-dom/server';
 import { StaticRouter } from 'react-router-dom';
 import { AppProvider } from './context';
 import Home from './Home';
+import { MobileHomeNav } from './MobileConversion';
 import DogTrainingPage from './DogTrainingPage';
 import HuntingPage from './HuntingPage';
 import BehaviorAssessmentPage from './BehaviorAssessmentPage';
@@ -21,6 +22,6 @@ const pages = { '/fci-support': FCISupportPage, '/live': LivePage, '/workshops':
 export function renderPublicPage(route) {
   const Component = pages[route];
   if (!Component) throw new Error(`No public component for ${route}`);
-  return renderToString(<StaticRouter location={route}><AppProvider><a className="skip-link" href="#main-content">Skip to main content</a><Component/></AppProvider></StaticRouter>);
+  return renderToString(<StaticRouter location={route}><AppProvider><a className="skip-link" href="#main-content">Skip to main content</a><Component/><MobileHomeNav staticFallback/></AppProvider></StaticRouter>);
 }
 
