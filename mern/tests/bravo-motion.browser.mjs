@@ -103,38 +103,15 @@ try{
  }
  for(const role of [null,'owner']){
   const {context,page}=await setup(390,role,'reduce');
-  await page.goto(origin+'/contact');const ad=page.locator('.home-ad-slide.is-active');await ad.waitFor();
-  if(role)await page.locator('[data-ad-editable]').waitFor();
-  assert.equal(await ad.getAttribute('data-ad-id'),'motion-one');
-  const box=await page.locator('.home-ad-carousel').boundingBox();
-  await swipe(page,box.x+box.width*.8,box.y+box.height*.4,-180,0);
-  await page.waitForFunction(()=>document.querySelector('.home-ad-slide.is-active')?.dataset.adId==='motion-two');
-  assert.equal(new URL(page.url()).pathname,'/contact');assert.equal(await page.locator('dialog[open]').count(),0);
-  // Settle the native browser swipe before issuing the separate tap gesture.
-  await page.waitForTimeout(650);
-  await ad.locator('a').tap();await page.waitForURL(origin+'/hunting-dog-training');
-  await page.goto(origin+'/contact');await ad.waitFor();
-  if(role){
-   await page.locator('[data-ad-editable]').waitFor();
-   const activeBox=await page.locator('.home-ad-carousel').boundingBox();const cdp=await context.newCDPSession(page);
-   await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:activeBox.width*.5,y:activeBox.y+40}]});
-   await page.getByRole('dialog',{name:'Manage advertisements',exact:true}).waitFor();
-   await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
-   assert.equal(new URL(page.url()).pathname,'/contact');
-   await page.getByRole('button',{name:'Close ad editor',exact:true}).click();
-   assert.equal(await page.locator('dialog[open]').count(),0);await cdp.detach();
-  }
-  checks.push(`${role||'guest'}: ad swipe does not navigate; a separate tap opens the right page; owner long-press remains separate`);
+  await page.goto(origin+'/contact',{waitUntil:'networkidle'});
+  assert.equal(await page.locator('.home-ad-dock').count(),0,'no ad surface intercepts touch gestures');
+  await page.getByRole('button',{name:'Accessibility',exact:true}).click();
+  const manage=page.getByRole('button',{name:'Manage advertisements',exact:true});
+  assert.equal(await manage.count(),role?1:0);
+  if(role){await manage.click();await page.getByRole('dialog',{name:'Manage advertisements',exact:true}).waitFor();await page.getByRole('button',{name:'Close ad editor',exact:true}).click();}
+  checks.push(`${role||'guest'}: ad-free layout, reduced motion and authorized archive management`);
   await context.close();
  }
- const {context,page}=await setup(390);
- await page.goto(origin+'/contact');await page.locator('.home-ad-slide.is-active').waitFor();
- const section=page.locator('.home-ad-carousel'),id=await page.locator('.home-ad-slide.is-active').getAttribute('data-ad-id');
- await section.dispatchEvent('pointerdown',{pointerId:42,isPrimary:true,pointerType:'touch',button:0,clientX:200,clientY:800});
- await page.waitForTimeout(3400);assert.equal(await page.locator('.home-ad-slide.is-active').getAttribute('data-ad-id'),id,'rotation freezes while held');
- await section.dispatchEvent('pointercancel',{pointerId:42,pointerType:'touch'});
- await page.waitForTimeout(3200);assert.notEqual(await page.locator('.home-ad-slide.is-active').getAttribute('data-ad-id'),id,'rotation resumes after cancellation');
- checks.push('Ad rotation freezes for the whole gesture and resumes after cancellation');await context.close();
  assert.deepEqual(errors,[]);console.log(JSON.stringify({checks,errors,realApplicationWrites:0},null,2));
  await writeFile('test-results/motion-checks.json',JSON.stringify({checks,errors,realApplicationWrites:0},null,2));
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}

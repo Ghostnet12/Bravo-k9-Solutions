@@ -81,11 +81,10 @@ export default function Home() {
       </section>
       <ConversionTrust/>
       <HomeBanner/>
-      <MobileDiscovery/>
+      <div id="training" className="home-primary-training"><MobileDiscovery/><GoalFinder/></div>
       <div className="cinema-shell site-media-tools-slot site-media-tools-slot--home" data-site-media-tools=""/>
 
       <HomeSectionOrder>
-      <GoalFinder key="goals"/>
       <section key="fci" className="home-fci cinema-shell" aria-labelledby="home-fci-title">
         <Link href="/fci-support" className="home-fci-card" aria-labelledby="home-fci-title home-fci-action">
           <div className="home-fci-identity"><img src="/images/fci-official-identity.jpeg" width="796" height="240" loading="lazy" alt="Fédération Cynologique Internationale — for pedigree dogs worldwide"/></div>
@@ -98,7 +97,7 @@ export default function Home() {
           </div>
         </Link>
       </section>
-      <Editable as="section" key="training" contentKey="copy-home-24" id="training" className="cinema-programs cinema-shell" aria-labelledby="program-title">
+      <Editable as="section" key="training" contentKey="copy-home-24" id="training-programs" className="cinema-programs cinema-shell" aria-labelledby="program-title">
         <div className="cinema-section-heading" data-reveal=""><div><Editable as="p" contentKey="copy-home-25" canEditText className="cinema-eyebrow">FIND YOUR STARTING POINT</Editable><Editable as="h2" contentKey="cinema-program-title" canEditText id="program-title">Training &amp;<br/><span>pricing.</span></Editable></div><Editable as={Link} contentKey="copy-home-26" canEditText canEditLink href="/dog-training" className="cinema-link">How training works <span aria-hidden="true">↗</span></Editable></div>
         <nav className="training-service-links" aria-label="Training options">
           <Link href="/dog-training">Everyday obedience</Link>

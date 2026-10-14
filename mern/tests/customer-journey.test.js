@@ -22,7 +22,7 @@ test('everyday goals retain the correct training focus', () => {
 });
 test('homepage pricing and proof precede the longer brand story in DOM order', () => {
   const home = source('Home.tsx');
-  const order = ['<HomeBanner/>', '<GoalFinder ', 'id="training"', 'id="reviews"', 'id="team"', 'id="method"', 'id="dogs"'];
+  const order = ['<HomeBanner/>', 'id="training"', '<MobileDiscovery/>', '<GoalFinder/>', 'id="training-programs"', 'id="reviews"', 'id="team"', 'id="method"', 'id="dogs"'];
   const indices = order.map(value => home.indexOf(value));
   assert.ok(indices.every(index => index >= 0));
   assert.deepEqual([...indices].sort((a, b) => a - b), indices);

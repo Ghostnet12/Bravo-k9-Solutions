@@ -73,12 +73,13 @@ try {
         await page.locator('.fci-news-card').first().waitFor();
         await page.getByRole('link', { name: '← Back to Bravo' }).click();
         await page.waitForURL(origin + '/');
-        const ad = page.locator('.home-ad-slide.is-active a[href="/fci-support"]');
-        await ad.waitFor(); await ad.focus(); await page.keyboard.press('Enter');
+        assert.equal(await page.locator('.home-ad-dock').count(),0);
+        const introLink = page.locator('.home-fci-card');
+        await introLink.waitFor(); await introLink.focus(); await page.keyboard.press('Enter');
         await page.waitForURL('**/fci-support');
         await page.getByRole('heading', { name: 'GLOBAL STANDARDS. STRONGER DOGS.' }).waitFor();
         assert.deepEqual(errors, [], `${name} ${width}: browser errors`);
-        console.log(`FCI ${name} ${width}: layout, branding, footer, safe news, keyboard and ad navigation passed`);
+        console.log(`FCI ${name} ${width}: layout, branding, footer, safe news, keyboard and homepage introduction navigation passed`);
         await context.close();
       }
     } finally { await browser.close(); }
