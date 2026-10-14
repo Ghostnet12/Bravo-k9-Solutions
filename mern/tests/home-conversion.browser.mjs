@@ -47,13 +47,8 @@ try {
         const page = await context.newPage(); const errors = [];
         page.on('pageerror', error => errors.push(error.message));
         await page.goto(origin, { waitUntil: 'networkidle' });
-        // The cinematic hero adds a separate film, not a proof-carousel item.
-        const film = page.locator('.cinema-film video');
-        await page.waitForFunction(() => {
-          const video = document.querySelector('.cinema-film video');
-          return video && !video.paused && video.currentTime > 0 && video.videoWidth > 0;
-        });
-        assert.ok(await film.evaluate(video => video.muted && video.playsInline));
+        assert.equal(await page.locator('.cinema-film video').count(), 0);
+        await page.waitForFunction(()=>document.querySelector('.cinema-hero-still')?.naturalWidth>0);
         const heroBooking = await page.locator('.cinema-hero').getByRole('link', { name: width === 390 ? /Book your first session/i : /Book training/ }).boundingBox();
         assert.ok(heroBooking && heroBooking.y > 0 && heroBooking.y + heroBooking.height <= (width === 390 ? 844 : 1000), 'hero booking is immediately visible');
         assert.equal(await page.locator('.cinema-film-controls').count(), 0, 'hero playback controls are intentionally hidden');
@@ -61,11 +56,9 @@ try {
         assert.equal(await page.getByRole('button', { name: 'Turn hero video sound on', exact: true }).count(), 0);
         assert.equal(await page.getByRole('button', { name: 'Next hero video', exact: true }).count(), 0);
         await page.emulateMedia({ reducedMotion: 'reduce' });
-        await page.waitForFunction(() => document.querySelector('.cinema-film video').paused && document.querySelector('.cinema-home').dataset.motion === 'off');
+        await page.waitForFunction(() => document.querySelector('.cinema-home').dataset.motion === 'off');
         await page.emulateMedia({ reducedMotion: 'no-preference' });
-        await page.waitForFunction(() => !document.querySelector('.cinema-film video').paused);
         await page.locator('#training').scrollIntoViewIfNeeded();
-        await page.waitForFunction(() => document.querySelector('.cinema-film video').paused);
         await page.getByRole('heading', { name: /Don’t take\s*our word for it\./ }).waitFor();
         const proofTop = await page.locator('#reviews').evaluate(element => element.offsetTop);
         const trainingTop = await page.locator(width === 390 ? '.conversion-opening' : '#training').evaluate(element => element.offsetTop);

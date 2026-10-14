@@ -2,7 +2,7 @@ import { renderSiteContent } from './content-html.js';
 import { readFile } from 'node:fs/promises';
 import { HOME_HERO_META, HOME_HERO_SOURCE, HOME_HERO_ALT, homeHeroSnapshot } from '../shared/home-hero.js';
 import { framingStyle } from '../shared/site-images.js';
-import { DEFAULT_HERO_FILM, HERO_FILM_META, heroFilmPlaylistSnapshot } from '../shared/hero-film.js';
+import { HERO_FILM_META, heroFilmPlaylistSnapshot } from '../shared/hero-film.js';
 
 const escapeAttribute = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 let template;
@@ -13,17 +13,9 @@ function readTemplate() {
 
 export function renderHomepage(html, value, filmValue) {
   const hero = homeHeroSnapshot(value);
-  const films = heroFilmPlaylistSnapshot(filmValue), film = films[0];
-  // The saved photo now lives in the below-fold gallery. Prioritize the visible
-  // film poster while preserving the gallery's initial source/framing snapshot.
-  const preload = film.poster ? `<link rel="preload" as="image" href="${escapeAttribute(film.poster)}" fetchpriority="high"/>` : '';
-  // Put the published revision in both the server-rendered player and React's
-  // bootstrap data. Never download or flash the retired film during hydration.
-  html = html.replace(/<video\b(?=[^>]*\bdata-hero-film="")[^>]*>[\s\S]*?<\/video>/g, markup => {
-    const opening = markup.slice(0, markup.indexOf('>'))
-      .replace(/ poster="[^"]*"/, '').replace(/ aria-label="[^"]*"/, '').replace(/ style="[^"]*"/, '');
-    return `${opening}${film.poster ? ` poster="${escapeAttribute(film.poster)}"` : ''} aria-label="${escapeAttribute(film.description || film.title)}" style="object-fit:${film.fit}"><source src="${escapeAttribute(film.src)}"/>${film.src === DEFAULT_HERO_FILM.src ? '<source src="/videos/bravo-real-world.webm" type="video/webm"/>' : ''}</video>`;
-  });
+  const films = heroFilmPlaylistSnapshot(filmValue);
+  // The public hero is a still image; saved film records remain untouched.
+  const preload = '<link rel="preload" as="image" href="/images/mobile-bravo-cinematic.webp" fetchpriority="high"/>';
   // The pre-rendered photo must match the published snapshot on the very first
   // frame, including before JavaScript starts. Preserve the editor's original
   // source attributes so existing image edits and undo keep working.

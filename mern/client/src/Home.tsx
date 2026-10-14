@@ -1,5 +1,5 @@
 import LiveBanner from './LiveBanner';
-import { ConversionTrust, MobileDiscovery, MobileHomeNav, ConversionFAQ, HomeSectionOrder } from './MobileConversion';
+import { ConversionTrust, MobileDiscovery, ConversionFAQ, HomeSectionOrder } from './MobileConversion';
 import { trackVisit } from './telemetry';
 import './mobile-conversion.css';
 import { initialRecommendations } from './review-state';
@@ -19,7 +19,7 @@ import { HOME_HERO_SOURCE, HOME_HERO_ALT, HOME_HERO_KEY } from '../../shared/hom
 import { framingStyle } from '../../shared/site-images.js';
 import { getSiteImages } from './site-image-state.js';
 import HeroPhotoCarousel from './HeroPhotoCarousel';
-import CinematicFilm from './CinematicFilm';
+
 import useCinematicMotion from './useCinematicMotion';
 import HomeBanner from './HomeBanner';
 import ProofVideoCarousel from './ProofVideoCarousel';
@@ -66,10 +66,11 @@ export default function Home() {
     return () => { live = false; observer.disconnect(); window.removeEventListener('bravo-team-published', published); };
   }, []);
   return <div ref={root} className="bravo-home cinema-home conversion-home">
-    <link rel="preload" as="image" href="/images/mobile-bravo-cinematic.webp" media="(max-width: 700px)"/>
+    <link rel="preload" as="image" href="/images/mobile-bravo-cinematic.webp"/>
     <Header/>
     <Editable as="main" contentKey="copy-home-1" id="main-content" tabIndex={-1}>
-      <CinematicFilm>
+      <section className="home-hero cinema-hero" aria-labelledby="home-title">
+        <div className="cinema-hero-media"><div className="cinema-film"><img className="cinema-hero-still" src="/images/mobile-bravo-cinematic.webp" width="1024" height="1536" alt="" fetchPriority="high"/><div className="cinema-hero-shade" aria-hidden="true"/></div></div>
         <div className="cinema-hero-copy cinema-shell">
           <Editable as="p" contentKey="cinema-location" canEditText className="cinema-eyebrow">DOG TRAINING · ABERDEEN, SOUTH DAKOTA · WE COME TO YOU</Editable>
           <h1 id="home-title"><Editable as="span" contentKey="cinema-hero-title" canEditText className="conversion-desktop">Training built<br/>around the dog.</Editable><Editable as="span" contentKey="conversion-hero-title" canEditText className="conversion-mobile">REAL DOGS.<br/><em>REAL CONTROL.</em></Editable></h1>
@@ -79,7 +80,7 @@ export default function Home() {
           <div className="conversion-hero-actions conversion-mobile"><Editable as={Link} contentKey="mobile-hero-book" canEditText canEditLink href="/portal?program=training" className="conversion-button" onClick={() => trackVisit('hero_booking_clicked')}>Book your first session <span aria-hidden="true">→</span></Editable><Editable as="a" contentKey="mobile-hero-proof" canEditText canEditLink href="#reviews" className="conversion-button conversion-button-outline">▷ &nbsp; See Bravo in action</Editable></div>
         </div>
         <div className="cinema-hero-baseline cinema-shell"><Editable as="span" contentKey="copy-home-4" canEditText>REAL DOGS. REAL LIFE. BRAVO.</Editable><Editable as="a" contentKey="copy-home-5" canEditText canEditLink href="#method" aria-label="Discover the Bravo approach">SCROLL TO DISCOVER <span aria-hidden="true">↓</span></Editable></div>
-      </CinematicFilm>
+      </section>
       <ConversionTrust/>
       <HomeBanner/>
       <MobileDiscovery/>
@@ -164,7 +165,7 @@ export default function Home() {
       </HomeSectionOrder>
       <ConversionFAQ/>
       <Editable as="section" contentKey="copy-home-59" className="cinema-close cinema-shell" aria-labelledby="booking-title" data-reveal=""><Editable as="p" contentKey="copy-home-60" canEditText className="cinema-eyebrow">READY WHEN YOU ARE.</Editable><Editable as="h2" contentKey="cinema-close-title" canEditText id="booking-title">Start with<br/><span>your dog.</span></Editable><Editable as="p" contentKey="copy-home-61" canEditText>Tell us what you’re seeing. We’ll help you choose the right first step.</Editable><div className="cinema-actions"><Editable as={Link} contentKey="copy-home-62" canEditText canEditLink href="/portal?program=training" className="cinema-button">Book training <span aria-hidden="true">↗</span></Editable><Editable as="a" contentKey="copy-home-63" canEditText canEditLink href="tel:+16058242767" className="cinema-link">Talk to Bravo</Editable></div><Editable as="span" contentKey="copy-home-64" canEditText className="cinema-close-location">ABERDEEN, SOUTH DAKOTA · WE COME TO YOU</Editable></Editable>
-    </Editable><Footer/><MobileHomeNav/>
+    </Editable><Footer/>
   </div>;
 }
 

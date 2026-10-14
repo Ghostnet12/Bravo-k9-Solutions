@@ -56,7 +56,7 @@ try {for(const [name,engine] of engines) {
   await page.waitForFunction(()=>document.querySelector('.home-ad-dock video')?.currentTime>0.3);
   await page.evaluate(()=>{window.__ad=document.querySelector('.home-ad-dock video');window.__adTime=window.__ad.currentTime;window.scrollTo({top:document.body.scrollHeight,behavior:"instant"});window.dispatchEvent(new Event('bravo-ads-changed'));});
   await page.waitForFunction(()=>!window.__ad.paused && (window.__ad.currentTime>window.__adTime+0.3 || window.__adTime>window.__ad.duration-0.5 && window.__ad.currentTime<window.__adTime));
-  assert.equal(await ad.evaluate(el=>el===window.__ad && el.muted && getComputedStyle(el).objectFit==='contain'),true);
+  assert.equal(await ad.evaluate(el=>el===window.__ad && el.muted && getComputedStyle(el).objectFit==='cover'),true);
   assert.equal(await page.locator('.home-ad-dock .ad-dock-controls').count(),0);
   // Follow the artwork, then site navigation, without replacing the ad player.
   await page.locator('.home-ad-slide.is-active a').click();await page.waitForURL('**/dog-training');
@@ -147,7 +147,7 @@ try {for(const [name,engine] of engines) {
   sessions=[];await refresh();await page.getByRole('heading',{name:'OUT IN THE FIELD.'}).waitFor();await page.getByRole('region',{name:'Recorded Bravo training'}).waitFor();
   await page.setViewportSize({width:390,height:900});
   await page.goto(`${origin}/portal?program=walking`);await page.locator('.mobile-booking-bar').waitFor();await page.locator('.home-ad-dock').waitFor();
-  assert.ok(await page.evaluate(()=>{const bar=document.querySelector('.mobile-booking-bar').getBoundingClientRect(),dock=document.querySelector('.home-ad-dock').getBoundingClientRect(),access=document.querySelector('.accessibility-tools').getBoundingClientRect();return bar.bottom<=dock.top+1 && access.bottom<bar.top;}),'booking action and accessibility control clear the dock');
+  assert.ok(await page.evaluate(()=>{const bar=document.querySelector('.mobile-booking-bar').getBoundingClientRect(),dock=document.querySelector('.home-ad-dock').getBoundingClientRect(),access=document.querySelector('.accessibility-tools').getBoundingClientRect();const nav=document.querySelector('.mobile-home-nav').getBoundingClientRect();return nav.bottom<=dock.top+1 && access.bottom<nav.top && getComputedStyle(document.querySelector('.mobile-booking-bar')).position==='static';}),'booking action and accessibility control clear the dock');
   await page.locator('.mobile-booking-bar a').click();
   assert.equal(new URL(page.url()).hash,'#choose-dates','mobile booking action remains usable');
   await page.goto(origin);await page.locator('.home-ad-dock').waitFor();await page.emulateMedia({reducedMotion:'reduce'});await page.getByRole('button',{name:'Accessibility',exact:true}).click();await page.getByRole('button',{name:'Resume advertisements',exact:true}).waitFor();

@@ -68,13 +68,29 @@ try {
     await page.keyboard.press('Escape');
     await page.locator('.mobile-home-nav').getByRole('link', {name:/Book now/}).click();
     await page.getByRole('heading', {name:'Let’s start with your dog.'}).waitFor();
-    assert.equal(await page.locator('.mobile-home-nav').count(), 0);
+    assert.equal(await page.locator('.mobile-home-nav').count(), 1, 'navigation persists on booking');
+    await page.locator('.mobile-home-nav').getByRole('link', {name:'Reviews',exact:true}).click();
+    await page.waitForFunction(() => { const r=document.querySelector('#client-reviews')?.getBoundingClientRect(); return r && r.top >= 74 && r.top < 150; });
+    await page.locator('.mobile-home-nav').getByRole('link', {name:/Book now/}).click();
     await page.getByRole('button', {name:'Plan my entire month',exact:true}).waitFor();
     if (width === 390) {
       trainingCents = 27500; await page.goto(origin, {waitUntil:'networkidle'});
       assert.match(await page.locator('.conversion-price').innerText(), /\$275/); trainingCents = 20000;
     }
    }
+   if (width === 390) {
+    for (const route of ['/contact','/fci-support','/account','/portal']) {
+      await page.goto(origin+route, {waitUntil:'networkidle'});
+      await page.locator('.mobile-home-nav').waitFor();
+      await page.evaluate(()=>scrollTo(0,400));
+      const chrome = await page.evaluate(()=>{const h=document.querySelector('.app-header'), n=document.querySelector('.mobile-home-nav'), a=document.querySelector('.home-ad-dock');return {left:h.getBoundingClientRect().left,right:h.getBoundingClientRect().right,top:h.getBoundingClientRect().top,nav:n.getBoundingClientRect().bottom,ad:a.getBoundingClientRect().top};});
+      assert.ok(Math.abs(chrome.left)<1 && Math.abs(chrome.right-width)<1 && Math.abs(chrome.top)<1, 'full-width header stays fixed across routes');
+      assert.ok(chrome.nav<=chrome.ad+1, 'shared navigation clears ads');
+    }
+    await page.locator('.mobile-home-nav').getByRole('link',{name:'Reviews',exact:true}).click();
+    await page.waitForFunction(()=>{const r=document.querySelector('#client-reviews')?.getBoundingClientRect();return r && r.top>=74 && r.top<150;});
+   }
+   assert.equal(await page.locator('.cinema-hero video').count(),0,'hero remains image-only');
    assert.deepEqual(errors, []); await page.close();
   }} finally { await browser.close(); }
  }

@@ -75,16 +75,19 @@ export function MobileDiscovery() {
   </section>;
 }
 export function MobileHomeNav() {
+  const { user } = useBravo();
+  const staff = ['owner', 'staff'].includes(user?.role);
+  const bookingPath = staff ? '/admin?tab=schedule' : user ? '/schedule' : '/portal?program=training';
   function openMenu() {
     const menu = document.querySelector('.app-header .menu-toggle');
     if (menu?.getAttribute('aria-expanded') !== 'true') menu?.click();
     menu?.focus();
   }
   return <nav className="mobile-home-nav mobile-conversion" aria-label="Quick navigation">
-    <a href="#home-title" aria-label="Home"><span aria-hidden="true">⌂</span>Home</a>
-    <Link to="/portal?program=training" className="mobile-home-book" onClick={() => trackVisit('sticky_booking_clicked')}><span aria-hidden="true">▦</span>Book now</Link>
+    <Link to="/#home-title" aria-label="Home"><span aria-hidden="true">⌂</span>Home</Link>
+    <Link to={bookingPath} className="mobile-home-book" onClick={() => trackVisit('sticky_booking_clicked')}><span aria-hidden="true">▦</span>{user ? 'Schedule' : 'Book now'}</Link>
     <Link to="/live"><span aria-hidden="true">▷</span>Live cams</Link>
-    <a href="#reviews"><span aria-hidden="true">☆</span>Reviews</a>
+    <Link to="/#client-reviews"><span aria-hidden="true">☆</span>Reviews</Link>
     <button type="button" onClick={openMenu} aria-controls="bravo-navigation"><span aria-hidden="true">☰</span>More</button>
   </nav>;
 }
