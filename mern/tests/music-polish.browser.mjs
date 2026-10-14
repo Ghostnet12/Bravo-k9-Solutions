@@ -18,7 +18,7 @@ try {
   const browser = await engine.launch();
   try {
    for (const width of [320,375,390,430,768,1440]) {
-    const height = width === 320 ? 568 : 900;
+    const height = width === 320 ? 568 : width >= 768 ? 768 : 844;
     const context = await browser.newContext({viewport:{width,height}}), page = await context.newPage();
     page.on('pageerror', e => console.log('PAGE ERROR', e.message));
     let playlist = structuredClone(DEFAULT_MUSIC), uploads=0, chunks=0;
@@ -42,6 +42,7 @@ try {
     });
     await page.goto(origin); const book=page.locator('.polish-hero-actions a').first(); await book.waitFor(); await page.screenshot({path:'test-results/polish-debug.png'});
     const box=await book.boundingBox(); assert.ok(box.y>=0&&box.y+box.height<=height,`booking ${width}: ${JSON.stringify(box)}`);
+    const barrier = await page.locator(width <= 700 ? '.mobile-home-nav' : '.home-ad-dock').boundingBox(); if(barrier) assert.ok(box.y+box.height<=barrier.y, `booking under dock ${width}: ${JSON.stringify({box,barrier})}`);
     assert.match(await book.getAttribute('href'),/portal/);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`overflow ${width}`);
     await page.screenshot({path:`test-results/polish-${name}-${width}.png`});

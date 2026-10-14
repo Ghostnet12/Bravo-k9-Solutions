@@ -24,7 +24,7 @@ try{for(const [name,engine]of Object.entries({chromium,webkit})){if(process.env.
     await route.fulfill({status,json});});
   async function hold(locator){await locator.scrollIntoViewIfNeeded();const b=await locator.boundingBox();await page.mouse.move(b.x+Math.min(30,b.width/2),b.y+Math.min(12,b.height/2));await page.mouse.down();await page.waitForTimeout(750);await page.mouse.up();}
   try{
-    await page.goto(origin);await page.waitForLoadState('networkidle');const introSelector=`.cinema-hero-intro .${width <= 700 ? 'conversion-mobile' : 'conversion-desktop'}`,intro=page.locator(introSelector),key=await intro.getAttribute('data-site-content-key'),original=await intro.innerText();
+    await page.goto(origin);await page.waitForLoadState('networkidle');const introSelector='.cinema-hero-intro [data-site-content-key="conversion-hero-intro"]',intro=page.locator(introSelector),key=await intro.getAttribute('data-site-content-key'),original=await intro.innerText();
     assert.equal(await page.getByRole('button',{name:'Edit photos & videos',exact:true}).isVisible(),true);
     await hold(intro);const dialog=page.getByRole('dialog',{name:'Edit website section',exact:true});await dialog.waitFor();
     await dialog.getByLabel('Text',{exact:true}).fill('Training edited by the owner. <script>plain text</script>');
