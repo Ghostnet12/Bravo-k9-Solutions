@@ -12,6 +12,7 @@ const origin = `http://127.0.0.1:${server.address().port}`;
 await mkdir('test-results', { recursive: true });
 try {
   for (const [name, engine] of Object.entries({ chromium, webkit })) {
+    if (process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(name)) continue;
     const browser = await engine.launch();
     try {
       for (const width of [375, 390, 430, 768, 1440]) {
@@ -54,7 +55,7 @@ try {
         await intro.waitFor();
         assert.equal(await intro.getAttribute('href'), '/fci-support');
         await intro.scrollIntoViewIfNeeded();
-        await page.locator('.home-fci-identity img').evaluate(img => img.decode());
+        await page.waitForFunction(() => { const img = document.querySelector('.home-fci-identity img'); return img?.complete && img.naturalWidth > 0; });
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, 'homepage has no horizontal overflow');
         await page.screenshot({ path: `test-results/fci-home-${name}-${width}.png` });
         await intro.focus(); await page.keyboard.press('Enter');

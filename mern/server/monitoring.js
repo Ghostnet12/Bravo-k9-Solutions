@@ -87,13 +87,13 @@ export async function monitoringSummary(req, res) {
     FunnelVisit.aggregate([
       { $match: { firstSeen: { $gte: since }, expiresAt: { $gt: new Date() } } },
       { $lookup: { from: Booking.collection.name, localField: '_id', foreignField: 'analyticsSession', pipeline: [{ $project: { _id: 0, status: 1, paymentStatus: 1, paidAt: 1 } }], as: 'bookings' } },
-      { $project: { channel: 1, started: { $cond: ['$started', 1, 0] }, saved: { $cond: [{ $gt: [{ $size: '$bookings' }, 0] }, 1, 0] }, paid: { $cond: [{ $gt: [{ $size: { $filter: { input: '$bookings', as: 'b', cond: { $and: [{ $ne: [{ $ifNull: ['$$b.paidAt', null] }, null] }, { $in: ['$$b.paymentStatus', ['paid', 'refunded']] }] } } } }, 0] }, 1, 0] } } },
-      { $group: { _id: '$channel', visits: { $sum: 1 }, started: { $sum: '$started' }, saved: { $sum: '$saved' }, paid: { $sum: '$paid' } } },
+      { $project: { channel: 1, abandoned: { $cond: [{ $and: ['$started', { $lt: ['$firstSeen', new Date(Date.now() - 30 * 60 * 1000)] }, { $eq: [{ $size: '$bookings' }, 0] }] }, 1, 0] }, started: { $cond: ['$started', 1, 0] }, saved: { $cond: [{ $gt: [{ $size: '$bookings' }, 0] }, 1, 0] }, paid: { $cond: [{ $gt: [{ $size: { $filter: { input: '$bookings', as: 'b', cond: { $and: [{ $ne: [{ $ifNull: ['$$b.paidAt', null] }, null] }, { $in: ['$$b.paymentStatus', ['paid', 'refunded']] }] } } } }, 0] }, 1, 0] } } },
+      { $group: { _id: '$channel', visits: { $sum: 1 }, started: { $sum: '$started' }, saved: { $sum: '$saved' }, paid: { $sum: '$paid' }, abandoned: { $sum: '$abandoned' } } },
     ]).option({ maxTimeMS: 5000 }),
     SiteError.find({ lastSeen: { $gte: since }, expiresAt: { $gt: new Date() } }).select('-_id -__v -expiresAt').sort({ lastSeen: -1 }).limit(200).maxTimeMS(5000).lean(),
     WebVital.aggregate([{ $match: { createdAt: { $gte: since }, expiresAt: { $gt: new Date() } } }, { $group: { _id: { name: '$name', device: '$device' }, count: { $sum: 1 }, p75: { $percentile: { input: '$value', p: [0.75], method: 'approximate' } } } }]).option({ maxTimeMS: 5000 }),
     FunnelVisit.aggregate([{ $match: { firstSeen: { $gte: since }, expiresAt: { $gt: new Date() } } }, { $unwind: '$stages' }, { $group: { _id: '$stages', count: { $sum: 1 } } }]).option({ maxTimeMS: 5000 }),
   ]);
-  const totals = funnel.reduce((a, row) => { for (const key of ['visits', 'started', 'saved', 'paid']) a[key] += row[key]; return a; }, { visits: 0, started: 0, saved: 0, paid: 0 });
+  const totals = funnel.reduce((a, row) => { for (const key of ['visits', 'started', 'saved', 'paid', 'abandoned']) a[key] += row[key]; return a; }, { visits: 0, started: 0, saved: 0, paid: 0, abandoned: 0 });
   res.json({ days: Number(days), since, checkedAt: new Date(), databaseConnected: mongoose.connection.readyState === 1, vitals: vitals.map(row => ({ ...row._id, count: row.count, p75: row.p75[0] })), stages: stages.map(row => ({ stage: row._id, count: row.count })), totals, channels: funnel.map(({ _id, ...row }) => ({ channel: _id, ...row })), errors });
 }

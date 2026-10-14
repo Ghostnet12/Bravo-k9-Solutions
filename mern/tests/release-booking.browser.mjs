@@ -39,7 +39,7 @@ try {
    await page.getByRole('heading',{name:'Choose your trainer.',exact:true}).waitFor();
    assert.equal(await page.locator('.date-grid').count(),0);
    assert.equal(await page.getByRole('button',{name:'Choose a date & time →',exact:true}).isEnabled(),false);
-   await page.getByLabel('Choose my trainer',{exact:true}).selectOption(trainerId);
+   await page.locator('.guided-trainer-cards').getByRole('button').filter({hasText:'Fixture Trainer'}).click();
    await page.getByRole('button',{name:'Choose a date & time →',exact:true}).click();
    const dates=page.locator('.date-grid button');await dates.first().click();
    assert.equal(await page.getByRole('button',{name:'Review my request →',exact:true}).isEnabled(),false,'a date alone does not confirm a time');
@@ -68,7 +68,7 @@ try {
    await page.goto(origin+'/portal?program=training');
    await page.getByLabel('Dog’s name',{exact:true}).fill('Whole Month Dog');
    await page.getByLabel('Anything you’d like your trainer to know? (optional)',{exact:true}).fill('Retain this full-month note.');
-   await page.getByRole('button',{name:'Plan my whole month',exact:true}).click();
+   await page.getByRole('button',{name:'Plan my entire month',exact:true}).click();
    await page.getByRole('heading',{name:'Build your schedule',exact:true}).waitFor();
    assert.equal(await page.getByLabel('Dog’s name',{exact:true}).inputValue(),'Whole Month Dog');
    await page.getByLabel('Choose my trainer',{exact:true}).selectOption(trainerId);

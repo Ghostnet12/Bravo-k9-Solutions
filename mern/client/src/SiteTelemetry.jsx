@@ -13,6 +13,7 @@ export default function SiteTelemetry() {
     void installWebVitals();
     const newBooking = pathname === '/portal' && !new URLSearchParams(search).has('edit');
     if (PUBLIC_PAGES.includes(pathname) || newBooking) trackVisit('visit');
+    if (pathname === '/') trackVisit('homepage_viewed');
     if (newBooking && !user?.mustChangePassword) trackVisit('booking_started');
   }, [authReady, config?.monitoringEnabled, user?.id, user?.role, pathname, search]);
   return null;

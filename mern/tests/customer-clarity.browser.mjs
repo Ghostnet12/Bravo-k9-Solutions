@@ -35,9 +35,9 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){const br
   assert.equal(await page.locator('.home-hero-image').evaluate(el=>el.complete && el.naturalWidth>0),true);
   await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
   assert.equal(await page.locator('.home-hero-image').evaluate(el=>getComputedStyle(el).objectFit),'contain');
-  assert.match(await page.locator('h1').innerText(), /Training built\s*around the dog/i);
+  assert.match(await page.locator('h1').innerText(), width === 390 ? /REAL DOGS.\s*REAL CONTROL/i : /Training built\s*around the dog/i);
   assert.ok(await page.locator('.cinema-price').isVisible());
-  assert.ok(await page.getByText('Not treats. Not toys. Understanding.',{exact:true}).isVisible());
+  assert.ok(await page.getByText(width === 390 ? 'Personalized training built around your dog. No treats or toys as the foundation. Real-world results.' : 'Not treats. Not toys. Understanding.',{exact:true}).isVisible());
   assert.ok(await page.getByText(/Up to one hour per day. Monday–Friday./).isVisible());
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth + 1),'homepage fits viewport');
   await page.evaluate(()=>document.documentElement.style.fontSize='200%');

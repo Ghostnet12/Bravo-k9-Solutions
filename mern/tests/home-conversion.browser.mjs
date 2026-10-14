@@ -54,7 +54,7 @@ try {
           return video && !video.paused && video.currentTime > 0 && video.videoWidth > 0;
         });
         assert.ok(await film.evaluate(video => video.muted && video.playsInline));
-        const heroBooking = await page.locator('.cinema-hero').getByRole('link', { name: /Book training/ }).boundingBox();
+        const heroBooking = await page.locator('.cinema-hero').getByRole('link', { name: width === 390 ? /Book your first session/i : /Book training/ }).boundingBox();
         assert.ok(heroBooking && heroBooking.y > 0 && heroBooking.y + heroBooking.height <= (width === 390 ? 844 : 1000), 'hero booking is immediately visible');
         assert.equal(await page.locator('.cinema-film-controls').count(), 0, 'hero playback controls are intentionally hidden');
         assert.equal(await page.getByRole('button', { name: 'Pause training film', exact: true }).count(), 0);
@@ -68,7 +68,7 @@ try {
         await page.waitForFunction(() => document.querySelector('.cinema-film video').paused);
         await page.getByRole('heading', { name: /Don’t take\s*our word for it\./ }).waitFor();
         const proofTop = await page.locator('#reviews').evaluate(element => element.offsetTop);
-        const trainingTop = await page.locator('#training').evaluate(element => element.offsetTop);
+        const trainingTop = await page.locator(width === 390 ? '.conversion-opening' : '#training').evaluate(element => element.offsetTop);
         assert.ok(proofTop > trainingTop, `${engineName}-${width}: proof follows training and pricing`);
         const accountReviews = page.locator('.home-proof-reviews article').filter({ hasText: 'Verified Bravo account' });
         assert.equal(await accountReviews.count(), reviews.length);
@@ -110,7 +110,7 @@ try {
         if (width === 390) {
           await page.goto(`${origin}/portal?program=training`, { waitUntil: 'networkidle' });
           await page.getByRole('heading', { name: 'Let’s start with your dog.' }).waitFor();
-          const fullMonth = page.getByRole('button', { name: 'Plan my whole month', exact: true });
+          const fullMonth = page.getByRole('button', { name: 'Plan my entire month', exact: true });
           assert.ok(await fullMonth.isVisible(), 'whole-month entry is not hidden in a disclosure');
           await fullMonth.click();
           const booking = await page.locator('.mobile-booking-bar').boundingBox();

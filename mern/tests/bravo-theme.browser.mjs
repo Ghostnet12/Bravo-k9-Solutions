@@ -71,7 +71,7 @@ try {
           await page.goto(origin + route, { waitUntil: 'networkidle' });
           await page.locator('h1').waitFor();
           await darkSurface(page.locator('body'), route);
-          assert.match(await page.locator('h1').evaluate(el => getComputedStyle(el).fontFamily), /Montserrat/);
+          assert.match(await page.locator('h1').evaluate(el => getComputedStyle(el).fontFamily), route === '/' && width <= 700 ? /Bebas Neue/ : /Montserrat/);
           await fits(page, `${route}/${width}`);
           if (route === '/') {
             await page.waitForFunction(() => { const film = document.querySelector('.cinema-film video'); return film?.autoplay && film.muted && film.playsInline && !film.paused && film.currentTime > 0; });

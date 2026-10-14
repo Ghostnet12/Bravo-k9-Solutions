@@ -154,7 +154,7 @@ try {for(const [name,engine] of engines) {
   assert.equal(await page.locator('.home-ad-dock video').evaluate(el=>el.paused),true);
   const resume=page.getByRole('button',{name:'Resume advertisements',exact:true});await page.keyboard.press('Tab');await resume.focus();assert.ok(await resume.evaluate(el=>getComputedStyle(el).outlineStyle!=='none'));
   ads=ads.map(ad=>({...ad,enabled:false}));await page.evaluate(()=>window.dispatchEvent(new Event('bravo-ads-changed')));await page.waitForFunction(()=>!document.querySelector('.home-ad-dock'));
-  assert.equal(await page.evaluate(()=>parseFloat(getComputedStyle(document.querySelector('#root')).paddingBottom)),0);
+  assert.ok(await page.evaluate(()=>{const nav=document.querySelector('.mobile-home-nav').getBoundingClientRect();return parseFloat(getComputedStyle(document.querySelector('#root')).paddingBottom)>=nav.height && parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ad-dock-height'))===0;}),'hiding advertisements removes only ad spacing and preserves mobile navigation clearance');
   assert.deepEqual(errors,[]);console.log(`PASS ${name}: offline/one/two/rename/stop/private/unavailable, persistent elapsed, 320–1440px framing, dock media continuity/footer/floating controls/dialogs, pause, keyboard focus, reduced motion, hidden collection`);
   await context.close();
  }catch(error){

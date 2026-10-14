@@ -57,19 +57,32 @@ test('owner monitoring and server-authoritative booking funnel', { timeout: 1800
       await call(null, 'post', '/api/telemetry/error', { kind: 'page_crash', area: 'account', message: 'password private' }).expect(400);
       await call(null, 'post', '/api/telemetry/error', { kind: 'page_crash', area: '/account?secret=123' }).expect(400);
     });
+    await t.test('conversion events deduplicate and abandoned sessions require elapsed time without a saved request', async () => {
+      const abandoned = { token: randomUUID(), channel: 'direct', stage: 'booking_started' };
+      await call(null, 'post', '/api/telemetry/visit', abandoned).expect(204);
+      for (const stage of ['homepage_viewed', 'hero_booking_clicked', 'pricing_viewed', 'dog_step_completed', 'trainer_step_completed', 'visit_step_completed']) {
+        for (let i = 0; i < 2; i++) await call(null, 'post', '/api/telemetry/visit', { ...abandoned, stage }).expect(204);
+      }
+      assert.equal((await report()).body.totals.abandoned, 0);
+      await FunnelVisit.updateMany({}, { $set: { firstSeen: new Date(Date.now() - 31 * 60000) } });
+      const result = (await report()).body;
+      assert.equal(result.totals.abandoned, 1);
+      assert.equal(result.stages.find(item => item.stage === 'pricing_viewed').count, 1);
+      await FunnelVisit.deleteMany({});
+    });
     let saved;
     await t.test('visits and retries deduplicate; no client event can claim a booking or payment', async () => {
       await call(null, 'post', '/api/telemetry/visit', visit).expect(204);
       await call(null, 'post', '/api/telemetry/visit', visit).expect(204);
       await call('client', 'post', '/api/telemetry/visit', { ...visit, stage: 'booking_started' }).expect(204);
       await call('client', 'post', '/api/telemetry/visit', { ...visit, stage: 'paid' }).expect(400);
-      assert.deepEqual((await report()).body.totals, { visits: 1, started: 1, saved: 0, paid: 0 });
+      assert.deepEqual((await report()).body.totals, { visits: 1, started: 1, saved: 0, paid: 0, abandoned: 0 });
       const body = bookingBody();
       saved = (await call('client', 'post', '/api/bookings', body).set('X-Bravo-Visit', visit.token).expect(201)).body.booking;
       const retry = await call('client', 'post', '/api/bookings', body).set('X-Bravo-Visit', visit.token).expect(201);
       assert.equal(retry.body.booking._id, saved._id); assert.equal(retry.body.booking.analyticsSession, undefined);
       assert.equal(await Booking.countDocuments(), 1);
-      assert.deepEqual((await report()).body.totals, { visits: 1, started: 1, saved: 1, paid: 0 });
+      assert.deepEqual((await report()).body.totals, { visits: 1, started: 1, saved: 1, paid: 0, abandoned: 0 });
       const all = await call('client', 'get', '/api/bookings').expect(200); assert.equal(all.body.bookings[0].analyticsSession, undefined);
     });
     await t.test('payment requires persisted verified status; coverage and checkout URLs do not count', async () => {

@@ -70,7 +70,7 @@ try {
           for (const key of ['height', 'top', 'width']) assert.ok(Math.max(...frames.map(frame => frame[key])) - Math.min(...frames.map(frame => frame[key])) < 1, `${label}: ${key} changed: ${JSON.stringify(frames.filter((frame, i) => !i || frames[i - 1][key] !== frame[key]))}`);
           assert.ok(frames.every(frame => frame.visible === 'visible' && frame.opacity === '1'), `${label}: no hide-until-loaded guard`);
           assert.equal(await page.locator('.home-hero-image').getAttribute('loading'), 'lazy');
-          assert.equal(await page.locator('link[rel="preload"][as="image"]').getAttribute('href'), '/images/bravo-film-poster.webp');
+          assert.equal(await page.locator('link[rel="preload"][as="image"][href="/images/bravo-film-poster.webp"]').getAttribute('href'), '/images/bravo-film-poster.webp');
           await page.locator('.home-hero-image').scrollIntoViewIfNeeded();
           await page.waitForFunction(() => { const image = document.querySelector('.home-hero-image'); return image.complete && image.naturalWidth > 0; });
           assert.ok(photoRequests.length > 0 && photoRequests.every(url => url.includes(hero.src)), `${label}: only published gallery photo requested`);

@@ -78,13 +78,17 @@ try {
         await playlistDialog.waitFor({ state: 'hidden' });
       }
       async function editCopy(text) {
-        const intro = page.locator('.cinema-hero-intro');
+        const copyKey = width <= 700 ? 'conversion-hero-intro' : 'cinema-hero-intro';
+        const intro = page.locator(`[data-site-content-key="${copyKey}"]`);
+        const other = page.locator(`.cinema-hero-intro .${width <= 700 ? 'conversion-desktop' : 'conversion-mobile'}`);
+        const originalOther = await other.textContent();
         await intro.scrollIntoViewIfNeeded(); await page.waitForTimeout(350);
         const box = await intro.boundingBox(); await holdAt(box.x + 20, box.y + 10);
         await copyDialog.waitFor(); await copyDialog.getByLabel('Text', { exact: true }).fill(text);
         await copyDialog.getByRole('button', { name: 'Publish website changes', exact: true }).click();
         await copyDialog.waitFor({ state: 'hidden' });
-        assert.equal((await SiteContent.findById('cinema-hero-intro').lean()).value.text, text);
+        assert.equal((await SiteContent.findById(copyKey).lean()).value.text, text);
+        assert.equal(await other.textContent(), originalOther, 'editing one breakpoint must preserve the other variant');
       }
       try {
         await page.goto(origin); await page.getByRole('button', { name: 'Manage hero videos', exact: true }).waitFor(); await page.waitForLoadState('networkidle');
@@ -101,7 +105,7 @@ try {
         await editCopy('Owner saved homepage copy.');
         retiredRequests.length = 0;
         await page.reload(); await page.waitForLoadState('networkidle');
-        assert.equal(await page.locator('.cinema-hero-intro').innerText(), 'Owner saved homepage copy.');
+        assert.equal((await page.locator('.cinema-hero-intro').innerText()).trim(), 'Owner saved homepage copy.');
         assert.ok((await film.evaluate(video => video.currentSrc)).includes('/api/hero-film/opening/video'));
         assert.deepEqual(retiredRequests, [], 'reload never downloads the retired opening film or poster');
         await signIn('administrator'); await page.reload(); await page.waitForLoadState('networkidle');
@@ -131,7 +135,7 @@ try {
         await closePlaylist();
         await signIn(null); const response = await page.reload(); await page.waitForLoadState('networkidle');
         assert.ok((await response.text()).includes('Administrator saved homepage copy.'), 'public server render uses persisted copy');
-        assert.equal(await page.locator('.cinema-hero-intro').innerText(), 'Administrator saved homepage copy.');
+        assert.equal((await page.locator('.cinema-hero-intro').innerText()).trim(), 'Administrator saved homepage copy.');
         assert.equal(await film.getAttribute('aria-label'), 'Administrator updated opening film.');
         await page.waitForFunction(() => { const video = document.querySelector('.cinema-film video'); return video.muted && video.playsInline && !video.paused && video.currentTime > 0; });
         assert.equal(await page.locator('.cinema-film-controls').count(), 0, 'public hero playback buttons stay removed');
@@ -140,7 +144,7 @@ try {
         try {
           const visitor = await noScript.newPage(); await visitor.goto(origin);
           assert.match(await visitor.locator('.cinema-film video source').first().getAttribute('src'), /^\/api\/hero-film\/opening\/video\?v=2$/);
-          assert.equal(await visitor.locator('.cinema-hero-intro').innerText(), 'Administrator saved homepage copy.');
+          assert.equal((await visitor.locator('.cinema-hero-intro').innerText()).trim(), 'Administrator saved homepage copy.');
         } finally { await noScript.close(); }
         const paginationRows = Array.from({ length: 30 }, (_, i) => ({
           _id: `page-fixture-${String(i).padStart(2, '0')}`,
