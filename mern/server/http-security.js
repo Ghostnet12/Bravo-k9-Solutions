@@ -1,9 +1,11 @@
 import helmet from 'helmet';
 
+export const PERMISSIONS_POLICY = 'camera=(self), microphone=(self), geolocation=(), accelerometer=(), gyroscope=(), magnetometer=(), usb=(), serial=(), hid=(), midi=()';
+
 // One policy for the Express entry points. Keep Vercel's static-page policy
 // aligned; deployment smoke checks verify both boundaries.
 export function securityHeaders() {
-  return helmet({
+  const helmetHeaders = helmet({
     xFrameOptions: { action: 'deny' },
     contentSecurityPolicy: { directives: {
       defaultSrc: ["'self'"], scriptSrc: ["'self'"],
@@ -14,6 +16,11 @@ export function securityHeaders() {
       upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
     } },
   });
+  return (req, res, next) => {
+    // Restrict unused device APIs without disabling Bravo Live or media controls.
+    res.set('Permissions-Policy', PERMISSIONS_POLICY);
+    helmetHeaders(req, res, next);
+  };
 }
 
 export function privateResponse(_req, res, next) {

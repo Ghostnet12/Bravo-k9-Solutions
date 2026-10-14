@@ -78,6 +78,9 @@ export async function identify(req, res, next) {
 export function publicUser(user) { return { id: String(user._id), email: user.email, name: user.name, role: user.role, mfaEnabled: !!user.mfaEnabled, mustChangePassword: !!user.mustChangePassword, isPrimaryOwner: isPrimaryOwner(user), publicRole: publicRole(user), hasBillingAccount: !!user.stripeCustomerId, dogName: user.dogName, phone: user.phone, address: user.address, title: user.title, bio: user.bio, showPhone: user.showPhone }; }
 export function sameOrigin(req, _res, next) {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+  // Browser-supplied Fetch Metadata is an additional CSRF boundary. Clients
+  // without this header still must pass the exact Origin and JSON checks below.
+  if (req.headers['sec-fetch-site'] === 'cross-site') throw Object.assign(new Error('This request must start from the Bravo website.'), { status: 403 });
   const allowed = process.env.APP_ORIGIN || (process.env.NODE_ENV !== 'production' ? 'http://localhost:5173' : '');
   if (!allowed || req.headers.origin !== allowed) throw Object.assign(new Error('This request must start from the Bravo website.'), { status: 403 });
   if (!req.is('application/json')) throw Object.assign(new Error('JSON request required.'), { status: 415 });
