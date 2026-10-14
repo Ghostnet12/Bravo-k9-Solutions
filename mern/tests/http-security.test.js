@@ -1,11 +1,13 @@
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import express from 'express';
 import request from 'supertest';
 import app from '../server/client-services-app.js';
-import { securityHeaders, privateResponse } from '../server/http-security.js';
+import { securityHeaders, privateResponse, PERMISSIONS_POLICY } from '../server/http-security.js';
 
 function assertPolicy(headers) {
+  assert.equal(headers['permissions-policy'], PERMISSIONS_POLICY);
   assert.equal(headers['x-frame-options'], 'DENY');
   assert.equal(headers['x-content-type-options'], 'nosniff');
   const csp = headers['content-security-policy'];
@@ -51,4 +53,15 @@ test('early routes and dependency failures retain headers without Vercel', async
   const cron = await request(app).get('/api/cron/memberships').expect(401);
   assertPolicy(cron.headers);
   assert.match(cron.headers['cache-control'], /no-store/);
+});
+
+
+test('static and dynamic device policies agree and preserve Bravo Live capture', () => {
+  const config = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
+  const deployed = config.headers.find(rule => rule.source === '/(.*)').headers.find(header => header.key === 'Permissions-Policy').value;
+  assert.equal(deployed, PERMISSIONS_POLICY);
+  const directives = new Map(deployed.split(', ').map(item => item.split('=')));
+  for (const feature of ['camera', 'microphone']) assert.equal(directives.get(feature), '(self)');
+  for (const feature of ['geolocation', 'accelerometer', 'gyroscope', 'magnetometer', 'usb', 'serial', 'hid', 'midi']) assert.equal(directives.get(feature), '()');
+  for (const feature of ['autoplay', 'fullscreen', 'screen-wake-lock', 'payment']) assert.equal(directives.has(feature), false);
 });
