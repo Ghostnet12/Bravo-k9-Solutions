@@ -64,7 +64,12 @@ try {
     if(barrier) assert.ok(box.y+box.height<=barrier.y, 'booking clears navigation');
     if(width<=700){
      const art=await page.locator('.cinema-hero-still').boundingBox();
-     assert.ok(box.y>=art.y+art.height,'hero booking sits below the complete dog image');
+     const intro=await page.locator('.cinema-hero-intro').boundingBox();
+     const secondary=await page.locator('.polish-hero-actions .cinema-link').boundingBox();
+     assert.ok(box.y>=intro.y+intro.height && box.y<intro.y+intro.height+24,'booking directly below hero copy');
+     assert.ok(box.y<art.y+art.height && box.width<width*.65,'booking stays in left hero area');
+     assert.ok(Math.abs(box.x-intro.x)<2 && Math.abs(secondary.x-box.x)<2,'both hero buttons align with intro');
+     assert.ok(secondary.y>=box.y+box.height && secondary.height>=44,'secondary button stacked with touch target');
      const more=page.locator('.mobile-home-nav button[aria-controls="bravo-navigation"]');
      await more.click();assert.equal(await more.getAttribute('aria-expanded'),'true');
      await more.click();assert.equal(await more.getAttribute('aria-expanded'),'false');
