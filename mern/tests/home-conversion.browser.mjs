@@ -60,8 +60,8 @@ try {
         await page.emulateMedia({ reducedMotion: 'no-preference' });
         await page.locator('#training').scrollIntoViewIfNeeded();
         await page.getByRole('heading', { name: /Don’t take\s*our word for it\./ }).waitFor();
-        const proofTop = await page.locator('#reviews').evaluate(element => element.offsetTop);
-        const trainingTop = await page.locator(width === 390 ? '.conversion-opening' : '#training').evaluate(element => element.offsetTop);
+        const proofTop = await page.locator('#reviews').evaluate(element => element.getBoundingClientRect().top);
+        const trainingTop = await page.locator(width === 390 ? '.conversion-opening' : '#training').evaluate(element => element.getBoundingClientRect().top);
         assert.ok(proofTop > trainingTop, `${engineName}-${width}: proof follows training and pricing`);
         const accountReviews = page.locator('.home-proof-reviews article').filter({ hasText: 'Verified Bravo account' });
         assert.equal(await accountReviews.count(), reviews.length);
