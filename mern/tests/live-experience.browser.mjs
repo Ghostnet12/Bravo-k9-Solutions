@@ -28,7 +28,17 @@ try {for(const [name,engine] of engines) {
  try {
   const context=await browser.newContext({viewport:{width:390,height:900}}),page=await context.newPage();
   // Keep media lifecycle evidence as screenshots and request diagnostics.
-  evidencePage=page;page.on('request',r=>pendingRequests.add(r.url()));page.on('requestfinished',r=>pendingRequests.delete(r.url()));page.on('requestfailed',r=>{pendingRequests.delete(r.url());failedRequests.push({url:r.url(),error:r.failure()?.errorText});});page.on('pageerror',error=>errors.push(error.message));
+  evidencePage=page;page.on('request',r=>pendingRequests.add(r.url()));page.on('requestfinished',r=>pendingRequests.delete(r.url()));page.on('requestfailed',r=>{pendingRequests.delete(r.url());failedRequests.push({url:r.url(),error:r.failure()?.errorText});});page.on('pageerror',error=>{
+   // WebKit may surface the deliberately injected 503 as a page error.
+   // Only this endpoint during the explicit outage scenario is expected;
+   // successful-response, navigation, and unrelated errors still fail.
+   if(name==='webkit' && failure && error.message.endsWith('/api/live due to access control checks.')) {
+    console.log('Expected WebKit error during injected live-status outage',error.message);
+    return;
+   }
+   console.log('Unexpected page error',{message:error.message,outage:failure,url:page.url()});
+   errors.push(error.message);
+  });
   let sessions=[],failure=false,ads=[{id:'fixture-video',title:'Recorded Bravo training — test ad placement',alt:'Existing Bravo footage used as a test advertisement',enabled:true,link:'/dog-training',src:'/images/training-education.webp',videoSrc:'/assets/bravo-opening-565c14182176.mp4'}];
   handleApi=(req,res)=>{
    const path=new URL(req.originalUrl,origin).pathname;
