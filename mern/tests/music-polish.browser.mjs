@@ -26,6 +26,16 @@ try {
    for (const width of [320,375,390,430,768,1440]) {
     const height = width === 320 ? 568 : width >= 768 ? 768 : 844;
     const context = await browser.newContext({viewport:{width,height}}), page = await context.newPage();
+    if (width === 390) await page.addInitScript(() => {
+     const play = HTMLMediaElement.prototype.play;
+     HTMLMediaElement.prototype.play = function (...args) {
+      if (this.hasAttribute('data-site-soundtrack') && !this.dataset.policyTested) {
+       this.dataset.policyTested = 'true';
+       return Promise.reject(new DOMException('Gesture required by test policy', 'NotAllowedError'));
+      }
+      return play.apply(this, args);
+     };
+    });
     page.on('pageerror', e => console.log('PAGE ERROR', e.message));
     let playlist = structuredClone(DEFAULT_MUSIC), uploads=0, chunks=0;
     await page.route('**/audio/built-for-the-real-world.m4a', route => route.fulfill({ contentType: 'audio/wav', body: audioFixture }));
@@ -56,6 +66,14 @@ try {
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`overflow ${width}`);
     await page.screenshot({path:`test-results/polish-${name}-${width}.png`});
     if(width===390){
+     await page.waitForFunction(()=>document.querySelector('[data-site-soundtrack]')?.dataset.policyTested === 'true');
+     await page.getByText('ABERDEEN, SOUTH DAKOTA — WE COME TO YOU.', {exact:true}).click();
+     await page.waitForFunction(()=>!document.querySelector('[data-site-soundtrack]').paused);
+     await page.locator('[data-site-soundtrack]').evaluate(el=>el.dispatchEvent(new Event('error')));
+     assert.equal(await page.locator('[data-site-soundtrack]').evaluate(el=>el.paused),true);
+     await page.evaluate(()=>window.dispatchEvent(new Event('online')));
+     await page.waitForFunction(()=>!document.querySelector('[data-site-soundtrack]').paused);
+     assert.equal(playlist.revision, 0, 'same-revision playlist recovers after connectivity returns');
      await page.getByRole('button',{name:'Accessibility',exact:true}).click();
      await page.getByRole('button',{name:'Manage Music',exact:true}).click();
      const dialog=page.getByRole('dialog',{name:'Manage Music'});await dialog.waitFor();
@@ -75,6 +93,9 @@ try {
      await page.getByRole('button',{name:'Pause music',exact:true}).click();
      assert.equal(await page.locator('[data-site-soundtrack]').evaluate(el=>el.paused),true);
      await page.getByRole('button',{name:'Close accessibility options'}).click();
+     await page.getByText('ABERDEEN, SOUTH DAKOTA — WE COME TO YOU.', {exact:true}).click();
+     await page.keyboard.press('Shift');
+     assert.equal(await page.locator('[data-site-soundtrack]').evaluate(el=>el.paused),true,'ordinary gestures must preserve an explicit pause');
      await page.locator('[data-site-soundtrack]').evaluate(el=>el.dataset.testIdentity='same');
      await book.click();await page.waitForURL('**/portal?program=training');
      assert.equal(await page.locator('[data-site-soundtrack]').getAttribute('data-test-identity'),'same');
