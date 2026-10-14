@@ -47,12 +47,27 @@ try {for(const [name,engine] of engines) {
    if(path==='/api/proof-videos')json={clips:[{id:'recorded-test',title:'Recorded training test fixture',src:'/assets/bravo-opening-565c14182176.mp4',description:'Existing Bravo training footage'}]};
    res.json(json);
   };
+  // Complete fixture API requests before replacing the document. WebKit can
+  // report a navigation-cancelled fetch as an access-control page error.
+  const waitForApiIdle = async () => {
+   const deadline=Date.now()+5000;
+   let quietSince=0;
+   while(Date.now()<deadline) {
+    const pending=[...pendingRequests].some(url=>new URL(url).pathname.startsWith('/api/'));
+    if(pending) quietSince=0;
+    else if(!quietSince) quietSince=Date.now();
+    else if(Date.now()-quietSince>=100) return;
+    await new Promise(resolve=>setTimeout(resolve,25));
+   }
+   assert.fail('Fixture API requests did not settle before navigation');
+  };
   const refresh=()=>page.evaluate(()=>window.dispatchEvent(new Event('bravo-live-changed')));
   await page.goto(origin,{waitUntil:'networkidle'});
   assert.equal(await page.locator('.home-ad-dock').count(),0);
   assert.equal(await page.locator('.hero-live').count(),0);
   assert.ok(!(await page.locator('.home-status-banner').innerText()).includes('Bravo is live now'));
   for(const path of ['/workshops','/live','/contact','/']){
+   await waitForApiIdle();
    await page.goto(origin+path,{waitUntil:'domcontentloaded'});
    await page.locator('footer').waitFor();
    assert.equal(await page.locator('.home-ad-dock').count(),0,'no ads or ad videos across routes');
@@ -80,6 +95,7 @@ try {for(const [name,engine] of engines) {
   assert.equal(await page.locator('.hero-live li a').getAttribute('href'),'/live?trainer=two');
   sessions=[];await refresh();await page.waitForFunction(()=>!document.querySelector('.hero-live'));assert.equal(await page.locator('.ad-live-creative').count(),0);
   failure=true;await refresh();await page.locator('.hero-live-unavailable').waitFor();assert.equal(await page.locator('.hero-live').count(),0);
+  await waitForApiIdle();
   await page.goto(`${origin}/live`);await page.bringToFront();await page.getByText('Live status is temporarily unavailable. Reconnecting…',{exact:true}).waitFor();assert.equal(await page.getByRole('heading',{name:'OUT IN THE FIELD.'}).count(),0);
   failure=false;sessions=[makeSession('one','David · TEST'),makeSession('two','Ashley · TEST')];await refresh();await page.locator('.live-session-row').first().waitFor();
   await page.locator('.live-session-row').nth(1).click();await page.waitForFunction(()=>document.querySelector('.live-player-caption h2')?.textContent.includes('Ashley'));assert.match(await page.locator('.live-player-caption h2').innerText(),/Ashley/i);
@@ -87,6 +103,7 @@ try {for(const [name,engine] of engines) {
   // not network idleness, determine when this live document can be refreshed.
   await page.waitForFunction(async()=>(await navigator.serviceWorker.getRegistration('/live/'))?.active?.state==='activated');
   const previousDocument=await page.evaluate(()=>performance.timeOrigin);
+  await waitForApiIdle();
   await page.reload({waitUntil:'domcontentloaded'});
   assert.notEqual(await page.evaluate(()=>performance.timeOrigin),previousDocument,'refresh creates a new document');
   assert.equal(await page.evaluate(()=>performance.getEntriesByType('navigation')[0].type),'reload');
@@ -107,10 +124,12 @@ try {for(const [name,engine] of engines) {
   }
   sessions=[];await refresh();await page.getByRole('heading',{name:'OUT IN THE FIELD.'}).waitFor();await page.getByRole('region',{name:'Recorded Bravo training'}).waitFor();
   await page.setViewportSize({width:390,height:900});
+  await waitForApiIdle();
   await page.goto(`${origin}/portal?program=walking`);await page.locator('.mobile-booking-bar').waitFor();
   assert.ok(await page.evaluate(()=>{const access=document.querySelector('.accessibility-tools').getBoundingClientRect(),nav=document.querySelector('.mobile-home-nav').getBoundingClientRect();return nav.bottom<=innerHeight+1 && access.bottom<nav.top && getComputedStyle(document.querySelector('.mobile-booking-bar')).position==='static';}),'booking action and accessibility clear persistent navigation');
   await page.locator('.mobile-booking-bar a').click();
   assert.equal(new URL(page.url()).hash,'#choose-dates','mobile booking action remains usable');
+  await waitForApiIdle();
   await page.goto(origin,{waitUntil:'networkidle'});await page.emulateMedia({reducedMotion:'reduce'});
   const access=page.getByRole('button',{name:'Accessibility',exact:true});await access.focus();
   assert.ok(await access.evaluate(el=>getComputedStyle(el).outlineStyle!=='none'));
