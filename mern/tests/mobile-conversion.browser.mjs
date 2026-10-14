@@ -55,7 +55,8 @@ try {
     const access = await page.locator('.accessibility-tools').boundingBox(); assert.ok(access.y + access.height <= nav.y, 'accessibility stays above navigation');
     assert.equal(await hero.getAttribute('href'), '/portal?program=training');
     assert.equal(await page.locator('.conversion-goal').count(), 4);
-    assert.ok(await page.evaluate(() => !!(document.querySelector('#reviews').compareDocumentPosition(document.querySelector('.goal-finder')) & Node.DOCUMENT_POSITION_FOLLOWING)), 'keyboard reading order follows mobile visual order');
+    assert.equal(await page.locator('.goal-finder').isVisible(), false, 'no duplicate mobile training selector');
+    assert.equal(await page.locator('.home-training-offer').isVisible(), false, 'one visible standard offer');
     assert.equal(await page.locator('.conversion-goal').filter({hasText:'Aggression'}).getAttribute('href'), '/portal?program=aggression');
     await page.screenshot({ path:`test-results/mobile-first-${engineName}-${width}.png` });
     await page.locator('.conversion-opening').scrollIntoViewIfNeeded();

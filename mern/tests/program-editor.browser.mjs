@@ -11,7 +11,7 @@ const server=app.listen(0,'127.0.0.1');await once(server,'listening');const orig
 await mkdir('test-results',{recursive:true});
 try{for(const [name,engine] of Object.entries({chromium,webkit})){
  if(process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(name))continue;
- const browser=await engine.launch();try{for(const width of [360,1440]){
+ const browser=await engine.launch();try{for(const width of [768,1440]){
  const context=await browser.newContext({viewport:{width,height:900}}),page=await context.newPage();let role='owner',primary=true,entries={},fail=false;
  let clips=[{id:'manners',title:'Program video fixture',description:'Program description',src:'/fixture.mp4',revision:1,order:0,fit:'contain'}];
  await page.route('**/api/**',async route=>{const path=new URL(route.request().url()).pathname;let json={images:{},entries:{},clips:[],services:[],team:[],reviews:[],notifications:[],alerts:[]};

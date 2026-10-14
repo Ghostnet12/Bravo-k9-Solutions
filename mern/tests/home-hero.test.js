@@ -92,7 +92,7 @@ test('Vercel homepage uses the dynamic snapshot and includes its production HTML
   await assert.rejects(access(new URL('../client/dist/index.html', import.meta.url)), { code: 'ENOENT' });
   const source = await readFile(new URL('../client/src/Home.tsx', import.meta.url), 'utf8');
   assert.equal((source.match(/className="home-hero-image"/g) || []).length, 1);
-  assert.ok(source.indexOf('data-site-media-tools') > source.indexOf('home-service-strip'));
+  assert.ok(source.indexOf('data-site-media-tools') > source.indexOf('<MobileDiscovery/>'));
   assert.match(source, /className="home-hero-image"[^>]*loading="lazy" fetchPriority="low"/);
   assert.match(source, /data-site-image-original=\{HOME_HERO_SOURCE\}/);
 });

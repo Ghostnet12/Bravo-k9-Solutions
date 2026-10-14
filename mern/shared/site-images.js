@@ -9,7 +9,7 @@ export function defaultSiteImage(source) { return source; }
 // Explicit photo locations: raster logos and UI artwork must never become
 // editable just because they use an <img> or live in /images.
 const PHOTO_ASSETS = new Set([
-  'bravo-client-training.jpeg', 'hero-bravo-k9.webp', 'hero-bravo-launch.webp', 'training-education.webp',
+  'mobile-bravo-cinematic.webp', 'bravo-client-training.jpeg', 'hero-bravo-k9.webp', 'hero-bravo-launch.webp', 'training-education.webp',
   'protection-training.webp', 'team-trainers.webp', 'tracking-training.webp',
   'david-northrop.webp', 'obedience-real-world.webp', 'service-dog-training.webp',
   'dog-sitting-care.webp', 'ashley-northrop.webp', 'ashley-leverock.webp', 'janet-hughes.webp',

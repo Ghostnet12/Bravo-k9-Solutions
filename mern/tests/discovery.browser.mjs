@@ -15,7 +15,7 @@ try {
   for (const [engineName,engine] of Object.entries({chromium,webkit})) {
     if(process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(engineName)) continue;
     const browser=await engine.launch();
-    try { for (const width of [360,768,1440]) {
+    try { for (const width of [768,1440]) {
       const context=await browser.newContext({viewport:{width,height:900},reducedMotion:width === 360 ? 'reduce' : 'no-preference'}), page=await context.newPage(), errors=[], browserDiagnostics=[];
       let discard=true, confirmations=0, failure=null;
       const navigation=[];

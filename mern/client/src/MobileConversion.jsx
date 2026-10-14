@@ -1,4 +1,4 @@
-import { Children, useEffect, useRef, useSyncExternalStore } from 'react';
+import { Children, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Editable } from './SiteContent';
 import CatalogPrice from './CatalogPrice';
@@ -56,7 +56,7 @@ export function MobileDiscovery() {
       <Editable as="p" contentKey="mobile-discovery-intro" canEditText className="conversion-subtitle">Find the right training plan and book today.</Editable>
       <div className="conversion-goals">{MOBILE_GOALS.map(goal => {
         const enabled = catalog.find(item => item.id === goal.service)?.enabled !== false;
-        return <Editable as={Link} key={goal.id} contentKey={`mobile-goal-${goal.id}`} className="conversion-goal" to={enabled ? goal.href : '/contact'} onClick={() => trackVisit('goal_selected')}>
+        return <Editable as={Link} key={goal.id} contentKey={`mobile-goal-${goal.id}`} className="conversion-goal" data-site-photo-surface="" to={enabled ? goal.href : '/contact'} onClick={() => trackVisit('goal_selected')}>
           <img src={goal.image} alt="" width="480" height="360" loading="lazy"/>
           <div><Editable as="h3" contentKey={`mobile-goal-${goal.id}-title`} canEditText>{goal.title}</Editable><Editable as="p" contentKey={`mobile-goal-${goal.id}-copy`} canEditText>{enabled ? goal.copy : 'Ask Bravo about availability.'}</Editable><span aria-hidden="true" className="conversion-arrow">→</span></div>
         </Editable>;
@@ -84,17 +84,25 @@ export function MobileHomeNav({ staticFallback = false }) {
   const { user } = useBravo();
   const staff = ['owner', 'staff'].includes(user?.role);
   const bookingPath = staff ? '/admin?tab=schedule' : user ? '/schedule' : '/portal?program=training';
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => {
+    const menu = document.querySelector('.app-header .menu-toggle');
+    if (!menu) return;
+    const sync = () => setMenuOpen(menu.getAttribute('aria-expanded') === 'true');
+    const observer = new MutationObserver(sync);
+    observer.observe(menu, { attributes: true, attributeFilter: ['aria-expanded'] });
+    sync(); return () => observer.disconnect();
+  }, [location.pathname, staticFallback]);
   function openMenu() {
     const menu = document.querySelector('.app-header .menu-toggle');
-    if (menu?.getAttribute('aria-expanded') !== 'true') menu?.click();
-    menu?.focus();
+    menu?.click();
   }
   return <nav className="mobile-home-nav mobile-conversion" aria-label="Quick navigation">
     <Link to="/#home-title" aria-label="Home" onClick={event => returnToAnchor(event, 'home-title')}><span aria-hidden="true">⌂</span>Home</Link>
     <Link to={bookingPath} className="mobile-home-book" onClick={() => trackVisit('sticky_booking_clicked')}><span aria-hidden="true">▦</span>{user ? 'Schedule' : 'Book now'}</Link>
     <Link to="/live"><span aria-hidden="true">▷</span>Live cams</Link>
     <Link to="/#client-reviews" onClick={event => returnToAnchor(event, 'client-reviews')}><span aria-hidden="true">☆</span>Reviews</Link>
-    {staticFallback ? <Link to="/contact"><span aria-hidden="true">☰</span>Contact</Link> : <button type="button" onClick={openMenu} aria-controls="bravo-navigation"><span aria-hidden="true">☰</span>More</button>}
+    {staticFallback ? <Link to="/contact"><span aria-hidden="true">☰</span>Contact</Link> : <button type="button" data-navigation-toggle="" onClick={openMenu} aria-expanded={menuOpen} aria-controls="bravo-navigation"><span aria-hidden="true">☰</span>More</button>}
   </nav>;
 }
 export function ConversionFAQ() {

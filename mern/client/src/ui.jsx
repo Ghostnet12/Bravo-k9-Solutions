@@ -35,7 +35,7 @@ export function Header() {
     return () => expanded.removeEventListener('change', closeExpandedMenu);
   }, [user?.id]);
   useEffect(() => {
-    const outside = event => { if (header.current && !header.current.contains(event.target)) { setMenuOpen(false); if (about.current) about.current.open = false; } };
+    const outside = event => { if (header.current && !header.current.contains(event.target) && !event.target.closest('[data-navigation-toggle]')) { setMenuOpen(false); if (about.current) about.current.open = false; } };
     document.addEventListener('pointerdown', outside);
     return () => document.removeEventListener('pointerdown', outside);
   }, []);
