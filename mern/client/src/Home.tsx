@@ -81,8 +81,8 @@ export default function Home() {
         <div className="cinema-hero-baseline cinema-shell"><Editable as="span" contentKey="copy-home-4" canEditText>REAL DOGS. REAL LIFE. BRAVO.</Editable><Editable as="a" contentKey="copy-home-5" canEditText canEditLink href="#method" aria-label="Discover the Bravo approach">SCROLL TO DISCOVER <span aria-hidden="true">↓</span></Editable></div>
       </section>
       <ConversionTrust/>
-      {compact && <div className="home-live-status cinema-shell"><LiveBanner/></div>}
       <HomeBanner/>
+      {compact && <div className="home-live-status cinema-shell"><LiveBanner/></div>}
       <div id="training" className="home-primary-training"><MobileDiscovery/><GoalFinder/></div>
       <div className="cinema-shell site-media-tools-slot site-media-tools-slot--home" data-site-media-tools=""/>
 
