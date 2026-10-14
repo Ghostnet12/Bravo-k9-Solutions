@@ -23,6 +23,7 @@ export default function SiteSoundtrack() {
     const shouldPlay = () => enabled.current && !document.hidden && ready && !liveRoute.current && !focus && !media.size && tracks.length > failed.size;
     const attempt = () => {
       if (!active) return;
+      for (const item of media) if (!item.isConnected || item.paused || item.ended) media.delete(item);
       if (!shouldPlay()) { element.pause(); status(); return; }
       if (element.getAttribute('src') !== tracks[index].src) { element.src = tracks[index].src; element.load(); }
       element.play().then(status).catch(status);

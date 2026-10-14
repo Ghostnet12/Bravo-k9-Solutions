@@ -6,6 +6,12 @@ import { fileURLToPath } from 'node:url';
 import { chromium, webkit } from 'playwright';
 import { SERVICES } from '../shared/catalog.js';
 import { DEFAULT_MUSIC } from '../shared/music-playlist.js';
+// PCM fixture avoids depending on AAC support in the open-source Linux browser.
+const audioFixture = Buffer.alloc(44 + 8000 * 2 * 30);
+audioFixture.write('RIFF'); audioFixture.writeUInt32LE(audioFixture.length - 8, 4); audioFixture.write('WAVEfmt ', 8);
+audioFixture.writeUInt32LE(16, 16); audioFixture.writeUInt16LE(1, 20); audioFixture.writeUInt16LE(1, 22);
+audioFixture.writeUInt32LE(8000, 24); audioFixture.writeUInt32LE(16000, 28); audioFixture.writeUInt16LE(2, 32); audioFixture.writeUInt16LE(16, 34);
+audioFixture.write('data', 36); audioFixture.writeUInt32LE(audioFixture.length - 44, 40);
 const dist = fileURLToPath(new URL('../client/dist/', import.meta.url));
 const html = await readFile(`${dist}/bravo-shell.html`, 'utf8');
 const app = express(); app.use(express.static(dist)); app.get('/{*path}', (_req,res) => res.type('html').send(html));
@@ -22,6 +28,7 @@ try {
     const context = await browser.newContext({viewport:{width,height}}), page = await context.newPage();
     page.on('pageerror', e => console.log('PAGE ERROR', e.message));
     let playlist = structuredClone(DEFAULT_MUSIC), uploads=0, chunks=0;
+    await page.route('**/audio/built-for-the-real-world.m4a', route => route.fulfill({ contentType: 'audio/wav', body: audioFixture }));
     await page.route('**/api/**',async route => {
      const path = new URL(route.request().url()).pathname; let json={};
      if(path==='/api/config') json={connected:true,services:SERVICES,schedule:{enabled:true,weekdays:[1,2,3,4,5],hours:['10:00']}};
@@ -61,6 +68,10 @@ try {
      await dialog.getByRole('button',{name:'Remove holiday',exact:true}).click();
      await dialog.getByRole('button',{name:'Publish playlist'}).click();await dialog.waitFor({state:'hidden'});assert.equal(playlist.tracks.length,1);
      await page.getByRole('button',{name:'Mute music',exact:true}).click();assert.equal(await page.locator('[data-site-soundtrack]').evaluate(el=>el.muted),true);
+     if (await page.locator('[data-site-soundtrack]').evaluate(el=>el.paused)) await page.getByRole('button',{name:'Enable Music',exact:true}).click();
+     await page.waitForFunction(()=>!document.querySelector('[data-site-soundtrack]').paused);
+     await page.getByRole('button',{name:'Pause music',exact:true}).click();
+     assert.equal(await page.locator('[data-site-soundtrack]').evaluate(el=>el.paused),true);
      await page.getByRole('button',{name:'Close accessibility options'}).click();
      await page.locator('[data-site-soundtrack]').evaluate(el=>el.dataset.testIdentity='same');
      await book.click();await page.waitForURL('**/portal?program=training');
