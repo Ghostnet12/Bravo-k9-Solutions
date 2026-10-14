@@ -4,12 +4,13 @@ import { chromium, webkit } from 'playwright';
 import { once } from 'node:events';
 import app from '../server/app.js';
 import { SERVICES } from '../shared/catalog.js';
+import { DEFAULT_REVIEWS } from '../shared/reviews.js';
 const server=app.listen(0,'127.0.0.1');await once(server,'listening');
 const origin=`http://127.0.0.1:${server.address().port}`;
 try {for(const [name,engine] of Object.entries({chromium,webkit})) {
  if(process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(name))continue;
  const browser=await engine.launch();
- try {for(const mode of ['normal-navigation','immediate-notes-entry']) {
+ try {for(const mode of ['normal-navigation','immediate-notes-entry','review-link-focus']) {
   const context=await browser.newContext({viewport:{width:390,height:844}}),page=await context.newPage(),errors=[];
   page.on('pageerror',error=>errors.push(error.message));
   await context.addInitScript(()=>{
@@ -28,6 +29,7 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
    const url=new URL(route.request().url());if(url.origin!==origin)return route.abort();if(!url.pathname.startsWith('/api/'))return route.continue();
    let json={items:[],entries:{},images:{},clips:[],alerts:[],ads:[],team:[],reviews:[],services:[]};
    if(url.pathname==='/api/config')json={connected:true,paymentsReady:false,services:SERVICES};
+   if(url.pathname==='/api/reviews')json={reviews:[],recommendations:DEFAULT_REVIEWS,count:0,average:0};
    if(url.pathname==='/api/auth/me')json={user:null,services:[],membership:{active:false}};
    if(url.pathname==='/api/live')json={sessions:[],announcements:[],availability:'available',serverTime:new Date().toISOString()};
    await route.fulfill({json});
@@ -39,6 +41,16 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
    if(mode==='normal-navigation') {
     assert.equal(await page.evaluate(()=>window.flushRouteFocus()),1);
     assert.equal(await page.evaluate(()=>document.activeElement.id),'main-content','ordinary navigation still announces the page');
+   } else if (mode==='review-link-focus') {
+    await page.evaluate(()=>window.flushRouteFocus());
+    const reviews=page.locator('.mobile-home-nav').getByRole('link',{name:'Reviews',exact:true});
+    await reviews.click();
+    await page.waitForFunction(()=>location.hash==='#client-reviews' && window.routeFocusTimersSeen>1);
+    // Mobile link focus may arrive after React has committed the destination.
+    await reviews.evaluate(el=>el.dispatchEvent(new FocusEvent('focusin',{bubbles:true})));
+    await page.evaluate(()=>window.flushRouteFocus());
+    await page.waitForFunction(()=>{const top=document.getElementById('client-reviews')?.getBoundingClientRect().top;return top>=74 && top<150;}).catch(async error=>{console.log(await page.evaluate(()=>({top:document.getElementById('client-reviews')?.getBoundingClientRect().top,height:document.getElementById('client-reviews')?.getBoundingClientRect().height,scroll:scrollY,focus:document.activeElement.outerHTML.slice(0,200)})));throw error;});
+    assert.equal(await page.evaluate(()=>location.hash),'#client-reviews','one tap reaches reviews');
    } else {
     await notes.focus();
     await page.evaluate(()=>window.flushRouteFocus());
