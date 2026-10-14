@@ -133,9 +133,9 @@
 
 /* A single training destination and consistent, compact editorial rhythm. */
 .cinema-home #training.home-primary-training{scroll-margin-top:24px}
-.cinema-home.conversion-home :is(h2,h3){font-family:'Bebas Neue',sans-serif;font-weight:400;letter-spacing:.025em;line-height:1.08}
-.cinema-home.conversion-home h2{font-size:clamp(36px,4.5vw,64px)}
-.cinema-home.conversion-home h3{font-size:clamp(25px,2.8vw,36px)}
+.cinema-home.conversion-home main :is(h2,h3){font-family:'Bebas Neue',sans-serif;font-weight:400;letter-spacing:.025em;line-height:1.08}
+.cinema-home.conversion-home main h2{font-size:clamp(36px,4.5vw,64px)}
+.cinema-home.conversion-home main h3{font-size:clamp(25px,2.8vw,36px)}
 .cinema-home.conversion-home :is(.cinema-intro,.cinema-programs,.cinema-proof,.cinema-team,.cinema-events,.cinema-online,.cinema-close,.cinema-dogs){padding-block:56px}
 .cinema-home.conversion-home .goal-finder{padding-block:36px}
 .cinema-home.conversion-home .cinema-section-heading{margin-bottom:28px}
@@ -147,4 +147,8 @@
  .cinema-home.conversion-home .conversion-offer h2{font-size:22px}
  .cinema-home.conversion-home .conversion-goal h3{font-size:21px}
  .cinema-home.conversion-home .home-fci{margin-block:16px}
+}
+
+@media(max-width:700px){
+ .cinema-home.conversion-home #main-content>#training.home-primary-training{order:3}
 }
