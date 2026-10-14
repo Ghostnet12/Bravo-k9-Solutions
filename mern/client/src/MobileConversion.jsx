@@ -1,5 +1,5 @@
 import { Children, useEffect, useRef, useSyncExternalStore } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Editable } from './SiteContent';
 import CatalogPrice from './CatalogPrice';
 import { useBravo } from './context';
@@ -75,6 +75,12 @@ export function MobileDiscovery() {
   </section>;
 }
 export function MobileHomeNav() {
+  const location = useLocation();
+  function returnToAnchor(event, id) {
+    if (location.pathname !== '/' || location.hash !== `#${id}`) return;
+    const target = document.getElementById(id);
+    if (target) { event.preventDefault(); target.scrollIntoView({ behavior: 'instant' }); target.focus({ preventScroll: true }); }
+  }
   const { user } = useBravo();
   const staff = ['owner', 'staff'].includes(user?.role);
   const bookingPath = staff ? '/admin?tab=schedule' : user ? '/schedule' : '/portal?program=training';
@@ -84,10 +90,10 @@ export function MobileHomeNav() {
     menu?.focus();
   }
   return <nav className="mobile-home-nav mobile-conversion" aria-label="Quick navigation">
-    <Link to="/#home-title" aria-label="Home"><span aria-hidden="true">⌂</span>Home</Link>
+    <Link to="/#home-title" aria-label="Home" onClick={event => returnToAnchor(event, 'home-title')}><span aria-hidden="true">⌂</span>Home</Link>
     <Link to={bookingPath} className="mobile-home-book" onClick={() => trackVisit('sticky_booking_clicked')}><span aria-hidden="true">▦</span>{user ? 'Schedule' : 'Book now'}</Link>
     <Link to="/live"><span aria-hidden="true">▷</span>Live cams</Link>
-    <Link to="/#client-reviews"><span aria-hidden="true">☆</span>Reviews</Link>
+    <Link to="/#client-reviews" onClick={event => returnToAnchor(event, 'client-reviews')}><span aria-hidden="true">☆</span>Reviews</Link>
     <button type="button" onClick={openMenu} aria-controls="bravo-navigation"><span aria-hidden="true">☰</span>More</button>
   </nav>;
 }

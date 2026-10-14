@@ -90,6 +90,11 @@ try {
     await page.locator('.mobile-home-nav').getByRole('link',{name:'Reviews',exact:true}).click();
     await page.waitForFunction(()=>{const r=document.querySelector('#client-reviews')?.getBoundingClientRect();return r && r.top>=74 && r.top<150;});
    }
+   if (width === 390) {
+    await page.evaluate(()=>scrollTo(0,0));
+    await page.locator('.mobile-home-nav').getByRole('link',{name:'Reviews',exact:true}).click();
+    await page.waitForFunction(()=>{const r=document.querySelector('#client-reviews')?.getBoundingClientRect();return r && r.top>=74 && r.top<150;});
+   }
    assert.equal(await page.locator('.cinema-hero video').count(),0,'hero remains image-only');
    assert.deepEqual(errors, []); await page.close();
   }} finally { await browser.close(); }
