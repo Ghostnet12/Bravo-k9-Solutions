@@ -15,13 +15,11 @@ const subscribeCompact = notify => {
 const compactSnapshot = () => matchMedia(compactQuery).matches;
 const serverSnapshot = () => false;
 export const useCompactLayout = () => useSyncExternalStore(subscribeCompact, compactSnapshot, serverSnapshot);
-const mobileSectionOrder = ['reviews', 'team', 'method', 'goals', 'training', 'story', 'dogs', 'workshops', 'fci', 'online'];
-// Keep keyboard and screen-reader order aligned with the mobile visual order.
-// Stable React keys preserve each section's media and editor state when resizing.
+const homeSectionOrder = ['method', 'results', 'reviews', 'team', 'training', 'story', 'dogs', 'workshops', 'fci', 'online'];
+// One reading order for every viewport, including the server-rendered page.
+// Stable keys preserve media and editor state when the viewport changes.
 export function HomeSectionOrder({ children }) {
-  const compact = useSyncExternalStore(subscribeCompact, compactSnapshot, serverSnapshot);
-  const sections = Children.toArray(children);
-  return compact ? sections.sort((a, b) => mobileSectionOrder.indexOf(a.key.split('$').at(-1)) - mobileSectionOrder.indexOf(b.key.split('$').at(-1))) : sections;
+  return Children.toArray(children).sort((a, b) => homeSectionOrder.indexOf(a.key.split('$').at(-1)) - homeSectionOrder.indexOf(b.key.split('$').at(-1)));
 }
 export const MOBILE_GOALS = [
   { id: 'manners', title: 'Pulling & jumping', copy: 'Everyday obedience and better control.', image: '/images/obedience-real-world.webp', href: '/portal?program=training&focus=basic-obedience', service: 'training' },
@@ -38,7 +36,7 @@ const trustIcons = [
 export function ConversionTrust() {
   return <div className="conversion-trust mobile-conversion" aria-label="The Bravo approach">{[['All breeds','All ages'],['Real-world','Environments'],['Professional','Trainers'],['See our','Results']].map(([a,b],index)=><div key={a}><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">{trustIcons[index]}</svg><strong>{a}<br/>{b}</strong></div>)}</div>;
 }
-export function MobileDiscovery() {
+export function TrainingOffer() {
   const { config } = useBravo();
   const catalog = config?.services?.length ? config.services : SERVICES;
   const training = catalog.find(item => item.id === 'training');
@@ -47,11 +45,26 @@ export function MobileDiscovery() {
     const target = offer.current;
     if (!target) return;
     const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && matchMedia('(max-width: 700px)').matches) trackVisit('pricing_viewed');
+      if (entry.isIntersecting) trackVisit('pricing_viewed');
     }, { threshold: .4 });
     observer.observe(target); return () => observer.disconnect();
   }, []);
-  return <section className="mobile-conversion conversion-opening" aria-labelledby="conversion-goal-title">
+  return <div className="conversion-opening cinema-shell">
+    <Editable as="section" contentKey="mobile-training-offer" ref={offer} className="conversion-offer" aria-labelledby="conversion-price-title" data-site-service="training">
+      <div className="conversion-offer-copy">
+        <Editable as="h2" contentKey="mobile-training-heading" canEditText id="conversion-price-title">Private dog training</Editable>
+        <p className="conversion-price"><CatalogPrice/><span> / month</span></p>
+        <ul>{['Personalized training','Up to one hour per scheduled training day','Monday through Friday','Up to five training visits per week','Client-selected scheduling, subject to availability','Training in real-world environments','Bravo comes to you','Manual monthly renewal'].map((term,index)=><Editable as="li" key={term} contentKey={`mobile-training-term-${index}`} canEditText>{term}</Editable>)}</ul>
+        <details className="conversion-catalog-terms"><summary>Current program terms</summary><p>{training?.description}</p><p>One dog. Additional dogs: <CatalogPrice field="additionalDogCents"/>/month each. Aggression assessments and specialist programs are separate.</p></details>
+        <Editable as={Link} contentKey="mobile-training-start" canEditText canEditLink className="conversion-button" to={training?.enabled === false ? '/contact' : '/portal?program=training'} onClick={() => trackVisit('pricing_booking_clicked')}>{training?.enabled === false ? 'Ask about training' : 'Start my training plan'} <span aria-hidden="true">→</span></Editable>
+      </div>
+    </Editable>
+  </div>;
+}
+export function MobileDiscovery() {
+  const { config } = useBravo();
+  const catalog = config?.services?.length ? config.services : SERVICES;
+  return <section className="mobile-conversion" aria-labelledby="conversion-goal-title">
     <div className="conversion-discovery">
       <Editable as="h2" contentKey="mobile-discovery-title" canEditText id="conversion-goal-title">What does your dog struggle with?</Editable>
       <Editable as="p" contentKey="mobile-discovery-intro" canEditText className="conversion-subtitle">Find the right training plan and book today.</Editable>
@@ -64,15 +77,6 @@ export function MobileDiscovery() {
       })}</div>
       <Editable as={Link} contentKey="mobile-not-sure" canEditText canEditLink className="conversion-talk" to="/contact">Not sure? Talk to Bravo. <span aria-hidden="true">→</span></Editable>
     </div>
-    <Editable as="section" contentKey="mobile-training-offer" ref={offer} className="conversion-offer" aria-labelledby="conversion-price-title" data-site-service="training">
-      <div className="conversion-offer-copy">
-        <Editable as="h2" contentKey="mobile-training-heading" canEditText id="conversion-price-title">Private dog training</Editable>
-        <p className="conversion-price"><CatalogPrice/><span> / month</span></p>
-        <ul>{['Personalized training','Up to one hour per scheduled training day','Monday through Friday','Up to five training visits per week','Client-selected scheduling, subject to availability','Training in real-world environments','Bravo comes to you','Manual monthly renewal'].map((term,index)=><Editable as="li" key={term} contentKey={`mobile-training-term-${index}`} canEditText>{term}</Editable>)}</ul>
-        <details className="conversion-catalog-terms"><summary>Current program terms</summary><p>{training?.description}</p><p>One dog. Additional dogs: <CatalogPrice field="additionalDogCents"/>/month each. Aggression assessments and specialist programs are separate.</p></details>
-        <Editable as={Link} contentKey="mobile-training-start" canEditText canEditLink className="conversion-button" to={training?.enabled === false ? '/contact' : '/portal?program=training'} onClick={() => trackVisit('pricing_booking_clicked')}>{training?.enabled === false ? 'Ask about training' : 'Start my training plan'} <span aria-hidden="true">→</span></Editable>
-      </div>
-    </Editable>
   </section>;
 }
 export function MobileHomeNav({ staticFallback = false }) {

@@ -37,6 +37,7 @@ test('published public prices render before JavaScript, with a minimal safe cata
 test('public trainer rename preserves portrait key, real staff IDs and the joint trainer option',()=>{
  const david={id:'111111111111111111111111',name:'David Northrop'},ashley={id:'222222222222222222222222',name:'Ashley Northrop',publicName:'Ashley Example',publicProfileRevision:1};
  const before=publicTrainerProfile({...ashley,publicName:undefined}),after=publicTrainerProfile(ashley);
+ assert.equal(publicTrainerProfile({...ashley,publicName:'Ashley Northrop'}).name,'Ashley Leverock');
  assert.equal(before.imageKey,after.imageKey);assert.equal(before.image,after.image);assert.equal(after.name,'Ashley Example');assert.equal(after.id,ashley.id);
  assert.equal(trainerOptions([publicTrainerProfile(david),after]).find(row=>row.joint).disabled,false);
  const choices=trainerOptions([david,ashley]);assert.equal(choices.find(row=>row.joint).disabled,false);assert.equal(choices.find(row=>row.id===ashley.id).name,'Ashley Example');

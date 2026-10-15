@@ -2,7 +2,8 @@ import { DEFAULT_REVIEWS } from '../shared/reviews.js';
 import assert from 'node:assert/strict';
 import express from 'express';
 import { once } from 'node:events';
-import { readFile, mkdir } from 'node:fs/promises';
+import axe from 'axe-core';
+import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { chromium, webkit } from 'playwright';
 import { SERVICES } from '../shared/catalog.js';
@@ -44,6 +45,20 @@ try {
    const page = await browser.newPage({ viewport: { width, height: 844 }, reducedMotion: 'reduce' });
    const errors = []; page.on('pageerror', error => errors.push(error.message));
    await page.goto(origin, { waitUntil: 'networkidle' });
+   const readingOrder = await page.evaluate(() => ['training','method','results','reviews','team','training-programs','workshops'].map(id=>({id,top:document.getElementById(id).getBoundingClientRect().top})));
+   assert.deepEqual([...readingOrder].sort((a,b)=>a.top-b.top),readingOrder,'same visual and reading order on every screen');
+   assert.equal(await page.locator('.conversion-offer').count(),1,'one primary membership offer');
+   assert.ok(await page.locator('.conversion-price').isVisible());
+   assert.equal(await page.locator('#results .home-results-actions .cinema-button').getAttribute('href'),'/portal?program=training');
+   if (engineName === 'chromium' && [390,1440].includes(width)) {
+     await page.addScriptTag({content:axe.source});
+     const audit=await page.evaluate(async()=>await axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa','wcag22aa']}}));
+     await writeFile(`test-results/accessibility-${width}.json`,JSON.stringify(audit,null,2));
+     console.log('Accessibility',width,JSON.stringify(audit.violations.map(item=>({id:item.id,impact:item.impact,nodes:item.nodes.map(node=>node.target)}))));
+     const changedAudit=await page.evaluate(async()=>await axe.run({include:['#training','#results','#team']},{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa','wcag22aa']}}));
+     assert.deepEqual(changedAudit.violations.filter(item=>['critical','serious'].includes(item.impact)).map(item=>({id:item.id,targets:item.nodes.map(node=>node.target)})),[],'changed sections have no serious or critical automated accessibility violations');
+     await page.screenshot({path:`test-results/optimization-full-${width}.png`,fullPage:true});
+   }
    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${engineName}-${width} overflow`);
    if (width <= 700) {
     assert.ok(await page.locator('.brand-lockup').first().isVisible());
@@ -56,7 +71,7 @@ try {
     assert.equal(await hero.getAttribute('href'), '/portal?program=training');
     assert.equal(await page.locator('.conversion-goal').count(), 4);
     assert.equal(await page.locator('.goal-finder').isVisible(), false, 'no duplicate mobile training selector');
-    assert.equal(await page.locator('.home-training-offer').isVisible(), false, 'one visible standard offer');
+    assert.equal(await page.locator('.home-training-offer').count(), 0, 'one visible standard offer');
     assert.equal(await page.locator('.conversion-goal').filter({hasText:'Aggression'}).getAttribute('href'), '/portal?program=aggression');
     await page.screenshot({ path:`test-results/mobile-first-${engineName}-${width}.png` });
     await page.locator('.conversion-opening').scrollIntoViewIfNeeded();

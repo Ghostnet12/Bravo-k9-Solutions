@@ -10,7 +10,7 @@ test('homepage tells the requested story while preserving proof and booking', as
   assert.match(source, /Verified Bravo account/);
   assert.match(source, /We train where life happens/);
   assert.match(source, /href="\/portal\?program=training"/);
-  assert.match(source, /Start with private training/);
+  assert.match(source, /Start training with Bravo/);
   assert.equal((source.match(/id="reviews"/g) || []).length, 1);
   assert.match(source, /<ProofVideoCarousel\/>/);
 });

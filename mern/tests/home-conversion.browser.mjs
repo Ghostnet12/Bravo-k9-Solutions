@@ -97,7 +97,7 @@ try {
         }
         assert.equal(await page.locator('#team').getByText('David Northrop', { exact: true }).count(), 1);
         assert.ok((await page.locator(width === 390 ? '.conversion-offer .conversion-button' : '.goal-result .goal-actions .button').getAttribute('href')).startsWith('/portal?program=training'));
-        assert.equal(await page.locator('.home-training-offer').isVisible(), false, 'no repeated standard offer');
+        assert.equal(await page.locator('.home-training-offer').count(), 0, 'no repeated standard offer');
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${engineName}-${width}: homepage overflow`);
         assert.deepEqual(errors, [], `${engineName}-${width}: homepage runtime errors`);
         await page.screenshot({ path: `test-results/home-conversion-${engineName}-${width}.png`, fullPage: true });
