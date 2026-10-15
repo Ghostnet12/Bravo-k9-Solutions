@@ -43,3 +43,5 @@
 @media(prefers-reduced-motion:reduce){.cinema-home.conversion-home .cinema-story{height:auto;min-height:0}}
 .access-reduced-motion .cinema-home.conversion-home .cinema-story{height:auto;min-height:0}
 @media(forced-colors:active){.conversion-offer,.cinema-team-grid>article{border:1px solid CanvasText}}
+
+.hero-photo-window:focus-visible,.home-proof-reviews:focus-visible{outline:3px solid #e1c99d;outline-offset:-3px}

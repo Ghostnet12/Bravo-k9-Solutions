@@ -58,7 +58,7 @@ try {
       await page.goto(origin,{waitUntil:'networkidle'});
       await page.locator('.cinema-hero-still').evaluate(img=>img.decode());
       await page.evaluate(()=>new Promise(resolve=>setTimeout(resolve,1000)));
-      const initial=await page.evaluate(()=>({...window.labVitals,bytes:performance.getEntriesByType('resource').reduce((n,r)=>n+r.transferSize,0)}));
+      const initial=await page.evaluate(()=>({...window.labVitals,documentHeight:document.documentElement.scrollHeight,bytes:performance.getEntriesByType('resource').reduce((n,r)=>n+r.transferSize,0)}));
       await page.locator('.polish-hero-actions').getByRole('link',{name:/Explore training/i}).click();
       await page.locator('#training').waitFor();
       if(width===390) {
@@ -69,14 +69,14 @@ try {
       await page.evaluate(()=>new Promise(resolve=>setTimeout(resolve,1000)));
       const interactions=await page.evaluate(()=>window.labVitals);
       assert.ok(initial.lcp>0,'LCP measurement exists');
-      results.push({width,run,lcpMs:Math.round(initial.lcp),cls:initial.cls,initialTransferBytes:initial.bytes,initialBlockingMs:Math.round(initial.longTaskMs),sampledMaxInteractionMs:interactions.maxInteraction});
+      results.push({width,run,lcpMs:Math.round(initial.lcp),cls:initial.cls,initialTransferBytes:initial.bytes,documentHeight:initial.documentHeight,initialBlockingMs:Math.round(initial.longTaskMs),sampledMaxInteractionMs:interactions.maxInteraction});
       await context.close();
     }
   }
   const summary=[390,1440].map(width=>{
     const samples=results.filter(r=>r.width===width);
     const median=key=>samples.map(r=>r[key]).sort((a,b)=>a-b)[1];
-    return {width,lcpMs:median('lcpMs'),cls:median('cls'),initialTransferBytes:median('initialTransferBytes'),initialBlockingMs:median('initialBlockingMs'),sampledMaxInteractionMs:median('sampledMaxInteractionMs')};
+    return {width,lcpMs:median('lcpMs'),cls:median('cls'),initialTransferBytes:median('initialTransferBytes'),documentHeight:median('documentHeight'),initialBlockingMs:median('initialBlockingMs'),sampledMaxInteractionMs:median('sampledMaxInteractionMs')};
   });
   const report={label,conditions:'390px: 4x CPU, 150ms RTT, 1.6Mbps. 1440px: unthrottled. Median of three fresh contexts. Same fixtures, external requests blocked. Sampled interaction latency is not field INP.',summary,samples:results};
   await writeFile(`test-results/performance-${label}.json`,JSON.stringify(report,null,2));

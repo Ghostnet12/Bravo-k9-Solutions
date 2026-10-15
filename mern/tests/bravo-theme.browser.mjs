@@ -78,7 +78,7 @@ try {
             assert.equal(await page.locator('.cinema-film video').count(), 0);
             assert.equal(await page.locator('.cinema-film-controls').count(), 0, 'hero has no public playback buttons');
             for (const selector of ['.conversion-offer', '.cinema-team', '.cinema-events', '.cinema-learning-caption', '.bravo-footer']) await darkSurface(page.locator(selector), selector);
-            const headingColor = await page.locator('.cinema-program-copy h3').evaluate(el => getComputedStyle(el).color.match(/\d+/g).map(Number));
+            const headingColor = await page.locator('.conversion-offer h2').evaluate(el => getComputedStyle(el).color.match(/\d+/g).map(Number));
             assert.ok(Math.min(...headingColor) > 150, 'training headline remains readable on the dark card');
             if (width === 390) {
               await page.getByRole('button', { name: 'Menu', exact: true }).click();

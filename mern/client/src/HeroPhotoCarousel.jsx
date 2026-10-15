@@ -176,7 +176,7 @@ export default function HeroPhotoCarousel({ children }) {
     onTouchCancel={() => { setTouching(false); setInteraction(value => value + 1); }}
     onPointerLeave={event => { cancelHold(); if (event.pointerType !== 'touch') setTouching(false); }}
     onContextMenu={event => { if (canEdit) event.preventDefault(); }}>
-    <div ref={viewport} className="hero-photo-window" onScroll={onScroll}><div className="hero-photo-track">
+    <div ref={viewport} className="hero-photo-window" role="group" aria-label="Scrollable trainer photos" tabIndex={0} onScroll={onScroll}><div className="hero-photo-track">
       <div className="hero-photo-slide" aria-hidden={index !== 0} inert={index !== 0}>{children}</div>
       {settings.photos.map((key, i) => { const item = photo(key); return <div key={key} className="hero-photo-slide" aria-hidden={index !== i + 1} inert={index !== i + 1}>{heroVideoId(key) ? <HeroVideo clip={videos[heroVideoId(key)]} active={index === i + 1 && inView && !open && !editingVideo} paused={paused || reduced || touching || scrolling} onEnded={() => { if (!touching && !scrolling) advance(); }}/> : <img className="hero-carousel-image" src={item.src} alt={item.alt} width="828" height="1121" loading={i + 1 === index || i + 1 === (index + 1) % keys.length ? "eager" : "lazy"} data-site-image-key={key} data-site-image-original={HERO_PHOTO_DEFAULTS[key]?.src || item.src} style={images[key]?.framed ? framingStyle(images[key]) : undefined}/>}</div>; })}
     </div></div>

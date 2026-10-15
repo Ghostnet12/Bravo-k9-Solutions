@@ -55,9 +55,15 @@ try {
      const audit=await page.evaluate(async()=>await axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa','wcag22aa']}}));
      await writeFile(`test-results/accessibility-${width}.json`,JSON.stringify(audit,null,2));
      console.log('Accessibility',width,JSON.stringify(audit.violations.map(item=>({id:item.id,impact:item.impact,nodes:item.nodes.map(node=>node.target)}))));
-     const changedAudit=await page.evaluate(async()=>await axe.run({include:['#training','#results','#team']},{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa','wcag22aa']}}));
+     const changedAudit=await page.evaluate(async()=>await axe.run({include:['#training','#results','#reviews','#team','.hero-photo-window']},{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa','wcag22aa']}}));
      assert.deepEqual(changedAudit.violations.filter(item=>['critical','serious'].includes(item.impact)).map(item=>({id:item.id,targets:item.nodes.map(node=>node.target)})),[],'changed sections have no serious or critical automated accessibility violations');
      await page.screenshot({path:`test-results/optimization-full-${width}.png`,fullPage:true});
+     for (const id of ['training','results','reviews','team']) {
+       await page.locator(`#${id}`).scrollIntoViewIfNeeded();
+       await page.locator(`#${id} img`).evaluateAll(images=>Promise.all(images.map(img=>img.decode().catch(()=>{}))));
+       await page.screenshot({path:`test-results/optimization-${id}-${width}.png`});
+     }
+     await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));
    }
    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${engineName}-${width} overflow`);
    if (width <= 700) {
