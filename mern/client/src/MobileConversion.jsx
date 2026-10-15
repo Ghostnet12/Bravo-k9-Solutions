@@ -55,8 +55,8 @@ export function TrainingOffer() {
         <Editable as="h2" contentKey="mobile-training-heading" canEditText id="conversion-price-title">Private dog training</Editable>
         <p className="conversion-price"><CatalogPrice/><span> / month</span></p>
         <ul>{['Personalized training','Up to one hour per scheduled training day','Monday through Friday','Up to five training visits per week','Client-selected scheduling, subject to availability','Training in real-world environments','Bravo comes to you','Manual monthly renewal'].map((term,index)=><Editable as="li" key={term} contentKey={`mobile-training-term-${index}`} canEditText>{term}</Editable>)}</ul>
-        <details className="conversion-catalog-terms"><summary>Current program terms</summary><p>{training?.description}</p><p>One dog. Additional dogs: <CatalogPrice field="additionalDogCents"/>/month each. Aggression assessments and specialist programs are separate.</p></details>
         <Editable as={Link} contentKey="mobile-training-start" canEditText canEditLink className="conversion-button" to={training?.enabled === false ? '/contact' : '/portal?program=training'} onClick={() => trackVisit('pricing_booking_clicked')}>{training?.enabled === false ? 'Ask about training' : 'Start my training plan'} <span aria-hidden="true">→</span></Editable>
+        <details className="conversion-catalog-terms"><summary>Current program terms</summary><p>{training?.description}</p><p>One dog. Additional dogs: <CatalogPrice field="additionalDogCents"/>/month each. Aggression assessments and specialist programs are separate.</p></details>
       </div>
     </Editable>
   </div>;
