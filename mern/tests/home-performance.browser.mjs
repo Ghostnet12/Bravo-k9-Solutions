@@ -2,8 +2,9 @@
 // Both revisions receive identical public fixtures and never contact MongoDB.
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { gzipSync } from 'node:zlib';
 import express from 'express';
 import { chromium } from 'playwright';
 import { SERVICES } from '../shared/catalog.js';
@@ -23,6 +24,18 @@ app.get('/api/site-images', (_req,res)=>res.json({images:{}}));
 app.get('/api/site-content', (_req,res)=>res.json({entries:{}}));
 app.get('/api/team/schedules', (_req,res)=>res.json({schedules:[]}));
 app.use('/api', (_req,res)=>res.json({sessions:[],events:[],clips:[],settings:{},ads:[],revision:0}));
+// Match CDN text compression for both revisions, instead of measuring raw JS/CSS.
+const compressed = new Map();
+for (const directory of ['assets','fonts']) for (const file of await readdir(path.join(dist,directory))) {
+  if (!/\.(js|css|ttf)$/.test(file)) continue;
+  const type=file.endsWith('.js') ? 'text/javascript' : file.endsWith('.css') ? 'text/css' : 'font/ttf';
+  compressed.set(`/${directory}/${file}`,{type,body:gzipSync(await readFile(path.join(dist,directory,file)))});
+}
+app.use((req,res,next)=>{
+  const asset=compressed.get(req.path);
+  if (!asset || !req.acceptsEncodings('gzip')) return next();
+  res.set('Content-Encoding','gzip').set('Vary','Accept-Encoding').type(asset.type).send(asset.body);
+});
 app.use(express.static(dist));
 app.get('/{*path}', (_req,res)=>res.type('html').send(html));
 const server=app.listen(0,'127.0.0.1'); await once(server,'listening');
@@ -46,7 +59,7 @@ try {
       await page.addInitScript(()=>{
         window.labVitals={lcp:0,cls:0,maxInteraction:0,longTaskMs:0};
         let sessionStart=0,lastShift=0,sessionValue=0;
-        new PerformanceObserver(list=>{for(const e of list.getEntries()) window.labVitals.lcp=e.startTime;}).observe({type:'largest-contentful-paint',buffered:true});
+        new PerformanceObserver(list=>{for(const e of list.getEntries()) { window.labVitals.lcp=e.startTime; window.labVitals.lcpElement=e.element?.className || e.element?.tagName; }}).observe({type:'largest-contentful-paint',buffered:true});
         new PerformanceObserver(list=>{for(const e of list.getEntries()) {
           if(e.hadRecentInput) continue;
           if(e.startTime-lastShift>1000 || e.startTime-sessionStart>5000) {sessionStart=e.startTime;sessionValue=0;}
@@ -69,7 +82,7 @@ try {
       await page.evaluate(()=>new Promise(resolve=>setTimeout(resolve,1000)));
       const interactions=await page.evaluate(()=>window.labVitals);
       assert.ok(initial.lcp>0,'LCP measurement exists');
-      results.push({width,run,lcpMs:Math.round(initial.lcp),cls:initial.cls,initialTransferBytes:initial.bytes,documentHeight:initial.documentHeight,initialBlockingMs:Math.round(initial.longTaskMs),sampledMaxInteractionMs:interactions.maxInteraction});
+      results.push({width,run,lcpMs:Math.round(initial.lcp),lcpElement:initial.lcpElement,cls:initial.cls,initialTransferBytes:initial.bytes,documentHeight:initial.documentHeight,initialBlockingMs:Math.round(initial.longTaskMs),sampledMaxInteractionMs:interactions.maxInteraction});
       await context.close();
     }
   }
@@ -78,7 +91,7 @@ try {
     const median=key=>samples.map(r=>r[key]).sort((a,b)=>a-b)[1];
     return {width,lcpMs:median('lcpMs'),cls:median('cls'),initialTransferBytes:median('initialTransferBytes'),documentHeight:median('documentHeight'),initialBlockingMs:median('initialBlockingMs'),sampledMaxInteractionMs:median('sampledMaxInteractionMs')};
   });
-  const report={label,conditions:'390px: 4x CPU, 150ms RTT, 1.6Mbps. 1440px: unthrottled. Median of three fresh contexts. Same fixtures, external requests blocked. Sampled interaction latency is not field INP.',summary,samples:results};
+  const report={label,conditions:'390px: 4x CPU, 150ms RTT, 1.6Mbps. 1440px: unthrottled. Median of three fresh contexts. Same fixtures, gzip text assets, external requests blocked. Sampled interaction latency is not field INP.',summary,samples:results};
   await writeFile(`test-results/performance-${label}.json`,JSON.stringify(report,null,2));
   console.log(JSON.stringify(report));
 } finally {await browser.close();await new Promise(resolve=>server.close(resolve));}
