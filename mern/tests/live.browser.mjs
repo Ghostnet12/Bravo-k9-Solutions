@@ -39,7 +39,7 @@ try {
         // Playwright WebKit also emits handled, navigation-canceled fetches as
         // pageerror (#43120). Only the observed public reads during an explicit
         // document replacement are diagnostics; native uncaught errors still fail.
-        if (engineName === 'webkit' && navigating && ['live', 'site-content'].some(path => error.message.endsWith(`${new URL(origin).host}/api/${path} due to access control checks.`))) navigationDiagnostics.push({ message: error.message, url: page.url() });
+        if (engineName === 'webkit' && navigating && ['live', 'site-content', 'site-images'].some(path => error.message.endsWith(`${new URL(origin).host}/api/${path} due to access control checks.`))) navigationDiagnostics.push({ message: error.message, url: page.url() });
         else errors.push(error.message);
       });
       await page.exposeFunction('recordLiveRuntimeError', message => errors.push(message));
@@ -48,6 +48,10 @@ try {
         window.addEventListener('unhandledrejection', event => { void window.recordLiveRuntimeError(event.reason?.stack || event.reason?.message || String(event.reason)).catch(() => {}); });
       });
       const navigate = async url => {
+        // These scenarios switch fixture audiences/accounts, so finish the old
+        // document's queued reads before changing documents. Mid-load booking
+        // remains covered separately by public-startup.browser.mjs.
+        await page.waitForLoadState('networkidle');
         navigating = true;
         try { if (url) await page.goto(url); else await page.reload(); }
         finally { navigating = false; }
@@ -56,11 +60,14 @@ try {
         const result = await page.evaluate(async () => {
           const content = await fetch('/api/site-content', { credentials: 'same-origin', cache: 'no-store' });
           const contentData = await content.json();
+          const images = await fetch('/api/site-images', { credentials: 'same-origin', cache: 'no-store' });
+          const imageData = await images.json();
           const live = await fetch('/api/live', { credentials: 'same-origin', cache: 'no-store' });
           const liveData = await live.json();
-          return { content: content.status, entries: !!contentData.entries && typeof contentData.entries === 'object' && !Array.isArray(contentData.entries), live: live.status, sessions: Array.isArray(liveData.sessions) };
+          return { content: content.status, entries: !!contentData.entries && typeof contentData.entries === 'object' && !Array.isArray(contentData.entries), images: images.status, imageMap: !!imageData.images && typeof imageData.images === 'object' && !Array.isArray(imageData.images), live: live.status, sessions: Array.isArray(liveData.sessions) };
         });
-        assert.deepEqual(result, { content: 200, entries: true, live: 200, sessions: true });
+        assert.deepEqual(result, { content: 200, entries: true, images: 200, imageMap: true, live: 200, sessions: true });
+        await page.waitForLoadState('networkidle');
       };
       try {
         await navigate(`${origin}/live`);
