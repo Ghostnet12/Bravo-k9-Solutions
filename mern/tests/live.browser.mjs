@@ -78,6 +78,9 @@ try {
         await page.screenshot({ path: `test-results/live-banner-${engineName}-${width}.png`, fullPage: false });
         await LiveSession.updateOne({ _id: row._id }, { $set: { audience: 'client' } });
         await Promise.all([page.waitForResponse(r => r.url().endsWith('/api/live')), navigate()]);
+        // A completed API response can precede React's banner render (and the
+        // destination probe also reads this endpoint). Observe the UI first.
+        await page.locator('.hero-live').getByText('Client session', { exact: false }).waitFor();
         assert.equal(await page.locator('.hero-live').count(), 1);
         assert.match(await page.locator('.hero-live').innerText(), /Client session/);
         await navigate(`${origin}/live?session=${row._id}`);
