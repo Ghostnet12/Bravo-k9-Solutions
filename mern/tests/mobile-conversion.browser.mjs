@@ -94,7 +94,7 @@ try {
     await page.getByRole('heading', {name:'Let’s start with your dog.'}).waitFor();
     assert.equal(await page.locator('.mobile-home-nav').count(), 1, 'navigation persists on booking');
     await page.locator('.mobile-home-nav').getByRole('link', {name:'Reviews',exact:true}).click();
-    await page.waitForFunction(() => { const r=document.querySelector('#client-reviews')?.getBoundingClientRect(); return r && r.top >= 74 && r.top < 150; }).catch(async error=>{console.error('Review geometry',width,await page.evaluate(()=>({top:document.querySelector('#client-reviews')?.getBoundingClientRect().top,padding:getComputedStyle(document.documentElement).scrollPaddingTop,margin:getComputedStyle(document.querySelector('#client-reviews')).scrollMarginTop})));throw error;});
+    await page.waitForFunction(() => { const r=document.querySelector('#reviews')?.getBoundingClientRect(); return r && r.top >= 74 && r.top < 150; }).catch(async error=>{console.error('Review geometry',width,await page.evaluate(()=>({top:document.querySelector('#reviews')?.getBoundingClientRect().top,padding:getComputedStyle(document.documentElement).scrollPaddingTop,margin:getComputedStyle(document.querySelector('#reviews')).scrollMarginTop})));throw error;});
     await page.locator('.mobile-home-nav').getByRole('link', {name:/Book now/}).click();
     await page.getByRole('button', {name:'Plan my entire month',exact:true}).waitFor();
     if (width === 390) {
@@ -119,12 +119,12 @@ try {
       assert.ok(Math.abs(chrome.nav-chrome.screen)<2, 'shared navigation stays at the viewport bottom');
     }
     await page.locator('.mobile-home-nav').getByRole('link',{name:'Reviews',exact:true}).click();
-    await page.waitForFunction(()=>{const r=document.querySelector('#client-reviews')?.getBoundingClientRect();return r && r.top>=74 && r.top<150;});
+    await page.waitForFunction(()=>{const r=document.querySelector('#reviews')?.getBoundingClientRect();return r && r.top>=74 && r.top<150;});
    }
    if (width === 390) {
     await page.evaluate(()=>scrollTo(0,0));
     await page.locator('.mobile-home-nav').getByRole('link',{name:'Reviews',exact:true}).click();
-    await page.waitForFunction(()=>{const r=document.querySelector('#client-reviews')?.getBoundingClientRect();return r && r.top>=74 && r.top<150;});
+    await page.waitForFunction(()=>{const r=document.querySelector('#reviews')?.getBoundingClientRect();return r && r.top>=74 && r.top<150;});
    }
    assert.equal(await page.locator('.cinema-hero video').count(),0,'hero remains image-only');
    assert.deepEqual(errors, []); await page.close();

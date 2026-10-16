@@ -70,7 +70,7 @@ export default function Home() {
     <Header/>
     <Editable as="main" contentKey="copy-home-1" id="main-content" tabIndex={-1}>
       <section className="home-hero cinema-hero" aria-labelledby="home-title">
-        <div className="cinema-hero-media"><div className="cinema-film"><img className="cinema-hero-still" src="/images/mobile-bravo-cinematic.webp" width="1536" height="1024" alt="Bravo cinematic dog portrait" fetchPriority="high"/><div className="cinema-hero-shade" aria-hidden="true"/></div></div>
+        <div className="cinema-hero-media"><div className="cinema-film"><img className="cinema-hero-still" data-site-image-key="asset-mobile-bravo-cinematic.webp" src="/images/mobile-bravo-cinematic.webp" width="1536" height="1024" alt="Bravo cinematic dog portrait" fetchPriority="high"/><div className="cinema-hero-shade" aria-hidden="true"/></div></div>
         <div className="cinema-hero-copy cinema-shell">
           <Editable as="p" contentKey="polish-hero-location" canEditText className="cinema-eyebrow">ABERDEEN, SOUTH DAKOTA — WE COME TO YOU.</Editable>
           <h1 id="home-title"><Editable as="span" contentKey="conversion-hero-title" canEditText>REAL DOGS.<br/><em>REAL CONTROL.</em></Editable></h1>
@@ -115,10 +115,10 @@ export default function Home() {
       <Editable as="section" key="results" contentKey="home-results-section" id="results" className="cinema-proof home-results" aria-labelledby="results-title"><div className="cinema-shell">
         <div className="cinema-section-heading" data-reveal=""><div><Editable as="p" contentKey="home-results-eyebrow" canEditText className="cinema-eyebrow">REAL DOGS. REAL SESSIONS.</Editable><Editable as="h2" contentKey="home-results-title" canEditText id="results-title">See the work.<br/><span>See the progress.</span></Editable></div><Editable as="p" contentKey="home-results-copy" canEditText>Watch authentic Bravo sessions, with the context behind each dog's training.</Editable></div>
         <ProofVideoCarousel/>
-        <div className="home-results-actions"><Editable as={Link} contentKey="home-results-book" canEditText canEditLink href="/portal?program=training" className="cinema-button">Start training with Bravo <span aria-hidden="true">→</span></Editable><a className="cinema-link" href="#client-reviews">Read client experiences <span aria-hidden="true">↓</span></a></div>
+        <div className="home-results-actions"><Editable as={Link} contentKey="home-results-book" canEditText canEditLink href="/portal?program=training" className="cinema-button">Start training with Bravo <span aria-hidden="true">→</span></Editable><a className="cinema-link" href="#reviews">Read client experiences <span aria-hidden="true">↓</span></a></div>
       </div></Editable>
 
-      <Editable as="section" key="reviews" contentKey="copy-home-42" id="reviews" className="cinema-proof" aria-labelledby="reviews-title"><div className="cinema-shell">
+      <Editable as="section" key="reviews" contentKey="copy-home-42" id="reviews" tabIndex={-1} className="cinema-proof" aria-labelledby="reviews-title"><div className="cinema-shell">
         <div className="cinema-proof-intro" data-reveal=""><img src="/images/bravo-logo-small.webp" width="64" height="72" alt="" data-site-image-ignore=""/><Editable as="p" contentKey="copy-home-43" canEditText className="cinema-eyebrow">PROOF IN THE WORK</Editable><Editable as="h2" contentKey="cinema-proof-title" canEditText id="reviews-title">Don’t take<br/><span>our word for it.</span></Editable><Editable as="p" contentKey="copy-home-44" canEditText>Read what clients noticed at home.</Editable></div>
 
         <FacebookRecommendations reviews={recommendations}/>
