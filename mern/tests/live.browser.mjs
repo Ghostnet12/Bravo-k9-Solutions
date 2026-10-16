@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { randomBytes, createHash } from 'node:crypto';
 import mongoose from 'mongoose';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
@@ -33,9 +33,37 @@ try {
       process.env.BRAVO_LIVE_ENABLED = 'true';
       await LiveSession.deleteMany({}); await LiveSession.create({ ...row, lastSeenAt: new Date(), lastPublishedAt: new Date() });
       const context = await browser.newContext({ viewport: { width, height: 1000 } });
-      const page = await context.newPage(), errors = []; page.on('pageerror', e => errors.push(e.message));
+      const page = await context.newPage(), errors = [], navigationDiagnostics = [];
+      let navigating = false;
+      page.on('pageerror', error => {
+        // Playwright WebKit also emits handled, navigation-canceled fetches as
+        // pageerror (#43120). Only the observed public reads during an explicit
+        // document replacement are diagnostics; native uncaught errors still fail.
+        if (engineName === 'webkit' && navigating && ['live', 'site-content'].some(path => error.message.endsWith(`${new URL(origin).host}/api/${path} due to access control checks.`))) navigationDiagnostics.push({ message: error.message, url: page.url() });
+        else errors.push(error.message);
+      });
+      await page.exposeFunction('recordLiveRuntimeError', message => errors.push(message));
+      await page.addInitScript(() => {
+        window.addEventListener('error', event => { if (event instanceof ErrorEvent) void window.recordLiveRuntimeError(event.error?.stack || event.message).catch(() => {}); });
+        window.addEventListener('unhandledrejection', event => { void window.recordLiveRuntimeError(event.reason?.stack || event.reason?.message || String(event.reason)).catch(() => {}); });
+      });
+      const navigate = async url => {
+        navigating = true;
+        try { if (url) await page.goto(url); else await page.reload(); }
+        finally { navigating = false; }
+        // The destination must still permit both reads. Real CORS/CSP failures
+        // cannot be hidden by classifying the previous document's cancellation.
+        const result = await page.evaluate(async () => {
+          const content = await fetch('/api/site-content', { credentials: 'same-origin', cache: 'no-store' });
+          const contentData = await content.json();
+          const live = await fetch('/api/live', { credentials: 'same-origin', cache: 'no-store' });
+          const liveData = await live.json();
+          return { content: content.status, entries: !!contentData.entries && typeof contentData.entries === 'object' && !Array.isArray(contentData.entries), live: live.status, sessions: Array.isArray(liveData.sessions) };
+        });
+        assert.deepEqual(result, { content: 200, entries: true, live: 200, sessions: true });
+      };
       try {
-        await page.goto(`${origin}/live`);
+        await navigate(`${origin}/live`);
         await page.getByRole('heading', { name: 'BRAVO LIVE', exact: true }).waitFor();
         await page.locator('.live-session-row').waitFor();
         assert.equal(await page.locator('.live-session-row').count(), 1);
@@ -44,22 +72,22 @@ try {
         assert.ok(await page.getByRole('button', { name: 'Watch live', exact: false }).isVisible());
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${engineName} ${width} viewer overflow`);
         await page.screenshot({ path: `test-results/live-${engineName}-${width}.png`, fullPage: true });
-        await page.goto(origin);
+        await navigate(origin);
         await page.locator('.hero-live').waitFor();
         await page.locator('.hero-live').scrollIntoViewIfNeeded();
         await page.screenshot({ path: `test-results/live-banner-${engineName}-${width}.png`, fullPage: false });
         await LiveSession.updateOne({ _id: row._id }, { $set: { audience: 'client' } });
-        await Promise.all([page.waitForResponse(r => r.url().endsWith('/api/live')), page.reload()]);
+        await Promise.all([page.waitForResponse(r => r.url().endsWith('/api/live')), navigate()]);
         assert.equal(await page.locator('.hero-live').count(), 1);
         assert.match(await page.locator('.hero-live').innerText(), /Client session/);
-        await page.goto(`${origin}/live?session=${row._id}`);
+        await navigate(`${origin}/live?session=${row._id}`);
         await page.getByRole('heading', { name: 'OUT IN THE FIELD.' }).waitFor();
         assert.equal(await page.locator('.live-session-row').count(), 0);
-        await page.goto(`${origin}/live/studio`);
+        await navigate(`${origin}/live/studio`);
         await page.getByRole('heading', { name: 'Trainer sign in required.' }).waitFor();
         await context.addCookies([{ name: 'bravo_session', value: token, domain: '127.0.0.1', path: '/' }]);
         process.env.BRAVO_LIVE_ENABLED = 'false';
-        await page.reload();
+        await navigate();
         await page.getByText('Camera preview is available.', { exact: false }).waitFor();
         const selection = page.getByLabel('Dog / scheduled client');
         await selection.selectOption({ label: 'Gunner · Private client fixture' });
@@ -85,7 +113,7 @@ try {
         if (engineName === 'chromium') await page.waitForFunction(() => window.__previewStream.getTracks().every(track => track.readyState === 'ended'));
         assert.deepEqual(errors, []);
         console.log(`PASS ${engineName} ${width}: live rows, private isolation, banner, studio, preview cleanup`);
-      } finally { await context.close(); }
+      } finally { await writeFile(`test-results/live-diagnostics-${engineName}-${width}.json`, JSON.stringify({ errors, navigationDiagnostics }, null, 2)); await context.close(); }
     } } finally { await browser.close(); }
   }
 } finally { clearInterval(healthTimer); if (server) await new Promise(resolve => server.close(resolve)); await mongoose.disconnect(); await replica.stop(); }
