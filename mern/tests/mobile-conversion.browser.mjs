@@ -41,7 +41,7 @@ await mkdir('test-results', { recursive: true });
 try {
  for (const [engineName, engine] of Object.entries(process.env.BROWSER_ENGINE ? { [process.env.BROWSER_ENGINE]: { chromium, webkit }[process.env.BROWSER_ENGINE] } : { chromium, webkit })) {
   const browser = await engine.launch();
-  try { for (const width of [320,375,390,430,768,1440]) {
+  try { for (const width of [320,375,390,430,768,1024,1440]) {
    const page = await browser.newPage({ viewport: { width, height: 844 }, reducedMotion: 'reduce' });
    const errors = []; page.on('pageerror', error => errors.push(error.message));
    await page.goto(origin, { waitUntil: 'networkidle' });
@@ -89,7 +89,9 @@ try {
     await page.screenshot({ path:`test-results/mobile-pricing-${engineName}-${width}.png` });
     await page.locator('.mobile-home-nav').getByRole('button', {name:'More'}).click();
     await page.getByRole('navigation', {name:'Primary navigation'}).getByRole('link', {name:/FCI Support/}).waitFor({state:'visible'});
+    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('href')), '/#training', 'bottom menu moves keyboard focus to the revealed links');
     await page.keyboard.press('Escape');
+    assert.equal(await page.evaluate(() => document.activeElement?.hasAttribute('data-navigation-toggle')), true, 'Escape returns focus to the opener');
     await page.locator('.mobile-home-nav').getByRole('link', {name:/Book now/}).click();
     await page.getByRole('heading', {name:'Let’s start with your dog.'}).waitFor();
     assert.equal(await page.locator('.mobile-home-nav').count(), 1, 'navigation persists on booking');

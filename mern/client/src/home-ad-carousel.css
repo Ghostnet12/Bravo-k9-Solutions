@@ -54,8 +54,6 @@
 .home-ad-slide.is-image-missing .home-ad-fallback{display:block}
 .home-ad-slide.is-image-missing>a,.home-ad-slide.is-image-missing>img{display:none}
 /* One persistent viewport dock; measured height includes the device safe area. */
-:root{--ad-dock-height:0px}html{scroll-padding-bottom:calc(var(--ad-dock-height) + 20px)}
-#root{padding-bottom:var(--ad-dock-height)}
 .home-ad-dock{position:fixed;inset:auto 0 0;z-index:80;background:#101010f5;color:#fff;border-top:1px solid #ba9a64;box-shadow:0 -8px 35px #0005;padding:0 0 env(safe-area-inset-bottom);backdrop-filter:blur(12px)}
 .home-ad-dock[data-keyboard],.home-ad-dock[data-obscured]{visibility:hidden;pointer-events:none}
 .home-ad-dock .home-ad-carousel{position:relative;width:100%;margin:0;min-width:0;height:clamp(100px,10vw,140px)}

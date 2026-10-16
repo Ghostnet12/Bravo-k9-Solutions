@@ -16,7 +16,7 @@ export function Header() {
   const { pathname, search, hash } = useLocation(), navigate = useNavigate();
   const [signingOut, setSigningOut] = useState(false), [signOutError, setSignOutError] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuButton = useRef(null), header = useRef(null), about = useRef(null);
+  const menuButton = useRef(null), header = useRef(null), about = useRef(null), menuOrigin = useRef(null);
   const staff = ['staff', 'owner'].includes(user?.role);
   const primaryPath = staff ? '/admin?tab=schedule' : user ? '/schedule' : '/portal';
   const primaryLabel = staff ? 'Team schedule' : user ? 'My Schedule' : 'Book Training';
@@ -28,10 +28,15 @@ export function Header() {
     finally { setSigningOut(false); }
   }
   useEffect(() => { setMenuOpen(false); if (about.current) about.current.open = false; }, [pathname, search, hash]);
-  useLayoutEffect(() => { window.dispatchEvent(new CustomEvent('bravo-navigation-state', { detail: { open: menuOpen } })); }, [menuOpen]);
+  useLayoutEffect(() => {
+    window.dispatchEvent(new CustomEvent('bravo-navigation-state', { detail: { open: menuOpen } }));
+    // The bottom control is after page content in the reading order. Opening
+    // it should put keyboard users at the links they just revealed.
+    if (menuOpen && menuOrigin.current?.matches('[data-navigation-toggle]')) header.current?.querySelector('#bravo-navigation a')?.focus({ preventScroll: true });
+  }, [menuOpen]);
   useEffect(() => {
     // Both header and bottom bar operate the same React navigation state.
-    const toggle = () => { if (about.current) about.current.open = false; setMenuOpen(open => !open); };
+    const toggle = () => { menuOrigin.current = document.querySelector('[data-navigation-toggle]'); if (about.current) about.current.open = false; setMenuOpen(open => !open); };
     const close = () => { if (about.current) about.current.open = false; setMenuOpen(false); };
     window.addEventListener('bravo-navigation-toggle', toggle);
     window.addEventListener('bravo-navigation-close', close);
@@ -49,12 +54,13 @@ export function Header() {
   useEffect(() => {
     const outside = event => { if (header.current && !header.current.contains(event.target) && !event.target.closest('[data-navigation-toggle]')) { setMenuOpen(false); if (about.current) about.current.open = false; } };
     document.addEventListener('pointerdown', outside);
-    return () => document.removeEventListener('pointerdown', outside);
+    document.addEventListener('focusin', outside);
+    return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('focusin', outside); };
   }, []);
   function handleEscape(event) {
     if (event.key !== 'Escape') return;
     if (about.current?.open) { about.current.open = false; about.current.querySelector('summary')?.focus(); event.stopPropagation(); }
-    else if (menuOpen) { setMenuOpen(false); menuButton.current?.focus(); }
+    else if (menuOpen) { setMenuOpen(false); (menuOrigin.current?.isConnected ? menuOrigin.current : menuButton.current)?.focus({ preventScroll: true }); }
   }
   function leaveAbout(event) {
     // WebKit may blur the summary to a null target while a submenu link is
@@ -68,7 +74,7 @@ export function Header() {
       <Brand/>
       <a className="conversion-header-phone" href="tel:+16058242767" aria-label="Call Bravo at (605) 824-2767"><svg viewBox="0 0 24 24" width="23" height="23" fill="#BA9A64" aria-hidden="true" focusable="false" style={{verticalAlign:"middle",marginRight:8}}><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.25 1.01l-2.2 2.2Z"/></svg><span>(605) 824-2767</span></a>
       <NavLink className="header-quick-action" to={primaryPath}>{primaryLabel}</NavLink>
-      <Editable as="button" contentKey="ui-3" ref={menuButton} type="button" className="menu-toggle" aria-expanded={menuOpen} aria-controls="bravo-navigation" onClick={() => { if (about.current) about.current.open = false; setMenuOpen(open => !open); }}>
+      <Editable as="button" contentKey="ui-3" ref={menuButton} type="button" className="menu-toggle" aria-expanded={menuOpen} aria-controls="bravo-navigation" onClick={event => { menuOrigin.current = event.currentTarget; if (about.current) about.current.open = false; setMenuOpen(open => !open); }}>
         <span className="menu-lines" aria-hidden="true"><i/><i/></span>{menuOpen ? 'Close' : 'Menu'}
         {notifications.some(item => item.unread) && <Editable as="span" contentKey="ui-5" className="menu-notification-count notification-count" aria-label="Unread notifications">{Math.min(99, notifications.filter(item => item.unread).length)}</Editable>}
       </Editable>

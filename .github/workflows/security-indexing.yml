@@ -41,6 +41,7 @@ jobs:
         run: |
           node tests/music-polish.browser.mjs
           node tests/mobile-conversion.browser.mjs
+          node tests/refinement.browser.mjs
           node tests/fci.browser.mjs
           node tests/discovery.browser.mjs
           node tests/route-focus.browser.mjs

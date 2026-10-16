@@ -13,7 +13,7 @@ import { mountSiteImages } from './site-image-editor.js';
 import { isImageEditor } from '../../shared/site-images.js';
 import Home from './Home';
 import { MobileHomeNav } from './MobileConversion';
-import { AdvertisementManagement } from './HomeAdCarousel';
+import AdvertisementManagement from './AdvertisementManagement';
 import AccessibilityPage from './AccessibilityPage';
 import NotFoundPage from './NotFoundPage';
 import { Page } from './ui';
