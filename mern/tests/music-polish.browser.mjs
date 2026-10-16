@@ -120,9 +120,10 @@ try {
      await volume.press('Home');await page.waitForFunction(()=>document.querySelector('[data-site-soundtrack]').muted);
      assert.equal(await soundtrack.evaluate(el=>el.volume),0);
      await page.getByRole('button',{name:'Unmute music',exact:true}).click();
-     assert.equal(await soundtrack.evaluate(el=>el.volume),.72);
+     // WebKit exposes native media volume at float32 precision.
+     assert.ok(Math.abs(await soundtrack.evaluate(el=>el.volume)-.72)<1e-6);
      await volume.press('End');await volume.press('ArrowLeft');
-     assert.equal(await soundtrack.evaluate(el=>el.volume),.95);
+     assert.ok(Math.abs(await soundtrack.evaluate(el=>el.volume)-.95)<1e-6);
      const range=await volume.boundingBox();await page.touchscreen.tap(range.x+range.width*.3,range.y+range.height/2);
      const savedVolume=await soundtrack.evaluate(el=>el.volume);assert.ok(savedVolume>0&&savedVolume<.6);
      assert.equal(await soundtrack.evaluate(el=>el.paused),false,'volume does not interrupt playback');
