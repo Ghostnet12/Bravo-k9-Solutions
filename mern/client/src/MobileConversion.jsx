@@ -97,21 +97,21 @@ export function MobileHomeNav({ staticFallback = false }) {
     return () => window.removeEventListener('bravo-navigation-state', sync);
   }, []);
   function closeOnEscape(event) {
-    const menu = document.querySelector('.app-header .menu-toggle');
-    if (event.key === 'Escape' && menu?.getAttribute('aria-expanded') === 'true') {
-      event.preventDefault(); menu.click();
+    if (event.key === 'Escape' && menuOpen) {
+      event.preventDefault();
+      window.dispatchEvent(new Event('bravo-navigation-close'));
     }
   }
-  function openMenu() {
-    const menu = document.querySelector('.app-header .menu-toggle');
-    menu?.click();
+  function toggleMenu() {
+    window.dispatchEvent(new Event('bravo-navigation-toggle'));
   }
   return <nav className="mobile-home-nav mobile-conversion" aria-label="Quick navigation">
     <Link to="/#home-title" aria-label="Home" onClick={event => returnToAnchor(event, 'home-title')}><span aria-hidden="true">⌂</span>Home</Link>
     <Link to={bookingPath} className="mobile-home-book" onClick={() => trackVisit('sticky_booking_clicked')}><span aria-hidden="true">▦</span>{user ? 'Schedule' : 'Book now'}</Link>
     <Link to="/live"><span aria-hidden="true">▷</span>Live cams</Link>
-    <Link to="/#client-reviews" onClick={event => returnToAnchor(event, 'client-reviews')}><span aria-hidden="true">☆</span>Reviews</Link>
-    {staticFallback ? <Link to="/contact"><span aria-hidden="true">☰</span>Contact</Link> : <button type="button" data-navigation-toggle="" onClick={openMenu} onKeyDown={closeOnEscape} aria-expanded={menuOpen} aria-controls="bravo-navigation"><span aria-hidden="true">☰</span>More</button>}
+    <Link to="/#reviews" onClick={event => returnToAnchor(event, 'reviews')}><span aria-hidden="true">☆</span>Reviews</Link>
+    <Link to="/contact"><span aria-hidden="true">☎</span>Contact</Link>
+    {!staticFallback && <button type="button" data-navigation-toggle="" onClick={toggleMenu} onKeyDown={closeOnEscape} aria-expanded={menuOpen} aria-controls="bravo-navigation"><span aria-hidden="true">☰</span>More</button>}
   </nav>;
 }
 export function ConversionFAQ() {

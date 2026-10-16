@@ -2,6 +2,7 @@ import FirstVisitIntro from './FirstVisitIntro';
 import { Editable } from './SiteContent';
 import { bookingTrackingHeaders, trackVisit } from './telemetry';
 import { trainerChoice, trainerOptions, JOINT_TRAINER_ID } from '../../shared/trainers';
+import { bookingRequestNotice } from '../../shared/booking-notice.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { SERVICES, TRAINING_ADDITIONAL_DOG_CENTS, TRAINING_FOCUSES, money, quote, serviceSelection, rescheduledQuote, trainingFocusName } from '../../shared/catalog';
@@ -163,7 +164,7 @@ export default function BookingPage() {
       if (!editId && ids.includes('training') && !trainerId) throw new Error('Choose your trainer before saving this training request.');
       if (!editId) await api('/quote', { method: 'POST', body: { serviceIds: ids, visits, dogCount } });
       if (editId) { await api(`/bookings/${editId}/visits`, { method: 'PATCH', body: { visits } }); setNotice('Your updated schedule is saved for Bravo to review.'); }
-      else { const { booking } = await api('/bookings', { method: 'POST', headers: bookingTrackingHeaders(), body: { requestKey, serviceIds: ids, visits, trainingFocus: ids.includes('training') ? trainingFocus : undefined, preferredTrainerId: ids.includes('training') ? trainerId : undefined, dogCount, ...form } }); setSaved(booking); setBookingDraft(null); setNotice(booking.status === 'waitlisted' ? `You joined ${chosenTrainer?.name || 'this trainer'}’s waiting list. Your preferred dates were saved, no calendar time was reserved, and no card was charged.` : 'Request saved. Bravo will confirm the visit details. No card has been charged.'); }
+      else { const { booking } = await api('/bookings', { method: 'POST', headers: bookingTrackingHeaders(), body: { requestKey, serviceIds: ids, visits, trainingFocus: ids.includes('training') ? trainingFocus : undefined, preferredTrainerId: ids.includes('training') ? trainerId : undefined, dogCount, ...form } }); setSaved(booking); setBookingDraft(null); setNotice(booking.status === 'waitlisted' ? `You joined ${chosenTrainer?.name || 'this trainer'}’s waiting list. Your preferred dates were saved, no calendar time was reserved, and no card was charged.` : bookingRequestNotice({ visits: Array.isArray(booking.visits) ? booking.visits : visits, serviceIds: Array.isArray(booking.serviceIds) ? booking.serviceIds : ids })); }
     } catch (e) { setError(e.message); } finally { requestInFlight.current = false; setBusy(false); }
   }
   async function pay() { if (requestInFlight.current || !saved || covered || waitlisted || !config?.paymentsReady) return; requestInFlight.current = true; setBusy(true); setError(''); try { const result = await api(`/bookings/${saved._id}/checkout`, { method: 'POST', body: {} }); window.location.assign(result.url); } catch (e) { requestInFlight.current = false; setError(e.message); setBusy(false); } }
