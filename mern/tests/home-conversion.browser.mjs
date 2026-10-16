@@ -95,6 +95,8 @@ try {
           assert.equal(await card.locator('iframe').count(), 0);
           assert.equal(await watch.isVisible(), true, `${engineName}-${width}: Back must return to the Bravo carousel`);
         }
+        // Back restores the static carousel before the asynchronous roster.
+        await page.locator('#team').getByText('David Northrop', { exact: true }).waitFor();
         assert.equal(await page.locator('#team').getByText('David Northrop', { exact: true }).count(), 1);
         assert.ok((await page.locator(width === 390 ? '.conversion-offer .conversion-button' : '.goal-result .goal-actions .button').getAttribute('href')).startsWith('/portal?program=training'));
         assert.equal(await page.locator('.home-training-offer').count(), 0, 'no repeated standard offer');
