@@ -35,7 +35,12 @@ for (const [name, engine, width] of [['webkit', webkit, 390], ['chromium', chrom
     });
     try {
       await page.goto(origin, { waitUntil: 'domcontentloaded' });
+      await page.bringToFront();
       await page.waitForFunction(() => document.querySelector('.cinema-hero-still')?.naturalWidth > 0, {}, { timeout: 45000 });
+      // Headless WebKit may throttle animation frames on a busy runner. Wait
+      // for actual observations instead of assuming six frames in one second.
+      // Keep every first-paint sample: a genuine layout shift must still fail.
+      await page.waitForFunction(() => window.heroSamples.length > 5, {}, { polling: 100, timeout: 15000 });
       await page.waitForTimeout(1000);
       const state = await page.evaluate(() => {
         window.stopHeroSamples = true;
@@ -53,7 +58,8 @@ for (const [name, engine, width] of [['webkit', webkit, 390], ['chromium', chrom
       console.log(`PASS LIVE ${name} ${width}: cinematic still, stable layout and no hero video`);
     } catch (error) {
       await page.screenshot({ path: `test-results/live-failure-${name}-${width}.png` });
-      await writeFile(`test-results/live-failure-${name}-${width}.json`, JSON.stringify({ error: error.message, errors }));
+      const observations = await page.evaluate(() => ({ samples: window.heroSamples, visibility: document.visibilityState }));
+      await writeFile(`test-results/live-failure-${name}-${width}.json`, JSON.stringify({ error: error.message, errors, ...observations }));
       throw error;
     }
   } finally { await browser.close(); }
