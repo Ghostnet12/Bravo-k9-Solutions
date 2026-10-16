@@ -15,10 +15,19 @@ export async function connectDb() {
   if (!process.env.MONGODB_URI) throw Object.assign(new Error('Accounts and scheduling are not connected yet. Please call Bravo at (605) 824-2767.'), { status: 503, databaseIssue: 'missing_configuration' });
   if (!pending) {
     let phase = 'connect';
+    const started = performance.now();
+    let connected;
     pending = Promise.resolve().then(() => mongoose.connect(process.env.MONGODB_URI, { dbName: process.env.MONGODB_DB || 'bravo_k9', serverSelectionTimeoutMS: 5000, maxPoolSize: 5 })).then(async () => {
+      connected = performance.now();
       phase = 'initialize';
       await Promise.all(ALL_MODELS.map(m => m.init()));
       await Settings.updateOne({ _id: 'schedule' }, { $setOnInsert: DEFAULT_SCHEDULE }, { upsert: true });
+      // One fixed, non-identifying timing record per cold startup. Keep driver
+      // messages, connection strings, database names and records out of logs.
+      console.info('Bravo database startup ready', {
+        connectMs: Math.round(connected - started),
+        initializeMs: Math.round(performance.now() - connected),
+      });
     }).catch(error => {
       const issue = databaseIssue(error, phase);
       // Log only fixed categories: driver messages/stacks can contain credentials.

@@ -14,14 +14,24 @@ test('persistent accounts, conflict protection, ownership, staff tools, and bill
   const replica = await MongoMemoryReplSet.create({ replSet: { count: 1 }, binary: { version: '8.0.5' } });
   process.env.MONGODB_URI = replica.getUri(); process.env.MONGODB_DB = 'bravo_disposable_test'; process.env.APP_ORIGIN = origin;
   t.after(async () => { await mongoose.disconnect(); await replica.stop(); });
+  const startupLogs = [], info = console.info;
+  console.info = (...args) => { if (args[0] === 'Bravo database startup ready') startupLogs.push(args); else info(...args); };
+  t.after(() => { console.info = info; });
   const alice = request.agent(app), bob = request.agent(app);
   const post = (agent,url,body) => agent.post(url).set('Origin',origin).send(body);
   let aliceId;
   await t.test('real registration and session cookies; injected role ignored', async () => {
     const a = await post(alice,'/api/auth/register',{ name:'Alice Test', email:'alice@example.test', password:'test-long-password-123', role:'staff' }).expect(201);
+    assert.equal(startupLogs.length, 1);
+    const timing = startupLogs[0][1];
+    assert.deepEqual(Object.keys(timing).sort(), ['connectMs', 'initializeMs']);
+    assert.ok(Object.values(timing).every(value => Number.isSafeInteger(value) && value >= 0));
+    assert.ok(!JSON.stringify(startupLogs).includes(process.env.MONGODB_URI));
+    assert.ok(!JSON.stringify(startupLogs).includes(process.env.MONGODB_DB));
     aliceId=a.body.user.id; assert.equal(a.body.user.role,'member'); assert.ok(a.headers['set-cookie'][0].includes('HttpOnly'));
     await post(bob,'/api/auth/register',{ name:'Bob Test', email:'bob@example.test', password:'test-long-password-456' }).expect(201);
     await alice.get('/api/auth/me').expect(200);
+    assert.equal(startupLogs.length, 1, 'warm requests reuse the initialized connection');
     await post(alice,'/api/community',{body:'Fake staff alert',kind:'alert'}).expect(403);
     await alice.get('/api/admin').expect(403);
   });
