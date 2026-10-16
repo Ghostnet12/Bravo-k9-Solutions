@@ -49,6 +49,13 @@ try {
           assert.equal(new Set(heroRequests).size, 1, 'preload and image choose the same responsive asset');
           assert.ok(!requests.some(path => /\/(ContentEditor|AdEditor|BannerEditor)-.*\.js$/.test(path)), 'public loads exclude editing dialogs');
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+          if (height === 390) {
+            for (const link of await page.locator('.polish-hero-actions a').all()) {
+              const box = await link.boundingBox();
+              assert.ok(box.y > 74 && box.y + box.height <= height, 'landscape hero actions remain visible below the header');
+            }
+            assert.equal(await image.evaluate(img => getComputedStyle(img).objectFit), 'contain', 'short landscape preserves the complete photo');
+          }
           await page.screenshot({ path: `test-results/refinement-${name}-${width}x${height}-${deviceScaleFactor}x.png` });
           if (width === 390) {
             owner = true;
