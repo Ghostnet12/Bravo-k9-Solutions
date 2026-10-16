@@ -2,6 +2,12 @@
 import { CONTENT_KEYS as BASE_CONTENT_KEYS } from './site-content-base-keys.js';
 export const CONTENT_KEYS = {
   ...BASE_CONTENT_KEYS,
+  'accessible-media-title': { text: true },
+  'accessible-media-lessons': { text: true },
+  'accessible-media-public': { text: true },
+  'accessible-media-help': { text: true },
+  'contact-main-call': { text: true, link: true },
+  'contact-message-signin': { text: true },
   'home-results-section': { text: false },
   'home-results-eyebrow': { text: true },
   'home-results-title': { text: true },
