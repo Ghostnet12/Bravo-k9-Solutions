@@ -106,7 +106,9 @@ try {for(const [name,engine] of engines) {
   sessions=[];await refresh();await page.waitForFunction(()=>!document.querySelector('.hero-live'));assert.equal(await page.locator('.ad-live-creative').count(),0);
   failure=true;await refresh();await page.locator('.hero-live-unavailable').waitFor();assert.equal(await page.locator('.hero-live').count(),0);
   await waitForApiIdle();
-  await page.goto(`${origin}/live`);await page.bringToFront();await page.getByText('Live status is temporarily unavailable. Reconnecting…',{exact:true}).waitFor();assert.equal(await page.getByRole('heading',{name:'OUT IN THE FIELD.'}).count(),0);
+  // WebKit can keep the document load event pending while media initializes.
+  // Assert the rendered connection state, as for the live-document reload below.
+  await page.goto(`${origin}/live`,{waitUntil:'domcontentloaded'});await page.bringToFront();await page.getByText('Live status is temporarily unavailable. Reconnecting…',{exact:true}).waitFor();assert.equal(await page.getByRole('heading',{name:'OUT IN THE FIELD.'}).count(),0);
   failure=false;sessions=[makeSession('one','David · TEST'),makeSession('two','Ashley · TEST')];await refresh();await page.locator('.live-session-row').first().waitFor();
   await page.locator('.live-session-row').nth(1).click();await page.waitForFunction(()=>document.querySelector('.live-player-caption h2')?.textContent.includes('Ashley'));assert.match(await page.locator('.live-player-caption h2').innerText(),/Ashley/i);
   // A playing video can keep a media request open; UI and worker readiness,
