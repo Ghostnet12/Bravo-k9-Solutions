@@ -7,14 +7,15 @@ import {chromium,webkit} from 'playwright';
 import {SERVICES} from '../shared/catalog.js';
 const dist=fileURLToPath(new URL('../client/dist/',import.meta.url)),html=await readFile(`${dist}/bravo-shell.html`,'utf8');
 const app=express();app.use(express.static(dist));app.get('/{*path}',(_req,res)=>res.type('html').send(html));const server=app.listen(0,'127.0.0.1');await once(server,'listening');const origin=`http://127.0.0.1:${server.address().port}`;await mkdir('test-results',{recursive:true});
-try {for(const [engineName,engine]of Object.entries({chromium,webkit})){const browser=await engine.launch();try{for(const width of [390,1440]){
+try {for(const [engineName,engine]of Object.entries({chromium,webkit})){if(process.env.BRAVO_BROWSER_ENGINES&&!process.env.BRAVO_BROWSER_ENGINES.split(',').includes(engineName))continue;const browser=await engine.launch();try{for(const width of [390,1440]){
  const context=await browser.newContext({viewport:{width,height:900},hasTouch:true}),page=await context.newPage(),errors=[];
  let actor=null,paid=false,library={open:false,revision:0,lessonCents:7500,bundleCents:25000},sections=[],lessons=[];
  // Complete mocked requests before replacing the document. WebKit can report
  // interrupted route fulfillment as an access-control error during navigation.
- const navigate=async url=>{await page.waitForLoadState('networkidle');await page.goto(url);await page.waitForLoadState('networkidle');};
- const reload=async()=>{await page.waitForLoadState('networkidle');await page.reload();await page.waitForLoadState('networkidle');};
- page.on('pageerror',e=>errors.push(e.message));
+ const contentReady = url => Promise.all((new URL(url).pathname === '/' ? ['/api/site-content','/api/team','/api/reviews'] : ['/api/site-content']).map(path => page.waitForResponse(response => new URL(response.url()).pathname === path).then(response => response.finished())));
+ const navigate=async url=>{await page.waitForLoadState('networkidle');const ready=contentReady(url);await page.goto(url,{waitUntil:'domcontentloaded'});await ready;await page.waitForLoadState('networkidle');};
+ const reload=async()=>{await page.waitForLoadState('networkidle');const ready=contentReady(page.url());await page.reload({waitUntil:'domcontentloaded'});await ready;await page.waitForLoadState('networkidle');};
+ page.on('pageerror',e=>{console.log('Lesson page error',{url:page.url(),message:e.message});errors.push(e.message);});
  await page.route('**/api/**',async route=>{const path=new URL(route.request().url()).pathname,method=route.request().method();let json={services:[],images:{},entries:{},team:[],schedules:[],reviews:[],count:0,clips:[],bookings:[],terms:[],messages:[],notifications:[],alerts:[],revision:0};
   if(path==='/api/config')json={connected:true,paymentsReady:false,lessonLibrary:library,services:SERVICES.map(s=>({...s,enabled:s.id!=='online'||library.open})),schedule:{enabled:true,weekdays:[1,2,3,4,5],hours:['09:00']}};
   if(path==='/api/auth/me')json={user:actor?{id:'fixture',name:'Fixture',role:actor,isPrimaryOwner:false}:null,services:paid?['online']:[],membership:{active:paid,onlineAccess:paid},subscriptions:[]};
@@ -33,6 +34,14 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){const br
  try{
   await navigate(origin);await page.waitForLoadState('networkidle');assert.ok(await page.locator('a[href="/learn"]').count() > 0);assert.equal(await page.locator('.lesson-offers').count(),0);
   await navigate(origin+'/learn');await page.getByRole('heading',{name:'Bravo. Anywhere.',exact:true}).waitFor();
+  assert.equal(await page.getByRole('link',{name:'See Bravo’s public training videos →',exact:true}).getAttribute('href'),'/#results');
+  await page.getByRole('button',{name:'Accessibility',exact:true}).click();await page.getByRole('link',{name:'Captions & transcripts',exact:true}).click();
+  await page.waitForFunction(()=>{const el=document.getElementById('accessible-media');return el&&el.getBoundingClientRect().top>=70&&el.getBoundingClientRect().top<180;});
+  assert.match(await page.locator('#accessible-media').innerText(),/may not include captions/);
+  const proofLoaded = Promise.all([contentReady(origin),page.waitForResponse(response => new URL(response.url()).pathname === '/api/proof-videos').then(response => response.finished())]);
+  await page.getByRole('link',{name:'See Bravo’s public training videos →',exact:true}).click();await page.waitForURL('**/#results');
+  await proofLoaded;await page.waitForLoadState('networkidle');
+  await page.waitForFunction(()=>{const el=document.getElementById('results');return el&&el.getBoundingClientRect().top>=70&&el.getBoundingClientRect().top<180;}).catch(async error=>{console.log('Video anchor',await page.evaluate(()=>({hash:location.hash,top:document.getElementById('results')?.getBoundingClientRect().top,margin:getComputedStyle(document.getElementById('results')).scrollMarginTop,focus:document.activeElement?.outerHTML.slice(0,200)})));throw error;});
   await navigate(origin+'/portal?program=training&lessons=1');await page.getByRole('heading',{name:'This option is unavailable.',exact:true}).waitFor();
   actor='owner';await navigate(origin+'/admin?tab=lessons');await page.getByRole('heading',{name:'Lesson studio.',exact:true}).waitFor();
   assert.equal(await page.getByRole('switch',{name:'Library closed',exact:true}).isChecked(),false);
@@ -48,7 +57,7 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){const br
   await page.getByRole('switch',{name:'Library closed',exact:true}).click();await page.getByText('Library open. Clients can browse and purchase access.',{exact:true}).waitFor();assert.equal(library.open,true);assert.equal(await page.getByRole('switch',{name:'Library open',exact:true}).isChecked(),true);
   actor=null;await navigate(origin+'/learn');await page.getByRole('heading',{name:'Read your dog',exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'Open lesson',exact:true}).count(),0);assert.equal(await page.getByRole('link',{name:'Choose lessons',exact:true}).isVisible(),true);assert.equal(await page.getByRole('link',{name:'Choose the bundle',exact:true}).isVisible(),true);assert.match(await page.locator('.lesson-offers').innerText(),/\$75/);assert.match(await page.locator('.lesson-offers').innerText(),/\$250/);
   await page.getByRole('link',{name:'Choose the bundle',exact:true}).click();await page.getByRole('heading',{name:'Let’s start with your dog.',exact:true}).waitFor();assert.match(await page.locator('.price-total').innerText(),/\$250/);await page.getByLabel('Number of dogs',{exact:true}).fill('2');assert.match(await page.locator('.price-total').innerText(),/\$350/);
-  actor='member';paid=true;await navigate(origin+'/learn');await page.getByRole('button',{name:'Open lesson',exact:true}).click();await page.getByText('Look for relaxed posture. Give your dog space.',{exact:true}).waitFor();assert.equal(await page.locator('.lesson-offers').count(),0);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'member library fits viewport');await page.screenshot({path:`test-results/lesson-library-${engineName}-${width}.png`,fullPage:true});
+  actor='member';paid=true;await navigate(origin+'/learn');assert.equal(await page.locator('#accessible-media').count(),1);await page.getByRole('button',{name:'Open lesson',exact:true}).click();await page.getByText('Look for relaxed posture. Give your dog space.',{exact:true}).waitFor();assert.equal(await page.locator('.lesson-offers').count(),0);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'member library fits viewport');await page.screenshot({path:`test-results/lesson-library-${engineName}-${width}.png`,fullPage:true});
   library={...library,open:false,revision:library.revision+1};await reload();await page.getByRole('heading',{name:'Bravo. Anywhere.',exact:true}).waitFor();assert.equal(await page.locator('.lesson-offers').count(),0);
   actor='owner';await reload();await page.getByRole('button',{name:'Open lesson',exact:true}).click();await page.getByText('Look for relaxed posture. Give your dog space.',{exact:true}).waitFor();assert.equal(await page.getByRole('link',{name:'Choose the bundle',exact:true}).count(),0);
   assert.deepEqual(errors,[]);console.log(`PASS ${engineName}/${width}: private studio, sections, formats, instructors, public offers, bundle pricing, member reading and closed access`);

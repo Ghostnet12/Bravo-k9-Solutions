@@ -33,3 +33,6 @@ html { scroll-padding-top: 96px; }
 :root{--ad-dock-height:0px}
 html{scroll-padding-bottom:calc(var(--ad-dock-height) + 20px)}
 #root{padding-bottom:var(--ad-dock-height)}
+
+/* The document already reserves the sticky header height for anchor links. */
+.cinema-home.conversion-home #results{scroll-margin-top:0}

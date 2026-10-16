@@ -158,6 +158,11 @@ try {
         assert.equal(await page.locator('.goal-result .goal-actions .button').getAttribute('href'),'/contact');
         assert.equal(await page.locator('.goal-result').getByRole('link',{name:'Explore working-dog goals'}).getAttribute('href'),'/#specialist-training');
         await follow(page.locator('.goal-result .goal-actions .button'),'/contact');await page.getByRole('heading',{name:'Talk to Bravo.',exact:true}).waitFor();
+        assert.equal(await page.getByRole('link',{name:'Call Bravo · (605) 824-2767',exact:true}).getAttribute('href'),'tel:+16058242767');
+        await page.getByRole('link',{name:'Message Ashley',exact:true}).click();await page.getByRole('link',{name:'Sign in to Bravo',exact:true}).waitFor();
+        const returnLink=await page.getByRole('link',{name:'Sign in to Bravo',exact:true}).getAttribute('href');
+        assert.equal(new URL(returnLink,origin).searchParams.get('next'),'/community?tab=direct&to=cccccccccccccccccccccccc');
+        await visit(origin+'/contact');
         await visit(origin);await page.locator('.goal-proof figcaption').waitFor();await settleApi();
         const proof=page.locator('.home-work-proof');await proof.getByRole('button',{name:'Working dogs',exact:true}).click();assert.equal(await proof.locator('article[data-proof-video]').count(),1);await proof.getByRole('button',{name:'All training',exact:true}).click();assert.equal(await proof.locator('article[data-proof-video]').count(),3);
         await visit(origin+'/learn');await page.getByLabel('Email address',{exact:true}).fill('visitor@example.test');await page.getByLabel('Email me once when Bravo online courses launch.').check();await page.getByRole('button',{name:'Request a launch update'}).click();await page.getByText('Your launch-update request is saved.',{exact:false}).waitFor();assert.equal(signup.consent,true);assert.equal(signup.email,'visitor@example.test');
