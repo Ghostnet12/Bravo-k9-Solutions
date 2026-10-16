@@ -47,3 +47,6 @@
 .hero-photo-window:focus-visible,.home-proof-reviews:focus-visible{outline:3px solid #e1c99d;outline-offset:-3px}
 
 .cinema-home.conversion-home .cinema-portrait img{object-position:50% 8%}
+
+/* The desktop goal selector already presents walking and assessment cards. */
+@media(min-width:701px){.cinema-home.conversion-home .cinema-secondary-programs{display:none}}

@@ -1,4 +1,5 @@
 import LiveBanner from './LiveBanner';
+import { CINEMATIC_HERO_SRCSET, CINEMATIC_HERO_SIZES } from '../../shared/cinematic-hero.js';
 import { ConversionTrust, MobileDiscovery, TrainingOffer, ConversionFAQ, HomeSectionOrder, useCompactLayout } from './MobileConversion';
 import { trackVisit } from './telemetry';
 import './mobile-conversion.css';
@@ -70,7 +71,7 @@ export default function Home() {
     <Header/>
     <Editable as="main" contentKey="copy-home-1" id="main-content" tabIndex={-1}>
       <section className="home-hero cinema-hero" aria-labelledby="home-title">
-        <div className="cinema-hero-media"><div className="cinema-film"><img className="cinema-hero-still" data-site-image-key="asset-mobile-bravo-cinematic.webp" src="/images/mobile-bravo-cinematic.webp" width="1536" height="1024" alt="Bravo cinematic dog portrait" fetchPriority="high"/><div className="cinema-hero-shade" aria-hidden="true"/></div></div>
+        <div className="cinema-hero-media"><div className="cinema-film"><img className="cinema-hero-still" data-site-image-key="asset-mobile-bravo-cinematic.webp" src="/images/mobile-bravo-cinematic.webp" srcSet={CINEMATIC_HERO_SRCSET} sizes={CINEMATIC_HERO_SIZES} width="1536" height="1024" alt="Bravo cinematic dog portrait" fetchPriority="high"/><div className="cinema-hero-shade" aria-hidden="true"/></div></div>
         <div className="cinema-hero-copy cinema-shell">
           <Editable as="p" contentKey="polish-hero-location" canEditText className="cinema-eyebrow">ABERDEEN, SOUTH DAKOTA — WE COME TO YOU.</Editable>
           <h1 id="home-title"><Editable as="span" contentKey="conversion-hero-title" canEditText>REAL DOGS.<br/><em>REAL CONTROL.</em></Editable></h1>

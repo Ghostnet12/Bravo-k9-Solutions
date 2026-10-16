@@ -19,6 +19,6 @@ export default function FirstVisitIntro({ form, setForm, dogCount, setDogCount, 
       <div className="first-visit-actions"><Editable as="button" contentKey="copy-firstvisitintro-10" canEditText className="button" type="submit">Choose a trainer →</Editable><Editable as="button" contentKey="copy-firstvisitintro-15" canEditText type="button" className="button button-ghost" onClick={onFullSchedule}>Plan my entire month</Editable><Editable as="a" contentKey="copy-firstvisitintro-11" canEditText canEditLink className="button button-ghost" href="tel:+16058242767">Talk to Bravo</Editable></div>
       <p className="booking-request-note">Choosing dates does not confirm an appointment. Review your request before submitting; Bravo confirms visits separately.</p>
     </form>
-    <details className="home-availability"><Editable as="summary" contentKey="copy-firstvisitintro-12" canEditText>Need a different starting point?</Editable><p><Editable as="span" contentKey="copy-firstvisitintro-13" canEditText>For aggression or difficult handling, start with a </Editable><Editable as={Link} contentKey="copy-firstvisitintro-14" canEditText canEditLink to="/behavior-assessment">two-trainer assessment</Editable>.</p></details>
+
   </Editable>;
 }

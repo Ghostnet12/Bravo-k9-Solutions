@@ -1,4 +1,5 @@
 import { renderSiteContent } from './content-html.js';
+import { CINEMATIC_HERO_SRCSET, CINEMATIC_HERO_SIZES } from '../shared/cinematic-hero.js';
 import { readFile } from 'node:fs/promises';
 import { HOME_HERO_META, HOME_HERO_SOURCE, HOME_HERO_ALT, homeHeroSnapshot } from '../shared/home-hero.js';
 import { framingStyle } from '../shared/site-images.js';
@@ -15,7 +16,7 @@ export function renderHomepage(html, value, filmValue) {
   const hero = homeHeroSnapshot(value);
   const films = heroFilmPlaylistSnapshot(filmValue);
   // The public hero is a still image; saved film records remain untouched.
-  const preload = '<link rel="preload" as="image" href="/images/mobile-bravo-cinematic.webp" fetchpriority="high"/>';
+  const preload = `<link rel="preload" as="image" href="/images/mobile-bravo-cinematic.webp" imagesrcset="${CINEMATIC_HERO_SRCSET}" imagesizes="${CINEMATIC_HERO_SIZES}" fetchpriority="high"/>`;
   // The pre-rendered photo must match the published snapshot on the very first
   // frame, including before JavaScript starts. Preserve the editor's original
   // source attributes so existing image edits and undo keep working.
