@@ -2,7 +2,7 @@ import FirstVisitIntro from './FirstVisitIntro';
 import { Editable } from './SiteContent';
 import { bookingTrackingHeaders, trackVisit } from './telemetry';
 import { trainerChoice, trainerOptions, JOINT_TRAINER_ID } from '../../shared/trainers';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { SERVICES, TRAINING_ADDITIONAL_DOG_CENTS, TRAINING_FOCUSES, money, quote, serviceSelection, rescheduledQuote, trainingFocusName } from '../../shared/catalog';
 import { useBravo } from './context';
@@ -25,6 +25,7 @@ function shuffled(items) {
 export default function BookingPage() {
   const { user, services, membership, config, bookingDraft, setBookingDraft } = useBravo(), [params] = useSearchParams();
   const editId = params.get('edit');
+  const requestInFlight = useRef(false);
   const catalog = config?.services?.length ? config.services : SERVICES;
   const program = SERVICES.some(s => s.id === params.get('program')) ? params.get('program') : 'training';
   const resume = !editId && params.get('resume') === '1' ? bookingDraft : null;
@@ -70,13 +71,13 @@ export default function BookingPage() {
   const trainingMonthlyCents = pricing.lines.filter(line => line.id === 'training' || line.id === 'training-additional-dogs' || line.id === 'online').reduce((total, line) => total + line.unitCents * line.quantity, 0);
   const hours = Array.from({ length: 13 }, (_, i) => `${i + 9}:00`.padStart(5, '0'));
   useEffect(() => {
-    const resetCheckoutButton = () => setBusy(false);
+    const resetCheckoutButton = () => { requestInFlight.current = false; setBusy(false); };
     window.addEventListener('pageshow', resetCheckoutButton);
     return () => window.removeEventListener('pageshow', resetCheckoutButton);
   }, []);
   useEffect(() => {
     if (!error) return;
-    requestAnimationFrame(() => document.getElementById('booking-error')?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+    requestAnimationFrame(() => document.getElementById('booking-error')?.scrollIntoView({ behavior: 'instant', block: 'center' }));
   }, [error]);
   useEffect(() => { if (user) setForm(f => ({ ...f, dogName: f.dogName || user.dogName || '', phone: f.phone || user.phone || '', address: f.address || user.address || '' })); }, [user]);
   useEffect(() => { if (!editId && !saved) setBookingDraft({ ids, visits, kind, trainingFocus, trainerId, from, to, startTime, endTime, count, preference, dogCount, form, requestKey, introDone, firstVisit, bookingStep, timeConfirmed }); }, [editId, saved, ids, visits, kind, trainingFocus, trainerId, from, to, startTime, endTime, count, preference, dogCount, form, requestKey, introDone, firstVisit, bookingStep, timeConfirmed, setBookingDraft]);
@@ -154,16 +155,18 @@ export default function BookingPage() {
     setNotice(`Made a random schedule with ${automatic.length} ${automatic.length === 1 ? 'visit' : 'visits'}. Review every selected date and time before saving.`);
   }
   async function save(e) {
-    e.preventDefault(); setBusy(true); setError('');
+    e.preventDefault();
+    if (requestInFlight.current || saved) return;
+    requestInFlight.current = true; setBusy(true); setError('');
     try {
       if (simpleBooking && (!visitReady || loadingDays || !batchAvailable(visits[0]?.date, visits[0]?.time))) throw new Error('Choose an available date and time before sending your request.');
       if (!editId && ids.includes('training') && !trainerId) throw new Error('Choose your trainer before saving this training request.');
       if (!editId) await api('/quote', { method: 'POST', body: { serviceIds: ids, visits, dogCount } });
       if (editId) { await api(`/bookings/${editId}/visits`, { method: 'PATCH', body: { visits } }); setNotice('Your updated schedule is saved for Bravo to review.'); }
       else { const { booking } = await api('/bookings', { method: 'POST', headers: bookingTrackingHeaders(), body: { requestKey, serviceIds: ids, visits, trainingFocus: ids.includes('training') ? trainingFocus : undefined, preferredTrainerId: ids.includes('training') ? trainerId : undefined, dogCount, ...form } }); setSaved(booking); setBookingDraft(null); setNotice(booking.status === 'waitlisted' ? `You joined ${chosenTrainer?.name || 'this trainer'}’s waiting list. Your preferred dates were saved, no calendar time was reserved, and no card was charged.` : 'Request saved. Bravo will confirm the visit details. No card has been charged.'); }
-    } catch (e) { setError(e.message); } finally { setBusy(false); }
+    } catch (e) { setError(e.message); } finally { requestInFlight.current = false; setBusy(false); }
   }
-  async function pay() { if (!saved || covered || waitlisted || !config?.paymentsReady) return; setBusy(true); setError(''); try { const result = await api(`/bookings/${saved._id}/checkout`, { method: 'POST', body: {} }); window.location.assign(result.url); } catch (e) { setError(e.message); setBusy(false); } }
+  async function pay() { if (requestInFlight.current || !saved || covered || waitlisted || !config?.paymentsReady) return; requestInFlight.current = true; setBusy(true); setError(''); try { const result = await api(`/bookings/${saved._id}/checkout`, { method: 'POST', body: {} }); window.location.assign(result.url); } catch (e) { requestInFlight.current = false; setError(e.message); setBusy(false); } }
   if(user && !['staff','owner'].includes(user.role) && membership?.active && services.includes('training') && !params.toString()) return <Navigate to="/schedule" replace/>;
   if (ids.includes('online') && config && config.lessonLibrary?.open !== true && user?.role !== 'owner') return <Page title="This option is unavailable."><Editable as={Link} contentKey="copy-bookingpage-1" canEditText canEditLink to="/portal?program=training" onClick={()=>{setIds(['training']);setKind('training');}}>Explore private training →</Editable></Page>;
   if (simpleBooking && !introDone) return <Page title="Start private training." eyebrow="YOUR FIRST VISIT" intro="A calmer everyday life starts with one conversation.">

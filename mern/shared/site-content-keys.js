@@ -2,6 +2,11 @@
 import { CONTENT_KEYS as BASE_CONTENT_KEYS } from './site-content-base-keys.js';
 export const CONTENT_KEYS = {
   ...BASE_CONTENT_KEYS,
+  'home-results-section': { text: false },
+  'home-results-eyebrow': { text: true },
+  'home-results-title': { text: true },
+  'home-results-copy': { text: true },
+  'home-results-book': { text: true, link: true },
   "home-fci-eyebrow": {"text": true},
   "home-fci-title": {"text": true},
   "home-fci-description": {"text": true},

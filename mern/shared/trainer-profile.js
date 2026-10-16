@@ -11,7 +11,7 @@ export function trainerProfileKey(person) {
 export function publicTrainerProfile(person, role = person.role) {
   const profileKey = trainerProfileKey(person);
   const legacy = { david: 'david-northrop', ashley: 'ashley-northrop', janet: 'janet-hughes' }[profileKey];
-  return { id: String(person._id || person.id), name: person.publicName ?? publicTrainerName(person.name), role,
+  return { id: String(person._id || person.id), name: publicTrainerName(person.publicName ?? person.name), role,
     title: person.title || (role === 'owner' ? 'Owner & Lead Trainer' : 'Bravo Trainer'), bio: person.bio || '',
     phone: person.showPhone ? person.phone : '', profileKey,
     revision: person.publicProfileRevision || 0, imageKey: `team-${legacy || profileKey}`,

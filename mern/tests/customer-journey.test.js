@@ -21,14 +21,14 @@ test('everyday goals retain the correct training focus', () => {
   assert.equal(goalBookingPath(goal), '/portal?program=training&focus=basic-obedience');
 });
 test('homepage pricing and proof precede the longer brand story in DOM order', () => {
-  const home = source('Home.tsx');
-  const order = ['<HomeBanner/>', 'id="training"', '<MobileDiscovery/>', '<GoalFinder/>', 'id="training-programs"', 'id="reviews"', 'id="team"', 'id="method"', 'id="dogs"'];
+  const home = readFileSync(new URL('../client/dist/bravo-shell.html', import.meta.url), 'utf8');
+  const order = ['id="training"', 'id="method"', 'id="results"', 'id="reviews"', 'id="team"', 'id="training-programs"', 'id="dogs"'];
   const indices = order.map(value => home.indexOf(value));
   assert.ok(indices.every(index => index >= 0));
   assert.deepEqual([...indices].sort((a, b) => a - b), indices);
-  assert.match(home, /id="specialist-training" open/);
+  assert.match(home, /id="specialist-training"[^>]*open/);
   assert.match(home, /Hunting Dog Training/);
-  assert.match(home, /<CatalogPrice/);
+  assert.match(home, /data-site-price="training"/);
 });
 test('full-month and returning-client entry points are outside disclosures', () => {
   const intro = source('FirstVisitIntro.jsx');

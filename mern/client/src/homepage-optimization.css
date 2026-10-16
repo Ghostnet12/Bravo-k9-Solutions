@@ -1,0 +1,49 @@
+/* The main offer is shared by mobile and desktop, using the live catalog. */
+.cinema-home.conversion-home .conversion-opening{display:block;margin:0 auto;padding-block:32px}
+.cinema-home.conversion-home .conversion-offer{padding:clamp(24px,4vw,48px);border:1px solid #ba9a6466;border-radius:16px;background:linear-gradient(120deg,#1d1b17,#101010);box-shadow:0 10px 38px #0003}
+.cinema-home.conversion-home .conversion-offer-copy{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);column-gap:48px;align-items:start}
+.cinema-home.conversion-home .conversion-offer h2{grid-column:1;font-size:clamp(30px,3.5vw,48px);margin:0;color:#f4f1eb}
+.cinema-home.conversion-home .conversion-price{grid-column:1;font:400 clamp(52px,6vw,76px)/1.05 'Bebas Neue',sans-serif;color:#e1c99d;margin:12px 0 20px}
+.cinema-home.conversion-home .conversion-price>span:last-child{font-size:26px;color:#d6cfc2}
+.cinema-home.conversion-home .conversion-offer ul{grid-column:2;grid-row:1 / span 3;list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 24px;max-width:none}
+.cinema-home.conversion-home .conversion-offer li{position:relative;padding-left:20px;font:400 14px/1.65 Montserrat,sans-serif;color:#eee9df}
+.cinema-home.conversion-home .conversion-offer li:before{content:'✓';position:absolute;left:0;color:#e1c99d}
+.cinema-home.conversion-home .conversion-catalog-terms{grid-column:1 / -1;grid-row:4;margin:20px 0 0;padding-top:8px;border-top:1px solid #ba9a6438;font:400 14px/1.7 Montserrat,sans-serif}
+.cinema-home.conversion-home .conversion-catalog-terms summary{min-height:44px;display:flex;align-items:center;cursor:pointer;color:#e1c99d}
+.cinema-home.conversion-home .conversion-catalog-terms p{font-size:14px;max-width:820px;color:#d6cfc2}
+.cinema-home.conversion-home .conversion-offer .conversion-button{grid-column:1;grid-row:3;display:flex;align-items:center;justify-content:center;gap:14px;width:fit-content;max-width:100%;min-height:48px;padding:12px 20px;box-sizing:border-box;background:#ba9a64;color:#101010;border:1px solid #ba9a64;border-radius:6px;font:600 14px/1.5 Montserrat,sans-serif;text-decoration:none}
+.cinema-home.conversion-home .home-results-actions{display:flex;align-items:center;flex-wrap:wrap;gap:18px 28px;margin-top:28px}
+.cinema-home.conversion-home #reviews .facebook-recommendations{margin-top:24px}
+.cinema-home.conversion-home .cinema-team-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:24px}
+.cinema-home.conversion-home .cinema-team-grid>article{border:1px solid #ba9a6440;border-radius:16px;overflow:hidden;background:#171614}
+.cinema-home.conversion-home .cinema-portrait{width:100%;border-radius:0;aspect-ratio:4 / 4;max-height:460px}
+.cinema-home.conversion-home .cinema-person{padding:24px}
+.cinema-home.conversion-home .home-trainer-focus{font:400 14px/1.7 Montserrat,sans-serif;color:#d6cfc2;margin:12px 0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.cinema-home.conversion-home #training-programs .goal-finder{width:100%;padding-top:8px}
+.cinema-home.conversion-home .cinema-dog-gallery{height:480px}
+.cinema-home.conversion-home .cinema-story{height:150svh;min-height:900px}
+@media(max-width:700px){
+ .cinema-home.conversion-home .conversion-opening{width:calc(100% - 32px);padding-block:24px}
+ .cinema-home.conversion-home .conversion-offer{padding:24px 20px}
+ .cinema-home.conversion-home .conversion-offer-copy{display:flex;flex-direction:column}
+ .cinema-home.conversion-home .conversion-offer h2{font-size:30px}
+ .cinema-home.conversion-home .conversion-price{font-size:58px;margin:10px 0 20px}
+ .cinema-home.conversion-home .conversion-offer ul{grid-template-columns:1fr;gap:8px;margin-bottom:20px}
+ .cinema-home.conversion-home .conversion-offer .conversion-button{order:1;width:100%}
+ .cinema-home.conversion-home .conversion-catalog-terms{order:2;width:100%;margin-top:16px}
+ .cinema-home.conversion-home .conversion-goal p{font-size:12px;line-height:1.5}
+ .cinema-home.conversion-home .conversion-subtitle{font-size:11px}
+ .cinema-home.conversion-home .home-results-actions{flex-direction:column;align-items:stretch}
+ .cinema-home.conversion-home .home-results-actions .cinema-link{align-self:center;min-height:44px}
+ .cinema-home.conversion-home .cinema-story{height:auto;min-height:0}
+ .cinema-home.conversion-home .cinema-story-stage{min-height:520px}
+ .cinema-home.conversion-home .cinema-dog-gallery{height:530px}
+ .cinema-home.conversion-home .cinema-portrait{max-height:420px}
+}
+@media(prefers-reduced-motion:reduce){.cinema-home.conversion-home .cinema-story{height:auto;min-height:0}}
+.access-reduced-motion .cinema-home.conversion-home .cinema-story{height:auto;min-height:0}
+@media(forced-colors:active){.conversion-offer,.cinema-team-grid>article{border:1px solid CanvasText}}
+
+.hero-photo-window:focus-visible,.home-proof-reviews:focus-visible{outline:3px solid #e1c99d;outline-offset:-3px}
+
+.cinema-home.conversion-home .cinema-portrait img{object-position:50% 8%}

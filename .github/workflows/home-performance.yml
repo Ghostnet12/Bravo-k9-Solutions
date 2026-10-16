@@ -1,0 +1,48 @@
+name: Homepage performance comparison
+on:
+  pull_request:
+    branches: [bravo-mern]
+    paths: ['mern/**', '.github/workflows/home-performance.yml']
+permissions:
+  contents: read
+concurrency:
+  group: homepage-performance-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: mern
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: mern/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: npm install --ignore-scripts --no-save --package-lock=false playwright@1.55.1
+      - run: npx playwright install --with-deps chromium
+      - name: Candidate lab samples
+        run: node tests/home-performance.browser.mjs
+      - name: Build production base with its own locked dependencies
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git worktree add --detach "$RUNNER_TEMP/bravo-performance-base" "$BASE_SHA"
+          cd "$RUNNER_TEMP/bravo-performance-base/mern"
+          npm ci --ignore-scripts
+          npm run build
+      - name: Base lab samples with identical fixtures
+        run: PERF_LABEL=base PERF_DIST="$RUNNER_TEMP/bravo-performance-base/mern/client/dist" node tests/home-performance.browser.mjs
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: homepage-performance-comparison
+          path: mern/test-results/performance-*.json

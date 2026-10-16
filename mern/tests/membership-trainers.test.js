@@ -34,6 +34,19 @@ test('missing, blocked, ambiguous, or virtual profiles do not invent a trainer i
   for(const people of [[david],[david,{...ashley,blocked:true}],[david,ashley,{...ashley,id:'cccccccccccccccccccccccc'}],[david,{id:JOINT_TRAINER_ID,name:'Ashley'}]])assert.equal(trainerOptions(people).find(p=>p.joint).disabled,true);
   assert.equal(jointTrainerPair([{...david,name:'Dave Northrop'},{...ashley,name:'Ashley Leverock'}]).length,2);
 });
+test('legacy public surnames stay consistent in signed-in choices and schedule labels while preserving custom edits',()=>{
+  for(const publicName of ['Ashley Northrop','Ashley Leverock','Ashley L.']) {
+    const person={...ashley,profileKey:'ashley',publicName};
+    const expected=publicName==='Ashley Northrop'?'Ashley Leverock':publicName;
+    const choices=trainerOptions([david,person]);
+    assert.equal(choices[1].name,expected);
+    assert.equal(choices[1].id,ashley.id);
+    assert.deepEqual(choices[2].staffIds,[david.id,ashley.id]);
+    assert.equal(choices[2].spotsRemaining,2);
+    assert.equal(scheduledTrainerLabel({staffId:person}),expected);
+    assert.equal(scheduledTrainerLabel({staffIds:[david,person],trainerAcceptanceRequired:true,trainerAcceptedIds:[david.id]}),`Awaiting acceptance from ${expected}`);
+  }
+});
 test('legacy and multi-trainer bookings resolve consistently without duplicating the primary trainer',()=>{
   assert.deepEqual(bookingTrainerIds({staffId:david.id}),[david.id]);
   assert.equal(trainerChoice({staffId:david.id,staffIds:[david.id,ashley.id]}),JOINT_TRAINER_ID);
