@@ -71,14 +71,21 @@ try {for(const [name,engine] of engines) {
    }
    assert.fail('Fixture API requests did not settle before navigation');
   };
+  // Public HTML can render its footer before React starts queued content reads.
+  // Wait for hydration's content response before declaring a document settled.
+  const visit = async (url, options = {}) => {
+   const content = page.waitForResponse(response => new URL(response.url()).pathname === '/api/site-content');
+   await page.goto(url, { waitUntil: 'domcontentloaded', ...options });
+   await content; await waitForApiIdle();
+  };
   const refresh=()=>page.evaluate(()=>window.dispatchEvent(new Event('bravo-live-changed')));
-  await page.goto(origin,{waitUntil:'networkidle'});
+  await visit(origin,{waitUntil:'networkidle'});
   assert.equal(await page.locator('.home-ad-dock').count(),0);
   assert.equal(await page.locator('.hero-live').count(),0);
   assert.ok(!(await page.locator('.home-status-banner').innerText()).includes('Bravo is live now'));
   for(const path of ['/workshops','/live','/contact','/']){
    await waitForApiIdle();
-   await page.goto(origin+path,{waitUntil:'domcontentloaded'});
+   await visit(origin+path,{waitUntil:'domcontentloaded'});
    await page.locator('footer').waitFor();
    assert.equal(await page.locator('.home-ad-dock').count(),0,'no ads or ad videos across routes');
    await page.evaluate(()=>window.scrollTo({top:document.body.scrollHeight,behavior:'instant'}));
@@ -108,7 +115,7 @@ try {for(const [name,engine] of engines) {
   await waitForApiIdle();
   // WebKit can keep the document load event pending while media initializes.
   // Assert the rendered connection state, as for the live-document reload below.
-  await page.goto(`${origin}/live`,{waitUntil:'domcontentloaded'});await page.bringToFront();await page.getByText('Live status is temporarily unavailable. Reconnecting…',{exact:true}).waitFor();assert.equal(await page.getByRole('heading',{name:'OUT IN THE FIELD.'}).count(),0);
+  await visit(`${origin}/live`,{waitUntil:'domcontentloaded'});await page.bringToFront();await page.getByText('Live status is temporarily unavailable. Reconnecting…',{exact:true}).waitFor();assert.equal(await page.getByRole('heading',{name:'OUT IN THE FIELD.'}).count(),0);
   failure=false;sessions=[makeSession('one','David · TEST'),makeSession('two','Ashley · TEST')];await refresh();await page.locator('.live-session-row').first().waitFor();
   await page.locator('.live-session-row').nth(1).click();await page.waitForFunction(()=>document.querySelector('.live-player-caption h2')?.textContent.includes('Ashley'));assert.match(await page.locator('.live-player-caption h2').innerText(),/Ashley/i);
   // A playing video can keep a media request open; UI and worker readiness,
@@ -137,12 +144,12 @@ try {for(const [name,engine] of engines) {
   sessions=[];await refresh();await page.getByRole('heading',{name:'OUT IN THE FIELD.'}).waitFor();await page.getByRole('region',{name:'Recorded Bravo training'}).waitFor();
   await page.setViewportSize({width:390,height:900});
   await waitForApiIdle();
-  await page.goto(`${origin}/portal?program=walking`);await page.locator('.mobile-booking-bar').waitFor();
+  await visit(`${origin}/portal?program=walking`);await page.locator('.mobile-booking-bar').waitFor();
   assert.ok(await page.evaluate(()=>{const access=document.querySelector('.accessibility-tools').getBoundingClientRect(),nav=document.querySelector('.mobile-home-nav').getBoundingClientRect();return nav.bottom<=innerHeight+1 && access.bottom<nav.top && getComputedStyle(document.querySelector('.mobile-booking-bar')).position==='static';}),'booking action and accessibility clear persistent navigation');
   await page.locator('.mobile-booking-bar a').click();
   assert.equal(new URL(page.url()).hash,'#choose-dates','mobile booking action remains usable');
   await waitForApiIdle();
-  await page.goto(origin,{waitUntil:'networkidle'});await page.emulateMedia({reducedMotion:'reduce'});
+  await visit(origin,{waitUntil:'networkidle'});await page.emulateMedia({reducedMotion:'reduce'});
   const access=page.getByRole('button',{name:'Accessibility',exact:true});await access.focus();
   assert.ok(await access.evaluate(el=>getComputedStyle(el).outlineStyle!=='none'));
   assert.equal(await page.locator('.home-ad-dock').count(),0);
