@@ -41,7 +41,7 @@ await mkdir('test-results', { recursive: true });
 try {
  for (const [engineName, engine] of Object.entries(process.env.BROWSER_ENGINE ? { [process.env.BROWSER_ENGINE]: { chromium, webkit }[process.env.BROWSER_ENGINE] } : { chromium, webkit })) {
   const browser = await engine.launch();
-  try { for (const width of [320,375,390,430,768,1440]) {
+  try { for (const width of [320,375,390,430,768,1024,1440]) {
    const page = await browser.newPage({ viewport: { width, height: 844 }, reducedMotion: 'reduce' });
    const errors = []; page.on('pageerror', error => errors.push(error.message));
    await page.goto(origin, { waitUntil: 'networkidle' });

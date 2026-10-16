@@ -20,8 +20,8 @@ try {
     if (process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(name)) continue;
     const browser = await engine.launch();
     try {
-      for (const [width, height] of [[320, 700], [390, 844], [844, 390], [1440, 900]]) {
-        const context = await browser.newContext({ viewport: { width, height }, reducedMotion: 'reduce', hasTouch: width < 900 });
+      for (const [width, height, deviceScaleFactor] of [[320, 700, 1], [390, 844, 1], [390, 844, 3], [844, 390, 1], [1440, 900, 1]]) {
+        const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor, isMobile: deviceScaleFactor === 3, reducedMotion: 'reduce', hasTouch: width < 900 });
         let owner = false, saved = null;
         const requests = [], errors = [];
         await context.route('**/*', async route => {
@@ -42,12 +42,14 @@ try {
           const image = page.locator('.cinema-hero-still');
           await image.evaluate(img => img.decode());
           const source = await image.evaluate(img => img.currentSrc);
-          assert.ok(source.endsWith(width <= 600 ? 'mobile-bravo-cinematic-600.webp' : width <= 900 ? 'mobile-bravo-cinematic-900.webp' : 'mobile-bravo-cinematic.webp'));
+          const pixels = width * deviceScaleFactor;
+          const expectedImage = pixels <= 600 ? 'mobile-bravo-cinematic-600.webp' : pixels <= 900 ? 'mobile-bravo-cinematic-900.webp' : pixels <= 1200 ? 'mobile-bravo-cinematic-1200.webp' : 'mobile-bravo-cinematic.webp';
+          assert.ok(source.endsWith(expectedImage), source);
           const heroRequests = requests.filter(path => /\/mobile-bravo-cinematic(?:-\d+)?\.webp$/.test(path));
           assert.equal(new Set(heroRequests).size, 1, 'preload and image choose the same responsive asset');
           assert.ok(!requests.some(path => /\/(ContentEditor|AdEditor|BannerEditor)-.*\.js$/.test(path)), 'public loads exclude editing dialogs');
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
-          await page.screenshot({ path: `test-results/refinement-${name}-${width}x${height}.png` });
+          await page.screenshot({ path: `test-results/refinement-${name}-${width}x${height}-${deviceScaleFactor}x.png` });
           if (width === 390) {
             owner = true;
             await page.reload({ waitUntil: 'networkidle' });
@@ -73,7 +75,7 @@ try {
           assert.deepEqual(violations, [], 'booking automated WCAG checks');
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
           assert.deepEqual(errors, []);
-          console.log(`PASS ${name}/${width}x${height}: responsive preload, deferred editors, hero framing, booking accessibility and overflow`);
+          console.log(`PASS ${name}/${width}x${height}/${deviceScaleFactor}x: responsive preload, deferred editors, hero framing, booking accessibility and overflow`);
         } finally { await context.close(); }
       }
     } finally { await browser.close(); }
