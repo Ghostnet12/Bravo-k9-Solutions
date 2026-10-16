@@ -4,16 +4,18 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import express from 'express';
 import { chromium } from 'playwright';
-import { renderHomepage } from '../server/homepage.js';
 import { SERVICES } from '../shared/catalog.js';
 import { DEFAULT_REVIEWS } from '../shared/reviews.js';
 import { DEFAULT_PROOF_VIDEOS } from '../shared/proof-videos.js';
 
 const dist = path.resolve(process.env.PERF_DIST || 'client/dist');
 const label = process.env.PERF_LABEL || 'candidate';
+// Preload order is server behavior: measure each revision's own renderer.
+const { renderHomepage } = await import(pathToFileURL(path.resolve(dist, '../../server/homepage.js')).href);
 const html = renderHomepage(await readFile(path.join(dist, 'bravo-shell.html'), 'utf8'), null, null);
 const app = express();
 app.get('/api/config', (_req,res)=>res.json({connected:false,paymentsReady:false,services:SERVICES,schedule:{enabled:false,weekdays:[1,2,3,4,5],hours:[]}}));
@@ -76,7 +78,13 @@ try {
       await page.goto(origin,{waitUntil:'networkidle'});
       await page.locator('.cinema-hero-still').evaluate(img=>img.decode());
       await page.evaluate(()=>new Promise(resolve=>setTimeout(resolve,1000)));
-      const initial=await page.evaluate(()=>({...window.labVitals,documentHeight:document.documentElement.scrollHeight,bytes:performance.getEntriesByType('resource').reduce((n,r)=>n+r.transferSize,0)}));
+      const initial=await page.evaluate(()=>{
+        const resources=performance.getEntriesByType('resource');
+        const hero=resources.find(r=>r.name.includes('/images/mobile-bravo-cinematic.webp'));
+        return {...window.labVitals,documentHeight:document.documentElement.scrollHeight,bytes:resources.reduce((n,r)=>n+r.transferSize,0),
+          fonts:resources.filter(r=>r.initiatorType==='css' || r.initiatorType==='link').map(r=>r.name).filter(name=>/\.woff2$/.test(name)),
+          heroRequest:hero?{startMs:Math.round(hero.startTime),endMs:Math.round(hero.responseEnd),bytes:hero.transferSize}:null};
+      });
       await page.locator('.polish-hero-actions').getByRole('link',{name:/Explore training/i}).click();
       await page.locator('#training').waitFor();
       if(width===390) {
@@ -87,7 +95,13 @@ try {
       await page.evaluate(()=>new Promise(resolve=>setTimeout(resolve,1000)));
       const interactions=await page.evaluate(()=>window.labVitals);
       assert.ok(initial.lcp>0,'LCP measurement exists');
-      results.push({width,run,lcpMs:Math.round(initial.lcp),lcpElement:initial.lcpElement,cls:initial.cls,initialTransferBytes:initial.bytes,documentHeight:initial.documentHeight,initialBlockingMs:Math.round(initial.longTaskMs),sampledMaxInteractionMs:interactions.maxInteraction});
+      results.push({width,run,lcpMs:Math.round(initial.lcp),lcpElement:initial.lcpElement,cls:initial.cls,initialTransferBytes:initial.bytes,documentHeight:initial.documentHeight,initialBlockingMs:Math.round(initial.longTaskMs),sampledMaxInteractionMs:interactions.maxInteraction,heroRequest:initial.heroRequest});
+      if(label==='candidate' && width===390 && run===1) {
+        assert.ok(initial.fonts.some(name=>name.endsWith('/montserrat-400-latin.woff2')),'homepage uses the Latin delivery font');
+        assert.ok(initial.fonts.every(name=>name.endsWith('-latin.woff2')),'full fonts do not compete with the initial hero');
+        await page.evaluate(()=>document.fonts.load('400 18px Montserrat','Żł'));
+        assert.ok(await page.evaluate(()=>performance.getEntriesByType('resource').some(r=>r.name.endsWith('/montserrat-400.woff2'))),'extended characters still load the complete brand font');
+      }
       await context.close();
     }
   }
