@@ -38,6 +38,7 @@ test('cinematic still has the only image preload while the saved gallery snapsho
   assert.match(html, /&quot;fit&quot;:&quot;contain&quot;/);
   assert.match(html, /&quot;zoom&quot;:1.36/);
   assert.match(html, /as="font"/);
+  assert.ok(html.indexOf('/images/mobile-bravo-cinematic.webp') < html.indexOf('as="font"'), 'critical hero is discovered before font preloads');
   assert.ok(html.indexOf('bravo-home-hero') < html.indexOf('<body>'));
 });
 

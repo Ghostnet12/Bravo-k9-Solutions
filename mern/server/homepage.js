@@ -29,7 +29,8 @@ export function renderHomepage(html, value, filmValue) {
   // Replace React's image preloads so below-fold uploads cannot compete with
   // the first visible poster for high-priority bandwidth.
   return html.replace(/<link\b(?=[^>]*\brel="preload")(?=[^>]*\bas="image")[^>]*>/g, '')
-    .replace('</head>', `${preload}<meta name="${HOME_HERO_META}" content="${escapeAttribute(JSON.stringify(hero))}"/><meta name="${HERO_FILM_META}" content="${escapeAttribute(JSON.stringify(films))}"/></head>`);
+    .replace('<head>', `<head>${preload}`)
+    .replace('</head>', `<meta name="${HOME_HERO_META}" content="${escapeAttribute(JSON.stringify(hero))}"/><meta name="${HERO_FILM_META}" content="${escapeAttribute(JSON.stringify(films))}"/></head>`);
 }
 
 export function createHomepageHandler({ loadHero, loadTemplate = readTemplate, loadContent = async () => ({}), loadFilm = async () => null, loadWorkshop = async () => undefined, loadCatalog = async () => undefined, loadReviews = async () => [] }) {
