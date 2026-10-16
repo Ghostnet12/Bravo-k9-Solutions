@@ -7,7 +7,12 @@ import { chromium, webkit } from 'playwright';
 
 const dist=fileURLToPath(new URL('../client/dist/',import.meta.url)), html=await readFile(`${dist}/bravo-shell.html`,'utf8');
 const fixture=fileURLToPath(new URL('../client/public/images/training-education.webp',import.meta.url));
-const app=express();app.use(express.static(dist));app.get('/{*path}',(_req,res)=>res.type('html').send(html));
+const app=express();
+// Keep polling on real same-origin HTTP while documents reload between roles.
+// WebKit can report an access-control page error when an intercepted poll is
+// fulfilled after its document has been torn down.
+app.get('/api/live',(_req,res)=>res.json({sessions:[],announcements:[],availability:'available',serverTime:new Date().toISOString()}));
+app.use(express.static(dist));app.get('/{*path}',(_req,res)=>res.type('html').send(html));
 const server=app.listen(0,'127.0.0.1');await once(server,'listening');const origin=`http://127.0.0.1:${server.address().port}`;
 await mkdir('test-results',{recursive:true});
 try{
@@ -21,7 +26,7 @@ try{
     {id:'fixture-second',title:'Second promotion',alt:'Second promotion',link:'',enabled:true,src:'/images/training-education.webp'}
    ]};
    const errors=[];page.on('pageerror',e=>errors.push(e.message));
-   await page.route('**/api/**',async route=>{
+   await page.route(/\/api\/(?!live(?:[/?#]|$))/,async route=>{
     const url=new URL(route.request().url()),path=url.pathname,method=route.request().method();let json={services:[],team:[],images:{},reviews:[],schedules:[],clips:[],count:0},status=200;
     if(path==='/api/auth/me')json={user:role?{id:'fixture',role,name:'Fixture'}:null,services:[]};
     else if(path==='/api/site-ads'){
@@ -30,8 +35,7 @@ try{
       else json=collection;
     } else if(path.startsWith('/api/site-ads/')&&method==='DELETE'){const id=path.split('/').pop(),body=route.request().postDataJSON();assert.equal(body.expectedRevision,collection.revision);collection={...collection,revision:collection.revision+1,ads:collection.ads.filter(ad=>ad.id!==id)};json=collection;
     } else if(path.startsWith('/api/site-ads/')&&method==='PUT'){const id=path.split('/').pop(),body=route.request().postDataJSON();collection={...collection,revision:collection.revision+1,ads:collection.ads.map(ad=>ad.id===id?{...ad,...body,src:ad.src}:ad)};json=collection;
-    } else if(path==='/api/live')json={sessions:[],announcements:[],availability:'available',serverTime:new Date().toISOString()};
-    else if(path==='/api/site-banner')json={revision:0,alerts:[],settings:{}};
+    } else if(path==='/api/site-banner')json={revision:0,alerts:[],settings:{}};
     else if(path==='/api/site-banner/weather')json={weather:null};
     else if(path==='/api/site-content')json={entries:{}};
     await route.fulfill({status,json});
