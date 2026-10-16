@@ -15,10 +15,31 @@ const now=DateTime.fromISO('2026-09-14T08:00',{zone:'America/Chicago'});
 const name=date=>new RegExp(`^${DateTime.fromISO(date).toFormat('ccc, LLL d')},`);
 await mkdir('test-results',{recursive:true});
 try{for(const [engineName,engine]of Object.entries({chromium,webkit})){
+ if(process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(engineName))continue;
  const browser=await engine.launch();try{for(const access of ['staff','administrator','owner']){
   const context=await browser.newContext({viewport:{width:access==='owner'?1440:390,height:844}}),page=await context.newPage();await page.clock.setFixedTime(now.toJSDate());
   let role=access==='staff'?'staff':'owner',lastCredit,lastMove;
-  const errors=[];page.on('pageerror',e=>errors.push({message:e.message,cause:e.cause?.message,url:page.url()}));
+  const errors=[],navigationDiagnostics=[];let navigating=false;
+  page.on('pageerror',e=>{
+   const diagnostic={message:e.message,cause:e.cause?.message,url:page.url()};
+   // WebKit reports a handled live-poll cancellation during document replacement
+   // as pageerror (Playwright #43120). Only this exact navigation diagnostic is
+   // separated; uncaught DOM errors/rejections and all other errors still fail.
+   if(engineName==='webkit' && navigating && e.message.endsWith(`${new URL(origin).host}/api/live due to access control checks.`))navigationDiagnostics.push(diagnostic);
+   else errors.push(diagnostic);
+  });
+  await page.exposeFunction('recordCreditRuntimeError',message=>errors.push({message}));
+  await page.addInitScript(()=>{
+   window.addEventListener('error',event=>{if(event instanceof ErrorEvent)void window.recordCreditRuntimeError(event.error?.stack||event.message).catch(()=>{});});
+   window.addEventListener('unhandledrejection',event=>{void window.recordCreditRuntimeError(event.reason?.stack||event.reason?.message||String(event.reason)).catch(()=>{});});
+  });
+  const navigate=async url=>{
+   navigating=true;
+   try{await page.goto(url);}finally{navigating=false;}
+   // A genuine access-control or live-status failure on the destination fails.
+   const live=await page.evaluate(async()=>{const response=await fetch('/api/live',{credentials:'same-origin',cache:'no-store'});const data=await response.json();return {status:response.status,sessions:Array.isArray(data.sessions),announcements:Array.isArray(data.announcements)};});
+   assert.deepEqual(live,{status:200,sessions:true,announcements:true});
+  };
   let term={stripeId:'grant:test',bookingId,serviceIds:['training'],status:'active',validFrom:'2026-09-01T05:00:00.000Z',validUntil:'2026-09-21T05:00:00.000Z',creditedDays:1};
   let credits=[{_id:'legacy-credit',termId:term.stripeId,days:1,reason:'Other',note:'',beforeEnd:'2026-09-20T05:00:00.000Z',afterEnd:term.validUntil,createdAt:now.toISO()}];
   let booking={_id:bookingId,dogName:'Gunner',staffId,staffIds:[staffId],termStartsAt:term.validFrom,termEndsAt:term.validUntil,updatedAt:now.toISO(),visits:['2026-09-16','2026-09-17'].map(date=>({date,time:'10:00',service:'training'})),cancelledVisits:[]};
@@ -26,6 +47,7 @@ try{for(const [engineName,engine]of Object.entries({chromium,webkit})){
    const url=new URL(route.request().url()),path=url.pathname;let json={};
    const person={id:staffId,_id:staffId,name:'Trainer',role,isPrimaryOwner:access==='owner'};
    if(path==='/api/auth/me')json={user:role==='member'?{id:clientId,name:'Client',role}:person,services:['training'],membership:{active:true}};
+   else if(path==='/api/live')json={sessions:[],announcements:[]};
    else if(path==='/api/config')json={connected:true,services:SERVICES,schedule:{enabled:true,hours:['10:00','11:00']}};
    else if(path==='/api/notifications')json={items:[]};else if(path==='/api/team')json={team:[person]};
    else if(path==='/api/client-schedule')json={client:{id:clientId,name:'Client'},terms:[term],dayCredits:credits,trainingBookings:[booking],visits:[...booking.visits.map(v=>({...v,status:'confirmed'})),...booking.cancelledVisits.map(v=>({...v,status:'cancelled'}))].filter(v=>v.date.startsWith(url.searchParams.get('month'))).map(v=>({...v,bookingId,dogName:'Gunner',trainer:'Trainer',paymentStatus:'covered'}))};
@@ -46,7 +68,7 @@ try{for(const [engineName,engine]of Object.entries({chromium,webkit})){
    await route.fulfill({json});
   });
   try{
-   await page.goto(`${origin}/schedule?client=${clientId}&month=2026-09`);await page.getByRole('button',{name:'Add or Cancel Date',exact:true}).waitFor();
+   await navigate(`${origin}/schedule?client=${clientId}&month=2026-09`);await page.getByRole('button',{name:'Add or Cancel Date',exact:true}).waitFor();
    const grid=page.getByLabel('Saved monthly schedule');await grid.getByRole('button',{name:name('2026-09-20')}).click();
    const move=page.getByRole('region',{name:'Move credit',exact:true});await move.getByRole('button',{name:'Move credit',exact:true}).click();
    assert.equal(await move.getByLabel('Include weekends',{exact:true}).isChecked(),false);
@@ -80,9 +102,9 @@ try{for(const [engineName,engine]of Object.entries({chromium,webkit})){
    await add.getByLabel('Number of credit days',{exact:true}).fill('3');assert.equal(await add.getByLabel('Include weekends',{exact:true}).isChecked(),false);
    await add.getByRole('button',{name:'Save credit',exact:true}).click();await page.getByText('Credits saved.',{exact:true}).waitFor();
    assert.deepEqual(credits.at(-1).creditDates,['2026-10-02','2026-10-05','2026-10-06']);assert.equal(term.creditedDays,6);assert.equal(lastCredit.note,'');
-   await page.waitForLoadState('networkidle');role='member';await page.goto(`${origin}/schedule?month=2026-10`);await page.getByRole('button',{name:'Add or Cancel Date',exact:true}).waitFor();
+   await page.waitForLoadState('networkidle');role='member';await navigate(`${origin}/schedule?month=2026-10`);await page.getByRole('button',{name:'Add or Cancel Date',exact:true}).waitFor();
    await grid.getByRole('button',{name:name('2026-10-06')}).click();assert.equal(await page.getByRole('button',{name:'Move credit',exact:true}).count(),0);assert.equal(await page.getByRole('button',{name:'Add credit days',exact:true}).count(),0);
    assert.deepEqual(errors,[]);console.log(`${engineName} ${access}: legacy Sunday move, opt-in weekends, batch cancellations, editor move across months, extra credits and client visibility passed`);
-  }catch(error){await page.screenshot({path:`test-results/move-credit-failure-${engineName}-${access}.png`,fullPage:true});await writeFile(`test-results/move-credit-failure-${engineName}-${access}.txt`,JSON.stringify({url:page.url(),errors,body:await page.locator('body').innerText()},null,2));throw error;}finally{await context.close();}
+  }catch(error){await page.screenshot({path:`test-results/move-credit-failure-${engineName}-${access}.png`,fullPage:true});await writeFile(`test-results/move-credit-failure-${engineName}-${access}.txt`,JSON.stringify({url:page.url(),errors,body:await page.locator('body').innerText()},null,2));throw error;}finally{await writeFile(`test-results/move-credit-diagnostics-${engineName}-${access}.json`,JSON.stringify({errors,navigationDiagnostics},null,2));await context.close();}
  }}finally{await browser.close();}
 }}finally{server.close();}

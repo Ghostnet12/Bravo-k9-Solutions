@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import express from 'express';
 import { once } from 'node:events';
-import { readFile, mkdir } from 'node:fs/promises';
+import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { chromium, webkit } from 'playwright';
 import { schedulePdf } from '../server/schedule-pdf.js';
@@ -30,12 +30,37 @@ try {
         let singleVisitBody=null;
         let trainerAssigned='aaaaaaaaaaaaaaaaaaaaaaaa',trainerPending=false,trainerAccepted=null;
         let savedVisits=['2026-09-21','2026-09-28','2026-10-05'].map(date=>({date,time:'10:00',service:'training'}));
-        page.on('pageerror', error => errors.push(error.message));
+        const navigationDiagnostics = []; let navigating = false;
+        page.on('pageerror', error => {
+          // WebKit can emit a handled live-poll cancellation as pageerror while
+          // replacing the document. Keep this exact diagnostic as evidence;
+          // actual uncaught errors/rejections and destination failures still fail.
+          if (name === 'webkit' && navigating && error.message.endsWith(`${new URL(origin).host}/api/live due to access control checks.`)) navigationDiagnostics.push({ message: error.message, url: page.url() });
+          else errors.push(error.message);
+        });
+        await page.exposeFunction('recordClientRuntimeError', message => errors.push(message));
+        await page.addInitScript(() => {
+          window.addEventListener('error', event => { if (event instanceof ErrorEvent) void window.recordClientRuntimeError(event.error?.stack || event.message).catch(() => {}); });
+          window.addEventListener('unhandledrejection', event => { void window.recordClientRuntimeError(event.reason?.stack || event.reason?.message || String(event.reason)).catch(() => {}); });
+        });
+        const navigate = async url => {
+          await page.waitForLoadState('networkidle');
+          navigating = true;
+          try { await page.goto(url); } finally { navigating = false; }
+          const live = await page.evaluate(async () => {
+            const response = await fetch('/api/live', { credentials: 'same-origin', cache: 'no-store' });
+            const data = await response.json();
+            return { status: response.status, sessions: Array.isArray(data.sessions), announcements: Array.isArray(data.announcements) };
+          });
+          assert.deepEqual(live, { status: 200, sessions: true, announcements: true });
+          await page.waitForLoadState('networkidle');
+        };
         await page.exposeFunction('recordPrint', () => { printed = true; });
         await page.addInitScript(() => { window.print = () => window.recordPrint(); });
         await page.route('**/api/**', async route => {
           const url = new URL(route.request().url()); let json = {};
-          if (url.pathname === '/api/config') json = { connected: true, paymentsReady: true };
+          if (url.pathname === '/api/live') json = { sessions: [], announcements: [] };
+          else if (url.pathname === '/api/config') json = { connected: true, paymentsReady: true };
           else if (url.pathname === '/api/auth/me') json = { user: { id: 'aaaaaaaaaaaaaaaaaaaaaaaa', name: 'Fixture client', role }, services: [] };
           else if (url.pathname === '/api/admin') json={role,bookings:[],team:[{_id:'aaaaaaaaaaaaaaaaaaaaaaaa',name:'Fixture Trainer'}],inbox:[],blocks:[],settings:{enabled:true,weekdays:[1,2,3,4,5],hours:['10:00']}};
           else if (url.pathname === '/api/admin/reviews') json={reviews:[]};
@@ -57,7 +82,7 @@ try {
           if (url.pathname === '/api/client-schedule' && url.searchParams.get('format') === 'pdf') return route.fulfill({ body: await schedulePdf(json), contentType: 'application/pdf', headers: { 'Content-Disposition': 'attachment; filename="bravo-schedule.pdf"' } });
           await route.fulfill({ json });
         });
-        await page.goto(`${origin}/schedule?month=2026-09`);
+        await navigate(`${origin}/schedule?month=2026-09`);
         await page.getByRole('heading', { name: 'September 2026' }).waitFor();
         assert.equal(await page.locator('.schedule-visit').count(), 2);
         assert.equal(await page.locator('.saved-calendar button').count(), 30);
@@ -95,7 +120,7 @@ try {
         await page.getByRole('button',{name:'Notifications',exact:true}).click();
         await page.getByText('No unread notifications.',{exact:true}).waitFor();
         // Client toggles stay in a draft, work across months, and save together.
-        await page.goto(`${origin}/schedule?month=2026-09`);
+        await navigate(`${origin}/schedule?month=2026-09`);
         await page.getByRole('button',{name:'Add or Cancel Date',exact:true}).click();
         const editor=page.getByRole('region',{name:'Add or Cancel Date',exact:true});
         await editor.getByRole('button',{name:/Tue, Sep 22,/}).click();
@@ -118,8 +143,9 @@ try {
         assert.deepEqual(changeBody.removals,[{date:'2026-09-21',time:'10:00'}]);
         assert.equal(changeBody.openWeekends,false);
         await page.getByRole('button',{name:'Tue, Sep 22, 1 visit',exact:true}).waitFor();
+        await page.waitForLoadState('networkidle');
         role = width === 320 ? 'staff' : 'owner'; saved=false;
-        await page.goto(`${origin}/schedule?month=2026-09&client=cccccccccccccccccccccccc`);
+        await navigate(`${origin}/schedule?month=2026-09&client=cccccccccccccccccccccccc`);
         await page.getByRole('button',{name:'Add or Cancel Date',exact:true}).click();
         const weekendToggle=editor.getByRole('checkbox',{name:'Open the selected weekend times when saving',exact:true});
         assert.equal(await weekendToggle.isChecked(),false);await weekendToggle.check();
@@ -144,12 +170,12 @@ try {
         assert.deepEqual(changeBody.removals,[{date:'2026-09-22',time:'10:00'}]);
         await page.getByRole('button',{name:'Sun, Sep 20, 1 visit',exact:true}).waitFor();
         // Assign on the client's schedule, then accept in the trainer's profile/desk.
-        trainerAssigned='';
-        await page.goto(`${origin}/schedule?month=2026-09&client=cccccccccccccccccccccccc`);
+        await page.waitForLoadState('networkidle');trainerAssigned='';
+        await navigate(`${origin}/schedule?month=2026-09&client=cccccccccccccccccccccccc`);
         await page.getByText('Assign trainer & accept client',{exact:true}).click();
         await page.getByRole('button',{name:'Assign trainer',exact:true}).click();
         await page.getByText('Trainer: Awaiting acceptance from Fixture Trainer',{exact:true}).first().waitFor();
-        await page.goto(`${origin}/admin?tab=${role==='owner'?'people':'schedule'}`);
+        await navigate(`${origin}/admin?tab=${role==='owner'?'people':'schedule'}`);
         if(role==='owner')await page.locator('.owner-person>summary').filter({hasText:'Fixture Trainer'}).click();
         await page.getByText('Training clients · accept assignments',{exact:true}).click();
         await page.getByRole('button',{name:'Accept client',exact:true}).click();
@@ -157,10 +183,11 @@ try {
         assert.ok(trainerAccepted);assert.equal(trainerPending,false);
         assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
         await page.screenshot({path:`test-results/trainer-acceptance-${name}-${width}.png`,fullPage:true});
-        role='member';
-        await page.goto(`${origin}/schedule?month=2026-09`);
+        await page.waitForLoadState('networkidle');role='member';
+        await navigate(`${origin}/schedule?month=2026-09`);
         await page.getByText('Trainer: Fixture Trainer',{exact:true}).first().waitFor();
         assert.equal(await page.getByText('Assign trainer & accept client',{exact:true}).count(),0);
+        await writeFile(`test-results/client-services-diagnostics-${name}-${width}.json`, JSON.stringify({ errors, navigationDiagnostics }, null, 2));
         assert.deepEqual(errors, []);
         await context.close(); console.log(`${name} ${width}: PDF, client/staff batch calendars, notes, trainer acceptance, notifications and layout passed`);
       }
