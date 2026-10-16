@@ -50,6 +50,8 @@ try {
           assert.ok(!requests.some(path => /\/(ContentEditor|AdEditor|BannerEditor)-.*\.js$/.test(path)), 'public loads exclude editing dialogs');
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
           assert.equal(await page.locator('.mobile-home-nav svg').count(),6,'all quick-navigation icons are stable SVG outlines');
+          assert.equal(await page.locator('.cinema-story').count(),0,'duplicate training-photo story is removed');
+          assert.equal(await page.locator('.cinema-dog-gallery').count(),1,'editable original photo gallery remains');
           if (height === 390) {
             for (const link of await page.locator('.polish-hero-actions a').all()) {
               const box = await link.boundingBox();
