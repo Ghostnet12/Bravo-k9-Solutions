@@ -37,7 +37,9 @@ try {
       await plain.close();
       for (const width of [390, 1440]) {
         const context = await browser.newContext({ viewport: { width, height: 900 } });
+        await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
         const page = await context.newPage(), errors = [];
+        try {
         page.on('pageerror', error => errors.push(error.message));
         await page.route('**/api/**', route => {
           const path = new URL(route.request().url()).pathname;
@@ -60,7 +62,20 @@ try {
           const original = await card.locator('.review-full blockquote').textContent();
           assert.equal(await card.locator('.review-full blockquote').isVisible(), false);
           await card.getByText('Read full review', { exact: true }).click();
-          await card.locator('.review-excerpt').waitFor({state:'hidden'});
+          try {
+            await card.locator('.review-excerpt').waitFor({state:'hidden'});
+          } catch (error) {
+            console.log('Review expansion diagnostic', await card.evaluate(node => ({
+              author: node.querySelector('strong')?.textContent,
+              open: node.querySelector('details')?.open,
+              excerptDisplay: getComputedStyle(node.querySelector('.review-excerpt')).display,
+              card: node.getBoundingClientRect().toJSON(),
+              summary: node.querySelector('summary')?.getBoundingClientRect().toJSON(),
+              railScroll: node.parentElement.scrollLeft,
+              active: document.activeElement?.outerHTML,
+            })));
+            throw error;
+          }
           assert.equal((await card.locator('.review-full blockquote').innerText()).trim(), original.trim());
           await card.getByText('Show less', { exact: true }).click();
           assert.ok(await card.locator('.review-excerpt').isVisible());
@@ -103,8 +118,12 @@ try {
         await page.getByRole('heading', { level: 1, name: 'That page wandered off.' }).waitFor();
         assert.equal(await page.locator('link[rel="canonical"]').count(), 0);
         assert.deepEqual(errors, []);
-        await context.close();
         console.log(`PASS ${name} ${width}: readable HTML, mobile layout, FAQs, booking links, navigation and metadata`);
+        } catch (error) {
+          await page.screenshot({ path: `test-results/seo-failure-${name}-${width}.png`, fullPage: true });
+          await context.tracing.stop({ path: `test-results/seo-failure-${name}-${width}.zip` });
+          throw error;
+        } finally { await context.close(); }
       }
     } finally { await browser.close(); }
   }

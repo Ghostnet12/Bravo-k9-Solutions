@@ -39,6 +39,7 @@ jobs:
       - run: npx playwright install --with-deps chromium webkit
       - name: Public pages without JavaScript and client sign-in on mobile
         run: |
+          node tests/seo.browser.mjs
           node tests/music-polish.browser.mjs
           node tests/mobile-conversion.browser.mjs
           node tests/refinement.browser.mjs
@@ -54,7 +55,6 @@ jobs:
           node tests/public-content.browser.mjs
           node tests/make-member-training.browser.mjs
           node tests/lesson-library.browser.mjs
-          node tests/seo.browser.mjs
           node tests/carousel-swipe.browser.mjs
           node tests/customer-clarity.browser.mjs
           node tests/client-login.browser.mjs
