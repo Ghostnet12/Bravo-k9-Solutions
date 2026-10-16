@@ -4,7 +4,7 @@ import { isImageEditor } from '../../shared/site-images.js';
 const MusicEditor = lazy(() => import('./MusicEditor'));
 export default function MusicPanel() {
   const { user } = useBravo();
-  const [status, setStatus] = useState({ playing: false, muted: false, volume: .72, title: '', available: false });
+  const [status, setStatus] = useState({ playing: false, muted: false, volume: .72, title: '', available: false, volumeSupported: false });
   const [editing, setEditing] = useState(false);
   useEffect(() => {
     const update = event => setStatus(event.detail);
@@ -21,7 +21,7 @@ export default function MusicPanel() {
   return <div className="music-panel">
     <strong>Bravo music</strong><p aria-live="polite">{status.title || 'No songs enabled'}</p>
     <div className="music-buttons"><button type="button" disabled={!status.available} onClick={() => command('toggle')}>{status.playing ? 'Pause music' : 'Enable Music'}</button><button type="button" disabled={!status.available} onClick={() => command('next')}>Next song</button><button type="button" aria-pressed={status.muted} onClick={() => command('mute')}>{status.muted ? 'Unmute music' : 'Mute music'}</button></div>
-    <label>Music volume<input aria-label="Music volume" type="range" min="0" max="1" step=".05" value={status.volume} onChange={e => command('volume', Number(e.target.value))}/></label>
+    <div className="music-volume-control">{status.volumeSupported ? <label>Music volume<input aria-label="Music volume" aria-valuetext={`${Math.round(status.volume * 100)}%${status.muted ? ' (muted)' : ''}`} type="range" min="0" max="1" step=".05" value={status.volume} onChange={e => command('volume', Number(e.target.value))}/></label> : <p>Use your device’s volume buttons or system volume control to adjust the music. You can still mute or pause it here.</p>}</div>
     {isImageEditor(user) && !user?.mustChangePassword && <button type="button" onClick={() => setEditing(true)}>Manage Music</button>}
     {editing && <Suspense fallback={<p role="status">Opening music editor…</p>}><MusicEditor close={() => setEditing(false)}/></Suspense>}
   </div>;
