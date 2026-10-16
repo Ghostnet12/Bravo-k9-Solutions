@@ -37,7 +37,9 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){if(proce
   await page.getByRole('button',{name:'Accessibility',exact:true}).click();await page.getByRole('link',{name:'Captions & transcripts',exact:true}).click();
   await page.waitForFunction(()=>{const el=document.getElementById('accessible-media');return el&&el.getBoundingClientRect().top>=70&&el.getBoundingClientRect().top<180;});
   assert.match(await page.locator('#accessible-media').innerText(),/may not include captions/);
+  const proofLoaded = page.waitForResponse(response => new URL(response.url()).pathname === '/api/proof-videos');
   await page.getByRole('link',{name:'See Bravo’s public training videos →',exact:true}).click();await page.waitForURL('**/#results');
+  await proofLoaded;await page.waitForLoadState('networkidle');
   await page.waitForFunction(()=>{const el=document.getElementById('results');return el&&el.getBoundingClientRect().top>=70&&el.getBoundingClientRect().top<180;}).catch(async error=>{console.log('Video anchor',await page.evaluate(()=>({hash:location.hash,top:document.getElementById('results')?.getBoundingClientRect().top,margin:getComputedStyle(document.getElementById('results')).scrollMarginTop,focus:document.activeElement?.outerHTML.slice(0,200)})));throw error;});
   await navigate(origin+'/portal?program=training&lessons=1');await page.getByRole('heading',{name:'This option is unavailable.',exact:true}).waitFor();
   actor='owner';await navigate(origin+'/admin?tab=lessons');await page.getByRole('heading',{name:'Lesson studio.',exact:true}).waitFor();
