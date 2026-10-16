@@ -83,8 +83,15 @@ try {
               const password = confirmation.getByLabel('Your current owner password', { exact: true });
               assert.equal(await password.getAttribute('type'), 'password');
               await password.fill('incorrect-fixture-password');
+              // A native close event can arrive after a rapid cancel/reopen.
+              // It must not reset the new confirmation or erase its error.
+              await confirmation.evaluate(el => el.dispatchEvent(new Event('close')));
+              assert.equal(await password.inputValue(), 'incorrect-fixture-password');
               await confirmation.getByRole('button', { name: 'Confirm administrator deletion', exact: true }).click();
               await confirmation.getByRole('alert').waitFor(); assert.equal(adminRemoved, false); assert.equal(await password.inputValue(), '');
+              await confirmation.evaluate(el => el.dispatchEvent(new Event('close')));
+              await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+              assert.equal(await confirmation.getByRole('alert').innerText(), 'Confirm your current owner password.');
               assert.ok(await confirmation.evaluate(el => el.getBoundingClientRect().width <= innerWidth));
               await page.screenshot({ path: `test-results/owner-reauth-${engineName}-${width}.png`, fullPage: true });
               await password.fill('Fixture-owner-password-2026!'); await password.press('Enter'); await trash.waitFor({ state: 'detached' });

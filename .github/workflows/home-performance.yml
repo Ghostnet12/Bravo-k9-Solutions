@@ -45,4 +45,6 @@ jobs:
         if: always()
         with:
           name: homepage-performance-comparison
-          path: mern/test-results/performance-*.json
+          path: |
+            mern/test-results/performance-*.json
+            mern/test-results/home-*.png

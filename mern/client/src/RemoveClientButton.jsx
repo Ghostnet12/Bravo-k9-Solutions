@@ -26,7 +26,7 @@ export default function RemoveClientButton({ client, onRemoved, disabled = false
     event.preventDefault(); event.stopPropagation();
     if (busy) return;
     setError('');
-    if (administrator) { dialog.current.showModal(); return; }
+    if (administrator) { dialog.current.querySelector('form')?.reset(); dialog.current.showModal(); return; }
     if (window.confirm(`Remove ${client.name}? This disables their account access and cancels remaining visits. Payment history is kept and no refund is issued.`)) submitRemoval();
   }
   function confirmAdministrator(event) {
@@ -41,7 +41,12 @@ export default function RemoveClientButton({ client, onRemoved, disabled = false
       {busy && <span className="sr-only">Removing…</span>}
     </button>
     {!administrator && error && <span role="alert" className="client-removal-error">{error}</span>}
-    {administrator && createPortal(<dialog ref={dialog} className="owner-confirm-dialog" aria-label={`Confirm administrator deletion: ${client.name}`} onClick={event => event.stopPropagation()} onCancel={event => { if (busy) event.preventDefault(); }} onClose={() => { dialog.current?.querySelector('form')?.reset(); setError(''); }}>
+    {administrator && createPortal(<dialog ref={dialog} className="owner-confirm-dialog" aria-label={`Confirm administrator deletion: ${client.name}`} onClick={event => event.stopPropagation()} onCancel={event => { if (busy) event.preventDefault(); }} onClose={event => {
+      // Native close events are queued. A previous close must not clear a newly
+      // reopened confirmation's password or failed-authorization feedback.
+      if (event.currentTarget.open) return;
+      event.currentTarget.querySelector('form')?.reset(); setError('');
+    }}>
       <form onSubmit={confirmAdministrator}>
         <h2>Delete administrator {client.name}?</h2>
         <p>Their account access will be revoked immediately. Client appointments and history are kept. Joint appointments keep the other trainer; clients with no remaining trainer will await reassignment.</p>

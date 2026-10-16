@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import express from 'express';
 import { once } from 'node:events';
-import { readFile, mkdir } from 'node:fs/promises';
+import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { chromium, webkit } from 'playwright';
 import { DateTime } from 'luxon';
@@ -22,19 +22,42 @@ try {
         const operator = { id: 'aaaaaaaaaaaaaaaaaaaaaaaa', _id: 'aaaaaaaaaaaaaaaaaaaaaaaa', name: 'Fixture Operator', role: access === 'staff' ? 'staff' : 'owner', isPrimaryOwner: access === 'owner' };
         let activeUser = operator, client, acceptedReplacement = false, createdBody, lastLogin, replacementCalls = 0, scheduleReads = 0;
         let temporaryPassword = 'Isolated-temporary-password-123!'; const ownPassword = 'Isolated-client-chosen-password-456!';
-        const errors = [];
-        page.on('pageerror', e => errors.push({ message:e.message, cause:e.cause?.message, url:page.url() }));
+        const errors = [], navigationDiagnostics = []; let navigating = false;
+        page.on('pageerror', e => {
+          const diagnostic = { message: e.message, cause: e.cause?.message, url: page.url() };
+          // WebKit may report a handled same-origin live-poll cancellation as a
+          // pageerror during document replacement (Playwright #43120). Retain
+          // that exact diagnostic; native uncaught errors/rejections still fail.
+          if (engineName === 'webkit' && navigating && e.message.endsWith(`${new URL(origin).host}/api/live due to access control checks.`)) navigationDiagnostics.push(diagnostic);
+          else errors.push(diagnostic);
+        });
+        await page.exposeFunction('recordLoginRuntimeError', message => errors.push({ message }));
+        await page.addInitScript(() => {
+          window.addEventListener('error', event => { if (event instanceof ErrorEvent) void window.recordLoginRuntimeError(event.error?.stack || event.message).catch(() => {}); });
+          window.addEventListener('unhandledrejection', event => { void window.recordLoginRuntimeError(event.reason?.stack || event.reason?.message || String(event.reason)).catch(() => {}); });
+        });
+        async function verifyDestination() {
+          const live = await page.evaluate(async () => {
+            const response = await fetch('/api/live', { credentials: 'same-origin', cache: 'no-store' });
+            const data = await response.json();
+            return { status: response.status, sessions: Array.isArray(data.sessions), announcements: Array.isArray(data.announcements) };
+          });
+          assert.deepEqual(live, { status: 200, sessions: true, announcements: true });
+          await page.waitForLoadState('networkidle');
+        }
         // Forced fixture navigation must not abort an in-flight lazy route or
         // change the mocked account while the previous page is still fetching.
         async function navigate(url) {
           await page.waitForLoadState('networkidle');
-          await page.goto(url);
-          await page.waitForLoadState('networkidle');
+          navigating = true;
+          try { await page.goto(url); } finally { navigating = false; }
+          await verifyDestination();
         }
         async function reload() {
           await page.waitForLoadState('networkidle');
-          await page.reload();
-          await page.waitForLoadState('networkidle');
+          navigating = true;
+          try { await page.reload(); } finally { navigating = false; }
+          await verifyDestination();
         }
         page.on('dialog', dialog => acceptedReplacement ? dialog.accept() : dialog.dismiss());
         await page.addInitScript(() => Object.defineProperty(navigator, 'clipboard', { value: { writeText: async text => { window.fixtureCopiedText = text; } }, configurable: true }));
@@ -43,6 +66,7 @@ try {
           const url = new URL(route.request().url()), path = url.pathname, method = route.request().method(); let json = {}, status = 200;
           if (path === '/api/config') json = { connected: true, paymentsReady: false, services: SERVICES, schedule: { enabled: true, weekdays: [1, 2, 3, 4, 5], hours: ['10:00'] } };
           else if (path === '/api/auth/me') json = { user: activeUser, services: activeUser === client && !client.mustChangePassword ? ['training', 'online'] : [], membership: activeUser === client && !client.mustChangePassword ? membership : { active: false } };
+          else if (path === '/api/live') json = { availability: 'available', sessions: [], announcements: [], serverTime: new Date().toISOString() };
           else if (path === '/api/team') json = { team: [operator] };
           else if (path === '/api/notifications') json = { items: [] };
           else if (path === '/api/site-images') json = { images: {} };
@@ -129,7 +153,7 @@ try {
           assert.equal(await page.getByRole('button', { name: 'Create new temporary password', exact: true }).count(), 0);
           assert.deepEqual(errors, []); console.log(`${engineName} ${width} ${access}: create, copy, replace, name/email sign-in, required password setup and saved schedule passed`);
         } catch (error) { await page.screenshot({ path: `test-results/client-signin-failure-${engineName}-${access}-${width}.png`, fullPage: true }); throw error; }
-        finally { await context.close(); }
+        finally { await writeFile(`test-results/client-signin-diagnostics-${engineName}-${access}-${width}.json`, JSON.stringify({ errors, navigationDiagnostics }, null, 2)); await context.close(); }
       }
     } finally { await browser.close(); }
   }

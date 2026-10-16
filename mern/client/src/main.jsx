@@ -79,7 +79,7 @@ function RouteBehavior() {
     history.scrollRestoration = 'manual';
     if (!hash) window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     let cancelled = false;
-    let frame = 0;
+    let frame = 0, focusedAnchor = null, movingAnchorFocus = false;
     let anchor = hash.slice(1);
     try { anchor = decodeURIComponent(anchor); } catch { /* Malformed links must not crash navigation. */ }
     const alignAnchor = () => {
@@ -87,6 +87,11 @@ function RouteBehavior() {
       const target = document.getElementById(anchor);
       if (target?.tagName === 'DETAILS') target.open = true;
       target?.scrollIntoView({ behavior: 'instant' });
+      if (target && target !== focusedAnchor) {
+        if (!target.hasAttribute('tabindex') && !target.matches('a[href],button,input,select,textarea')) target.tabIndex = -1;
+        focusedAnchor = target; movingAnchorFocus = true;
+        try { target.focus({ preventScroll: true }); } finally { movingAnchorFocus = false; }
+      }
     };
     const scheduleAlignment = () => {
       cancelAnimationFrame(frame);
@@ -113,6 +118,7 @@ function RouteBehavior() {
     // A navigation link receiving focus is part of the same tap, not a request
     // to abandon its destination. New gestures and form/editor focus take over.
     const cancelRouteFocus = event => {
+      if (movingAnchorFocus) return;
       if (hash && event?.type === 'focusin' && event.target.closest?.('a[href]')) return;
       stopAlignment();
     };

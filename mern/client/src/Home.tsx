@@ -139,20 +139,8 @@ export default function Home() {
         <div className="cinema-method-signature"><Editable as="span" contentKey="copy-home-11" canEditText>Trust.</Editable><Editable as="span" contentKey="copy-home-12" canEditText>Train.</Editable><Editable as="span" contentKey="copy-home-13" canEditText>Deploy.</Editable></div>
       </Editable>
 
-      <Editable as="section" key="story" contentKey="copy-home-14" className="cinema-story" data-step="0" aria-labelledby="real-world-title">
-        <div className="cinema-story-stage">
-          <img src="/images/bravo-client-training.jpeg" width="828" height="1121" loading="lazy" alt="A Bravo dog practicing calm behavior alongside its trainer in a busy store"/>
-          <div className="cinema-story-shade" aria-hidden="true"/>
-          <div className="cinema-story-copy cinema-shell"><Editable as="p" contentKey="copy-home-15" canEditText className="cinema-eyebrow">TRAINING FOR THE LIFE YOU LIVE</Editable>
-            <Editable as="h2" contentKey="copy-home-16" id="real-world-title"><Editable as="span" contentKey="home-story-line-0" canEditText className="cinema-story-line">Life doesn’t<br/>stand still.</Editable><Editable as="span" contentKey="home-story-line-1" canEditText className="cinema-story-line">Stairs. Crowds.<br/>Noise. Distractions.</Editable><Editable as="span" contentKey="home-story-line-2" canEditText className="cinema-story-line">Practice it.<br/>Everywhere.</Editable></Editable>
-            <Editable as="p" contentKey="copy-home-17" canEditText>We train where life happens—repeating the work across breeds, temperaments, and real distractions.</Editable>
-            <div className="cinema-story-progress" aria-hidden="true"><i/><i/><i/></div>
-          </div>
-        </div>
-      </Editable>
-
       <Editable as="section" key="dogs" contentKey="copy-home-18" id="dogs" className="cinema-dogs cinema-shell" aria-labelledby="dogs-title">
-        <div className="cinema-section-heading" data-reveal=""><div><Editable as="p" contentKey="copy-home-19" canEditText className="cinema-eyebrow">ONE STANDARD. DIFFERENT DOGS.</Editable><Editable as="h2" contentKey="cinema-dogs-title" canEditText id="dogs-title">Different dogs.<br/><span>Different starting points.</span></Editable></div><Editable as="p" contentKey="copy-home-20" canEditText>The standard stays clear.<br/>The approach adapts to the dog.</Editable></div>
+        <div className="cinema-section-heading" data-reveal=""><div><Editable as="p" contentKey="copy-home-19" canEditText className="cinema-eyebrow">ONE STANDARD. DIFFERENT DOGS.</Editable><Editable as="h2" contentKey="cinema-dogs-title" canEditText id="dogs-title">Different dogs.<br/><span>Different starting points.</span></Editable></div><Editable as="p" contentKey="copy-home-17" canEditText>We train where life happens—repeating the work across breeds, temperaments, and real distractions.</Editable></div>
         <div className="cinema-dog-gallery home-hero-authentic">
           <HeroPhotoCarousel><img className="home-hero-image" src={hero?.src || HOME_HERO_SOURCE} width="828" height="1121" loading="lazy" fetchPriority="low" alt={hero?.framed ? hero.alt : HOME_HERO_ALT} style={hero?.framed ? framingStyle(hero) : undefined} data-site-image-original={HOME_HERO_SOURCE} data-site-image-original-alt={HOME_HERO_ALT} data-site-media-original-styles='{"objectFit":"","objectPosition":"","transform":"","transformOrigin":"","clipPath":""}'/></HeroPhotoCarousel>
           <div className="cinema-gallery-note"><Editable as="span" contentKey="copy-home-21" canEditText>THE BRAVO FIELD NOTES</Editable><Editable as="p" contentKey="copy-home-22" canEditText>Real dogs.<br/>Real sessions.</Editable><Editable as="small" contentKey="copy-home-23" canEditText>Swipe through Bravo in the field.</Editable></div>

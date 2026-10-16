@@ -40,7 +40,8 @@ try {for(const [name,engine] of engines) {
    errors.push(error.message);
   });
   let sessions=[],failure=false,ads=[{id:'fixture-video',title:'Recorded Bravo training — test ad placement',alt:'Existing Bravo footage used as a test advertisement',enabled:true,link:'/dog-training',src:'/images/training-education.webp',videoSrc:'/assets/bravo-opening-565c14182176.mp4'}];
-  handleApi=(req,res)=>{
+  let statusRequests = 0;
+  handleApi=async (req,res)=>{
    const path=new URL(req.originalUrl,origin).pathname;
    res.set('Cache-Control','no-store');
    let json={services:[],team:[],images:{},reviews:[],schedules:[],clips:[],count:0};
@@ -50,6 +51,8 @@ try {for(const [name,engine] of engines) {
    if(path==='/api/site-banner')json={revision:0,settings:{motion:'never'},alerts:['Bravo is live now under live cams in menu on upper right-hand corner.','Test announcement — browser verification only.']};
    if(path==='/api/site-banner/weather')json={weather:null};
    if(path==='/api/live') {
+    statusRequests++;
+    if (statusRequests === 1) await new Promise(resolve => setTimeout(resolve, 6000));
     if(failure)return res.status(503).json({error:'Test status outage'});
     const fresh=sessions.map(s=>({...s,liveUntil:new Date(Date.now()+8000).toISOString()}));
     json={sessions:fresh.filter(s=>s.audience==='public'),announcements:fresh.map(({id,trainerId,trainerName,audience,status,liveUntil})=>({trainerId,trainerName,audience,status,liveUntil,href:`/live?${audience==='public'?'session':'trainer'}=${id}`})),availability:'available',serverTime:new Date().toISOString()};
@@ -79,7 +82,11 @@ try {for(const [name,engine] of engines) {
    await content; await waitForApiIdle();
   };
   const refresh=()=>page.evaluate(()=>window.dispatchEvent(new Event('bravo-live-changed')));
-  await visit(origin,{waitUntil:'networkidle'});
+  const firstStatus = page.waitForResponse(response => new URL(response.url()).pathname === '/api/live');
+  await page.goto(origin,{waitUntil:'domcontentloaded'});
+  await firstStatus;
+  assert.equal(statusRequests, 1, 'six-second cold status read completes without cancellation or duplicate polling');
+  assert.equal(failedRequests.filter(item => new URL(item.url).pathname === '/api/live').length, 0, 'cold status request is not aborted');
   assert.equal(await page.locator('.home-ad-dock').count(),0);
   assert.equal(await page.locator('.hero-live').count(),0);
   assert.ok(!(await page.locator('.home-status-banner').innerText()).includes('Bravo is live now'));

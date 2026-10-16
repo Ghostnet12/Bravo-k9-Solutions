@@ -22,7 +22,7 @@ export default function AccessibilityPage() {
       <Editable as="ul" contentKey="accessibilitypage-15">
         <Editable as="li" contentKey="accessibilitypage-16" canEditText>Use semantic page structure, visible keyboard focus, labeled forms, status announcements, and controls sized for touch and pointer use.</Editable>
         <Editable as="li" contentKey="accessibilitypage-17" canEditText>Test representative pages at mobile and desktop sizes, with keyboard-only navigation, browser zoom, reduced motion, and higher contrast settings.</Editable>
-        <Editable as="li" contentKey="accessibilitypage-18" canEditText>Provide text alternatives for meaningful images and require captions or transcripts for published training media.</Editable>
+        <Editable as="li" contentKey="accessibilitypage-18" canEditText>Provide text alternatives for meaningful images and caption or transcript controls for published training lessons. Public demonstration clips may not include these alternatives.</Editable>
         <Editable as="li" contentKey="accessibilitypage-19" canEditText>Keep booking and account tasks usable without dragging, timed responses, or memory-based authentication puzzles.</Editable>
       </Editable>
       <Editable as="h2" contentKey="accessibilitypage-20" canEditText>Using this website</Editable>
@@ -30,7 +30,7 @@ export default function AccessibilityPage() {
         <Editable as="li" contentKey="accessibilitypage-22" canEditText>Use a keyboard to reach navigation, forms, and buttons. A “Skip to main content” link appears when focused.</Editable>
         <Editable as="li" contentKey="accessibilitypage-23" canEditText>Use your browser’s zoom, or open Accessibility for larger text, higher contrast, and reduced motion.</Editable>
         <Editable as="li" contentKey="accessibilitypage-24" canEditText>Forms provide labels and status or error messages. Mobile layouts allow text and controls to wrap.</Editable>
-        <Editable as="li" contentKey="accessibilitypage-25" canEditText>Published training lessons provide caption and transcript controls. Tell us if a description or media alternative does not meet your needs.</Editable>
+        <Editable as="li" contentKey="accessibilitypage-25" canEditText>Published training lessons provide caption and transcript controls. For public demonstration clips, check the source player for captions or contact Bravo about available alternatives.</Editable>
       </Editable>
       <Editable as="h2" contentKey="accessibilitypage-26" canEditText>Need assistance or found a barrier?</Editable>
       <Editable as="p" contentKey="accessibilitypage-27"><Editable as="span" contentKey="copy-accessibilitypage-3" canEditText>Call </Editable><Editable as="a" contentKey="accessibilitypage-28" canEditLink canEditText href="tel:+16058242767">(605) 824-2767</Editable><Editable as="span" contentKey="copy-accessibilitypage-4" canEditText>, including through your preferred telecommunications relay service, or </Editable><Editable as={Link} contentKey="accessibilitypage-29" canEditLink canEditText to="/community?tab=direct">message the Bravo team</Editable><Editable as="span" contentKey="copy-accessibilitypage-5" canEditText> if you can sign in. You can request help with booking, account access, or information in an alternative format.</Editable></Editable>
