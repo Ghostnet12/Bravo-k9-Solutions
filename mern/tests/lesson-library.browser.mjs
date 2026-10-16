@@ -12,9 +12,10 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){if(proce
  let actor=null,paid=false,library={open:false,revision:0,lessonCents:7500,bundleCents:25000},sections=[],lessons=[];
  // Complete mocked requests before replacing the document. WebKit can report
  // interrupted route fulfillment as an access-control error during navigation.
- const navigate=async url=>{await page.waitForLoadState('networkidle');await page.goto(url);await page.waitForLoadState('networkidle');};
- const reload=async()=>{await page.waitForLoadState('networkidle');await page.reload();await page.waitForLoadState('networkidle');};
- page.on('pageerror',e=>errors.push(e.message));
+ const contentReady = url => Promise.all((new URL(url).pathname === '/' ? ['/api/site-content','/api/team','/api/reviews'] : ['/api/site-content']).map(path => page.waitForResponse(response => new URL(response.url()).pathname === path).then(response => response.finished())));
+ const navigate=async url=>{await page.waitForLoadState('networkidle');const ready=contentReady(url);await page.goto(url,{waitUntil:'domcontentloaded'});await ready;await page.waitForLoadState('networkidle');};
+ const reload=async()=>{await page.waitForLoadState('networkidle');const ready=contentReady(page.url());await page.reload({waitUntil:'domcontentloaded'});await ready;await page.waitForLoadState('networkidle');};
+ page.on('pageerror',e=>{console.log('Lesson page error',{url:page.url(),message:e.message});errors.push(e.message);});
  await page.route('**/api/**',async route=>{const path=new URL(route.request().url()).pathname,method=route.request().method();let json={services:[],images:{},entries:{},team:[],schedules:[],reviews:[],count:0,clips:[],bookings:[],terms:[],messages:[],notifications:[],alerts:[],revision:0};
   if(path==='/api/config')json={connected:true,paymentsReady:false,lessonLibrary:library,services:SERVICES.map(s=>({...s,enabled:s.id!=='online'||library.open})),schedule:{enabled:true,weekdays:[1,2,3,4,5],hours:['09:00']}};
   if(path==='/api/auth/me')json={user:actor?{id:'fixture',name:'Fixture',role:actor,isPrimaryOwner:false}:null,services:paid?['online']:[],membership:{active:paid,onlineAccess:paid},subscriptions:[]};
@@ -37,7 +38,7 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){if(proce
   await page.getByRole('button',{name:'Accessibility',exact:true}).click();await page.getByRole('link',{name:'Captions & transcripts',exact:true}).click();
   await page.waitForFunction(()=>{const el=document.getElementById('accessible-media');return el&&el.getBoundingClientRect().top>=70&&el.getBoundingClientRect().top<180;});
   assert.match(await page.locator('#accessible-media').innerText(),/may not include captions/);
-  const proofLoaded = page.waitForResponse(response => new URL(response.url()).pathname === '/api/proof-videos');
+  const proofLoaded = Promise.all([contentReady(origin),page.waitForResponse(response => new URL(response.url()).pathname === '/api/proof-videos').then(response => response.finished())]);
   await page.getByRole('link',{name:'See Bravo’s public training videos →',exact:true}).click();await page.waitForURL('**/#results');
   await proofLoaded;await page.waitForLoadState('networkidle');
   await page.waitForFunction(()=>{const el=document.getElementById('results');return el&&el.getBoundingClientRect().top>=70&&el.getBoundingClientRect().top<180;}).catch(async error=>{console.log('Video anchor',await page.evaluate(()=>({hash:location.hash,top:document.getElementById('results')?.getBoundingClientRect().top,margin:getComputedStyle(document.getElementById('results')).scrollMarginTop,focus:document.activeElement?.outerHTML.slice(0,200)})));throw error;});
