@@ -47,7 +47,7 @@ export function SiteContentProvider({ children }) {
       }
       for (const node of target.querySelectorAll('[data-site-content-key]')) { if(options.some(item=>item.key===node.dataset.siteContentKey))continue; options.push({key:node.dataset.siteContentKey,media:[...node.querySelectorAll('[data-site-image-key]')].filter(image=>!image.closest('[data-site-image-ignore]')).map(image=>({key:image.dataset.siteImageKey,title:image.getAttribute('alt') || 'Section media'})),text:node.dataset.siteContentText==='true',link:node.dataset.siteOriginalLink,original:node.dataset.siteOriginalText || '',title:`${node.tagName.toLowerCase()}: ${(node.dataset.siteOriginalText || node.className || 'section').replace(/\s+/g,' ').slice(0,65)}`}); }
       options.push({key:'site-theme',text:false,title:'Whole website · fonts, colors & background'});
-      try{const fresh=await api('/site-content');if(!disposed && allowed.current && route.current===openedRoute && target.isConnected){setEntries(fresh.entries || {});setSelection(options);}}
+      try{const fresh=await api('/site-content', { foreground: true });if(!disposed && allowed.current && route.current===openedRoute && target.isConnected){setEntries(fresh.entries || {});setSelection(options);}}
       catch(e){if(!disposed)setError(e.message);}finally{pending=false;}
     }
     const down=event=>{cancel();suppressUntil=0;const target=event.target;if(!(target instanceof Element)||event.button!==0||event.isPrimary===false||ignored(target)||!target.closest('main,header,footer,[data-site-content-key],[data-site-service],[data-site-trainer]'))return;hold={x:event.clientX,y:event.clientY,timer:setTimeout(()=>{suppressUntil=Date.now()+1200;open(target);},650)};};

@@ -25,14 +25,17 @@ export default function ProgramMedia({ goal, automaticClip }) {
   async function selectKind(next) {
     setBusy(true); setError(''); setStatus('');
     try {
-      const baseline = entries[key] || {revision:0,value:{}};
+      // The initial public snapshot may still be loading. Read the current
+      // revision before changing this field, preserving other published values.
+      const current = await api('/site-content', { foreground: true });
+      const baseline = current.entries?.[key] || {revision:0,value:{}};
       const data = await api(`/site-content/${key}`, {method:'PUT',body:{expectedRevision:baseline.revision,value:{...baseline.value,mediaKind:next}}});
       publishEntry(key,data.entry); setStatus('Program media selection published.');
     } catch(cause) { setError(cause.message); } finally { setBusy(false); }
   }
   async function editVideo() {
     setBusy(true);setError('');
-    try { const data=await api('/program-videos'); const current=data.clips?.find(item=>item.id===goal.id); setVideo(current || null);setEditing(current || {id:goal.id,title:goal.title,description:goal.description,order:0,revision:0,src:null}); }
+    try { const data=await api('/program-videos', { foreground: true }); const current=data.clips?.find(item=>item.id===goal.id); setVideo(current || null);setEditing(current || {id:goal.id,title:goal.title,description:goal.description,order:0,revision:0,src:null}); }
     catch(cause){setError(cause.message);}finally{setBusy(false);}
   }
   const clip = kind === 'photo' ? null : kind === 'video' ? video : automaticClip;

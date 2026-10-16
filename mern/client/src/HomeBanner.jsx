@@ -36,7 +36,7 @@ export default function HomeBanner() {
   async function openEditor() {
     if (!canEdit) return;
     cancelHold(); setEditError('');
-    try { const data = await api('/site-banner'); setSaved(data); setEditing(true); }
+    try { const data = await api('/site-banner', { foreground: true }); setSaved(data); setEditing(true); }
     catch (e) { setEditError(e.message); }
   }
   const freshWeather = weather && now.getTime() - Date.parse(weather.observedAt) <= 7200000 ? weather : null;

@@ -12,7 +12,7 @@ export default function ClientTrainer({ bookings, onSaved, initiallyOpen = false
   useEffect(() => { setTrainer(assigned || user.id); }, [bookingId, assigned, user.id]);
   const mine = bookingTrainerIds(booking).includes(user.id), selected = team?.find(t => t.id === trainer);
   const alreadyAccepted = user.role === 'owner' ? !!booking?.trainerAcceptedAt && !booking?.trainerAcceptanceRequired : acceptedTrainerIds(booking).includes(user.id);
-  async function load() { try { const r = await api('/team'); setTeam(trainerOptions(r.team)); } catch (e) { setError(e.message); } }
+  async function load() { try { const r = await api('/team', { foreground: true }); setTeam(trainerOptions(r.team)); } catch (e) { setError(e.message); } }
   async function save(accept) {
     setBusy(true); setError(''); try {
       if (accept) { const r = await api(`/admin/bookings/${bookingId}/accept-client`, { method: 'POST', body: { staffId: user.role === 'owner' ? trainer : user.id, revision: booking.updatedAt } }); onSaved(r.message); }
