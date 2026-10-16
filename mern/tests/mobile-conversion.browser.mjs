@@ -48,6 +48,8 @@ try {
    const readingOrder = await page.evaluate(() => ['training','method','results','reviews','team','training-programs','workshops'].map(id=>({id,top:document.getElementById(id).getBoundingClientRect().top})));
    assert.deepEqual([...readingOrder].sort((a,b)=>a.top-b.top),readingOrder,'same visual and reading order on every screen');
    assert.equal(await page.locator('.conversion-offer').count(),1,'one primary membership offer');
+   const portraitsFillCards=await page.locator('.cinema-team-grid>article').evaluateAll(cards=>cards.every(card=>Math.abs(card.querySelector('.cinema-portrait').getBoundingClientRect().width-card.clientWidth)<2));
+   assert.ok(portraitsFillCards,'trainer portraits fill their cards without empty side columns');
    assert.ok(await page.locator('.conversion-price').isVisible());
    assert.equal(await page.locator('#results .home-results-actions .cinema-button').getAttribute('href'),'/portal?program=training');
    if (engineName === 'chromium' && [390,1440].includes(width)) {

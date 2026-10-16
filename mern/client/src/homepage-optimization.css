@@ -16,7 +16,7 @@
 .cinema-home.conversion-home #reviews .facebook-recommendations{margin-top:24px}
 .cinema-home.conversion-home .cinema-team-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:24px}
 .cinema-home.conversion-home .cinema-team-grid>article{border:1px solid #ba9a6440;border-radius:16px;overflow:hidden;background:#171614}
-.cinema-home.conversion-home .cinema-portrait{border-radius:0;aspect-ratio:4 / 4;max-height:460px}
+.cinema-home.conversion-home .cinema-portrait{width:100%;border-radius:0;aspect-ratio:4 / 4;max-height:460px}
 .cinema-home.conversion-home .cinema-person{padding:24px}
 .cinema-home.conversion-home .home-trainer-focus{font:400 14px/1.7 Montserrat,sans-serif;color:#d6cfc2;margin:12px 0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .cinema-home.conversion-home #training-programs .goal-finder{width:100%;padding-top:8px}
@@ -45,3 +45,5 @@
 @media(forced-colors:active){.conversion-offer,.cinema-team-grid>article{border:1px solid CanvasText}}
 
 .hero-photo-window:focus-visible,.home-proof-reviews:focus-visible{outline:3px solid #e1c99d;outline-offset:-3px}
+
+.cinema-home.conversion-home .cinema-portrait img{object-position:50% 8%}

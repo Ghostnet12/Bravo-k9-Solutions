@@ -7,13 +7,14 @@ import path from 'node:path';
 import { gzipSync } from 'node:zlib';
 import express from 'express';
 import { chromium } from 'playwright';
+import { renderHomepage } from '../server/homepage.js';
 import { SERVICES } from '../shared/catalog.js';
 import { DEFAULT_REVIEWS } from '../shared/reviews.js';
 import { DEFAULT_PROOF_VIDEOS } from '../shared/proof-videos.js';
 
 const dist = path.resolve(process.env.PERF_DIST || 'client/dist');
 const label = process.env.PERF_LABEL || 'candidate';
-const html = await readFile(path.join(dist, 'bravo-shell.html'), 'utf8');
+const html = renderHomepage(await readFile(path.join(dist, 'bravo-shell.html'), 'utf8'), null, null);
 const app = express();
 app.get('/api/config', (_req,res)=>res.json({connected:false,paymentsReady:false,services:SERVICES,schedule:{enabled:false,weekdays:[1,2,3,4,5],hours:[]}}));
 app.get('/api/auth/me', (_req,res)=>res.json({user:null,services:[],membership:{active:false}}));
@@ -37,7 +38,11 @@ app.use((req,res,next)=>{
   res.set('Content-Encoding','gzip').set('Vary','Accept-Encoding').type(asset.type).send(asset.body);
 });
 app.use(express.static(dist));
-app.get('/{*path}', (_req,res)=>res.type('html').send(html));
+app.get('/{*path}', (req,res)=>{
+  res.type('html');
+  if(req.acceptsEncodings('gzip')) res.set('Content-Encoding','gzip').set('Vary','Accept-Encoding').send(gzipSync(html));
+  else res.send(html);
+});
 const server=app.listen(0,'127.0.0.1'); await once(server,'listening');
 const origin=`http://127.0.0.1:${server.address().port}`;
 const browser=await chromium.launch();
@@ -91,7 +96,7 @@ try {
     const median=key=>samples.map(r=>r[key]).sort((a,b)=>a-b)[1];
     return {width,lcpMs:median('lcpMs'),cls:median('cls'),initialTransferBytes:median('initialTransferBytes'),documentHeight:median('documentHeight'),initialBlockingMs:median('initialBlockingMs'),sampledMaxInteractionMs:median('sampledMaxInteractionMs')};
   });
-  const report={label,conditions:'390px: 4x CPU, 150ms RTT, 1.6Mbps. 1440px: unthrottled. Median of three fresh contexts. Same fixtures, gzip text assets, external requests blocked. Sampled interaction latency is not field INP.',summary,samples:results};
+  const report={label,conditions:'390px: 4x CPU, 150ms RTT, 1.6Mbps. 1440px: unthrottled. Median of three fresh contexts. Same public fixtures and production homepage renderer; gzip HTML/text assets; external requests blocked. Sampled interaction latency is not field INP.',summary,samples:results};
   await writeFile(`test-results/performance-${label}.json`,JSON.stringify(report,null,2));
   console.log(JSON.stringify(report));
 } finally {await browser.close();await new Promise(resolve=>server.close(resolve));}
