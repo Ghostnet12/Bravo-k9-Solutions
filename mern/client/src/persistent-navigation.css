@@ -30,3 +30,6 @@ html { scroll-padding-top: 96px; }
   .cinema-home.conversion-home #reviews,#client-reviews{scroll-margin-top:0}
 }
 @media(min-width:701px){.cinema-home .app-header.bravo-nav{position:fixed}}
+:root{--ad-dock-height:0px}
+html{scroll-padding-bottom:calc(var(--ad-dock-height) + 20px)}
+#root{padding-bottom:var(--ad-dock-height)}
