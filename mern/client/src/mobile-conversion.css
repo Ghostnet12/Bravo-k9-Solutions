@@ -136,10 +136,9 @@
 @media(max-width:700px){
 }
 
-/* Keep both mobile hero actions below the visible dog photograph, not across its face. */
+/* Preserve the approved left-hand hero placement: CTAs follow the copy, not the dog's face. */
 @media(max-width:700px){
-  .cinema-home.conversion-home .cinema-hero-copy{min-height:calc(66.6667vw + 132px)}
-  .cinema-home.conversion-home .polish-hero-actions{margin-top:auto;padding-top:16px;width:min(100%,330px)}
+  .cinema-home.conversion-home .polish-hero-actions{margin-top:clamp(10px,3.5vw,14px);padding:0;width:60%;max-width:330px}
   .cinema-home.conversion-home .polish-hero-actions .cinema-link{width:100%}
   .mobile-home-nav>a,.mobile-home-nav>button{min-width:0;touch-action:manipulation}
   body:has(.app-header.bravo-nav #bravo-navigation.is-open){overflow:hidden}
