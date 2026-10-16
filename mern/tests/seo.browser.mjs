@@ -35,7 +35,7 @@ try {
         }
       }
       await plain.close();
-      for (const width of [390, 1440]) {
+      for (const width of [390, 1348, 1440]) {
         const context = await browser.newContext({ viewport: { width, height: 900 } });
         await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
         const page = await context.newPage(), errors = [];
@@ -54,6 +54,17 @@ try {
         const cards = page.locator('.facebook-recommendations article');
         assert.equal(await cards.count(), 7);
         await page.locator('.facebook-recommendations-more > summary').click();
+        // Reach the partly clipped last card directly, without visiting the
+        // intervening cards. A single activation must not be undone by snapping.
+        const last = cards.last();
+        await last.getByText('Read full review', { exact: true }).click();
+        await last.locator('.review-excerpt').waitFor({ state: 'hidden' });
+        await last.getByText('Show less', { exact: true }).click();
+        await last.locator('.review-excerpt').waitFor({ state: 'visible' });
+        await last.locator('summary').press('Enter');
+        await last.locator('.review-excerpt').waitFor({ state: 'hidden' });
+        await last.locator('summary').press('Space');
+        await last.locator('.review-excerpt').waitFor({ state: 'visible' });
         const justine = cards.filter({ hasText: 'Justine Harty West' });
         assert.equal(await justine.count(), 1);
         assert.equal(await justine.locator('small').innerText(), 'Facebook comment');
