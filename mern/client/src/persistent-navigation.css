@@ -27,6 +27,6 @@ html { scroll-padding-top: 96px; }
   body:has(.mobile-home-nav) .home-ad-dock .home-ad-carousel{height:110px}
   body:has(.mobile-home-nav) .accessibility-tools{bottom:calc(var(--ad-dock-height,0px) + 80px + env(safe-area-inset-bottom))!important}
   body:has(.mobile-home-nav) .action-feedback,body:has(.mobile-home-nav) .media-rights-toast{bottom:calc(var(--ad-dock-height,0px) + 80px + env(safe-area-inset-bottom))}
-  #reviews,#client-reviews{scroll-margin-top:0}
+  .cinema-home.conversion-home #reviews,#client-reviews{scroll-margin-top:0}
 }
 @media(min-width:701px){.cinema-home .app-header.bravo-nav{position:fixed}}
