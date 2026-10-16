@@ -8,6 +8,11 @@ export function routeArea(path = '') {
   const clean = String(path).split(/[?#]/)[0];
   if (clean === '/') return 'home';
   if (PUBLIC_PAGES.includes(clean)) return clean.slice(1);
+  if (/^\/api\/config\/?$/.test(clean)) return 'configuration';
+  if (/^\/api\/(site-content|site-banner|site-ads)(\/|$)/.test(clean)) return 'content';
+  if (/^\/(api\/)?live(\/|$)/.test(clean)) return 'live';
+  if (/^\/api\/(proof-videos|reviews)(\/|$)/.test(clean)) return 'proof';
+  if (/^\/api\/team(\/|$)/.test(clean)) return 'team';
   if (/^\/(api\/)?(auth|account|reset-password)(\/|$)/.test(clean)) return 'account';
   if (/^\/api\/stripe(\/|$)/.test(clean) || /^\/api\/bookings\/[^/]+\/checkout$/.test(clean)) return 'checkout';
   if (/^\/(api\/)?(admin|site-images)(\/|$)/.test(clean)) return 'team';
@@ -17,4 +22,4 @@ export function routeArea(path = '') {
   if (/^\/(api\/)?(community|messages|notifications)(\/|$)/.test(clean)) return 'messages';
   return 'other';
 }
-export const AREAS = [...new Set([...PUBLIC_PAGES.map(routeArea), 'account', 'checkout', 'team', 'schedule', 'booking', 'lessons', 'messages', 'other'])];
+export const AREAS = [...new Set([...PUBLIC_PAGES.map(routeArea), 'configuration', 'content', 'live', 'proof', 'account', 'checkout', 'team', 'schedule', 'booking', 'lessons', 'messages', 'other'])];

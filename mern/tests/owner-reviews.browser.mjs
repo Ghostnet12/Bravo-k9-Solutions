@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { randomBytes, createHash } from 'node:crypto';
 import mongoose from 'mongoose';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
@@ -33,9 +33,37 @@ try {
       await WebsiteReview.deleteMany({});
       const context = await browser.newContext({ viewport: { width, height: 900 } });
       await context.addCookies([{ name: 'bravo_session', value: tokens.owner, domain: '127.0.0.1', path: '/' }]);
-      const page = await context.newPage(); const errors = []; page.on('pageerror', error => errors.push(error.message));
+      const page = await context.newPage();
+      const errors = [], navigationDiagnostics = [];
+      let navigating = false;
+      page.on('pageerror', error => {
+        // WebKit emits a JS-source access-control diagnostic for a same-origin
+        // poll canceled by document replacement (Playwright issue #43120).
+        // Scope this to explicit hard navigation and this exact local endpoint;
+        // real DOM errors/rejections and all other page errors still fail.
+        if (name === 'webkit' && navigating && error.message.endsWith(`${new URL(origin).host}/api/live due to access control checks.`)) {
+          navigationDiagnostics.push({ message: error.message, url: page.url() });
+        } else errors.push(error.message);
+      });
+      await page.exposeFunction('recordReviewRuntimeError', message => errors.push(message));
+      await page.addInitScript(() => {
+        window.addEventListener('error', event => { if (event instanceof ErrorEvent) void window.recordReviewRuntimeError(event.error?.stack || event.message).catch(() => {}); });
+        window.addEventListener('unhandledrejection', event => { void window.recordReviewRuntimeError(event.reason?.stack || event.reason?.message || String(event.reason)).catch(() => {}); });
+      });
+      const navigate = async url => {
+        navigating = true;
+        try { if (url) await page.goto(url); else await page.reload(); }
+        finally { navigating = false; }
+        // A real CORS/CSP failure or broken poll on the new document must fail.
+        const live = await page.evaluate(async () => {
+          const response = await fetch('/api/live', { credentials: 'same-origin', cache: 'no-store' });
+          const data = await response.json();
+          return { status: response.status, sessions: Array.isArray(data.sessions), announcements: Array.isArray(data.announcements) };
+        });
+        assert.deepEqual(live, { status: 200, sessions: true, announcements: true });
+      };
       try {
-        await page.goto(`${origin}/account`); await page.getByRole('link', { name: 'Manage reviews', exact: true }).click();
+        await navigate(`${origin}/account`); await page.getByRole('link', { name: 'Manage reviews', exact: true }).click();
         await page.getByRole('heading', { name: 'Manage reviews.', exact: true }).waitFor();
         const sherrie = page.getByRole('article', { name: 'Review by Sherrie Humphries', exact: true });
         await sherrie.waitFor(); assert.equal(await sherrie.getByText('No star rating', { exact: true }).count(), 1);
@@ -51,7 +79,7 @@ try {
         await add.getByLabel('Review text', { exact: true }).fill('Our daily walks are much calmer after the training sessions.');
         await add.getByLabel('Review source', { exact: true }).selectOption('Facebook comment');
         await add.getByRole('button', { name: 'Publish review', exact: true }).click(); await add.waitFor({ state: 'hidden' });
-        await page.reload(); const added = page.getByRole('article', { name: 'Review by Browser Test Client', exact: true }); await added.waitFor();
+        await navigate(); const added = page.getByRole('article', { name: 'Review by Browser Test Client', exact: true }); await added.waitFor();
         assert.ok((await publicHtml()).includes('Browser Test Client'));
         page.once('dialog', dialog => dialog.accept());
         await added.getByRole('button', { name: 'Remove review', exact: true }).click(); await added.waitFor({ state: 'hidden' });
@@ -62,7 +90,7 @@ try {
         const first = page.getByRole('article', { name: 'Review by Tamyra Borg', exact: true });
         page.once('dialog', dialog => dialog.accept()); await first.getByRole('button', { name: 'Remove review', exact: true }).click(); await first.waitFor({ state: 'hidden' });
         const html = await publicHtml(); assert.ok(!html.includes('Tamyra Borg'), 'removed imported reviews disappear from public HTML and the bootstrap snapshot');
-        await page.goto(origin); await page.locator('.facebook-recommendations article').filter({ hasText: 'Sherrie Humphries' }).waitFor({ state: 'attached' });
+        await navigate(origin); await page.locator('.facebook-recommendations article').filter({ hasText: 'Sherrie Humphries' }).waitFor({ state: 'attached' });
         assert.equal(await page.getByText('Tamyra Borg', { exact: true }).count(), 0);
         assert.equal(await page.locator('.goal-early-review').isVisible(), false, 'no duplicate review teaser');
         const retainedReview = page.locator('.facebook-recommendations article').filter({ hasText: 'Waneta Malsom' });
@@ -72,16 +100,19 @@ try {
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
         for (const who of ['administrator', 'staff', 'member']) {
           await context.clearCookies(); await context.addCookies([{ name: 'bravo_session', value: tokens[who], domain: '127.0.0.1', path: '/' }]);
-          await page.goto(`${origin}/account`); await page.getByRole('heading', { name: /^Welcome,/ }).waitFor();
+          await navigate(`${origin}/account`); await page.getByRole('heading', { name: /^Welcome,/ }).waitFor();
           assert.equal(await page.getByRole('link', { name: 'Manage reviews', exact: true }).count(), 0);
-          await page.goto(`${origin}/admin?tab=reviews`); await page.waitForLoadState('networkidle');
+          await navigate(`${origin}/admin?tab=reviews`); await page.waitForLoadState('networkidle');
           assert.equal(await page.getByRole('button', { name: 'Add review', exact: true }).count(), 0);
           assert.equal(await page.getByRole('button', { name: 'Reviews', exact: true }).count(), 0);
         }
         assert.deepEqual(errors, []);
         console.log(`PASS ${name}/${width}: owner profile review add/edit/remove/restore, reload, live homepage and delegated-access denial`);
       } catch (error) { await page.screenshot({ path: `test-results/owner-reviews-failure-${name}-${width}.png`, fullPage: true }); throw error; }
-      finally { await context.close(); }
+      finally {
+        await writeFile(`test-results/owner-reviews-diagnostics-${name}-${width}.json`, JSON.stringify({ errors, navigationDiagnostics }, null, 2));
+        await context.close();
+      }
     } } finally { await browser.close(); }
   }
 } finally { if (server) await new Promise(resolve => server.close(resolve)); await mongoose.disconnect(); await replica.stop(); }
