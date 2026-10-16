@@ -26,7 +26,7 @@ export function jointTrainerPair(people = []) {
 export function trainerOptions(people = []) {
   const canonical = people.filter(person => identity(person) !== JOINT_TRAINER_ID);
   const ids = jointTrainerPair(canonical).map(identity);
-  const real = canonical.map(person => ({ ...person, name: person.publicName ?? (person.profileKey ? person.name : publicTrainerName(person.name)) }));
+  const real = canonical.map(person => ({ ...person, name: publicTrainerName(person.publicName ?? person.name) }));
   const pair = ids.map(id => real.find(person => identity(person) === id));
   const capacityKnown = pair.length === 2 && pair.every(person => Number.isFinite(person.spotsRemaining));
   const group = { id: JOINT_TRAINER_ID, _id: JOINT_TRAINER_ID, name: JOINT_TRAINER_LABEL, staffIds: ids, disabled: pair.length !== 2, joint: true,
@@ -40,7 +40,7 @@ export function scheduledTrainerLabel(booking) {
   if (booking.trainerAcceptanceRequired) {
     const accepted = acceptedTrainerIds(booking);
     const pending = assigned.filter(person => !accepted.includes(identity(person)));
-    return `Awaiting acceptance from ${(pending.length ? pending : assigned).map(person => person.publicName ?? publicTrainerName(person.name)).join(' and ')}`;
+    return `Awaiting acceptance from ${(pending.length ? pending : assigned).map(person => publicTrainerName(person.publicName ?? person.name)).join(' and ')}`;
   }
-  return assigned.length > 1 ? JOINT_TRAINER_LABEL : assigned[0].publicName ?? publicTrainerName(assigned[0].name);
+  return assigned.length > 1 ? JOINT_TRAINER_LABEL : publicTrainerName(assigned[0].publicName ?? assigned[0].name);
 }
