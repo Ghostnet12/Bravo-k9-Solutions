@@ -1,7 +1,8 @@
 // A cold homepage can request many independent content snapshots at once.
 // Bound only these reads so they do not all start database initialization in
 // separate serverless instances. Never cache responses or queue account,
-// booking, streaming, uploads, or writes.
+// booking availability, streaming, uploads, or writes. Callers can mark
+// interactive reads (such as the booking trainer list) as foreground in api().
 const contentPaths = new Set([
   '/config', '/team', '/reviews', '/site-images', '/site-content', '/site-music',
   '/site-banner', '/site-banner/weather', '/workshops', '/program-videos',

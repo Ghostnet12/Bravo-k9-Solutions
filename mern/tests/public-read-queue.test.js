@@ -25,12 +25,14 @@ test('public content concurrency is bounded while booking, sign-in, live and wri
   await turn(); assert.equal(calls.length, 2);
   const immediate = ['/availability', '/auth/me', '/live', '/site-images/asset/video'].map(path => api(path));
   immediate.push(api('/workshops', { method: 'PUT', body: { title: 'Unsent fixture' } }));
-  await turn(); assert.equal(calls.length, 7);
-  assert.deepEqual(calls.slice(2).map(call => call.url), ['/api/availability', '/api/auth/me', '/api/live', '/api/site-images/asset/video', '/api/workshops']);
+  immediate.push(api('/team', { foreground: true }));
+  await turn(); assert.equal(calls.length, 8);
+  assert.deepEqual(calls.slice(2).map(call => call.url), ['/api/availability', '/api/auth/me', '/api/live', '/api/site-images/asset/video', '/api/workshops', '/api/team']);
+  assert.equal('foreground' in calls.at(-1).options, false, 'internal priority is not sent to fetch');
   for (const call of calls) { assert.equal(call.options.credentials, 'same-origin'); assert.equal(call.options.cache, 'no-store'); call.finish(); }
-  await Promise.all(immediate); await turn(); assert.equal(calls.length, 9);
-  calls.slice(7).forEach(call => call.finish()); await turn(); assert.equal(calls.length, 11);
-  calls.slice(9).forEach(call => call.finish());
+  await Promise.all(immediate); await turn(); assert.equal(calls.length, 10);
+  calls.slice(8).forEach(call => call.finish()); await turn(); assert.equal(calls.length, 12);
+  calls.slice(10).forEach(call => call.finish());
   assert.deepEqual(await Promise.all(content), paths.map(path => ({ url: `/api${path}` })));
 });
 
