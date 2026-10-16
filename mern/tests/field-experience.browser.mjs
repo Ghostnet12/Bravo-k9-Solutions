@@ -34,6 +34,8 @@ try {for(const width of [320,390,768,1440]){
  const page=await context.newPage();page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));
  try {
  await page.goto(origin,{waitUntil:'domcontentloaded'});await page.locator('h1').waitFor();await page.evaluate(()=>document.fonts.ready);
+ await page.locator('.field-story-image img').first().waitFor({state:'attached'});
+ if(width===390)assert.equal(await page.locator('.field-story-image img').first().getAttribute('src'),null,'below-fold story posters wait until nearby');
  if(width>700){
  assert.equal(await page.locator('.goal-choice').count(),4);assert.equal(await page.locator('.goal-choice a').count(),0);assert.equal(await page.locator('.goal-choice button').count(),4);
  const ids=['manners','walks','handling','specialist'];const details=['/dog-training','/dog-walking','/behavior-assessment','/#specialist-training'];
@@ -51,6 +53,7 @@ try {for(const width of [320,390,768,1440]){
  }
  assert.equal(await page.locator('.field-story-card').count(),3);
  await page.locator('.field-story-card').first().locator('summary').click();assert.ok(await page.locator('.field-story-card').first().locator('details').getAttribute('open')!==null);
+ await page.waitForFunction(()=>{const image=document.querySelector('.field-story-image img');return image?.complete&&image.naturalWidth>0;});
  await page.locator('.field-stories').screenshot({path:`test-results/field-stories-${width}.png`});
  for(let repeat=0;repeat<2;repeat++){
   await page.getByRole('button',{name:'View session: Cleo and Patrick',exact:true}).click();
