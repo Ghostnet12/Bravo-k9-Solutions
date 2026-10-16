@@ -32,16 +32,17 @@ try {
     try { for (const width of [390, 1440]) {
       await WebsiteReview.deleteMany({});
       const context = await browser.newContext({ viewport: { width, height: 900 } });
+      await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
       await context.addCookies([{ name: 'bravo_session', value: tokens.owner, domain: '127.0.0.1', path: '/' }]);
       const page = await context.newPage();
       const errors = [], navigationDiagnostics = [];
       let navigating = false;
       page.on('pageerror', error => {
         // WebKit emits a JS-source access-control diagnostic for a same-origin
-        // poll canceled by document replacement (Playwright issue #43120).
-        // Scope this to explicit hard navigation and this exact local endpoint;
+        // read canceled by document replacement (Playwright issue #43120).
+        // Scope this to hard navigation and the two observed public endpoints;
         // real DOM errors/rejections and all other page errors still fail.
-        if (name === 'webkit' && navigating && error.message.endsWith(`${new URL(origin).host}/api/live due to access control checks.`)) {
+        if (name === 'webkit' && navigating && ['live', 'site-images'].some(path => error.message.endsWith(`${new URL(origin).host}/api/${path} due to access control checks.`))) {
           navigationDiagnostics.push({ message: error.message, url: page.url() });
         } else errors.push(error.message);
       });
@@ -61,6 +62,12 @@ try {
           return { status: response.status, sessions: Array.isArray(data.sessions), announcements: Array.isArray(data.announcements) };
         });
         assert.deepEqual(live, { status: 200, sessions: true, announcements: true });
+        const images = await page.evaluate(async () => {
+          const response = await fetch('/api/site-images', { credentials: 'same-origin', cache: 'no-store' });
+          const data = await response.json();
+          return { status: response.status, images: !!data.images && typeof data.images === 'object' && !Array.isArray(data.images) };
+        });
+        assert.deepEqual(images, { status: 200, images: true });
       };
       try {
         await navigate(`${origin}/account`); await page.getByRole('link', { name: 'Manage reviews', exact: true }).click();
@@ -108,7 +115,11 @@ try {
         }
         assert.deepEqual(errors, []);
         console.log(`PASS ${name}/${width}: owner profile review add/edit/remove/restore, reload, live homepage and delegated-access denial`);
-      } catch (error) { await page.screenshot({ path: `test-results/owner-reviews-failure-${name}-${width}.png`, fullPage: true }); throw error; }
+      } catch (error) {
+        await page.screenshot({ path: `test-results/owner-reviews-failure-${name}-${width}.png`, fullPage: true });
+        await context.tracing.stop({ path: `test-results/owner-reviews-failure-${name}-${width}.zip` });
+        throw error;
+      }
       finally {
         await writeFile(`test-results/owner-reviews-diagnostics-${name}-${width}.json`, JSON.stringify({ errors, navigationDiagnostics }, null, 2));
         await context.close();

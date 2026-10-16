@@ -87,7 +87,7 @@ export default function BookingPage() {
     let cancelled = false;
     if (!ids.includes('training')) { setTrainers([]); return; }
     setTrainersLoading(true);
-    Promise.all([api(user ? '/trainers' : '/team'), user ? api('/team').catch(() => ({ team: [] })) : Promise.resolve(null)]).then(([data, profiles]) => { if (!cancelled) setTrainers(user ? data.trainers.map(trainer => ({ ...trainer, image: profiles.team?.find(person => person.id === trainer.id)?.image, imageKey: profiles.team?.find(person => person.id === trainer.id)?.imageKey })) : trainerOptions(data.team)); }).catch(e => { if (!cancelled) setError(e.message); }).finally(() => { if (!cancelled) setTrainersLoading(false); });
+    Promise.all([api(user ? '/trainers' : '/team', { foreground: true }), user ? api('/team', { foreground: true }).catch(() => ({ team: [] })) : Promise.resolve(null)]).then(([data, profiles]) => { if (!cancelled) setTrainers(user ? data.trainers.map(trainer => ({ ...trainer, image: profiles.team?.find(person => person.id === trainer.id)?.image, imageKey: profiles.team?.find(person => person.id === trainer.id)?.imageKey })) : trainerOptions(data.team)); }).catch(e => { if (!cancelled) setError(e.message); }).finally(() => { if (!cancelled) setTrainersLoading(false); });
     return () => { cancelled = true; };
   }, [user, ids]);
   useEffect(() => {

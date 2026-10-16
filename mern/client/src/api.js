@@ -1,17 +1,21 @@
 import { reportBrowserError } from './telemetry.js';
+import { publicRead } from './public-read-queue.js';
 export async function api(path, options = {}) {
-  const { timeoutMs = path.endsWith('/checkout') ? 50000 : 20000, signal, ...fetchOptions } = options;
+  const { timeoutMs = path.endsWith('/checkout') ? 50000 : 20000, signal, foreground = false, ...fetchOptions } = options;
   const controller = new AbortController();
   const cancel = () => controller.abort();
   signal?.addEventListener('abort', cancel, { once: true });
   if (signal?.aborted) cancel();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(`/api${path}`, { credentials: 'same-origin', ...fetchOptions, cache: 'no-store', signal: controller.signal, headers: { 'Content-Type': 'application/json', ...fetchOptions.headers }, body: fetchOptions.body === undefined ? undefined : JSON.stringify(fetchOptions.body) });
-    const data = await res.json().catch(() => null);
-    if (!data) throw Object.assign(new Error('The service returned an unexpected response. Please try again or contact Bravo.'), { status: res.status });
-    if (!res.ok) throw Object.assign(new Error(data.error || 'Something went wrong.'), { status: res.status, code: data.code });
-    return data;
+    const read = async () => {
+      const res = await fetch(`/api${path}`, { credentials: 'same-origin', ...fetchOptions, cache: 'no-store', signal: controller.signal, headers: { 'Content-Type': 'application/json', ...fetchOptions.headers }, body: fetchOptions.body === undefined ? undefined : JSON.stringify(fetchOptions.body) });
+      const data = await res.json().catch(() => null);
+      if (!data) throw Object.assign(new Error('The service returned an unexpected response. Please try again or contact Bravo.'), { status: res.status });
+      if (!res.ok) throw Object.assign(new Error(data.error || 'Something went wrong.'), { status: res.status, code: data.code });
+      return data;
+    };
+    return await (foreground ? read() : publicRead(path, fetchOptions, read, controller.signal));
   } catch (error) {
     if (signal?.aborted) throw error;
     if (error.name === 'AbortError') reportBrowserError('request_timeout', `/api${path}`);

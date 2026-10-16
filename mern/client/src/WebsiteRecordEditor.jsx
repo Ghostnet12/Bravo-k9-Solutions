@@ -14,7 +14,7 @@ export default function WebsiteRecordEditor({ record, close, published, design }
   }, []);
   useEffect(() => {
     let live = true;
-    Promise.all([api(trainer ? '/team' : '/admin/services'), trainer ? api('/site-content') : null]).then(([data, content]) => {
+    Promise.all([api(trainer ? '/team' : '/admin/services', { foreground: true }), trainer ? api('/site-content', { foreground: true }) : null]).then(([data, content]) => {
       const row = (trainer ? data.team : data.services)?.find(item => item.id === record.id);
       if (!row) throw new Error('This item is no longer available. Reload the page.');
       if (!live) return;

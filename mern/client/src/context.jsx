@@ -58,7 +58,7 @@ export function AppProvider({ children }) {
     readNotifications.current = new Set();
     setUser(null); setServices([]); setMembership(noMembership); setNotifications([]); setBookingDraft(null);
   }, []);
-  const refreshConfig = useCallback(() => api('/config').then(setConfig), []);
+  const refreshConfig = useCallback(() => api('/config', { foreground: true }).then(setConfig), []);
   const updateService = useCallback(service => setConfig(old => ({ ...old,
     services: (old?.services || []).map(item => item.id === service.id ? service : item),
     ...(service.id === 'online' ? { lessonLibrary: { ...old?.lessonLibrary, lessonCents: service.cents, bundleCents: service.bundleCents } } : {}),
