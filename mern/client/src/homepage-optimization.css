@@ -66,3 +66,28 @@
  .cinema-home.conversion-home .polish-hero-actions .cinema-button{padding:10px 14px;gap:10px}
  .cinema-home.conversion-home .cinema-hero-baseline{display:none}
 }
+
+/* A shared rhythm keeps proof and secondary offers concise without hiding media. */
+.cinema-home.conversion-home :is(.cinema-intro,.cinema-team,.cinema-programs,.cinema-proof,.cinema-events,.cinema-dogs,.cinema-close){padding-block:48px}
+.cinema-home.conversion-home .cinema-section-heading{margin-bottom:32px;gap:28px}
+.cinema-home.conversion-home .field-stories{margin-bottom:28px;padding:0 0 28px}
+.cinema-home.conversion-home .field-stories-heading{margin-bottom:20px}
+.cinema-home.conversion-home .field-stories-heading h3,.cinema-home.conversion-home .home-work-proof-heading h3{font-size:clamp(28px,3vw,38px);line-height:1.15;margin:0}
+.cinema-home.conversion-home .home-work-proof-heading{margin-bottom:24px}
+.cinema-home.conversion-home .home-fci-card{grid-template-columns:minmax(120px,.35fr) minmax(0,1.65fr);gap:28px;padding:28px;border-radius:16px;background:linear-gradient(120deg,#1d1b17,#101010)}
+.cinema-home.conversion-home .home-fci-identity{max-width:220px}
+.cinema-home.conversion-home .home-fci-copy h2{font-size:clamp(30px,3vw,40px);margin:8px 0 12px}
+.cinema-home.conversion-home .cinema-online{padding-block:56px}
+.cinema-home.conversion-home .cinema-online-inner{gap:36px;grid-template-columns:1.3fr .7fr}
+.cinema-home.conversion-home .cinema-learning-visual{transform:none;filter:none}
+.cinema-home.conversion-home .cinema-learning-visual .home-lesson-preview{aspect-ratio:16/10;border:1px solid #ba9a6466;border-radius:16px}
+.cinema-home.conversion-home .cinema-learning-caption{display:none}
+@media(max-width:700px){
+ .cinema-home.conversion-home :is(.cinema-intro,.cinema-team,.cinema-programs,.cinema-proof,.cinema-events,.cinema-dogs,.cinema-close){padding-block:28px}
+ .cinema-home.conversion-home .cinema-section-heading{margin-bottom:24px;gap:16px}
+ .cinema-home.conversion-home .home-fci-card{grid-template-columns:1fr;gap:16px;padding:24px}
+ .cinema-home.conversion-home .home-fci-identity{max-width:180px}
+ .cinema-home.conversion-home .cinema-online-inner{grid-template-columns:1fr;gap:24px}
+ .cinema-home.conversion-home .cinema-online{padding-block:28px}
+ .cinema-home.conversion-home .cinema-learning-visual{max-width:420px;width:100%}
+}

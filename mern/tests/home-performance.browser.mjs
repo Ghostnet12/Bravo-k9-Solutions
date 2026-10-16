@@ -88,6 +88,16 @@ try {
       const interactions=await page.evaluate(()=>window.labVitals);
       assert.ok(initial.lcp>0,'LCP measurement exists');
       results.push({width,run,lcpMs:Math.round(initial.lcp),lcpElement:initial.lcpElement,cls:initial.cls,initialTransferBytes:initial.bytes,documentHeight:initial.documentHeight,initialBlockingMs:Math.round(initial.longTaskMs),sampledMaxInteractionMs:interactions.maxInteraction});
+      if (run === 1) {
+        // Visit each section so lazy media and motion reveals appear in the audit.
+        for (let top = 0; top < await page.evaluate(() => document.documentElement.scrollHeight); top += 650) {
+          await page.evaluate(y => window.scrollTo({ top: y, behavior: 'instant' }), top);
+          await page.waitForTimeout(120);
+        }
+        await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+        await page.waitForTimeout(800);
+        await page.screenshot({ path: `test-results/home-${label}-${width}.png`, fullPage: true });
+      }
       await context.close();
     }
   }

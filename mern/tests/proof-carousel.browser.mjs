@@ -40,7 +40,7 @@ try {
           // A playing native video blocks the timer, independent of pointer/focus.
           await rail.locator('video').first().evaluate(video => { Object.defineProperty(video, 'paused', { configurable: true, get: () => false }); });
           await page.getByRole('button', { name: 'Resume videos', exact: true }).click();
-          await page.getByRole('heading', { name: 'Training you can actually see.' }).evaluate(el => { el.tabIndex = -1; });
+          await page.getByRole('heading', { name: 'Video library' }).evaluate(el => { el.tabIndex = -1; });
           await page.locator('#main-content').focus(); await rail.scrollIntoViewIfNeeded(); await page.mouse.move(0, 0);
           const playingPosition = await rail.evaluate(el => el.scrollLeft); await page.waitForTimeout(5500);
           assert.ok(Math.abs((await rail.evaluate(el => el.scrollLeft)) - playingPosition) < 2);
@@ -52,7 +52,7 @@ try {
           role = 'owner'; await page.emulateMedia({ reducedMotion: 'no-preference' }); await page.reload();
           assert.equal(await page.getByRole('button', {name:'Add video',exact:true}).count(),0);
           assert.equal(await page.getByLabel('Time between videos (seconds)').count(),0);
-          const heading=page.getByRole('heading',{name:'Training you can actually see.',exact:true});await heading.scrollIntoViewIfNeeded();const hb=await heading.boundingBox();await page.mouse.move(hb.x+20,hb.y+10);await page.mouse.down();await page.waitForTimeout(750);await page.mouse.up();
+          const heading=page.getByRole('heading',{name:'Video library',exact:true});await heading.scrollIntoViewIfNeeded();const hb=await heading.boundingBox();await page.mouse.move(hb.x+20,hb.y+10);await page.mouse.down();await page.waitForTimeout(750);await page.mouse.up();
           await page.getByRole('dialog',{name:'Edit video section',exact:true}).waitFor();
           await page.getByLabel('Time between videos (seconds)').fill('2');
           await page.getByRole('button', { name: 'Publish carousel timing', exact: true }).click();

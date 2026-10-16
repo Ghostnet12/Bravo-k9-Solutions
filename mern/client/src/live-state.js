@@ -23,16 +23,20 @@ export function LiveStatusProvider({ children }) {
   const [data, setData] = useState(initial), now = useLiveClock(data.offset);
   useEffect(() => {
     if (!authReady) return;
-    let active = true, busy = false, suspended = false, request;
+    let active = true, busy = false, suspended = false, receivedStatus = false, request;
     const load = async () => {
       if (!active || busy || suspended || document.hidden) return;
       busy = true; const sent = Date.now();
       const controller = new AbortController(); request = controller;
       try {
-        const result = await api('/live', { timeoutMs: 4000, signal: controller.signal });
+        // Cold initialization can exceed the normal polling deadline. Keep one
+        // request in flight and allow a bounded first/recovery read to finish.
+        const result = await api('/live', { timeoutMs: receivedStatus ? 4000 : 12000, signal: controller.signal });
         if (!Array.isArray(result.sessions) || !Array.isArray(result.announcements)) throw new Error('Invalid live status');
+        receivedStatus = true;
         if (active) setData({ ...result, identity, loading: false, error: '', offset: new Date(result.serverTime).getTime() - (sent + Date.now()) / 2 });
       } catch {
+        receivedStatus = false;
         if (active && !controller.signal.aborted) setData(old => ({ ...old, identity, loading: false, availability: 'unavailable', error: 'Live status is temporarily unavailable. Reconnecting…' }));
       } finally { busy = false; }
     };

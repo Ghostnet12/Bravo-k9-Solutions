@@ -20,7 +20,7 @@ try {
     if (process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(name)) continue;
     const browser = await engine.launch();
     try {
-      for (const [width, height, deviceScaleFactor] of [[320, 700, 1], [390, 844, 1], [390, 844, 3], [844, 390, 1], [1440, 900, 1]]) {
+      for (const [width, height, deviceScaleFactor] of [[320, 700, 1], [375, 844, 1], [390, 844, 1], [430, 844, 1], [768, 900, 1], [1024, 900, 1], [390, 844, 3], [844, 390, 1], [1440, 900, 1]]) {
         const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor, isMobile: deviceScaleFactor === 3, reducedMotion: 'reduce', hasTouch: width < 900 });
         let owner = false, saved = null;
         const requests = [], errors = [];
@@ -49,6 +49,7 @@ try {
           assert.equal(new Set(heroRequests).size, 1, 'preload and image choose the same responsive asset');
           assert.ok(!requests.some(path => /\/(ContentEditor|AdEditor|BannerEditor)-.*\.js$/.test(path)), 'public loads exclude editing dialogs');
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+          assert.equal(await page.locator('.mobile-home-nav svg').count(),6,'all quick-navigation icons are stable SVG outlines');
           if (height === 390) {
             for (const link of await page.locator('.polish-hero-actions a').all()) {
               const box = await link.boundingBox();
