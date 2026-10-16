@@ -6,7 +6,7 @@ const css = readFileSync(new URL('client/src/brand-graphics.css', root), 'utf8')
 const directory = new URL('client/public/graphics/', root);
 test('original graphics are small self-contained SVGs with no executable or external content', () => {
   const assets = readdirSync(directory).filter(file => file.endsWith('.svg'));
-  assert.equal(assets.length, 9);
+  assert.equal(assets.length, 8);
   let bytes = 0;
   for (const file of assets) {
     const path = new URL(file, directory), svg = readFileSync(path, 'utf8');

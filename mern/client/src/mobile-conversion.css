@@ -51,6 +51,7 @@
  .cinema-home.conversion-home .cinema-story{height:auto;min-height:0}.cinema-home.conversion-home .cinema-story-stage{position:relative;min-height:600px;height:auto}.cinema-home.conversion-home .cinema-story-line{position:relative;opacity:1;transform:none;margin-bottom:18px}.cinema-home.conversion-home .cinema-story-progress{display:none}
  .cinema-home.conversion-home .cinema-close{padding:36px 0}.cinema-home.conversion-home .cinema-close h2{font-size:48px}.cinema-home.conversion-home .conversion-faq{padding-block:28px}.cinema-home.conversion-home .conversion-faq h2{font-size:34px}
  .mobile-home-nav{position:fixed;left:0;right:0;bottom:var(--ad-dock-height,0px);z-index:82;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));background:#080808f5;border-top:2px solid #ba9a64;min-height:64px;padding:4px 8px max(4px,env(safe-area-inset-bottom));box-shadow:0 -5px 20px #0004}
+ .mobile-home-nav svg{display:block}
  .mobile-home-nav>a,.mobile-home-nav>button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:48px;padding:3px 0;background:transparent;border:0;text-decoration:none;color:#eee;font:10px Montserrat,sans-serif}.mobile-home-nav span{font-size:25px;line-height:1.15}.mobile-home-nav .mobile-home-book{color:#e2bd79}
  body:has(.mobile-home-nav) #root{padding-bottom:calc(var(--ad-dock-height,0px) + 72px + env(safe-area-inset-bottom))}
  body:has(.mobile-home-nav) .home-ad-dock .home-ad-carousel{height:90px}

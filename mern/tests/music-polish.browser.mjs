@@ -24,8 +24,12 @@ try {
   const browser = await engine.launch();
   try {
    for (const width of [320,375,390,430,768,1440]) {
+    if(process.env.BRAVO_TEST_WIDTHS && !process.env.BRAVO_TEST_WIDTHS.split(',').map(Number).includes(width)) continue;
     const height = width === 320 ? 568 : width >= 768 ? 768 : 844;
-    const context = await browser.newContext({viewport:{width,height}}), page = await context.newPage();
+    const context = await browser.newContext({viewport:{width,height},hasTouch:width<=430}), page = await context.newPage();
+    if (width === 375) await page.addInitScript(() => {
+     Object.defineProperty(navigator, 'userAgent', {get:()=> 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile Safari/604.1'});
+    });
     if (width === 390) await page.addInitScript(() => {
      const play = HTMLMediaElement.prototype.play;
      HTMLMediaElement.prototype.play = function (...args) {
@@ -60,6 +64,12 @@ try {
     await page.goto(origin); const book=page.locator('.polish-hero-actions a').first(); await book.waitFor(); await page.screenshot({path:'test-results/polish-debug.png'});
     const box=await book.boundingBox(); assert.ok(box.y>=0&&box.y+box.height<=height,`booking ${width}: ${JSON.stringify(box)}`);
     assert.equal(await page.locator('.home-ad-dock').count(),0,'public ads removed');
+    const methodArt=await page.locator('#method').evaluate(el=>{const s=getComputedStyle(el,'::before');return {background:s.backgroundImage,height:parseFloat(s.height)};});
+    assert.match(methodArt.background,/bravo-logo-small/);assert.doesNotMatch(methodArt.background,/connection-rings/);assert.ok(methodArt.height<=100);
+    const contact=page.locator('.mobile-home-nav a[href="/contact"]');
+    assert.equal(await contact.locator('svg').getAttribute('fill'),'none');
+    assert.equal(await contact.locator('svg').getAttribute('stroke'),'currentColor');
+    assert.doesNotMatch(await contact.innerText(),/☎|📞/);
     const barrier = width<=700 ? await page.locator('.mobile-home-nav').boundingBox() : null;
     if(barrier) assert.ok(box.y+box.height<=barrier.y, 'booking clears navigation');
     if(width<=700){
@@ -106,6 +116,18 @@ try {
      await page.waitForFunction(()=>!document.querySelector('[data-site-soundtrack]').paused);
      assert.equal(playlist.revision, 0, 'same-revision playlist recovers after connectivity returns');
      await page.getByRole('button',{name:'Accessibility',exact:true}).click();
+     const volume=page.getByRole('slider',{name:'Music volume'}), soundtrack=page.locator('[data-site-soundtrack]');
+     await volume.press('Home');await page.waitForFunction(()=>document.querySelector('[data-site-soundtrack]').muted);
+     assert.equal(await soundtrack.evaluate(el=>el.volume),0);
+     await page.getByRole('button',{name:'Unmute music',exact:true}).click();
+     assert.equal(await soundtrack.evaluate(el=>el.volume),.72);
+     await volume.press('End');await volume.press('ArrowLeft');
+     assert.equal(await soundtrack.evaluate(el=>el.volume),.95);
+     const range=await volume.boundingBox();await page.touchscreen.tap(range.x+range.width*.3,range.y+range.height/2);
+     const savedVolume=await soundtrack.evaluate(el=>el.volume);assert.ok(savedVolume>0&&savedVolume<.6);
+     assert.equal(await soundtrack.evaluate(el=>el.paused),false,'volume does not interrupt playback');
+     assert.equal(await soundtrack.count(),1);
+     await page.screenshot({path:`test-results/music-volume-${name}.png`});
      await page.getByRole('button',{name:'Manage Music',exact:true}).click();
      const dialog=page.getByRole('dialog',{name:'Manage Music'});await dialog.waitFor();
      await dialog.getByLabel('Add a song',{exact:false}).setInputFiles({name:'holiday.mp3',mimeType:'audio/mpeg',buffer:Buffer.from('ID3holiday-fixture-for-upload')});
@@ -117,7 +139,7 @@ try {
      assert.equal(uploads,1);assert.equal(chunks,1);assert.equal(playlist.tracks[0].title,'holiday');
      await page.getByRole('button',{name:'Manage Music',exact:true}).click();
      await dialog.getByRole('button',{name:'Remove holiday',exact:true}).click();
-     await dialog.getByRole('button',{name:'Publish playlist'}).click();await dialog.waitFor({state:'hidden'});assert.equal(playlist.tracks.length,1);
+     await dialog.getByRole('button',{name:'Publish playlist'}).click();await dialog.waitFor({state:'hidden'});assert.equal(playlist.tracks.length,1);assert.equal(await soundtrack.evaluate(el=>el.volume),savedVolume,'track changes preserve volume');
      await page.getByRole('button',{name:'Mute music',exact:true}).click();assert.equal(await page.locator('[data-site-soundtrack]').evaluate(el=>el.muted),true);
      if (await page.locator('[data-site-soundtrack]').evaluate(el=>el.paused)) await page.getByRole('button',{name:'Enable Music',exact:true}).click();
      await page.waitForFunction(()=>!document.querySelector('[data-site-soundtrack]').paused);
@@ -131,6 +153,21 @@ try {
      await book.click();await page.waitForURL('**/portal?program=training');
      assert.equal(await page.locator('[data-site-soundtrack]').getAttribute('data-test-identity'),'same');
      assert.equal(await page.locator('[data-site-soundtrack]').evaluate(el=>el.muted),true);
+     assert.equal(await soundtrack.evaluate(el=>el.volume),savedVolume,'navigation preserves volume');
+     await page.waitForLoadState('networkidle');await page.reload();await page.waitForFunction(value=>document.querySelector('[data-site-soundtrack]')?.volume===value,savedVolume);
+     assert.equal(await soundtrack.evaluate(el=>el.volume),savedVolume,'reload preserves volume');
+     assert.equal(await soundtrack.evaluate(el=>el.muted),true);
+     assert.equal(await soundtrack.evaluate(el=>el.paused),true);
+    }
+    if(width===375){
+     await page.getByRole('button',{name:'Accessibility',exact:true}).click();
+     await page.getByText('Use your device’s volume buttons or system volume control to adjust the music. You can still mute or pause it here.',{exact:true}).waitFor();
+     assert.equal(await page.getByRole('slider',{name:'Music volume'}).count(),0);
+     await page.getByRole('button',{name:'Mute music',exact:true}).click();assert.equal(await page.locator('[data-site-soundtrack]').evaluate(el=>el.muted),true);
+     await page.getByRole('button',{name:'Unmute music',exact:true}).click();assert.equal(await page.locator('[data-site-soundtrack]').evaluate(el=>el.muted),false);
+     await page.screenshot({path:`test-results/music-device-volume-${name}.png`});
+     await page.getByRole('button',{name:'Close accessibility options'}).click();
+     await page.locator('#method').scrollIntoViewIfNeeded();await page.screenshot({path:`test-results/plain-shield-${name}.png`});
     }
     await context.close();console.log(`${name} ${width}: passed`);
    }

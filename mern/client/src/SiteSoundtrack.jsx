@@ -2,6 +2,7 @@ import { useLocation } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 import { DEFAULT_MUSIC, playableTracks } from '../../shared/music-playlist.js';
 import { api } from './api';
+import { createMusicVolume } from './music-volume';
 const storageKey = 'bravo-accessibility-preferences', positionKey = 'bravo-site-soundtrack-position', preferenceKey = 'bravo-music-preferences';
 function read(key, store = localStorage) { try { return JSON.parse(store.getItem(key) || '{}'); } catch { return {}; } }
 function write(key, value, store = localStorage) { try { store.setItem(key, JSON.stringify(value)); } catch { /* Storage may be unavailable. */ } }
@@ -15,10 +16,9 @@ export default function SiteSoundtrack() {
     let playlist = DEFAULT_MUSIC, tracks = playableTracks(playlist), index = 0, active = true, focus = false, ready = false, autoplayBlocked = false;
     const failed = new Set(), media = new Set(), preferences = read(preferenceKey), remembered = read(positionKey, sessionStorage);
     enabled.current = read(storageKey).siteMusic !== false && preferences.paused !== true;
-    element.volume = Number.isFinite(preferences.volume) ? Math.max(0, Math.min(1, preferences.volume)) : .72;
-    element.muted = preferences.muted === true;
-    const status = () => window.dispatchEvent(new CustomEvent('bravo-music-status', { detail: { playing: !element.paused, muted: element.muted, volume: element.volume, title: tracks[index]?.title || '', available: tracks.length > failed.size } }));
-    const persist = () => write(preferenceKey, { paused: !enabled.current, volume: element.volume, muted: element.muted });
+    const volumeControl = createMusicVolume(element, preferences);
+    const status = () => window.dispatchEvent(new CustomEvent('bravo-music-status', { detail: { playing: !element.paused, ...volumeControl.snapshot(), volumeSupported: volumeControl.supported, title: tracks[index]?.title || '', available: tracks.length > failed.size } }));
+    const persist = () => write(preferenceKey, { paused: !enabled.current, ...volumeControl.snapshot() });
     const remember = () => write(positionKey, { id: tracks[index]?.id, time: element.currentTime }, sessionStorage);
     const shouldPlay = () => enabled.current && !document.hidden && ready && !liveRoute.current && !focus && !media.size && tracks.length > failed.size;
     const attempt = () => {
@@ -52,10 +52,10 @@ export default function SiteSoundtrack() {
     const command = event => {
       const { action, value } = event.detail;
       if (action === 'toggle') { enabled.current = element.paused; write(storageKey, { ...read(storageKey), siteMusic: enabled.current }); window.dispatchEvent(new CustomEvent('bravo-music-preference', { detail: { enabled: enabled.current } })); }
-      if (action === 'mute') element.muted = !element.muted;
-      if (action === 'volume') element.volume = Math.max(0, Math.min(1, value));
+      if (action === 'mute') volumeControl.toggleMute();
+      if (action === 'volume') volumeControl.set(value);
       if (action === 'next') next();
-      if (action !== 'status') { persist(); attempt(); } status();
+      if (action !== 'status') { persist(); if (action !== 'volume' && action !== 'mute') attempt(); } status();
     };
     const audioFocus = event => { focus = event.detail?.active === true; attempt(); };
     const mediaChange = event => {
