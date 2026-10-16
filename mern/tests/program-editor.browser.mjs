@@ -27,6 +27,9 @@ try{for(const [name,engine] of Object.entries({chromium,webkit})){
  await route.fulfill({json});});
  try{for(const administrator of [false,true]){
  primary=!administrator;await page.goto(origin);await page.getByRole('button',{name:'Edit program video',exact:true}).waitFor();
+ // Wait for the background request to reach the fixture before holding it;
+ // otherwise a faster CI runner can make the interactive read arrive first.
+ const snapshotDeadline=Date.now()+5000;while(contentReads===0 && Date.now()<snapshotDeadline)await new Promise(resolve=>setTimeout(resolve,10));assert.ok(contentReads>0,'initial content request reached the fixture before editing');
  await page.getByLabel('Program photo or video',{exact:true}).selectOption('photo');await page.getByRole('button',{name:'Edit program photo',exact:true}).click();
  await page.locator('.site-photo-dialog[open]').waitFor();assert.equal(await page.getByLabel('Choose a replacement from files').count(),1);await page.getByRole('button',{name:'Close media editor'}).click();
  await page.getByRole('button',{name:'Edit program text',exact:true}).click();const dialog=page.getByRole('dialog',{name:'Edit website section'});await dialog.getByLabel('Edit this part').selectOption('goal-manners-title');await dialog.getByLabel('Text',{exact:true}).fill(administrator?'Admin title':'Owner title');fail=true;await dialog.getByRole('button',{name:'Publish website changes'}).click();await dialog.getByRole('alert').waitFor();assert.equal(await dialog.getByLabel('Text',{exact:true}).inputValue(),administrator?'Admin title':'Owner title');fail=false;await dialog.getByRole('button',{name:'Publish website changes'}).click();await dialog.waitFor({state:'hidden'});
