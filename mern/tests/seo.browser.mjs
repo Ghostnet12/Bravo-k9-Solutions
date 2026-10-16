@@ -4,13 +4,15 @@ import { DEFAULT_REVIEWS } from '../shared/reviews.js';
 import assert from 'node:assert/strict';
 import express from 'express';
 import { once } from 'node:events';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { chromium, webkit } from 'playwright';
 import app from '../server/app.js';
 import { PAGE_METADATA, publicRoutes, canonicalUrl } from '../shared/page-metadata.js';
 import { SERVICES } from '../shared/catalog.js';
 const home = renderSiteContent(await readFile(new URL('../client/dist/bravo-shell.html',import.meta.url),'utf8'), {}, undefined, undefined, DEFAULT_REVIEWS);
-const server = express().get('/',(_req,res)=>res.type('html').send(home)).use(app).listen(0, '127.0.0.1');
+const server = express().get('/',(_req,res)=>res.type('html').send(home))
+  .get('/api/live', (_req, res) => res.json({ sessions: [], announcements: [], availability: 'available', serverTime: new Date().toISOString() }))
+  .use(app).listen(0, '127.0.0.1');
 await once(server, 'listening');
 const origin = `http://127.0.0.1:${server.address().port}`;
 await mkdir('test-results', { recursive: true });
@@ -38,10 +40,37 @@ try {
       for (const width of [390, 1348, 1440]) {
         const context = await browser.newContext({ viewport: { width, height: 900 } });
         await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
-        const page = await context.newPage(), errors = [];
+        const page = await context.newPage(), errors = [], navigationDiagnostics = [];
+        let navigating = false;
         try {
-        page.on('pageerror', error => errors.push(error.message));
-        await page.route('**/api/**', route => {
+        page.on('pageerror', error => {
+          // Playwright #43120: WebKit reports a canceled same-origin poll as an
+          // access-control diagnostic during document replacement. The failure
+          // trace placed this 19ms after goto began. Keep that exact diagnostic
+          // only during hard navigation; actual DOM errors/rejections still fail.
+          if (name === 'webkit' && navigating && error.message.endsWith(`${new URL(origin).host}/api/live due to access control checks.`)) navigationDiagnostics.push({ message: error.message, url: page.url() });
+          else errors.push(error.message);
+        });
+        await page.exposeFunction('recordSeoRuntimeError', message => errors.push(message));
+        await page.addInitScript(() => {
+          window.addEventListener('error', event => { if (event instanceof ErrorEvent) void window.recordSeoRuntimeError(event.error?.stack || event.message).catch(() => {}); });
+          window.addEventListener('unhandledrejection', event => { void window.recordSeoRuntimeError(event.reason?.stack || event.reason?.message || String(event.reason)).catch(() => {}); });
+        });
+        const navigate = async url => {
+          let response;
+          navigating = true;
+          try { response = await page.goto(url); } finally { navigating = false; }
+          const live = await page.evaluate(async () => {
+            const result = await fetch('/api/live', { credentials: 'same-origin', cache: 'no-store' });
+            const data = await result.json();
+            return { status: result.status, sessions: Array.isArray(data.sessions), announcements: Array.isArray(data.announcements) };
+          });
+          assert.deepEqual(live, { status: 200, sessions: true, announcements: true });
+          return response;
+        };
+        // Polling uses a real same-origin HTTP fixture, including on the new
+        // document, rather than fulfilling an intercepted request at teardown.
+        await page.route(/\/api\/(?!live(?:[/?]|$))/, route => {
           const path = new URL(route.request().url()).pathname;
           const fixtures = {
             '/api/config': { connected: true, services: SERVICES }, '/api/auth/me': { user: null, services: [] }, '/api/team': { team: [] },
@@ -50,7 +79,7 @@ try {
           };
           return route.fulfill({ json: fixtures[path] || {} });
         });
-        await page.goto(origin);
+        await navigate(origin);
         const cards = page.locator('.facebook-recommendations article');
         assert.equal(await cards.count(), 7);
         await page.locator('.facebook-recommendations-more > summary').click();
@@ -92,7 +121,7 @@ try {
           assert.ok(await card.locator('.review-excerpt').isVisible());
         }
         if (width === 390) {
-          await page.goto(origin);
+          await navigate(origin);
           const price = page.locator('.conversion-price');
           await price.waitFor();
           assert.match(await price.innerText(), /\$200/);
@@ -103,7 +132,7 @@ try {
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
           await page.screenshot({ path: `test-results/mobile-home-polish-${name}.png` });
         }
-        await page.goto(`${origin}/dog-training?utm_source=fixture`);
+        await navigate(`${origin}/dog-training?utm_source=fixture`);
         await page.getByRole('heading', { level: 1, name: 'Dog training in Aberdeen, SD.' }).waitFor();
         await page.getByText('Do you come to my home?', { exact: true }).click();
         assert.ok(await page.getByText('Yes. Bravo provides private mobile training', { exact: false }).isVisible());
@@ -125,7 +154,7 @@ try {
         await page.locator('meta[name="robots"][content*="noindex"]').waitFor({ state: 'attached' });
         assert.match(await page.locator('meta[name="robots"]').getAttribute('content'), /noindex/);
         assert.equal(await page.locator('#bravo-structured-data').count(), 0);
-        assert.equal((await page.goto(origin + '/missing-bravo-page')).status(), 404);
+        assert.equal((await navigate(origin + '/missing-bravo-page')).status(), 404);
         await page.getByRole('heading', { level: 1, name: 'That page wandered off.' }).waitFor();
         assert.equal(await page.locator('link[rel="canonical"]').count(), 0);
         assert.deepEqual(errors, []);
@@ -134,7 +163,10 @@ try {
           await page.screenshot({ path: `test-results/seo-failure-${name}-${width}.png`, fullPage: true });
           await context.tracing.stop({ path: `test-results/seo-failure-${name}-${width}.zip` });
           throw error;
-        } finally { await context.close(); }
+        } finally {
+          await writeFile(`test-results/seo-diagnostics-${name}-${width}.json`, JSON.stringify({ errors, navigationDiagnostics }, null, 2));
+          await context.close();
+        }
       }
     } finally { await browser.close(); }
   }
