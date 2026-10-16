@@ -155,8 +155,13 @@ try {
      assert.equal(await page.locator('[data-site-soundtrack]').getAttribute('data-test-identity'),'same');
      assert.equal(await page.locator('[data-site-soundtrack]').evaluate(el=>el.muted),true);
      assert.equal(await soundtrack.evaluate(el=>el.volume),savedVolume,'navigation preserves volume');
-     await page.waitForLoadState('networkidle');await page.reload();await page.waitForFunction(value=>document.querySelector('[data-site-soundtrack]')?.volume===value,savedVolume);
-     assert.equal(await soundtrack.evaluate(el=>el.volume),savedVolume,'reload preserves volume');
+     const savedPreferences=await page.evaluate(()=>localStorage.getItem('bravo-music-preferences'));
+     await page.waitForLoadState('networkidle');await page.reload();
+     await page.waitForFunction(value=>Math.abs((document.querySelector('[data-site-soundtrack]')?.volume ?? -1)-value)<1e-6,savedVolume).catch(async error=>{
+      console.error('Reload volume state',await page.evaluate(()=>({volume:document.querySelector('[data-site-soundtrack]')?.volume,muted:document.querySelector('[data-site-soundtrack]')?.muted,preferences:localStorage.getItem('bravo-music-preferences')})));throw error;
+     });
+     assert.ok(Math.abs(await soundtrack.evaluate(el=>el.volume)-savedVolume)<1e-6,'reload preserves native volume');
+     assert.equal(await page.evaluate(()=>localStorage.getItem('bravo-music-preferences')),savedPreferences,'reload preserves exact saved preferences');
      assert.equal(await soundtrack.evaluate(el=>el.muted),true);
      assert.equal(await soundtrack.evaluate(el=>el.paused),true);
     }
