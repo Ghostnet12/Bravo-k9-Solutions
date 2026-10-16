@@ -62,7 +62,7 @@ try {
    await page.getByRole('button',{name:'Review my request →',exact:true}).click();
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
    await page.getByRole('button',{name:'Send my request • no charge',exact:true}).click();
-   await page.getByText('Request saved. Bravo will confirm the visit details. No card has been charged.',{exact:true}).waitFor();
+   await page.getByText('Your appointment request has been submitted. Bravo will confirm your selected date and time. No card has been charged.',{exact:true}).waitFor();
    assert.equal(saved.length,1);assert.equal(saved[0].visits.length,1);assert.equal(saved[0].visits[0].time,'10:00');assert.equal(saved[0].preferredTrainerId,trainerId);assert.equal(saved[0].dogCount,2);assert.equal(saved[0].trainingFocus,'basic-obedience');
    assert.equal(await page.getByRole('button',{name:'Send my request • no charge',exact:true}).count(),0);
    await page.goto(origin+'/portal?program=training');
