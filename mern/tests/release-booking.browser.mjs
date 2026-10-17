@@ -9,14 +9,14 @@ const browser=await chromium.launch({args:['--no-sandbox','--disable-dev-shm-usa
 try {
  for(const width of [390,1440]) {
   const context=await browser.newContext({viewport:{width,height:900},reducedMotion:'reduce'});
-  let signedIn=false;const writes=[],saved=[],errors=[];
+  let signedIn=false, lessonsOpen=false;const writes=[],saved=[],errors=[];
   await context.route('**/*',async route=>{
    const req=route.request(),url=new URL(req.url());
    if(url.origin!==origin)return route.abort();
    if(!url.pathname.startsWith('/api/'))return route.continue();
    const ep=url.pathname.slice(4);
    let data={services:[],images:{},entries:{},team:[],schedules:[],reviews:[],recommendations:[],count:0,clips:[],bookings:[],terms:[],items:[],alerts:[],revision:0};
-   if(ep==='/config')data={connected:true,paymentsReady:false,services:SERVICES,schedule:{enabled:true,weekdays:[1,2,3,4,5],hours:['09:00','10:00']}};
+   if(ep==='/config')data={connected:true,paymentsReady:false,services:SERVICES.map(service => service.id === 'online' ? {...service, enabled: lessonsOpen} : service),lessonLibrary:{open:lessonsOpen},schedule:{enabled:true,weekdays:[1,2,3,4,5],hours:['09:00','10:00']}};
    if(ep==='/auth/me')data={user:signedIn?{id:'fixture',name:'Fixture Client',role:'member',phone:'6055550100',address:'Fixture address'}:null,services:[],membership:{active:false}};
    if(ep==='/auth/login'){signedIn=true;data={user:{id:'fixture',name:'Fixture Client',role:'member'}};}
    if(ep==='/team')data={team:[{id:trainerId,name:'Fixture Trainer',role:'staff',title:'Private dog trainer',bio:'Private training at home.'}]};
@@ -32,7 +32,19 @@ try {
    await page.goto(origin+'/portal?program=training');
    await page.getByLabel('Dog’s name',{exact:true}).fill('Biscuit');
    await page.getByLabel('Number of dogs',{exact:true}).fill('2');
+   for (const focus of ['job-specific','hunting-dog','service-dog','law-enforcement','search-and-rescue','executive-protection']) {
+    await page.getByLabel('What would you like help with?',{exact:true}).selectOption(focus);
+    assert.ok((await page.locator('.specialist-scope').innerText()).includes('not a quote for a complete specialist program'));
+    assert.ok((await page.locator('.first-visit-intro .price-total').innerText()).includes('Obedience foundations'));
+    assert.equal(await page.getByRole('button',{name:'Choose a trainer →',exact:true}).count(),0);
+    assert.equal(await page.getByRole('link',{name:'Discuss your specialist goal with Bravo →',exact:true}).getAttribute('href'),'/contact');
+   }
+   await page.getByRole('button',{name:'Choose a trainer for obedience →',exact:true}).click();
+   await page.getByRole('heading',{name:'Choose your trainer.',exact:true}).waitFor();
+   assert.ok(await page.locator('.specialist-scope').isVisible());
+   await page.getByRole('button',{name:'Change your dog’s details',exact:true}).click();
    await page.getByLabel('What would you like help with?',{exact:true}).selectOption('basic-obedience');
+   assert.equal(await page.locator('.specialist-scope').count(),0);
    await page.getByLabel('Anything you’d like your trainer to know? (optional)',{exact:true}).fill('Jumps when visitors arrive.');
    assert.ok((await page.locator('.first-visit-intro .price-total').innerText()).includes('$300/month'));
    await page.getByRole('button',{name:'Choose a trainer →',exact:true}).focus();await page.keyboard.press('Enter');
@@ -70,6 +82,10 @@ try {
    await page.getByLabel('Anything you’d like your trainer to know? (optional)',{exact:true}).fill('Retain this full-month note.');
    await page.getByRole('button',{name:'Plan my entire month',exact:true}).click();
    await page.getByRole('heading',{name:'Build your schedule',exact:true}).waitFor();
+   await page.getByLabel('Training focus',{exact:true}).selectOption('service-dog');
+   assert.ok(await page.locator('.specialist-scope').isVisible());
+   await page.getByLabel('Training focus',{exact:true}).selectOption('basic-obedience');
+   assert.equal(await page.locator('.specialist-scope').count(),0);
    assert.equal(await page.getByLabel('Dog’s name',{exact:true}).inputValue(),'Whole Month Dog');
    await page.getByLabel('Choose my trainer',{exact:true}).selectOption(trainerId);
    await page.getByRole('button',{name:'Find available days & times',exact:true}).click();
@@ -81,6 +97,20 @@ try {
    assert.equal(await page.getByLabel('Anything the team should know?',{exact:true}).inputValue(),'Retain this full-month note.');
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
    assert.deepEqual(writes,['/auth/login','/quote','/bookings']);
+   lessonsOpen=true;
+   await page.goto(origin+'/portal?program=training&lessons=1&focus=service-dog');
+   await page.getByLabel('Dog’s name',{exact:true}).fill('Bundle Dog');
+   assert.ok((await page.locator('.first-visit-intro .price-total').innerText()).includes('Obedience foundations + lessons'));
+   assert.ok((await page.locator('.first-visit-intro .price-total').innerText()).includes('$250/month'));
+   assert.ok((await page.locator('.specialist-scope').innerText()).includes('and online lesson access'));
+   await page.getByRole('button',{name:'Choose a trainer for obedience →',exact:true}).click();
+   await page.getByRole('heading',{name:'Choose your trainer.',exact:true}).waitFor();
+   assert.ok((await page.locator('.specialist-scope').innerText()).includes('and online lesson access'));
+   assert.ok((await page.locator('.guided-booking-price').innerText()).includes('$250/month'));
+   await page.getByRole('button',{name:'Change your dog’s details',exact:true}).click();
+   await page.getByRole('button',{name:'Plan a month of obedience foundations',exact:true}).click();
+   await page.getByRole('heading',{name:'Build your schedule',exact:true}).waitFor();
+   assert.ok((await page.locator('.specialist-scope').innerText()).includes('and online lesson access'));
    assert.deepEqual(errors,[]);
    console.log(`PASS Chromium/${width}: first visit through sign-in, retained draft, explicit date/time, review and request save; full-month entry and shared-time selection. No real customer writes or payments.`);
   } catch(error) { console.error(error.message,(await page.locator('main').innerText()).slice(-2500));throw error; }

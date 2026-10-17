@@ -30,6 +30,7 @@ export const TRAINING_FOCUSES = [
   { id: 'search-and-rescue', name: 'Search-and-rescue training' },
   { id: 'executive-protection', name: 'Executive protection training' },
 ];
+export const isSpecialistFocus = id => ['job-specific', 'hunting-dog', 'service-dog', 'law-enforcement', 'search-and-rescue', 'executive-protection'].includes(id);
 export const trainingFocusName = id => TRAINING_FOCUSES.find(focus => focus.id === id)?.name || 'Professional training';
 // Retained only to label historical records. These programs are never exposed
 // to new quotes, bookings, checkout, or owner service controls.

@@ -20,13 +20,17 @@ export async function connectDb() {
     pending = Promise.resolve().then(() => mongoose.connect(process.env.MONGODB_URI, { dbName: process.env.MONGODB_DB || 'bravo_k9', serverSelectionTimeoutMS: 5000, maxPoolSize: 5 })).then(async () => {
       connected = performance.now();
       phase = 'initialize';
+      const modelsStarted = performance.now();
       await Promise.all(ALL_MODELS.map(m => m.init()));
+      const modelsReady = performance.now();
       await Settings.updateOne({ _id: 'schedule' }, { $setOnInsert: DEFAULT_SCHEDULE }, { upsert: true });
       // One fixed, non-identifying timing record per cold startup. Keep driver
       // messages, connection strings, database names and records out of logs.
       console.info('Bravo database startup ready', {
         connectMs: Math.round(connected - started),
         initializeMs: Math.round(performance.now() - connected),
+        modelsMs: Math.round(modelsReady - modelsStarted),
+        scheduleMs: Math.round(performance.now() - modelsReady),
       });
     }).catch(error => {
       const issue = databaseIssue(error, phase);

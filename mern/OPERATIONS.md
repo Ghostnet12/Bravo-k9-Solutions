@@ -1,23 +1,37 @@
 # Bravo website operations
 
-## Staff desk
-Sign in with an existing staff account and open Staff desk. Today’s agenda uses Aberdeen time. Filter the latest 200 requests by name, phone, booking ID, status, or visit date. Confirm or cancel requests and reopen blocked times here. Calendar downloads are available for confirmed appointments; downloaded events do not synchronize automatically, so replace them after a schedule change.
+Current runbook, reviewed October 17, 2026. Dated audit reports are historical evidence, not the current deployment state. Release evidence and unresolved operational items are tracked in GitHub Issue #119.
 
-## Lesson studio
-Choose an upcoming topic or create a new lesson. Save titles, instructors, cover selection, and transcripts as drafts. Draft content and private media fields are accessible only to staff. The public catalog retains the approved coming-soon topics until a lesson is published.
+## Production and releases
 
-Publishing requires a real private MP4/WebM video, VTT captions, and a nonempty transcript. The editor references existing private files; it does not upload video. The existing file-based delivery must be connected to durable private object storage for Vercel before recording uploads or paid lesson publication can launch. No media was fabricated or published by this update.
+The canonical origin is https://bravounleashed.com. The application lives in `mern/`, with Vercel project `bravo-k9-mern` and production branch `bravo-mern`. Verify the custom-domain deployment and exact commit for every release. The repository default branch is not the production branch.
 
-## Client tools
-Clients can save their profile, change passwords, manage visit requests, and download confirmed appointments. Contact & visit help includes booking and account assistance. The phone navigation collapses behind Menu.
+Use protected pull requests, resolve review threads, and pass all required checks on the current head. The active production ruleset requires an up-to-date `verify` and `Bravo release gate`, with no bypass actors. Record the previous READY deployment for rollback. After deployment, inspect runtime errors and repeat the public and account smoke checks without creating real transactions.
 
-## Search
-Public routes have their own initial HTML titles, descriptions, canonical URLs, and Open Graph metadata. robots.txt links to sitemap.xml. Account, staff, and community pages request no indexing. The canonical host is bravo-k9-mern.vercel.app; update shared/page-metadata.js when an approved custom domain is connected. Indexing is not guaranteed or submitted automatically.
+## Staff and client access
 
-## Remaining external setup
-Stripe work is paused at the owner’s request. Recent checkout tests still returned live-mode sessions, so payment verification remains incomplete. This update does not change the Stripe configuration or disable payment endpoints. All test bookings from those checks were cancelled without submitting payment.
+Clients can sign in with their email or full literal name. Staff, administrators, and owners must use their account email; name-only lookup intentionally applies to members only. Do not relax this boundary to diagnose sign-in failure. MFA-enabled users must complete the authenticator/recovery-code step. The generic rejected-sign-in response does not establish that the database is unavailable or identify a specific credential problem.
 
-Real recordings, captions, durable private media storage, and any future automated recovery email provider still require setup. Account recovery currently directs customers to phone Bravo for identity verification.
+Temporary client passwords expire and require the client to choose a new password. Never put credentials, MFA codes, cookies, or customer notes in tickets or logs. Recovery uses the current verified account-recovery flow; inspect current implementation and configuration before promising email recovery.
 
-## Validation
-September 10, 2026: production build and 17 automated tests passed, covering routing, public metadata, account/database failure behavior, scheduling, pricing, calendar daylight-saving behavior, and existing security checks. Staff publishing and authenticated browser workflows still require final owner validation; no production staff record was impersonated or altered for testing.
+## Training, scheduling, and content
+
+The live service catalog is authoritative for prices, enabled services, and additional-dog rates. Monthly training renews manually. Selecting a date creates a request only after submission; Bravo confirms visits separately. Specialist goals require separate suitability, scope, and pricing agreement. The standard membership price is not a complete specialist-program quote.
+
+Staff desk and schedules use America/Chicago. Workshop automatic-Saturday rollover must occur after Saturday ends in that timezone, including daylight-saving transitions. Downloaded calendar events are snapshots, not continuously synchronized subscriptions.
+
+Use the authorized content editors for managed portraits, reviews, prices, and media. Preserve revision checks, source attribution, and undo/recovery behavior. A source-code default does not replace an overriding managed record. Keep text-only recommendations without a numeric rating unless the source actually supports one.
+
+Private messages and client media remain permission-controlled. Keep online education in its current published/coming-soon state until real content, captions, transcripts, storage, access, and any payment prerequisites are verified. Do not infer readiness from an old audit document.
+
+## Startup diagnostics
+
+The application reuses a single pending database connection per process and initializes all models before serving database-backed requests. Startup logs report numeric `connectMs`, `initializeMs`, `modelsMs`, and `scheduleMs`. Model initialization and the schedule upsert are measured separately; no index or transaction checks are skipped. Warm requests should reuse the completed initialization.
+
+Compare cold and warm windows with the same routes, region, load, and deployment. These diagnostics do not alone prove database throttling. Never log connection strings, raw driver messages, account identifiers, or customer records. Field vitals and lab measurements must be reported separately.
+
+## Verification and outstanding operational evidence
+
+Run lint, build, unit tests, the isolated database/security suites, and relevant Chromium/WebKit browser regressions. Use the hosted CI matrix as the release gate; emulation is not physical-device verification.
+
+Physical iPhone/Android, real cellular broadcasting and recovery, screen-reader user testing, live owner publishing, backup restoration, Search Console indexing, and field performance require their own evidence. Track missing access or unavailable hardware explicitly. Preserve the existing WebRTC architecture and payment settings; use isolated fixtures rather than production bookings or charges for tests.

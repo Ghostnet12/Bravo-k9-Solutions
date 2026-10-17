@@ -33,6 +33,7 @@ jobs:
       - run: node tests/movable-credits.browser.mjs
       - run: node tests/day-credits.browser.mjs
       - run: node tests/client-login.browser.mjs
+      - run: node tests/release-booking.browser.mjs
       - run: node tests/site-operations.browser.mjs
       - run: node tests/usability-polish.browser.mjs
       - run: node tests/credited-calendar.browser.mjs
