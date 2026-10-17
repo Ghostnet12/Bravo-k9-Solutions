@@ -96,6 +96,8 @@ export const CONTENT_KEYS = {
   'page-hunting-dog-training-eyebrow': { text: true },
   'page-hunting-dog-training-intro': { text: true },
   'account-login-identifier-help': { text: true },
+  'specialist-booking-bundle-scope': { text: true },
+  'specialist-booking-bundle-start': { text: true },
   'specialist-booking-scope': { text: true },
   'specialist-booking-contact': { text: true, link: true },
   'specialist-booking-start': { text: true },

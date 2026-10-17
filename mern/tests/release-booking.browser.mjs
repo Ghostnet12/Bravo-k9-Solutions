@@ -9,14 +9,14 @@ const browser=await chromium.launch({args:['--no-sandbox','--disable-dev-shm-usa
 try {
  for(const width of [390,1440]) {
   const context=await browser.newContext({viewport:{width,height:900},reducedMotion:'reduce'});
-  let signedIn=false;const writes=[],saved=[],errors=[];
+  let signedIn=false, lessonsOpen=false;const writes=[],saved=[],errors=[];
   await context.route('**/*',async route=>{
    const req=route.request(),url=new URL(req.url());
    if(url.origin!==origin)return route.abort();
    if(!url.pathname.startsWith('/api/'))return route.continue();
    const ep=url.pathname.slice(4);
    let data={services:[],images:{},entries:{},team:[],schedules:[],reviews:[],recommendations:[],count:0,clips:[],bookings:[],terms:[],items:[],alerts:[],revision:0};
-   if(ep==='/config')data={connected:true,paymentsReady:false,services:SERVICES,schedule:{enabled:true,weekdays:[1,2,3,4,5],hours:['09:00','10:00']}};
+   if(ep==='/config')data={connected:true,paymentsReady:false,services:SERVICES.map(service => service.id === 'online' ? {...service, enabled: lessonsOpen} : service),lessonLibrary:{open:lessonsOpen},schedule:{enabled:true,weekdays:[1,2,3,4,5],hours:['09:00','10:00']}};
    if(ep==='/auth/me')data={user:signedIn?{id:'fixture',name:'Fixture Client',role:'member',phone:'6055550100',address:'Fixture address'}:null,services:[],membership:{active:false}};
    if(ep==='/auth/login'){signedIn=true;data={user:{id:'fixture',name:'Fixture Client',role:'member'}};}
    if(ep==='/team')data={team:[{id:trainerId,name:'Fixture Trainer',role:'staff',title:'Private dog trainer',bio:'Private training at home.'}]};
@@ -97,6 +97,20 @@ try {
    assert.equal(await page.getByLabel('Anything the team should know?',{exact:true}).inputValue(),'Retain this full-month note.');
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
    assert.deepEqual(writes,['/auth/login','/quote','/bookings']);
+   lessonsOpen=true;
+   await page.goto(origin+'/portal?program=training&lessons=1&focus=service-dog');
+   await page.getByLabel('Dog’s name',{exact:true}).fill('Bundle Dog');
+   assert.ok((await page.locator('.first-visit-intro .price-total').innerText()).includes('Obedience foundations + lessons'));
+   assert.ok((await page.locator('.first-visit-intro .price-total').innerText()).includes('$250/month'));
+   assert.ok((await page.locator('.specialist-scope').innerText()).includes('and online lesson access'));
+   await page.getByRole('button',{name:'Choose a trainer for obedience →',exact:true}).click();
+   await page.getByRole('heading',{name:'Choose your trainer.',exact:true}).waitFor();
+   assert.ok((await page.locator('.specialist-scope').innerText()).includes('and online lesson access'));
+   assert.ok((await page.locator('.guided-booking-price').innerText()).includes('$250/month'));
+   await page.getByRole('button',{name:'Change your dog’s details',exact:true}).click();
+   await page.getByRole('button',{name:'Plan a month of obedience foundations',exact:true}).click();
+   await page.getByRole('heading',{name:'Build your schedule',exact:true}).waitFor();
+   assert.ok((await page.locator('.specialist-scope').innerText()).includes('and online lesson access'));
    assert.deepEqual(errors,[]);
    console.log(`PASS Chromium/${width}: first visit through sign-in, retained draft, explicit date/time, review and request save; full-month entry and shared-time selection. No real customer writes or payments.`);
   } catch(error) { console.error(error.message,(await page.locator('main').innerText()).slice(-2500));throw error; }
