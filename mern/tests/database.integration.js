@@ -24,7 +24,7 @@ test('persistent accounts, conflict protection, ownership, staff tools, and bill
     const a = await post(alice,'/api/auth/register',{ name:'Alice Test', email:'alice@example.test', password:'test-long-password-123', role:'staff' }).expect(201);
     assert.equal(startupLogs.length, 1);
     const timing = startupLogs[0][1];
-    assert.deepEqual(Object.keys(timing).sort(), ['connectMs', 'initializeMs']);
+    assert.deepEqual(Object.keys(timing).sort(), ['connectMs', 'initializeMs', 'modelsMs', 'scheduleMs']);
     assert.ok(Object.values(timing).every(value => Number.isSafeInteger(value) && value >= 0));
     assert.ok(!JSON.stringify(startupLogs).includes(process.env.MONGODB_URI));
     assert.ok(!JSON.stringify(startupLogs).includes(process.env.MONGODB_DB));

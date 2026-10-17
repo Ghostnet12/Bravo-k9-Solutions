@@ -32,7 +32,19 @@ try {
    await page.goto(origin+'/portal?program=training');
    await page.getByLabel('Dog’s name',{exact:true}).fill('Biscuit');
    await page.getByLabel('Number of dogs',{exact:true}).fill('2');
+   for (const focus of ['job-specific','hunting-dog','service-dog','law-enforcement','search-and-rescue','executive-protection']) {
+    await page.getByLabel('What would you like help with?',{exact:true}).selectOption(focus);
+    assert.ok((await page.locator('.specialist-scope').innerText()).includes('not a quote for a complete specialist program'));
+    assert.ok((await page.locator('.first-visit-intro .price-total').innerText()).includes('Obedience foundations'));
+    assert.equal(await page.getByRole('button',{name:'Choose a trainer →',exact:true}).count(),0);
+    assert.equal(await page.getByRole('link',{name:'Discuss your specialist goal with Bravo →',exact:true}).getAttribute('href'),'/contact');
+   }
+   await page.getByRole('button',{name:'Choose a trainer for obedience →',exact:true}).click();
+   await page.getByRole('heading',{name:'Choose your trainer.',exact:true}).waitFor();
+   assert.ok(await page.locator('.specialist-scope').isVisible());
+   await page.getByRole('button',{name:'Change your dog’s details',exact:true}).click();
    await page.getByLabel('What would you like help with?',{exact:true}).selectOption('basic-obedience');
+   assert.equal(await page.locator('.specialist-scope').count(),0);
    await page.getByLabel('Anything you’d like your trainer to know? (optional)',{exact:true}).fill('Jumps when visitors arrive.');
    assert.ok((await page.locator('.first-visit-intro .price-total').innerText()).includes('$300/month'));
    await page.getByRole('button',{name:'Choose a trainer →',exact:true}).focus();await page.keyboard.press('Enter');
@@ -70,6 +82,10 @@ try {
    await page.getByLabel('Anything you’d like your trainer to know? (optional)',{exact:true}).fill('Retain this full-month note.');
    await page.getByRole('button',{name:'Plan my entire month',exact:true}).click();
    await page.getByRole('heading',{name:'Build your schedule',exact:true}).waitFor();
+   await page.getByLabel('Training focus',{exact:true}).selectOption('service-dog');
+   assert.ok(await page.locator('.specialist-scope').isVisible());
+   await page.getByLabel('Training focus',{exact:true}).selectOption('basic-obedience');
+   assert.equal(await page.locator('.specialist-scope').count(),0);
    assert.equal(await page.getByLabel('Dog’s name',{exact:true}).inputValue(),'Whole Month Dog');
    await page.getByLabel('Choose my trainer',{exact:true}).selectOption(trainerId);
    await page.getByRole('button',{name:'Find available days & times',exact:true}).click();

@@ -91,3 +91,8 @@
  .cinema-home.conversion-home .cinema-online{padding-block:28px}
  .cinema-home.conversion-home .cinema-learning-visual{max-width:420px;width:100%}
 }
+
+/* Keep the actual household price visible at the decision point. */
+.conversion-dog-terms{font-size:14px;line-height:1.6;color:#d6cfc2;margin:0 0 20px}
+.specialist-scope{margin-block:16px;line-height:1.6}
+.specialist-scope a{display:inline-flex;align-items:center;min-height:44px}
