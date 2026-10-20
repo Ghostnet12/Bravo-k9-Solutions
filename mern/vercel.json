@@ -10,6 +10,7 @@
     }
   ],
   "redirects": [
+    { "source": "/how-to.html", "destination": "/how-to", "permanent": true },
     { "source": "/fci-support.html", "destination": "/fci-support", "permanent": true },
     { "source": "/dog-sitting", "destination": "/portal", "permanent": true },
     { "source": "/dog-training.html", "destination": "/dog-training", "permanent": true },
@@ -48,6 +49,7 @@
   },
   "rewrites": [
     { "source": "/", "destination": "/api/homepage" },
+    { "source": "/how-to", "destination": "/api/public-page?path=/how-to" },
     { "source": "/fci-support", "destination": "/api/public-page?path=/fci-support" },
     { "source": "/api/:path*", "destination": "/api" },
     { "source": "/workshops", "destination": "/api/public-page?path=/workshops" },

@@ -32,6 +32,7 @@ import './homepage-optimization.css';
 // Keep the server-rendered public page readable until its interactive module
 // is ready. A failed chunk must not replace useful HTML with a loading/error shell.
 const publicPageLoaders = {
+  '/how-to': () => import('./HowToPage'),
   '/live': () => import('./LivePage'),
   '/workshops': () => import('./WorkshopPage'),
   '/dog-training': () => import('./DogTrainingPage'),
@@ -51,6 +52,7 @@ function publicPage(path) {
     return <Component {...props}/>;
   };
 }
+const HowToPage = publicPage('/how-to');
 const WorkshopPage = publicPage('/workshops');
 const DogTrainingPage = publicPage('/dog-training');
 const HuntingPage = publicPage('/hunting-dog-training');
@@ -161,7 +163,7 @@ class ErrorBoundary extends React.Component {
   render() { return this.state.error ? <Page title="Let’s get you back on track."><p>The page couldn’t load. Your saved bookings are not affected.</p><a className="button" href="/">Reload Bravo</a></Page> : this.props.children; }
 }
 function BookingRoute() { const location = useLocation(); return <BookingPage key={location.search}/>; }
-function App() { return <BrowserRouter><AppProvider><LiveStatusProvider><SiteContentProvider><a className="skip-link" href="#main-content">Skip to main content</a><RouteBehavior/><SiteTelemetry/><SiteSoundtrack/><ErrorBoundary><Suspense fallback={<Page title="Opening Bravo…"><p role="status">Loading your page.</p></Page>}><PasswordSetupGate><Routes><Route path="/live" element={<LivePage/>}/><Route path="/live/studio" element={<LiveStudio/>}/><Route path="/schedule" element={<SchedulePage/>}/><Route path="/reset-password" element={<ResetPasswordPage/>}/><Route path="/" element={<Home/>}/><Route path="/workshops" element={<WorkshopPage/>}/><Route path="/dog-training" element={<DogTrainingPage/>}/><Route path="/hunting-dog-training" element={<HuntingPage/>}/><Route path="/behavior-assessment" element={<BehaviorAssessmentPage/>}/><Route path="/dog-walking" element={<DogWalkingPage/>}/><Route path="/portal" element={<BookingRoute/>}/><Route path="/account" element={<AccountPage/>}/><Route path="/learn" element={<LearnPage/>}/><Route path="/community" element={<CommunityPage/>}/><Route path="/contact" element={<ContactPage/>}/><Route path="/fci-support" element={<FCISupportPage/>}/><Route path="/admin" element={<AdminPage/>}/><Route path="/accessibility" element={<AccessibilityPage/>}/><Route path="/media-rights" element={<MediaRightsPage/>}/><Route path="*" element={<NotFoundPage/>}/></Routes></PasswordSetupGate></Suspense></ErrorBoundary><AdvertisementManagement/><MobileHomeNav/><SiteImageTools/></SiteContentProvider></LiveStatusProvider></AppProvider></BrowserRouter>; }
+function App() { return <BrowserRouter><AppProvider><LiveStatusProvider><SiteContentProvider><a className="skip-link" href="#main-content">Skip to main content</a><RouteBehavior/><SiteTelemetry/><SiteSoundtrack/><ErrorBoundary><Suspense fallback={<Page title="Opening Bravo…"><p role="status">Loading your page.</p></Page>}><PasswordSetupGate><Routes><Route path="/how-to" element={<HowToPage/>}/><Route path="/live" element={<LivePage/>}/><Route path="/live/studio" element={<LiveStudio/>}/><Route path="/schedule" element={<SchedulePage/>}/><Route path="/reset-password" element={<ResetPasswordPage/>}/><Route path="/" element={<Home/>}/><Route path="/workshops" element={<WorkshopPage/>}/><Route path="/dog-training" element={<DogTrainingPage/>}/><Route path="/hunting-dog-training" element={<HuntingPage/>}/><Route path="/behavior-assessment" element={<BehaviorAssessmentPage/>}/><Route path="/dog-walking" element={<DogWalkingPage/>}/><Route path="/portal" element={<BookingRoute/>}/><Route path="/account" element={<AccountPage/>}/><Route path="/learn" element={<LearnPage/>}/><Route path="/community" element={<CommunityPage/>}/><Route path="/contact" element={<ContactPage/>}/><Route path="/fci-support" element={<FCISupportPage/>}/><Route path="/admin" element={<AdminPage/>}/><Route path="/accessibility" element={<AccessibilityPage/>}/><Route path="/media-rights" element={<MediaRightsPage/>}/><Route path="*" element={<NotFoundPage/>}/></Routes></PasswordSetupGate></Suspense></ErrorBoundary><AdvertisementManagement/><MobileHomeNav/><SiteImageTools/></SiteContentProvider></LiveStatusProvider></AppProvider></BrowserRouter>; }
 const start = () => createRoot(document.getElementById('root')).render(<React.StrictMode><App/></React.StrictMode>);
 const initialPath = window.location.pathname;
 if (publicPageLoaders[initialPath]) {

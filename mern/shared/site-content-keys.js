@@ -2,6 +2,14 @@
 import { CONTENT_KEYS as BASE_CONTENT_KEYS } from './site-content-base-keys.js';
 export const CONTENT_KEYS = {
   ...BASE_CONTENT_KEYS,
+  'nav-how-to-video': { text: true, link: true },
+  'footer-how-to-video': { text: true, link: true },
+  'page-how-to-layout': {},
+  'page-how-to-heading': {},
+  'page-how-to-heading-inner': {},
+  'page-how-to-title': { text: true },
+  'page-how-to-eyebrow': { text: true },
+  'page-how-to-intro': { text: true },
   'accessible-media-title': { text: true },
   'accessible-media-lessons': { text: true },
   'accessible-media-public': { text: true },

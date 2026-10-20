@@ -7,3 +7,6 @@ client/dist/
 private/
 coverage/
 *.log
+
+# Reassembled and checksum-verified from media/website-guide.
+client/public/assets/bravo-website-guide-*.mp4
