@@ -2,7 +2,7 @@
 
 A React Native / Expo app using Bravo’s existing black-and-gold identity, local brand assets, and the live website at https://bravounleashed.com.
 
-**Status: internal alpha source, not a signed installable app or an App Store / Google Play release.** Built from website branch `bravo-mern` at `07a087e483dd0b0a394546b7b436dc1cd4f791bd` (PR #127). This addition does not change the website server, database, checkout, or live-stream transport.
+**Status: internal alpha with a signed Android APK and an iOS simulator build.** Physical iPhone distribution still needs Apple signing credentials and device registration. This is not an App Store / Google Play release and has not completed physical-device acceptance. Built from website branch `bravo-mern` at `07a087e483dd0b0a394546b7b436dc1cd4f791bd` (PR #127). This addition does not change the website server, database, checkout, or live-stream transport.
 
 ## Included
 
@@ -41,7 +41,21 @@ The web UI tests use intercepted API responses to exercise offline and dynamic-p
 
 ## Installable builds
 
-The app config targets the existing **Bravo app** project at https://expo.dev/accounts/ghostnet12s-team/projects/bravo-app, owned by `ghostnet12s-team` (project ID `6e045e71-3563-472b-9036-855ba473f3f7`). These non-secret identifiers were verified in the owner's Expo dashboard. An authorized EAS CLI session and signing credentials are still required to build. `com.bravounleashed.app` is the proposed bundle/package ID and has not been registered. No signing secrets are committed.
+The app config targets the existing **Bravo app** project at https://expo.dev/accounts/ghostnet12s-team/projects/bravo-app, owned by `ghostnet12s-team` (project ID `6e045e71-3563-472b-9036-855ba473f3f7`). These non-secret identifiers were verified in the owner's Expo dashboard. The build workspace was authorized as `ghostnet12`, and Expo generated and manages the Android signing keystore. No signing secrets are committed. Android uses `com.bravounleashed.app`; iOS signing for that identifier has not been configured in this Expo project.
+
+### First successful builds
+
+Both builds use source commit `d1e15033513690ff6d9edf24d70a9359330ffba5`, app version `0.1.0`, build version `1`, and Expo SDK 58. They completed on October 20, 2026 UTC (October 19 in America/Chicago).
+
+| Target | Profile | Result |
+| --- | --- | --- |
+| Android phones and emulators | `preview` | [Signed APK, build 87b00415](https://expo.dev/accounts/ghostnet12s-team/projects/bravo-app/builds/87b00415-0332-4490-b943-cabaa232d160) |
+| iOS Simulator on a Mac | `simulator` | [Simulator app, build ba27ea5f](https://expo.dev/accounts/ghostnet12s-team/projects/bravo-app/builds/ba27ea5f-f368-45e4-ada7-ec6198177938) |
+| Physical iPhone | `preview` | Not built: Apple distribution certificate/provisioning credentials are not configured. |
+
+The Android APK was downloaded and checked for ZIP integrity, the expected app identifier, compiled classes, and its JavaScript bundle. Its SHA-256 is `1d2bbe1928be65e9073d7f905601c7893c23ce262d66aac8a05604f7666fe59e`. The iOS simulator output was downloaded and inspected: bundle ID `com.bravounleashed.app`, version `0.1.0 (1)`, iPhone Simulator platform, native executable and JavaScript bundle present, no camera or microphone usage declarations. These checks do not replace physical-device acceptance. Mobile CI, lint, and TypeScript checks passed. The build archive excluded generated native directories and signing/environment secrets; EAS generated native projects from app config.
+
+For another build, use an authorized Expo session:
 
 ```sh
 npx eas-cli@latest login
