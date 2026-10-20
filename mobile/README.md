@@ -24,7 +24,7 @@ npm ci
 npm start
 ```
 
-Scan the development QR with a matching Expo Go version. Use a physical device or a development build for final portal/WebView checks. `npm run web` previews the native screens in a browser; protected member workflows open the website separately. Website API CORS restrictions may prevent public reads in a browser preview; native reads do not have browser CORS restrictions. Do not weaken website CORS or CSRF protections for the preview.
+Scan the development QR only with a matching Expo Go version. As of October 20, 2026, the SDK 58 iPhone App Store version is not yet available; see the [SDK 58 release notes](https://expo.dev/changelog/sdk-58). For a physical iPhone and a free Apple account, use the [Mac / Xcode installation walkthrough](IPHONE-SETUP.md). Use a physical device or a development build for final portal/WebView checks. `npm run web` previews the native screens in a browser; protected member workflows open the website separately. Website API CORS restrictions may prevent public reads in a browser preview; native reads do not have browser CORS restrictions. Do not weaken website CORS or CSRF protections for the preview.
 
 ```sh
 npm run typecheck
@@ -40,6 +40,8 @@ npx expo prebuild --no-install
 The web UI tests use intercepted API responses to exercise offline and dynamic-price paths without mutating production. They are not a substitute for native device testing. Bundle export and prebuild are not signed IPA/APK builds.
 
 ## Installable builds
+
+**Free Apple account + Mac:** [IPHONE-SETUP.md](IPHONE-SETUP.md) covers personal-device installation. Run `bash scripts/prepare-iphone.sh` from `mobile` on the Mac to prepare and open the workspace, then choose your Personal Team in Xcode and run a Release configuration on your connected iPhone. This local route does not use EAS distribution credentials. The helper's shell syntax and non-Mac guard were checked; Mac signing and physical-device installation remain unverified.
 
 The app config targets the existing **Bravo app** project at https://expo.dev/accounts/ghostnet12s-team/projects/bravo-app, owned by `ghostnet12s-team` (project ID `6e045e71-3563-472b-9036-855ba473f3f7`). These non-secret identifiers were verified in the owner's Expo dashboard. The build workspace was authorized as `ghostnet12`, and Expo generated and manages the Android signing keystore. No signing secrets are committed. Android uses `com.bravounleashed.app`; iOS signing for that identifier has not been configured in this Expo project.
 
