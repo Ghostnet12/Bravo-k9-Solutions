@@ -41,11 +41,11 @@ The web UI tests use intercepted API responses to exercise offline and dynamic-p
 
 ## Installable builds
 
-The current environment is not signed in to Expo (`eas whoami` returned `Not logged in`). An authorized Expo account, app project, and signing credentials are still required. `com.bravounleashed.app` is the proposed bundle/package ID and has not been registered. No account/project IDs or signing secrets are committed.
+The app config targets the existing **Bravo app** project at https://expo.dev/accounts/ghostnet12s-team/projects/bravo-app, owned by `ghostnet12s-team` (project ID `6e045e71-3563-472b-9036-855ba473f3f7`). These non-secret identifiers were verified in the owner's Expo dashboard. An authorized EAS CLI session and signing credentials are still required to build. `com.bravounleashed.app` is the proposed bundle/package ID and has not been registered. No signing secrets are committed.
 
 ```sh
 npx eas-cli@latest login
-npx eas-cli@latest init
+npx eas-cli@latest project:info
 npx eas-cli@latest build --platform android --profile preview
 npx eas-cli@latest device:create
 npx eas-cli@latest build --platform ios --profile preview

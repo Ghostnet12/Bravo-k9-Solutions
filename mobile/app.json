@@ -1,7 +1,8 @@
 {
   "expo": {
     "name": "Bravo K9",
-    "slug": "bravo-k9",
+    "slug": "bravo-app",
+    "owner": "ghostnet12s-team",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -46,6 +47,11 @@
       "expo-router"
     ],
     "scheme": "bravok9",
+    "extra": {
+      "eas": {
+        "projectId": "6e045e71-3563-472b-9036-855ba473f3f7"
+      }
+    },
     "experiments": {
       "typedRoutes": true
     }
