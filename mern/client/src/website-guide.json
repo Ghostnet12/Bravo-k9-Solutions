@@ -1,0 +1,139 @@
+{
+  "video": "/assets/bravo-website-guide-e497f55b0e0e.mp4",
+  "poster": "/assets/bravo-website-guide-e497f55b0e0e.webp",
+  "captions": "/assets/bravo-website-guide-e497f55b0e0e.vtt",
+  "chapters": [
+    {
+      "id": "welcome",
+      "title": "Welcome to your Bravo website",
+      "start": 0,
+      "text": "Welcome to Bravo. In this guide, we'll take our time and learn the website together. You'll see how to sign in, build a training schedule, change or cancel a visit, and ask for help. We're using a demo account and sample dates. Follow along with your own account when you're ready, and pause whenever you need more time."
+    },
+    {
+      "id": "signin",
+      "title": "Sign in",
+      "start": 22.367,
+      "text": "Start at Bravo Unleashed dot com, slash account. Choose Sign in. Enter the name or email connected to your account, then your password. Here, we're signing in as Demo Client. If Bravo gave you a temporary password, use that for this first visit. If you don't have an account or training access yet, contact Bravo so the team can help you get set up."
+    },
+    {
+      "id": "password",
+      "title": "Your first password",
+      "start": 48.251,
+      "text": "On your first sign-in, you may see Create your password. Choose a new password with at least twelve characters, different from the temporary one. Enter the same new password in both boxes, then choose Save password and open schedule. Your temporary password stops working after this step. Returning members usually skip this screen and sign in with their own password."
+    },
+    {
+      "id": "account",
+      "title": "Your account is home base",
+      "start": 73.041,
+      "text": "Your account is your home base. The next-step card shows your upcoming visit when you have one, and your training membership dates. Notice that membership coverage and booked visits are separate: an active membership doesn't mean every day is already scheduled. Use Manage Schedule to choose your visits. Message Bravo is nearby whenever you need help. Let's open the schedule."
+    },
+    {
+      "id": "calendar",
+      "title": "Read your calendar",
+      "start": 98.87,
+      "text": "First, check the schedule month. You can change it when you need to view another month. In the saved calendar, filled gold dates have visits. An outline marks the date you're viewing. Tap a date to read its details below the calendar. A blank date means no saved visit that day. All times shown here are local to Aberdeen, South Dakota."
+    },
+    {
+      "id": "select",
+      "title": "Select your training days",
+      "start": 122.804,
+      "text": "Choose Add or Cancel Date. This opens the editor. We'll select Thursday the twenty-second and Friday the twenty-third. You can choose several dates before choosing a time. Gold now means selected for editing. Tapping a selected date again only deselects it; that does not cancel a saved visit. Dates you can't choose may be outside your coverage or the trainer's available schedule."
+    },
+    {
+      "id": "time",
+      "title": "Choose an available time",
+      "start": 150.033,
+      "text": "Scroll to Choose one time for all selected dates. We'll choose eleven A.M. That time is applied to both dates we selected. It can also replace the current time on selected dates that already have visits, so check your selection carefully. Use the available times shown for your account. For a different time on another day, add that day separately."
+    },
+    {
+      "id": "save_ready",
+      "title": "Why can’t i save yet?",
+      "start": 174.832,
+      "text": "If Save changes is unavailable, check for a selected date without a time. Here we've also selected Monday, but haven't chosen its time. The page asks us to choose a time before saving. We can assign one, or deselect Monday if we don't want it. We'll deselect Monday. Our original two dates still have their times and are ready to save."
+    },
+    {
+      "id": "review",
+      "title": "Review, then save",
+      "start": 199.204,
+      "text": "Before saving, read Review and save. Our summary says two to add and zero to cancel. Check every date and time. You can include a note to Bravo if the team needs context. When everything looks right, choose Save changes and wait for the saved message. Selecting dates or times alone does not finish the job. The save step is what submits your changes."
+    },
+    {
+      "id": "verify",
+      "title": "Check what saved",
+      "start": 224.823,
+      "text": "Back on the calendar, our two dates are filled gold. Tap one and check the date, time, dog, and trainer. Notice the status: Requested means the visit is awaiting Bravo's confirmation. Confirmed means it has been confirmed. Membership covered describes payment coverage, not confirmation. If you ever wonder whether a change saved, return to this calendar and read the visit details."
+    },
+    {
+      "id": "add",
+      "title": "Add another day",
+      "start": 251.889,
+      "text": "Let's add a day with a different time. Reopen Add or Cancel Date and select only Monday the twenty-sixth. Choose two P.M., review the summary, and save. The earlier dates stay in the schedule because we didn't change them. This is the same process you'll use whenever you want another available visit within your active training period."
+    },
+    {
+      "id": "change",
+      "title": "Move a saved visit",
+      "start": 276.309,
+      "text": "Now let's move an existing visit. From the saved calendar, tap Thursday the twenty-second. In its visit details, choose Change day or time. Set the new date to Tuesday the twenty-seventh, then choose Find available times. Pick a new time from that list. We're choosing ten A.M. This changes the existing visit, so you don't need to leave a duplicate on the old day."
+    },
+    {
+      "id": "change_save",
+      "title": "Check the change before submitting",
+      "start": 302.153,
+      "text": "Check the new date and time, then choose Save and notify team. After saving, open the new date and verify the details. Tuesday now shows ten A.M. You can also back out before submitting a change or cancellation: here we open Cancel this visit, then choose Keep current visit. Nothing is cancelled. Always read the final status."
+    },
+    {
+      "id": "cancel",
+      "title": "Cancel a training day",
+      "start": 327.196,
+      "text": "To remove a day, open Add or Cancel Date and select the date that already has a visit. We'll remove Friday the twenty-third. Choose Cancel visits on selected dates. Read the review: it should show one to cancel, and that date as a day off. Then save. Just tapping the date off or clearing your selection would not cancel the saved visit."
+    },
+    {
+      "id": "undo",
+      "title": "Fix an unsaved mistake",
+      "start": 351.717,
+      "text": "Made a mistake before saving? You have a way back. Watch us select another date and time, then choose Reset changes. The unsaved changes disappear. You can also leave with Discard changes and back when that option appears. These controls affect the draft you're editing; they don't undo changes you already saved. For a saved change, reopen the relevant visit and correct it."
+    },
+    {
+      "id": "membership",
+      "title": "Membership & credits",
+      "start": 378.186,
+      "text": "Cancelling a visit does not automatically extend your membership or create a refund. Changes within twenty-four hours follow Bravo's appointment policy. If you need a credit for missed training, contact the team so they can review it. A date marked Credit shows credited coverage, but still needs a booked time. Check your membership end date, and contact Bravo if you need help renewing."
+    },
+    {
+      "id": "pdf",
+      "title": "Save a copy of your schedule",
+      "start": 404.489,
+      "text": "Want a copy you can keep or print? Choose the correct month, then tap Download PDF. Depending on your browser, it may open the document or save it to your downloads. The copy includes saved visits and their statuses. Remember, a downloaded file is a snapshot. If you change your schedule later, download a fresh copy so you're looking at the latest plan."
+    },
+    {
+      "id": "message",
+      "title": "Message the Bravo team",
+      "start": 430.066,
+      "text": "For help, return to your account and choose Message Bravo. You can address an available team member or choose a particular trainer. This is a shared support thread: you and the Bravo team can read it, even when you select one trainer. Include your dog's name, the relevant date, and your question. Choose Send message when you're ready. For urgent needs, use the site's phone contact."
+    },
+    {
+      "id": "accessibility",
+      "title": "Make the site comfortable",
+      "start": 456.035,
+      "text": "If you'd like the site to be easier to read, open the A A Accessibility button. You can turn on larger text, increase contrast, or reduce motion. There's also a site-music control. These preferences stay on this device, so adjust them to suit you. Close the panel when you're finished. You can return to these controls whenever you like."
+    },
+    {
+      "id": "help",
+      "title": "If something doesn’t look right",
+      "start": 480.033,
+      "text": "If dates or times aren't available, first check that you're signed in to the right account and viewing the right month. Check your membership dates too. Availability depends on coverage and the trainer's schedule. If saving shows an error, read it and check the calendar before trying again. If you're still stuck, send Bravo the date and what the screen says. Never send your password."
+    },
+    {
+      "id": "practice",
+      "title": "Your turn / a quick confidence check",
+      "start": 504.939,
+      "text": "Here's a quick confidence check. Pause the video and find your next saved visit. Can you read its date, time, and status? Can you find Add or Cancel Date, Download PDF, and Message Bravo? You don't have to change anything to practice finding those controls. When you're ready to make a real change, remember the routine: choose, review, save, and verify."
+    },
+    {
+      "id": "recap",
+      "title": "You know your way around",
+      "start": 530.231,
+      "text": "You now know how to sign in, create your own password, plan training days, move a visit, cancel a day, and discard an unsaved mistake. You also know where to check coverage, download your schedule, and reach Bravo. Take it one step at a time. Your calendar tells you what is saved, and the team is there when you need a hand. Trust. Train. Deploy."
+    }
+  ]
+}

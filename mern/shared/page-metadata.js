@@ -1,5 +1,6 @@
 export const SITE_ORIGIN = 'https://bravounleashed.com';
 export const PAGE_METADATA = {
+  '/how-to': { title: 'How to Use the Website | Bravo K9 Solutions', description: 'Watch the step-by-step Bravo website guide. Learn to sign in, create a training schedule, add or cancel days, download your schedule and get help.', label: 'How-to video' },
   '/fci-support': { title: 'FCI Support | Bravo K9 Solutions', description: 'Explore Bravo K9 Solutions support for responsible breeding, breed heritage, canine welfare and official FCI resources.', label: 'FCI Support' },
   '/hunting-dog-training': { title: 'Hunting Dog Training in Aberdeen, SD | Bravo K9 Solutions', description: 'Discuss hunting-dog training goals with Bravo in Aberdeen, South Dakota. Explore field obedience, recall and retrieving goals, suitability and individually scoped plans.', label: 'Hunting dog training', service: 'Individually scoped hunting dog training' },
   '/live': { title: 'Bravo Live | Real Dog Training, Right Now', description: 'Watch live dog training with Bravo K9 Solutions. Real dogs, real sessions, real progress.', label: 'Live cams' },

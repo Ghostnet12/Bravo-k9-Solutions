@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useBravo } from './context';
 import { api } from './api';
 import { Page, Notice } from './ui';
 
 export default function PasswordSetupGate({ children }) {
-  const { user, refreshUser, signOut } = useBravo(), navigate = useNavigate();
+  const { user, refreshUser, signOut } = useBravo(), navigate = useNavigate(), { pathname } = useLocation();
   const [busy, setBusy] = useState(false), [error, setError] = useState('');
-  if (!user?.mustChangePassword) return children;
+  // The public guide explains first-time password setup without unlocking member screens.
+  if (!user?.mustChangePassword || pathname === '/how-to') return children;
   async function save(event) {
     event.preventDefault(); setError('');
     const form = event.currentTarget, fields = new FormData(form);
