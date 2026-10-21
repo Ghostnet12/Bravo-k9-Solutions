@@ -83,7 +83,14 @@ export default function Home() {
         </div>
         <div className="cinema-hero-baseline cinema-shell"><Editable as="span" contentKey="copy-home-4" canEditText>REAL DOGS. REAL LIFE. BRAVO.</Editable><Editable as="a" contentKey="copy-home-5" canEditText canEditLink href="#method" aria-label="Discover the Bravo approach">SCROLL TO DISCOVER <span aria-hidden="true">↓</span></Editable></div>
       </section>
-      <section className="home-tools cinema-shell" aria-label="Tools of the Trade">
+      <div id="training" className="home-primary-training"><TrainingOffer/></div>
+      <ConversionTrust/>
+      <HomeBanner/>
+      {compact && <div className="home-live-status cinema-shell"><LiveBanner/></div>}
+      <div className="cinema-shell site-media-tools-slot site-media-tools-slot--home" data-site-media-tools=""/>
+
+      <HomeSectionOrder>
+      <section key="tools" className="home-tools cinema-shell" aria-label="Tools of the Trade">
         <Editable as={Link} contentKey="home-tools-of-the-trade" canEditLink href="/tools-of-the-trade" className="home-tools-card" aria-labelledby="home-tools-title home-tools-action" aria-describedby="home-tools-copy">
           <div>
             <Editable as="p" contentKey="home-tools-eyebrow" canEditText className="home-tools-eyebrow">THE BRAVO TOOLKIT</Editable>
@@ -93,13 +100,6 @@ export default function Home() {
           <Editable as="span" contentKey="home-tools-action" canEditText id="home-tools-action" className="home-tools-action">Explore Tools of the Trade <span aria-hidden="true">→</span></Editable>
         </Editable>
       </section>
-      <ConversionTrust/>
-      <HomeBanner/>
-      {compact && <div className="home-live-status cinema-shell"><LiveBanner/></div>}
-      <div id="training" className="home-primary-training"><TrainingOffer/></div>
-      <div className="cinema-shell site-media-tools-slot site-media-tools-slot--home" data-site-media-tools=""/>
-
-      <HomeSectionOrder>
       <section key="fci" className="home-fci cinema-shell" aria-labelledby="home-fci-title">
         <Link href="/fci-support" className="home-fci-card" aria-labelledby="home-fci-title home-fci-action">
           <div className="home-fci-identity"><img src="/images/fci-official-identity.jpeg" width="796" height="240" loading="lazy" alt="Fédération Cynologique Internationale — for pedigree dogs worldwide"/></div>
@@ -112,7 +112,7 @@ export default function Home() {
           </div>
         </Link>
       </section>
-      <Editable as="section" key="training" contentKey="copy-home-24" id="training-programs" className="cinema-programs cinema-shell" aria-labelledby={compact ? "conversion-goal-title" : "goal-title"}>
+      <Editable as="section" key="training" contentKey="copy-home-24" id="training-programs" tabIndex={-1} className="cinema-programs cinema-shell" aria-labelledby={compact ? "conversion-goal-title" : "goal-title"}>
         <MobileDiscovery/><GoalFinder/>
         <div className="cinema-secondary-programs">{secondary.map(id => { const service = catalog.find(s => s.id === id); return service && service.enabled !== false ? <article data-site-service={id} key={id} data-reveal=""><Editable as="p" contentKey={`home-service-${id}-eyebrow`} canEditText className="cinema-eyebrow">{id === 'walking' ? 'MOVEMENT. STRUCTURE. ROUTINE.' : 'EXPERIENCE. CONTROL. STRUCTURE.'}</Editable><Editable as="h3" contentKey={`home-service-${id}-title`} canEditText>{id === 'walking' ? 'Better walks.' : 'Start with an assessment.'}</Editable><Editable as="p" contentKey={`home-service-${id}-copy`} canEditText>{id === 'walking' ? 'Dog walking with the Bravo team. Thirty minutes of focused movement.' : 'Aggressive-dog intake with two trainers. Review the behavior first; decide what comes next second.'}</Editable><div><span><CatalogPrice service={id}/> <small>{id === 'walking' ? '/ dog · 30 min' : 'initial intake'}</small></span><Editable as={Link} contentKey={`home-service-${id}-link`} canEditText canEditLink href={id === 'walking' ? '/dog-walking' : '/behavior-assessment'} aria-label={id === 'walking' ? 'Explore dog walking' : 'Explore aggressive dog intake'}>Explore <span aria-hidden="true">↗</span></Editable></div></article> : null; })}</div>
         <details id="specialist-training" open className="cinema-details cinema-specialists"><Editable as="summary" contentKey="copy-home-37" canEditText>Specialist and working-dog programs <span aria-hidden="true">+</span></Editable><Editable as="p" contentKey="copy-home-38" canEditText>Specialist and working-dog goals are scoped individually. Contact Bravo to discuss suitability, preparation, and pricing.</Editable><div>{['Service Dogs', 'Law Enforcement', 'Executive Protection', 'Search & Rescue', 'Hunting Dog Training'].map((name, index) => <Editable as={Link} contentKey={`home-specialist-${index}`} canEditText canEditLink key={name} href={index === 4 ? '/hunting-dog-training' : '/contact'}>{name}<span aria-hidden="true">↗</span></Editable>)}</div></details>
@@ -156,9 +156,9 @@ export default function Home() {
 
       <Editable as="section" key="online" contentKey="copy-home-53" id="online" className="cinema-online" aria-labelledby="online-title"><div className="cinema-shell cinema-online-inner"><div data-reveal=""><Editable as="p" contentKey="copy-home-54" canEditText className="cinema-eyebrow">BRAVO. ANYWHERE.</Editable><Editable as="h2" contentKey="cinema-online-title" canEditText id="online-title">Learn from Bravo.<br/><span>Wherever you are.</span></Editable><Editable as="p" contentKey="cinema-online-copy" canEditText>Dog-training education from David and Ashley—what to do, why it matters, and how to practice it at home.</Editable>{lessonsOpen ? <Editable as={Link} contentKey="copy-home-55" canEditText canEditLink href="/learn" className="cinema-button cinema-button-light">Explore online lessons <span aria-hidden="true">↗</span></Editable> : <Editable as={Link} contentKey="copy-home-56" canEditText canEditLink href="/learn" className="cinema-button cinema-button-light">Online courses · Coming soon →</Editable>}</div><div className="cinema-learning-visual" data-reveal=""><div className="home-lesson-preview"><img src="/images/training-education.webp" width="1600" height="900" loading="lazy" alt="A handler demonstrating clear communication with a dog"/></div><div className="cinema-learning-caption"><img src="/images/bravo-logo-small.webp" width="42" height="48" alt="" data-site-image-ignore=""/><Editable as="span" contentKey="copy-home-57" canEditText>Learn.<br/><strong>Practice. Repeat.</strong></Editable></div></div></div>{lessonsOpen && <details className="cinema-shell cinema-details"><Editable as="summary" contentKey="copy-home-58" canEditText>Online lesson options</Editable><LessonOffers/></details>}</Editable>
 
+      <ConversionFAQ key="faq"/>
+      <Editable as="section" key="booking" contentKey="copy-home-59" className="cinema-close cinema-shell" aria-labelledby="booking-title" data-reveal=""><Editable as="p" contentKey="copy-home-60" canEditText className="cinema-eyebrow">READY WHEN YOU ARE.</Editable><Editable as="h2" contentKey="cinema-close-title" canEditText id="booking-title">Start with<br/><span>your dog.</span></Editable><Editable as="p" contentKey="copy-home-61" canEditText>Tell us what you’re seeing. We’ll help you choose the right first step.</Editable><div className="cinema-actions"><Editable as={Link} contentKey="copy-home-62" canEditText canEditLink href="/portal?program=training" className="cinema-button">Book training <span aria-hidden="true">↗</span></Editable><Editable as="a" contentKey="copy-home-63" canEditText canEditLink href="tel:+16058242767" className="cinema-link">Talk to Bravo</Editable></div><Editable as="span" contentKey="copy-home-64" canEditText className="cinema-close-location">ABERDEEN, SOUTH DAKOTA · WE COME TO YOU</Editable></Editable>
       </HomeSectionOrder>
-      <ConversionFAQ/>
-      <Editable as="section" contentKey="copy-home-59" className="cinema-close cinema-shell" aria-labelledby="booking-title" data-reveal=""><Editable as="p" contentKey="copy-home-60" canEditText className="cinema-eyebrow">READY WHEN YOU ARE.</Editable><Editable as="h2" contentKey="cinema-close-title" canEditText id="booking-title">Start with<br/><span>your dog.</span></Editable><Editable as="p" contentKey="copy-home-61" canEditText>Tell us what you’re seeing. We’ll help you choose the right first step.</Editable><div className="cinema-actions"><Editable as={Link} contentKey="copy-home-62" canEditText canEditLink href="/portal?program=training" className="cinema-button">Book training <span aria-hidden="true">↗</span></Editable><Editable as="a" contentKey="copy-home-63" canEditText canEditLink href="tel:+16058242767" className="cinema-link">Talk to Bravo</Editable></div><Editable as="span" contentKey="copy-home-64" canEditText className="cinema-close-location">ABERDEEN, SOUTH DAKOTA · WE COME TO YOU</Editable></Editable>
     </Editable><Footer/>
   </div>;
 }

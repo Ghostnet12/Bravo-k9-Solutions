@@ -35,4 +35,4 @@ html{scroll-padding-bottom:calc(var(--ad-dock-height) + 20px)}
 #root{padding-bottom:var(--ad-dock-height)}
 
 /* The document already reserves the sticky header height for anchor links. */
-.cinema-home.conversion-home #results{scroll-margin-top:0}
+.cinema-home.conversion-home :is(#results, #training-programs){scroll-margin-top:0}

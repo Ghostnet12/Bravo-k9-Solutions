@@ -28,7 +28,6 @@
 .app-header.bravo-nav :is(a, button, summary):focus-visible,
 .training-service-links a:focus-visible, .goal-help a:focus-visible { outline: 2px solid var(--gold, #ba9a64); outline-offset: 4px; }
 .app-header.bravo-nav #bravo-navigation.is-open .nav-about { flex: 1 1 40%; }
-.app-header.bravo-nav #bravo-navigation.is-open .nav-explore > .nav-tools-of-the-trade { flex: 1 1 100%; color: #e4c78e; border: 1px solid #ba9a6466; border-radius: 8px; background: #ba9a6412; }
 .app-header.bravo-nav #bravo-navigation.is-open .nav-about[open] { flex-basis: 100%; }
 .app-header.bravo-nav #bravo-navigation.is-open .nav-about > summary { padding: 10px 12px; font-size: 14px; }
 .app-header.bravo-nav #bravo-navigation #bravo-navigation .nav-about-links { position: static; }

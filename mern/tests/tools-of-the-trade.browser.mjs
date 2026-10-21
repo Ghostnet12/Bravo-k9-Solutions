@@ -87,31 +87,64 @@ try {
           assert.match(await page.locator('.tool-card').last().innerText(), /12.inch|12 in/);
           assert.doesNotMatch(await page.locator('.tool-card').last().innerText(), /6.inch/);
           const collapsed = await page.locator('.menu-toggle').isVisible();
-          const navTools = page.locator('#bravo-navigation .nav-explore > a[href="/tools-of-the-trade"]');
-          assert.equal(await navTools.count(), 1);
-          assert.equal(await page.locator('.nav-about a[href="/tools-of-the-trade"]').count(), 0);
-          assert.equal(await navTools.evaluate(link => link.previousElementSibling?.getAttribute('href')), '/fci-support');
-          if (collapsed) await page.locator('.menu-toggle').click();
-          await navTools.waitFor({ state: 'visible' });
-          if (collapsed) assert.ok(await navTools.evaluate(link => link.getBoundingClientRect().top >= link.previousElementSibling.getBoundingClientRect().bottom));
-          await navTools.press('Enter');
-          if (collapsed) assert.equal(await page.locator('.menu-toggle').getAttribute('aria-expanded'), 'false');
+          assert.equal(await page.locator('#bravo-navigation a[href="/tools-of-the-trade"]').count(), 0);
+          assert.equal(await page.locator('footer a[href="/tools-of-the-trade"]').count(), 1);
+          const navReviews = page.locator('#bravo-navigation .nav-explore > a[href="/#reviews"]');
+          assert.equal(await navReviews.count(), 1);
+          assert.equal(await page.locator('.nav-about a[href="/#reviews"]').count(), 0);
+          if (collapsed) {
+            await page.locator('.menu-toggle').click();
+            await navReviews.waitFor({ state: 'visible' });
+            await navReviews.focus(); await page.keyboard.press('Escape');
+            assert.equal(await page.locator('.menu-toggle').getAttribute('aria-expanded'), 'false');
+            assert.ok(await page.locator('.menu-toggle').evaluate(node => node === document.activeElement));
+          }
           if (width < 768) {
             await page.locator('[data-navigation-toggle]').click();
             assert.equal(await page.locator('.menu-toggle').getAttribute('aria-expanded'), 'true');
-            await navTools.waitFor({ state: 'visible' });
-            await page.screenshot({ path: `test-results/tools-of-the-trade-menu-${name}-${width}.png` });
-            await navTools.press('Enter');
+            await navReviews.waitFor({ state: 'visible' });
+            await page.screenshot({ path: `test-results/tools-of-the-trade-service-navigation-menu-${name}-${width}.png` });
+            await page.keyboard.press('Escape');
             assert.equal(await page.locator('.menu-toggle').getAttribute('aria-expanded'), 'false');
+            assert.ok(await page.locator('[data-navigation-toggle]').evaluate(node => node === document.activeElement));
           }
           await page.locator('h1').scrollIntoViewIfNeeded();
           await page.screenshot({ path: `test-results/tools-of-the-trade-${name}-${width}.png`, fullPage: true });
-          await page.goto(origin + '/');
+          // Direct Reviews navigation works from another page with a keyboard.
+          if (collapsed) await page.locator('.menu-toggle').click();
+          await navReviews.focus(); await navReviews.press('Enter');
+          await page.waitForURL('**/#reviews');
+          await page.locator('#reviews').waitFor();
+          if (collapsed) assert.equal(await page.locator('.menu-toggle').getAttribute('aria-expanded'), 'false');
+          await page.goto(origin + '/', { waitUntil: 'networkidle' });
           const homeTools = page.locator('.home-tools-card');
           await homeTools.waitFor({ state: 'visible' });
           assert.equal(await homeTools.getAttribute('href'), '/tools-of-the-trade');
           assert.match(await homeTools.innerText(), /We assess your dog first/);
-          assert.ok(await page.locator('.cinema-hero').evaluate(hero => hero.nextElementSibling.matches('.home-tools')));
+          assert.ok(await page.locator('.cinema-hero').evaluate(hero => hero.nextElementSibling.id === 'training'));
+          const order = await page.evaluate(() => ['#training','#training-programs','#reviews','#team','#first-visit-help','.cinema-close','#method','.home-tools','#results'].map(selector => document.querySelector(selector).getBoundingClientRect().top));
+          assert.deepEqual([...order].sort((a,b) => a-b), order, 'services and booking confidence before background and equipment');
+          for (const id of ['training','training-programs']) {
+            await page.locator(`#${id}`).evaluate(node => node.scrollIntoView({ block: 'start', behavior: 'instant' }));
+            await page.screenshot({ path: `test-results/tools-of-the-trade-service-navigation-${id}-${name}-${width}.png` });
+          }
+          if (width < 768) {
+            // A customer can jump to Services from another route, then return to
+            // the same section again after scrolling, without a hidden heading.
+            await page.goto(origin + '/tools-of-the-trade');
+            await page.locator('.mobile-home-nav a[href="/#training-programs"]').click();
+            await page.waitForURL('**/#training-programs');
+            await page.waitForFunction(() => {
+              const top = document.getElementById('training-programs')?.getBoundingClientRect().top;
+              return top >= 74 && top <= 150;
+            });
+            await page.locator('#method').evaluate(node => node.scrollIntoView({ behavior: 'instant' }));
+            await page.locator('.mobile-home-nav a[href="/#training-programs"]').click();
+            const target = page.locator('#training-programs');
+            assert.ok(await target.evaluate(node => node === document.activeElement));
+            const top = await target.evaluate(node => node.getBoundingClientRect().top);
+            assert.ok(top >= 74 && top <= 150, `Services anchor clears header: ${top}`);
+          }
           await homeTools.scrollIntoViewIfNeeded();
           await homeTools.focus();
           assert.notEqual(await homeTools.evaluate(link => getComputedStyle(link).outlineStyle), 'none');
@@ -121,7 +154,7 @@ try {
           await page.locator('.tools-assessment').waitFor();
           assert.equal(new URL(page.url()).pathname, '/tools-of-the-trade');
           assert.deepEqual(errors, []);
-          console.log(`PASS ${name}/${width}: five products; direct menu link beneath FCI; both mobile toggles; homepage entry immediately after hero; keyboard navigation; responsive layout; no writes.`);
+          console.log(`PASS ${name}/${width}: five products preserved; Tools absent from shared menu; direct Reviews; both mobile toggles; service-first homepage; repeatable Services shortcut; keyboard navigation; responsive layout; no writes.`);
         } finally { await context.close(); }
       }
     } finally { await browser.close(); }
