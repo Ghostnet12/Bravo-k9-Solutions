@@ -49,8 +49,12 @@ try {
         try {
           await page.goto(origin + '/tools-of-the-trade');
           await page.locator('.tools-assessment').waitFor();
-          await page.locator('.tool-card').last().scrollIntoViewIfNeeded();
-          await page.waitForFunction(() => [...document.querySelectorAll('.tool-photo img')].every(img => img.complete && img.naturalWidth > 0));
+          // Visit every photo: WebKit correctly leaves skipped, offscreen lazy images unloaded.
+          for (const photo of await page.locator('.tool-photo img').all()) {
+            await photo.scrollIntoViewIfNeeded();
+            await photo.evaluate(img => img.decode());
+            assert.ok(await photo.evaluate(img => img.complete && img.naturalWidth > 0));
+          }
           assert.equal(await page.locator('h1').count(), 1);
           assert.equal(await page.title(), 'Tools of the Trade | Bravo K9 Solutions');
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
