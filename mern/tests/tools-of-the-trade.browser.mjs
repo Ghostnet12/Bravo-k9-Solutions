@@ -124,6 +124,10 @@ try {
           assert.ok(await page.locator('.cinema-hero').evaluate(hero => hero.nextElementSibling.id === 'training'));
           const order = await page.evaluate(() => ['#training','#training-programs','#reviews','#team','#first-visit-help','.cinema-close','#method','.home-tools','#results'].map(selector => document.querySelector(selector).getBoundingClientRect().top));
           assert.deepEqual([...order].sort((a,b) => a-b), order, 'services and booking confidence before background and equipment');
+          assert.ok(await page.locator('.conversion-dog-terms').evaluate(node => {
+            const button = node.parentElement.querySelector('.conversion-button');
+            return node.getBoundingClientRect().bottom <= button.getBoundingClientRect().top;
+          }), 'household pricing and renewal terms appear before the booking action');
           for (const id of ['training','training-programs']) {
             await page.locator(`#${id}`).evaluate(node => node.scrollIntoView({ block: 'start', behavior: 'instant' }));
             await page.screenshot({ path: `test-results/tools-of-the-trade-service-navigation-${id}-${name}-${width}.png` });
@@ -146,7 +150,8 @@ try {
             assert.ok(top >= 74 && top <= 150, `Services anchor clears header: ${top}`);
           }
           await homeTools.scrollIntoViewIfNeeded();
-          await homeTools.focus();
+          await homeTools.focus(); await page.keyboard.press('Tab'); await page.keyboard.press('Shift+Tab');
+          assert.ok(await homeTools.evaluate(node => node === document.activeElement));
           assert.notEqual(await homeTools.evaluate(link => getComputedStyle(link).outlineStyle), 'none');
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
           await page.screenshot({ path: `test-results/tools-of-the-trade-entry-${name}-${width}.png` });
