@@ -38,7 +38,8 @@ function BookingRoute({ params, draft }) {
   const { discardBookingDraft } = useBravo();
   // Freeze the route's starting intent: clearing a submitted draft must not remount its success screen.
   const [entry] = useState(() => params.get('resume') === '1' && draft ? draft.entry : bookingEntry(params));
-  if (!params.get('edit') && draft && (draft.entry !== entry || params.get('new') === '1')) return <Page title="You have an unsent request."><BookingDraftSummary draft={draft}/><div className="first-visit-actions"><Link className="button" to="/portal?resume=1">Resume my request</Link><button type="button" className="button button-ghost" onClick={discardBookingDraft}>Discard draft and start again</button></div></Page>;
+  const [chooseExisting] = useState(() => !params.get('edit') && draft && (draft.entry !== entry || params.get('new') === '1'));
+  if (chooseExisting && draft) return <Page title="You have an unsent request."><BookingDraftSummary draft={draft}/><div className="first-visit-actions"><Link className="button" to="/portal?resume=1">Resume my request</Link><button type="button" className="button button-ghost" onClick={discardBookingDraft}>Discard draft and start again</button></div></Page>;
   return <BookingForm entry={entry}/>;
 }
 function BookingForm({ entry }) {
