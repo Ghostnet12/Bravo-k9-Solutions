@@ -1,4 +1,5 @@
 import BookingDraftSummary from './BookingDraftSummary';
+import BookingHandoffNotice from './BookingHandoffNotice';
 import BookingProgress, { BOOKING_STAGES, bookingStageNumber } from './BookingProgress';
 import { bookingEntry } from './booking-draft';
 import './booking-continuity.css';
@@ -29,9 +30,10 @@ function shuffled(items) {
   return result;
 }
 export default function BookingPage() {
-  const { authReady, draftOwner, draftRevision, bookingDraft, refreshUser } = useBravo();
+  const { authReady, draftOwner, draftRevision, bookingDraft, refreshUser, hasPendingBookingHandoff } = useBravo();
   const [params] = useSearchParams();
   if (!authReady || !draftOwner) return <Page title="Your training request."><p role="status">{authReady ? 'Your account could not be checked. Retry to safely restore your request.' : 'Loading your request…'}</p>{authReady && <button className="button" onClick={() => refreshUser().catch(() => {})}>Retry</button>}</Page>;
+  if (hasPendingBookingHandoff) return <Page title="Your training request."><BookingHandoffNotice/></Page>;
   return <BookingRoute key={`${draftOwner}:${draftRevision}:${params.toString()}`} params={params} draft={bookingDraft}/>;
 }
 function BookingRoute({ params, draft }) {

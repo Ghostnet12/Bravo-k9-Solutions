@@ -7,8 +7,8 @@ import { api } from './api';
 import { Page, Notice } from './ui';
 
 export default function PasswordSetupGate({ children }) {
-  const { user, refreshUser, signOut, bookingDraft } = useBravo(), navigate = useNavigate(), { pathname, search } = useLocation();
-  const returningBooking = !!bookingDraft && (pathname === '/portal' || /^\/portal(?:\?|$)/.test(new URLSearchParams(search).get('next') || ''));
+  const { user, refreshUser, signOut, bookingDraft, hasPendingBookingHandoff } = useBravo(), navigate = useNavigate(), { pathname, search } = useLocation();
+  const returningBooking = (!!bookingDraft || hasPendingBookingHandoff) && (pathname === '/portal' || /^\/portal(?:\?|$)/.test(new URLSearchParams(search).get('next') || ''));
   const [busy, setBusy] = useState(false), [error, setError] = useState('');
   // The public guide explains first-time password setup without unlocking member screens.
   if (!user?.mustChangePassword || pathname === '/how-to') return children;
@@ -23,7 +23,7 @@ export default function PasswordSetupGate({ children }) {
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
   return <Page title="Create your password." eyebrow="WELCOME TO BRAVO" intro={`Welcome, ${user.name}. ${returningBooking ? 'Choose your own password to return to your saved training request.' : 'Choose your own password to open your membership and saved schedule.'}`}>
-    {returningBooking && <BookingDraftSummary draft={bookingDraft}/>}
+    {returningBooking && (bookingDraft ? <BookingDraftSummary draft={bookingDraft}/> : <p>Your unfinished request is saved. After creating your password, choose whether to resume it for this account or discard it.</p>)}
     <section className="panel account-auth"><Notice error>{error}</Notice>
       <form onSubmit={save}>
         <label>New password<input name="password" type="password" autoComplete="new-password" minLength="12" maxLength="128" required autoFocus/></label>

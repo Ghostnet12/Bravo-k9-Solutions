@@ -212,6 +212,7 @@ try {
       { failure: 'auth-refresh', passwordSetup: true },
       { failure: 'login-response', register: true },
       { failure: 'login-response', discard: true },
+      { failure: 'login-response', switchAccount: true },
     ]) {
       actor = null; writes = []; stale = false; recoveredBooking = null; failNextAuthRead = false;
       handoffFailure = scenario.failure; passwordSetup = !!scenario.passwordSetup;
@@ -249,13 +250,28 @@ try {
         assert.ok(!(await handoffPage.locator('body').innerText()).includes('Handoff fixture'), 'pending details require an explicit claim');
         await handoffPage.reload();
         await handoffPage.getByRole('button', { name: 'Resume request for this account', exact: true }).waitFor();
-        if (scenario.discard) {
+        if (!scenario.register && !scenario.discard && !scenario.switchAccount && !scenario.passwordSetup) {
+          for (const width of [360,390,768,1440]) {
+            await handoffPage.setViewportSize({ width, height: 900 });
+            assert.ok(await handoffPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `pending handoff fits ${width}px`);
+            await handoffPage.screenshot({path:`test-results/booking-handoff-${name}-${width}.png`,fullPage:true});
+          }
+          await handoffPage.setViewportSize({ width: 390, height: 900 });
+        }
+        if (scenario.switchAccount) {
+          actor = { ...fixtureUser, id: 'client-b', name: 'Different Client' };
+          await handoffPage.reload(); await handoffPage.waitForLoadState('networkidle');
+          assert.equal(await handoffPage.getByRole('button', { name: 'Resume request for this account', exact: true }).count(), 0);
+          assert.ok(!(await handoffPage.locator('body').innerText()).includes('Handoff fixture'));
+          await handoffPage.goto(`${origin}/portal?new=1`); await handoffPage.getByLabel('Dog’s name', { exact: true }).waitFor();
+          assert.equal(await handoffPage.getByLabel('Dog’s name', { exact: true }).inputValue(), '');
+        } else if (scenario.discard) {
           await handoffPage.getByRole('button', { name: 'Discard pending request', exact: true }).click();
           await handoffPage.getByLabel('Dog’s name', { exact: true }).waitFor();
           assert.equal(await handoffPage.getByLabel('Dog’s name', { exact: true }).inputValue(), '');
           assert.equal(await handoffPage.evaluate(() => sessionStorage.getItem('bravo-booking-draft-v1')), null);
         } else {
-          await handoffPage.getByRole('button', { name: 'Resume request for this account', exact: true }).click();
+          await handoffPage.getByRole('button', { name: 'Resume request for this account', exact: true }).focus(); await handoffPage.keyboard.press('Enter');
           await handoffPage.getByRole('heading', { name: 'Review your first visit.', exact: true }).waitFor();
           assert.equal(await handoffPage.getByLabel('Dog’s name', { exact: true }).inputValue(), 'Handoff fixture');
           assert.match(await handoffPage.locator('.guided-visit-summary').innerText(), /Fixture Trainer[\s\S]*10:00 AM/);
@@ -264,9 +280,9 @@ try {
           assert.equal(await handoffPage.getByLabel('Anything the team should know?', { exact: true }).inputValue(), 'Preserve this handoff');
         }
         assert.equal(writes.filter(write => write.path === '/bookings' || write.path.includes('checkout')).length, 0);
-        console.log(`PASS ${name}/390: ambiguous ${scenario.register ? 'registration' : scenario.failure}${scenario.passwordSetup ? ' with required password setup' : ''} preserves the pending handoff for explicit ${scenario.discard ? 'discard' : 'resume'}, including refresh. No bookings or charges.`);
+        console.log(`PASS ${name}/390: ambiguous ${scenario.register ? 'registration' : scenario.failure}${scenario.passwordSetup ? ' with required password setup' : ''} preserves the pending handoff with ${scenario.switchAccount ? 'account isolation' : scenario.discard ? 'explicit discard' : 'explicit resume'}, including refresh. No bookings or charges.`);
       } catch (error) {
-        await handoffPage.screenshot({path:`test-results/booking-handoff-${name}-${scenario.register ? 'registration' : scenario.discard ? 'discard' : scenario.failure}-failure.png`,fullPage:true});
+        await handoffPage.screenshot({path:`test-results/booking-handoff-${name}-${scenario.register ? 'registration' : scenario.discard ? 'discard' : scenario.switchAccount ? 'switch-account' : scenario.failure}-failure.png`,fullPage:true});
         throw error;
       } finally { await handoffContext.close(); handoffFailure = ''; }
     }

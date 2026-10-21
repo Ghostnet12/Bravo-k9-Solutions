@@ -44,22 +44,37 @@ export function cleanBookingDraft(value) {
   };
 }
 function storage() { try { return globalThis.sessionStorage; } catch { return null; } }
-export function readBookingDraft(owner, { claimGuest = false, now = Date.now(), store = storage() } = {}) {
+function readEnvelope(now, store) {
   try {
     const raw = store?.getItem(BOOKING_DRAFT_KEY);
     if (!raw) return null;
     if (raw.length > 60000) throw new Error('Draft too large');
     const envelope = JSON.parse(raw);
-    if (envelope.version !== 1 || !Number.isFinite(envelope.updatedAt) || envelope.updatedAt > now || now - envelope.updatedAt > DRAFT_TTL_MS || !(envelope.owner === owner || (claimGuest && envelope.owner === 'guest'))) throw new Error('Draft expired or belongs to another account');
+    if (envelope.version !== 1 || !Number.isFinite(envelope.updatedAt) || envelope.updatedAt > now || now - envelope.updatedAt > DRAFT_TTL_MS) throw new Error('Draft expired');
     const draft = cleanBookingDraft(envelope.draft);
     if (!draft) throw new Error('Invalid draft');
-    return draft;
+    return { ...envelope, draft };
   } catch { try { store?.removeItem(BOOKING_DRAFT_KEY); } catch { /* Optional storage. */ } return null; }
 }
-export function writeBookingDraft(owner, value, { now = Date.now(), store = storage() } = {}) {
+export function readBookingDraft(owner, { claimGuest = false, now = Date.now(), store = storage() } = {}) {
+  const envelope = readEnvelope(now, store);
+  if (!envelope) return null;
+  if (!(envelope.owner === owner || (claimGuest && envelope.owner === 'guest'))) {
+    try { store?.removeItem(BOOKING_DRAFT_KEY); } catch { /* Optional storage. */ }
+    return null;
+  }
+  // An ambiguous handoff bound to an account still needs its explicit choice.
+  if (envelope.handoff === true && envelope.owner !== 'guest') return null;
+  return envelope.draft;
+}
+export function readBookingHandoff(owner, { now = Date.now(), store = storage() } = {}) {
+  const envelope = readEnvelope(now, store);
+  return (owner === 'guest' || owner?.startsWith('user:')) && envelope?.handoff === true && (envelope.owner === 'guest' || envelope.owner === owner) ? envelope.draft : null;
+}
+export function writeBookingDraft(owner, value, { handoff = false, now = Date.now(), store = storage() } = {}) {
   const draft = cleanBookingDraft(value);
   try {
-    if (draft && owner) store?.setItem(BOOKING_DRAFT_KEY, JSON.stringify({ version:1, owner, updatedAt:now, draft }));
+    if (draft && owner) store?.setItem(BOOKING_DRAFT_KEY, JSON.stringify({ version:1, owner, updatedAt:now, draft, ...(handoff ? { handoff:true } : {}) }));
     else store?.removeItem(BOOKING_DRAFT_KEY);
   } catch { /* In-memory drafts still work when storage is unavailable. */ }
   return draft;
