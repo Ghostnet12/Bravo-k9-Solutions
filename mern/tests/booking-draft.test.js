@@ -17,6 +17,7 @@ test('guest handoff is explicit; account changes, expiry and discard cannot expo
 test('malformed, empty and blocked storage cannot crash the booking form',()=>{
  const store=memory();store.setItem(BOOKING_DRAFT_KEY,'{');assert.equal(readBookingDraft('guest',{store}),null);
  assert.equal(cleanBookingDraft({...fixture,form:{},trainerId:'',visits:[]}),null);
+ assert.equal(cleanBookingDraft({...fixture,form:{},trainerId:'',visits:[],dogCount:2}).dogCount,2);
  assert.equal(cleanBookingDraft({...fixture,visits:[{date:'oops',time:'100:00',service:'training'}]}),null);
  const blocked={getItem(){throw Error('blocked')},setItem(){throw Error('blocked')},removeItem(){throw Error('blocked')}};
  assert.equal(readBookingDraft('guest',{store:blocked}),null);assert.equal(writeBookingDraft('guest',fixture,{store:blocked}).form.dogName,'Biscuit');

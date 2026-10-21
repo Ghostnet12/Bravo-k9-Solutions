@@ -25,7 +25,7 @@ export function cleanBookingDraft(value) {
   if (typeof value.entry !== 'string' || value.entry.length > 400 || bookingEntry(new URLSearchParams(value.entry)) !== value.entry) return null;
   if (value.visits.some(visit => !visit || !date(visit.date) || !time(visit.time) || !ids.has(visit.service))) return null;
   const form = Object.fromEntries(Object.entries({dogName:80,phone:30,address:300,notes:1500}).map(([field,max]) => [field,text(value.form[field],max)]));
-  if (!form.dogName.trim() && !form.notes.trim() && !value.trainerId && !value.visits.length) return null;
+  if (!form.dogName.trim() && !form.notes.trim() && !value.trainerId && !value.visits.length && !(value.dogCount > 1) && !(value.trainingFocus && value.trainingFocus !== 'basic-obedience')) return null;
   return {
     entry: value.entry, ids: [...new Set(value.ids)], form,
     visits: value.visits.map(({date,time,service}) => ({date,time,service})),
