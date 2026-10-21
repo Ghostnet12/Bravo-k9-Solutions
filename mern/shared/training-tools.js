@@ -1,4 +1,4 @@
-// Product identities verified from the four Amazon links supplied by Bravo.
+// Product identities verified from the Amazon links supplied by Bravo.
 // Keep prices on the retailer's listing; sizes and availability can change.
 export const TRAINING_TOOLS = [
   {
@@ -9,6 +9,13 @@ export const TRAINING_TOOLS = [
     buyUrl: 'https://a.co/d/0cWLPuAY',
   },
   {
+    id: 'slip-lead', category: 'Slip lead', name: 'Fida Rope Slip Lead',
+    image: '/images/tool-slip-lead.jpg', alt: 'Black Fida rope slip lead with an adjustable loop and reflective stitching',
+    description: 'A rope lead with an adjustable collar loop, metal ring and reflective stitching. The linked model is 6 feet long and ½ inch thick. Your trainer will check suitability and demonstrate how to fit and handle it.',
+    detail: '6 ft × ½ in · Black rope',
+    buyUrl: 'https://a.co/d/07p2Zd9F',
+  },
+  {
     id: 'e-collar', category: 'E-collar', name: 'Dogtra 1900X Black Edition',
     image: '/images/tool-e-collar.jpg', alt: 'Dogtra 1900X Black Edition remote and electronic training collar',
     description: 'A rechargeable remote training collar with tone, vibration and adjustable electronic stimulation. If Bravo recommends an e-collar, your trainer will explain its role, fit and operation as part of an individual training plan.',
@@ -16,11 +23,11 @@ export const TRAINING_TOOLS = [
     buyUrl: 'https://a.co/d/08SLvEQC',
   },
   {
-    id: 'slip-lead', category: 'Slip lead', name: 'Fida Rope Slip Lead',
-    image: '/images/tool-slip-lead.jpg', alt: 'Black Fida rope slip lead with an adjustable loop and reflective stitching',
-    description: 'A rope lead with an adjustable collar loop, metal ring and reflective stitching. The linked model is 6 feet long and ½ inch thick. Your trainer will check suitability and demonstrate how to fit and handle it.',
-    detail: '6 ft × ½ in · Black rope',
-    buyUrl: 'https://a.co/d/07p2Zd9F',
+    id: 'budget-e-collar', category: 'Budget-friendly e-collar', name: 'My Pet Command Two-Collar Kit',
+    image: '/images/tool-budget-e-collar.jpg', alt: 'My Pet Command remote training kit with black and orange collars and one handheld remote',
+    description: 'A budget-friendly alternative to the Dogtra option for trainer-guided obedience work. This rechargeable two-collar kit includes one remote, tone, vibration and adjustable electronic stimulation. Bravo will confirm whether it suits your dog’s plan.',
+    detail: '2 collars + 1 remote · Check current Amazon price',
+    buyUrl: 'https://a.co/d/08BVVJuV',
   },
   {
     id: 'hand-leash', category: 'Short hand leash', name: 'PetBonus Traffic Tab Leash',

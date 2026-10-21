@@ -29,7 +29,7 @@ app.get('/', (_req,res) => res.type('html').send(home));
 app.use(express.static(dist));
 const server = app.listen(0, '127.0.0.1'); await once(server, 'listening');
 const origin = `http://127.0.0.1:${server.address().port}`;
-const links = ['https://a.co/d/0cWLPuAY','https://a.co/d/08SLvEQC','https://a.co/d/07p2Zd9F','https://a.co/d/0bMLFa5W'];
+const links = ['https://a.co/d/0cWLPuAY','https://a.co/d/07p2Zd9F','https://a.co/d/08SLvEQC','https://a.co/d/08BVVJuV','https://a.co/d/0bMLFa5W'];
 await mkdir('test-results', { recursive: true });
 try {
   for (const [name,engine] of Object.entries({ chromium, webkit })) {
@@ -37,7 +37,7 @@ try {
     try {
       const raw = await browser.newPage({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
       assert.equal((await raw.goto(origin + '/tools-of-the-trade')).status(), 200);
-      assert.equal(await raw.locator('.tool-card').count(), 4);
+      assert.equal(await raw.locator('.tool-card').count(), 5);
       assert.match(await raw.locator('.tools-assessment').innerText(), /We only use the tools your dog needs/);
       assert.equal(await raw.locator('.tool-purchase').first().getAttribute('href'), links[0]);
       await raw.close();
@@ -56,11 +56,13 @@ try {
             assert.ok(await photo.evaluate(img => img.complete && img.naturalWidth > 0));
           }
           assert.equal(await page.locator('h1').count(), 1);
+          assert.match(await page.locator('.app-page-title').innerText(), /basic through advanced obedience courses and training/);
+          assert.match(await page.locator('.tool-card').nth(3).innerText(), /budget-friendly alternative to the Dogtra option/);
           assert.equal(await page.title(), 'Tools of the Trade | Bravo K9 Solutions');
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
           assert.match(await page.locator('.tools-assessment').innerText(), /Not every dog needs every tool/);
           assert.ok(await page.evaluate(() => document.querySelector('.tools-assessment').getBoundingClientRect().top < document.querySelector('.tool-card').getBoundingClientRect().top));
-          assert.equal(await page.locator('.tool-card').count(), 4);
+          assert.equal(await page.locator('.tool-card').count(), 5);
           for (const [i,card] of (await page.locator('.tool-card').all()).entries()) {
             const image = card.locator('img'), link = card.locator('.tool-purchase');
             assert.ok((await image.getAttribute('alt')).length > 15);
@@ -89,7 +91,7 @@ try {
           await page.locator('h1').scrollIntoViewIfNeeded();
           await page.screenshot({ path: `test-results/tools-of-the-trade-${name}-${width}.png`, fullPage: true });
           assert.deepEqual(errors, []);
-          console.log(`PASS ${name}/${width}: assessment above products; four verified links and photos; keyboard; responsive layout; both mobile navigation controls where present; no writes.`);
+          console.log(`PASS ${name}/${width}: assessment above products; five verified links and photos; keyboard; responsive layout; both mobile navigation controls where present; no writes.`);
         } finally { await context.close(); }
       }
     } finally { await browser.close(); }

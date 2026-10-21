@@ -5,7 +5,7 @@ import { TRAINING_TOOLS } from '../../shared/training-tools';
 import './tools-of-the-trade.css';
 
 export default function ToolsOfTheTradePage() {
-  return <Page className="tools-page" title="Tools of the trade." eyebrow="THE BRAVO APPROACH" intro="A closer look at the equipment that may support your dog’s individual training plan.">
+  return <Page className="tools-page" title="Tools of the trade." eyebrow="THE BRAVO APPROACH" intro="Tools for Bravo’s basic through advanced obedience courses and training.">
     <Editable as="section" contentKey="tools-assessment" className="tools-assessment" aria-labelledby="tools-assessment-title">
       <Editable as="p" contentKey="tools-assessment-eyebrow" canEditText className="kicker gold">ASSESSMENT COMES FIRST</Editable>
       <Editable as="h2" contentKey="tools-assessment-title" canEditText id="tools-assessment-title">We assess your dog first. We only use the tools your dog needs.</Editable>
