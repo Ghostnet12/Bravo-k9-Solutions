@@ -1,7 +1,8 @@
 import mongoose from 'mongoose';
+import { waitUntil } from '@vercel/functions';
 import { ALL_MODELS, Settings } from './models.js';
 import { DEFAULT_SCHEDULE } from './scheduling.js';
-let pending;
+let pending, connectionPending;
 function databaseIssue(error, phase) {
   // Atlas may return code 8000 for an authentication failure rather than code 18.
   // Inspect the message locally for this known pattern, but never log or return it.
@@ -11,13 +12,14 @@ function databaseIssue(error, phase) {
   if (['ENOTFOUND', 'EAI_AGAIN', 'ECONNREFUSED', 'ETIMEDOUT', 'ENODATA', 'ESERVFAIL', 'ETIMEOUT'].includes(error?.code) || ['MongoServerSelectionError', 'MongooseServerSelectionError', 'MongoNetworkError'].includes(error?.name)) return 'database_unreachable';
   return phase === 'initialize' ? 'initialization_failed' : 'connection_failed';
 }
-export async function connectDb() {
+export async function connectDb({ statusOnly = false } = {}) {
   if (!process.env.MONGODB_URI) throw Object.assign(new Error('Accounts and scheduling are not connected yet. Please call Bravo at (605) 824-2767.'), { status: 503, databaseIssue: 'missing_configuration' });
   if (!pending) {
     let phase = 'connect';
     const started = performance.now();
     let connected;
-    pending = Promise.resolve().then(() => mongoose.connect(process.env.MONGODB_URI, { dbName: process.env.MONGODB_DB || 'bravo_k9', serverSelectionTimeoutMS: 5000, maxPoolSize: 5 })).then(async () => {
+    connectionPending = Promise.resolve().then(() => mongoose.connect(process.env.MONGODB_URI, { dbName: process.env.MONGODB_DB || 'bravo_k9', serverSelectionTimeoutMS: 5000, maxPoolSize: 5 }));
+    pending = connectionPending.then(async () => {
       connected = performance.now();
       phase = 'initialize';
       const modelsStarted = performance.now();
@@ -40,6 +42,14 @@ export async function connectDb() {
       throw Object.assign(new Error('Bravo’s account service is temporarily unavailable. Please try again or call us.'), { status: 503, databaseIssue: issue });
     });
   }
-  await pending;
+  if (statusOnly) {
+    // GET /api/live returns existing state. It must not wait for unrelated
+    // collection/index initialization. Keep that work alive on Vercel; every
+    // other caller still awaits the full barrier before accounts or bookings.
+    const initialization = pending.catch(() => {});
+    if (process.env.VERCEL) waitUntil(initialization);
+    try { await connectionPending; }
+    catch (error) { throw Object.assign(new Error('Bravo’s account service is temporarily unavailable. Please try again or call us.'), { status: 503, databaseIssue: databaseIssue(error, 'connect') }); }
+  } else await pending;
 }
 export async function transaction(work) { return mongoose.connection.transaction(work); }

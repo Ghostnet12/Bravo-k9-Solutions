@@ -9,6 +9,7 @@ import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import app from '../server/app.js';
 import { User, Settings, Booking, Slot, Lesson, Subscription, StripeEvent } from '../server/models.js';
 import { processStripeEvent } from '../server/payments.js';
+import { connectDb } from '../server/db.js';
 const origin = 'http://localhost:5173';
 test('persistent accounts, conflict protection, ownership, staff tools, and billing events', { timeout: 180000 }, async t => {
   const replica = await MongoMemoryReplSet.create({ replSet: { count: 1 }, binary: { version: '8.0.5' } });
@@ -20,6 +21,25 @@ test('persistent accounts, conflict protection, ownership, staff tools, and bill
   const alice = request.agent(app), bob = request.agent(app);
   const post = (agent,url,body) => agent.post(url).set('Origin',origin).send(body);
   let aliceId;
+  await t.test('cold live status does not wait for unrelated model initialization; other requests still do', async () => {
+    const originalInit = Lesson.init;
+    let release;
+    const held = new Promise(resolve => { release = resolve; });
+    Lesson.init = async function () { await held; return originalInit.call(this); };
+    let ready = false;
+    const fullReadiness = connectDb().then(() => { ready = true; });
+    try {
+      const status = await request(app).get('/api/live').timeout(10000).expect(200);
+      assert.equal(status.body.availability, 'available');
+      assert.deepEqual(status.body.sessions, []);
+      assert.match(status.headers['server-timing'], /^database;dur=\d+, snapshot;dur=\d+$/);
+      assert.equal(ready, false, 'status can return while unrelated initialization is held');
+      assert.equal(startupLogs.length, 0);
+    } finally { release(); Lesson.init = originalInit; }
+    await fullReadiness;
+    assert.equal(ready, true);
+    assert.equal(startupLogs.length, 1);
+  });
   await t.test('real registration and session cookies; injected role ignored', async () => {
     const a = await post(alice,'/api/auth/register',{ name:'Alice Test', email:'alice@example.test', password:'test-long-password-123', role:'staff' }).expect(201);
     assert.equal(startupLogs.length, 1);

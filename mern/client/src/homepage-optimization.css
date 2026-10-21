@@ -105,3 +105,11 @@
 @media(max-width:700px){.cinema-home .hero-booking-facts{width:100%;max-width:none;margin-top:14px;padding-top:12px;border-top:1px solid #ba9a6444;background:#080808;font-size:13px}.cinema-home.conversion-home .polish-hero-actions .cinema-link{border:0;background:transparent;justify-content:flex-start;text-decoration:underline;text-underline-offset:4px}}
 
 .site-content-owner .cinema-home.conversion-home .cinema-hero-baseline{display:flex}
+/* One proof section, with optional context instead of repeated full sections. */
+.home-results .proof-stories-details{border-block:1px solid var(--line,#ba9a6440);margin:20px 0;padding:4px 0}
+.home-results .proof-stories-details>summary{min-height:48px;padding:14px 0;cursor:pointer;color:var(--gold-light,#d2b57f);font-weight:600;line-height:1.5}
+.home-results .proof-stories-details>summary:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.home-results .proof-photos{padding:24px 0 8px}
+.home-results .proof-photos .cinema-section-heading{margin-bottom:24px}
+.home-results .proof-photos h3{font:400 clamp(1.6rem,3vw,2.5rem)/1.15 'Bebas Neue',sans-serif;margin:8px 0}
+.home-routine-updates{margin-top:32px}
