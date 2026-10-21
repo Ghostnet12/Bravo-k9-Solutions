@@ -10,7 +10,7 @@ import { SERVICES } from '../shared/catalog.js';
 const dist = fileURLToPath(new URL('../client/dist/', import.meta.url));
 const html = await readFile(`${dist}/bravo-shell.html`, 'utf8');
 const trainerId = '111111111111111111111111';
-let actor = null, writes = [], availabilityReads = 0, stale = false, liveError = false;
+let actor = null, writes = [], availabilityReads = 0, stale = false, liveError = false, passwordSetup = false;
 const fixtureUser = { id: 'client-a', name: 'Fixture Client', role: 'member', phone: '6055550100', address: 'Fixture address' };
 const app = express(); app.use(express.json());
 app.use('/api', (req, res) => {
@@ -19,7 +19,8 @@ app.use('/api', (req, res) => {
   if (req.method !== 'GET') writes.push({ path, body: req.body });
   if (path === '/config') data = { connected: true, paymentsReady: false, services: SERVICES, lessonLibrary: { open: false }, schedule: { enabled: true, weekdays: [1,2,3,4,5], hours: ['09:00','10:00'] } };
   if (path === '/auth/me') data = { user: actor, services: [], membership: { active: false } };
-  if (path === '/auth/login') { actor = fixtureUser; data = { user: actor }; }
+  if (path === '/auth/login') { actor = { ...fixtureUser, mustChangePassword: passwordSetup }; data = { user: actor }; }
+  if (path === '/auth/password-setup') { actor = { ...actor, mustChangePassword: false }; data = { user: actor }; }
   if (path === '/auth/logout') { actor = null; data = { ok: true }; }
   if (path === '/team') data = { team: [{ id: trainerId, name: 'Fixture Trainer', title: 'Private dog trainer', role: 'staff' }] };
   if (path === '/trainers') data = { trainers: [{ id: trainerId, name: 'Fixture Trainer', limit: 5, spotsRemaining: 4, full: false }] };
@@ -41,7 +42,7 @@ try {
     if (process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(name)) continue;
     const browser = await engine.launch({ ...(name === 'chromium' ? { args: ['--no-sandbox'] } : {}) });
     try { for (const width of (process.env.BRAVO_REPRODUCE ? [390] : [360,390,768,1440])) {
-      actor = null; writes = []; availabilityReads = 0; stale = false; liveError = false;
+      actor = null; writes = []; availabilityReads = 0; stale = false; liveError = false; passwordSetup = width === 390;
       const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: 'reduce' });
       await context.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
       const page = await context.newPage(); page.setDefaultTimeout(10000);
@@ -103,7 +104,18 @@ try {
         await navigate(() => page.goForward()); await page.getByLabel('Name or email',{exact:true}).waitFor();
         await navigate(() => page.reload()); await page.getByRole('region',{name:'Your unsent request'}).waitFor();
         await page.getByLabel('Name or email',{exact:true}).fill('fixture@example.test');await page.getByLabel('Password',{exact:true}).fill('fixture-password-only');
-        await page.locator('form').getByRole('button',{name:'Sign in',exact:true}).click();await review();
+        await page.locator('form').getByRole('button',{name:'Sign in',exact:true}).click();
+        if (passwordSetup) {
+          await page.getByRole('heading',{name:'Create your password.',exact:true}).waitFor();
+          await navigate(() => page.reload());await page.getByRole('heading',{name:'Create your password.',exact:true}).waitFor();
+          assert.match(await page.getByRole('region',{name:'Your unsent request'}).innerText(),/Biscuit[\s\S]*Fixture Trainer[\s\S]*10:00 AM/);
+          assert.equal(await page.getByRole('heading',{name:'Review your first visit.',exact:true}).count(),0,'password setup still gates the request');
+          await assertFit('Password setup');
+          await page.getByLabel('New password',{exact:true}).fill('fixture-new-password-only');await page.getByLabel('Confirm new password',{exact:true}).fill('fixture-new-password-only');
+          await page.getByRole('button',{name:'Save password & return to request',exact:true}).click();
+          assert.equal(writes.filter(w=>w.path==='/auth/password-setup').length,1);
+        }
+        await review();
         assert.equal(await page.getByLabel('Dog’s name',{exact:true}).inputValue(),'Biscuit');
         assert.equal(await page.getByLabel('Anything the team should know?',{exact:true}).inputValue(),'Keep this draft through navigation.');
         await navigate(() => page.reload());await review();assert.match(await page.locator('.guided-visit-summary').innerText(),/Fixture Trainer[\s\S]*10:00 AM/);await assertFit('Review');
@@ -127,7 +139,7 @@ try {
           liveError=true;await navigate(() => page.reload());await page.getByText('Live status is temporarily unavailable. Reconnecting…',{exact:true}).waitFor();assert.equal(await page.getByRole('heading',{name:'OUT IN THE FIELD.',exact:true}).count(),0,'failed status is never presented as offline');liveError=false;
         }
         assert.equal(writes.filter(w=>w.path==='/bookings'||w.path.includes('checkout')).length,0);assert.deepEqual(errors, []);
-        console.log(`PASS ${name}/${width}: four stages; keyboard; date/time proximity; Back/Forward/refresh/auth; resume/discard; account isolation; availability recheck; home and complete guide layouts. No real writes.`);
+        console.log(`PASS ${name}/${width}: four stages; keyboard; date/time proximity; Back/Forward/refresh/auth${passwordSetup ? ' including required password setup' : ''}; resume/discard; account isolation; availability recheck; home and complete guide layouts. No real writes.`);
       } catch (error) {
         await page.screenshot({path:`test-results/booking-continuity-${name}-${width}-failure.png`,fullPage:true});
         await writeFile(`test-results/booking-continuity-${name}-${width}-failure.json`,JSON.stringify({error:error.message,errors,navigationDiagnostics,text:await page.locator('body').innerText()},null,2));
