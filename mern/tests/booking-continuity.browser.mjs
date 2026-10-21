@@ -113,9 +113,9 @@ try {
           await assertFit('Password setup');
           await page.getByLabel('New password',{exact:true}).fill('fixture-new-password-only');await page.getByLabel('Confirm new password',{exact:true}).fill('fixture-new-password-only');
           await page.getByRole('button',{name:'Save password & return to request',exact:true}).click();
-          assert.equal(writes.filter(w=>w.path==='/auth/password-setup').length,1);
         }
         await review();
+        if (passwordSetup) assert.equal(writes.filter(w=>w.path==='/auth/password-setup').length,1,'one completed password setup returns to the saved review');
         assert.equal(await page.getByLabel('Dog’s name',{exact:true}).inputValue(),'Biscuit');
         assert.equal(await page.getByLabel('Anything the team should know?',{exact:true}).inputValue(),'Keep this draft through navigation.');
         await navigate(() => page.reload());await review();assert.match(await page.locator('.guided-visit-summary').innerText(),/Fixture Trainer[\s\S]*10:00 AM/);await assertFit('Review');
