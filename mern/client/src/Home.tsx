@@ -130,6 +130,7 @@ export default function Home() {
         <Editable as="p" contentKey="copy-home-10" canEditText className="cinema-eyebrow">THE BRAVO APPROACH</Editable>
         <Editable as="h2" contentKey="cinema-method-title" canEditText id="method-title">Understand the dog.<br/><span>Build from there.</span></Editable>
         <Editable as="p" contentKey="cinema-method-copy" canEditText>We start with the dog in front of us—their personality, instincts, and environment. Then we build trust through clear, consistent communication.</Editable>
+        <Editable as={Link} contentKey="home-tools-of-the-trade" canEditLink canEditText className="cinema-text-link" to="/tools-of-the-trade">Explore our tools of the trade →</Editable>
         <div className="cinema-method-signature"><Editable as="span" contentKey="copy-home-11" canEditText>Trust.</Editable><Editable as="span" contentKey="copy-home-12" canEditText>Train.</Editable><Editable as="span" contentKey="copy-home-13" canEditText>Deploy.</Editable></div>
       </Editable>
 
