@@ -132,6 +132,13 @@ try {
           await visit(origin);await page.locator('.goal-proof figcaption').waitFor();await settleApi();
           const bookingAction=await selectGoal(label,expected);
           await follow(bookingAction,expected);
+          if(program==='walking'){
+            // The previous training comparison entered two dogs. A different
+            // program must offer a choice before replacing that unsent request.
+            await page.getByRole('heading',{name:'You have an unsent request.',exact:true}).waitFor();
+            assert.equal(await page.getByRole('link',{name:'Resume my request',exact:true}).getAttribute('href'),'/portal?resume=1');
+            await page.getByRole('button',{name:'Discard draft and start again',exact:true}).click();
+          }
           if(program==='training'){
             const field=page.getByRole('combobox',{name:'What would you like help with?',exact:true});
             await field.waitFor();assert.equal(await field.inputValue(),focus);
