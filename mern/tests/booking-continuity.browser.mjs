@@ -213,6 +213,12 @@ try {
       { failure: 'login-response', register: true },
       { failure: 'login-response', discard: true },
       { failure: 'login-response', switchAccount: true },
+      { failure: '', direct: true },
+      { failure: '', direct: true, register: true },
+      { failure: '', direct: true, passwordSetup: true },
+      { failure: '', direct: true, next: '/schedule' },
+      { failure: 'login-response', direct: true },
+      { failure: 'auth-refresh', direct: true, passwordSetup: true },
     ]) {
       actor = null; writes = []; stale = false; recoveredBooking = null; failNextAuthRead = false;
       handoffFailure = scenario.failure; passwordSetup = !!scenario.passwordSetup;
@@ -229,7 +235,7 @@ try {
       }, { trainerId });
       const handoffPage = await handoffContext.newPage(); handoffPage.setDefaultTimeout(10000);
       try {
-        await handoffPage.goto(`${origin}/account?next=${encodeURIComponent('/portal?resume=1')}`);
+        await handoffPage.goto(`${origin}/account${scenario.direct ? scenario.next ? `?next=${encodeURIComponent(scenario.next)}` : '' : `?next=${encodeURIComponent('/portal?resume=1')}`}`);
         await handoffPage.getByRole('region', { name: 'Your unsent request', exact: true }).waitFor();
         if (scenario.register) {
           await handoffPage.getByRole('button', { name: 'Create account', exact: true }).click();
@@ -238,6 +244,23 @@ try {
         } else await handoffPage.getByLabel('Name or email', { exact: true }).fill('fixture@example.test');
         await handoffPage.getByLabel('Password', { exact: true }).fill('fixture-password-only');
         await handoffPage.locator('form').getByRole('button', { name: scenario.register ? 'Create my account' : 'Sign in', exact: true }).click();
+        if (!scenario.failure) {
+          if (scenario.passwordSetup) {
+            await handoffPage.getByRole('heading', { name: 'Create your password.', exact: true }).waitFor();
+            await handoffPage.getByLabel('New password', { exact: true }).fill('fixture-new-password-only');
+            await handoffPage.getByLabel('Confirm new password', { exact: true }).fill('fixture-new-password-only');
+            await handoffPage.getByRole('button', { name: 'Save password & return to request', exact: true }).click();
+          }
+          if (scenario.next) { await handoffPage.waitForURL(`${origin}${scenario.next}`); await handoffPage.goto(`${origin}/portal?resume=1`); }
+          await handoffPage.getByRole('heading', { name: 'Review your first visit.', exact: true }).waitFor();
+          assert.equal(await handoffPage.getByLabel('Dog’s name', { exact: true }).inputValue(), 'Handoff fixture');
+          assert.match(await handoffPage.locator('.guided-visit-summary').innerText(), /Fixture Trainer[\s\S]*10:00 AM/);
+          await handoffPage.reload(); await handoffPage.getByRole('heading', { name: 'Review your first visit.', exact: true }).waitFor();
+          assert.equal(await handoffPage.getByLabel('Anything the team should know?', { exact: true }).inputValue(), 'Preserve this handoff');
+          assert.equal(writes.filter(write => write.path === '/bookings' || write.path.includes('checkout')).length, 0);
+          console.log(`PASS ${name}/390: ordinary account ${scenario.register ? 'registration' : 'sign-in'}${scenario.passwordSetup ? ' with required password setup' : ''}${scenario.next ? ' with an explicit schedule destination' : ''} preserves the request and return path. No bookings or charges.`);
+          continue;
+        }
         await handoffPage.getByText(scenario.failure === 'auth-refresh' ? 'Fixture account refresh failed' : 'Fixture sign-in response lost', { exact: true }).waitFor();
         handoffFailure = ''; await handoffPage.reload();
         if (scenario.passwordSetup) {
@@ -250,7 +273,7 @@ try {
         assert.ok(!(await handoffPage.locator('body').innerText()).includes('Handoff fixture'), 'pending details require an explicit claim');
         await handoffPage.reload();
         await handoffPage.getByRole('button', { name: 'Resume request for this account', exact: true }).waitFor();
-        if (!scenario.register && !scenario.discard && !scenario.switchAccount && !scenario.passwordSetup) {
+        if (!scenario.direct && !scenario.register && !scenario.discard && !scenario.switchAccount && !scenario.passwordSetup) {
           for (const width of [360,390,768,1440]) {
             await handoffPage.setViewportSize({ width, height: 900 });
             assert.ok(await handoffPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `pending handoff fits ${width}px`);
@@ -280,7 +303,7 @@ try {
           assert.equal(await handoffPage.getByLabel('Anything the team should know?', { exact: true }).inputValue(), 'Preserve this handoff');
         }
         assert.equal(writes.filter(write => write.path === '/bookings' || write.path.includes('checkout')).length, 0);
-        console.log(`PASS ${name}/390: ambiguous ${scenario.register ? 'registration' : scenario.failure}${scenario.passwordSetup ? ' with required password setup' : ''} preserves the pending handoff with ${scenario.switchAccount ? 'account isolation' : scenario.discard ? 'explicit discard' : 'explicit resume'}, including refresh. No bookings or charges.`);
+        console.log(`PASS ${name}/390: ${scenario.direct ? 'ordinary account route: ' : ''}ambiguous ${scenario.register ? 'registration' : scenario.failure}${scenario.passwordSetup ? ' with required password setup' : ''} preserves the pending handoff with ${scenario.switchAccount ? 'account isolation' : scenario.discard ? 'explicit discard' : 'explicit resume'}, including refresh. No bookings or charges.`);
       } catch (error) {
         await handoffPage.screenshot({path:`test-results/booking-handoff-${name}-${scenario.register ? 'registration' : scenario.discard ? 'discard' : scenario.switchAccount ? 'switch-account' : scenario.failure}-failure.png`,fullPage:true});
         throw error;

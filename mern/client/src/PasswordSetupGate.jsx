@@ -8,7 +8,8 @@ import { Page, Notice } from './ui';
 
 export default function PasswordSetupGate({ children }) {
   const { user, refreshUser, signOut, bookingDraft, hasPendingBookingHandoff } = useBravo(), navigate = useNavigate(), { pathname, search } = useLocation();
-  const returningBooking = (!!bookingDraft || hasPendingBookingHandoff) && (pathname === '/portal' || /^\/portal(?:\?|$)/.test(new URLSearchParams(search).get('next') || ''));
+  const next = new URLSearchParams(search).get('next');
+  const returningBooking = (!!bookingDraft || hasPendingBookingHandoff) && (pathname === '/portal' || /^\/portal(?:\?|$)/.test(next || '') || (pathname === '/account' && !next));
   const [busy, setBusy] = useState(false), [error, setError] = useState('');
   // The public guide explains first-time password setup without unlocking member screens.
   if (!user?.mustChangePassword || pathname === '/how-to') return children;
