@@ -18,7 +18,7 @@ html { scroll-padding-top: 96px; }
   .app-header.bravo-nav .menu-toggle{font-size:0!important;border:0;background:transparent;padding:8px;min-width:44px;border-radius:0;margin-left:0}
   .app-header.bravo-nav .menu-lines i{width:24px;height:2px;background:#fff}
   .app-header.bravo-nav .conversion-header-phone{font-size:9px}
-  .app-header.bravo-nav:has(nav.is-open){max-height:calc(100dvh - var(--ad-dock-height,0px) - 76px);overflow:auto}
+  .app-header.bravo-nav:has(nav.is-open){max-height:calc(100dvh - var(--ad-dock-height,0px) - 76px);overflow:auto;background:#101010}
   .cinema-home.conversion-home .cinema-hero-media{inset:74px 0 0}
   .mobile-home-nav{display:grid}
   .app-header.bravo-nav #bravo-navigation .nav-workspace>.nav-book{display:inline-flex!important}

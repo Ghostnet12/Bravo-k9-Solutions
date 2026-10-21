@@ -12,6 +12,7 @@ The production homepage placed the equipment shopping card immediately after the
 - Keep additional-dog pricing and renewal terms above the booking action on desktop by assigning their grid row explicitly, matching the reading order.
 - Put the current monthly training offer directly after the hero. Follow with operational announcements/live status, service choices, reviews, trainers, first-visit answers and a booking invitation.
 - Place the approach and Tools card together after that decision path, followed by videos, real-session photographs, workshops, FCI and online education. The same DOM order serves mobile, desktop and server-rendered pages.
+- Use a solid background for the expanded mobile menu; WebKit screenshots revealed page text bleeding through the previous translucent surface.
 - Expose Reviews directly beside Training & Pricing. Keep existing operational, account, how-to and role-specific destinations.
 - Add Services to the mobile shortcut bar. Its anchor clears the fixed header, works from another route, and restores focus when used again after scrolling. Live Cams remains in the main menu.
 - Retain Bravo’s black-and-gold styling, typography, approved media and all owner content keys. No payment, booking, account, membership, credit, database or streaming logic changes.
