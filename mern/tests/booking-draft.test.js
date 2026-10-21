@@ -40,3 +40,10 @@ test('a resolved handoff cannot transfer to another account or survive expiry', 
  assert.equal(readBookingHandoff('user:b',{store,now:101}),null);assert.equal(readBookingDraft('user:b',{store,now:101}),null);assert.equal(store.getItem(BOOKING_DRAFT_KEY),undefined);
  writeBookingDraft('guest',fixture,{store,now:100,handoff:true});assert.equal(readBookingHandoff('user:a',{store,now:100+DRAFT_TTL_MS+1}),null);assert.equal(store.getItem(BOOKING_DRAFT_KEY),undefined);
 });
+test('an expired sign-in hides an account draft without deleting it before reauthentication', () => {
+ const store=memory();writeBookingDraft('user:a',fixture,{store,now:100});
+ assert.equal(readBookingDraft('guest',{store,now:101}),null,'signed-out readers cannot see account details');
+ assert.ok(store.getItem(BOOKING_DRAFT_KEY),'session expiry must not erase the account draft');
+ assert.equal(readBookingDraft('user:a',{store,now:102}).requestKey,fixture.requestKey,'the same account can restore the request');
+ assert.equal(readBookingDraft('user:b',{store,now:103,claimGuest:true}),null);assert.equal(store.getItem(BOOKING_DRAFT_KEY),undefined,'a confirmed different account clears the draft');
+});

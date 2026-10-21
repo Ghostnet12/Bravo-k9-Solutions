@@ -60,12 +60,18 @@ export function readBookingDraft(owner, { claimGuest = false, now = Date.now(), 
   const envelope = readEnvelope(now, store);
   if (!envelope) return null;
   if (!(envelope.owner === owner || (claimGuest && envelope.owner === 'guest'))) {
+    // Session expiry is not a deliberate discard or a confirmed account switch.
+    if (owner === 'guest' && typeof envelope.owner === 'string' && envelope.owner.startsWith('user:')) return null;
     try { store?.removeItem(BOOKING_DRAFT_KEY); } catch { /* Optional storage. */ }
     return null;
   }
   // An ambiguous handoff bound to an account still needs its explicit choice.
   if (envelope.handoff === true && envelope.owner !== 'guest') return null;
   return envelope.draft;
+}
+export function hasAccountBookingDraft({ now = Date.now(), store = storage() } = {}) {
+  const envelope = readEnvelope(now, store);
+  return typeof envelope?.owner === 'string' && envelope.owner.startsWith('user:');
 }
 export function readBookingHandoff(owner, { now = Date.now(), store = storage() } = {}) {
   const envelope = readEnvelope(now, store);

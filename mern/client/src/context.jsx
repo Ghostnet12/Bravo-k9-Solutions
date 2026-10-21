@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { api } from './api';
-import { readBookingDraft, readBookingHandoff, writeBookingDraft } from './booking-draft';
+import { hasAccountBookingDraft, readBookingDraft, readBookingHandoff, writeBookingDraft } from './booking-draft';
 import { publicCatalogSnapshot } from '../../shared/catalog';
 const Context = createContext(null);
 const noMembership = { active: false, manual: false, onlineAccess: false };
@@ -40,13 +40,13 @@ export function AppProvider({ children }) {
     return () => { current = false; clearInterval(timer); };
   }, [user?.id, user?.mustChangePassword, refreshNotifications]);
   const [membership, setMembership] = useState(noMembership);
-  const draftState = useRef({ owner: null, revision: 0, draft: null, pendingDraft: null, authHandoff: false });
+  const draftState = useRef({ owner: null, revision: 0, draft: null, pendingDraft: null, authHandoff: false, locked: false });
   const [draftSnapshot, setDraftSnapshot] = useState(draftState.current);
   const { owner: draftOwner, revision: draftRevision, draft: bookingDraft } = draftSnapshot;
   const setBookingDraft = useCallback(value => {
     const current = draftState.current;
     // A previous account/component cannot write into the newly resolved scope.
-    if (!draftOwner || current.owner !== draftOwner || current.revision !== draftRevision || current.pendingDraft) return;
+    if (!draftOwner || current.owner !== draftOwner || current.revision !== draftRevision || current.pendingDraft || current.locked) return;
     const draft = writeBookingDraft(draftOwner, value, { handoff: current.authHandoff });
     draftState.current = { ...current, draft };
     setDraftSnapshot(draftState.current);
@@ -66,7 +66,7 @@ export function AppProvider({ children }) {
   }, [draftOwner, draftRevision]);
   const discardBookingDraft = useCallback(() => {
     writeBookingDraft(null, null);
-    draftState.current = { ...draftState.current, draft: null, pendingDraft: null, authHandoff: false, revision: draftState.current.revision + 1 };
+    draftState.current = { ...draftState.current, draft: null, pendingDraft: null, authHandoff: false, locked: false, revision: draftState.current.revision + 1 };
     setDraftSnapshot(draftState.current);
   }, []);
   const authGeneration = useRef(0);
@@ -78,15 +78,16 @@ export function AppProvider({ children }) {
       const owner = data.user?.id ? `user:${data.user.id}` : 'guest';
       if (draftState.current.owner !== owner) {
         const current = draftState.current;
+        const locked = owner === 'guest' && hasAccountBookingDraft();
         const claimGuest = claimBookingDraft && current.owner === 'guest' && !!data.user;
         const storedHandoff = readBookingHandoff(owner);
         const pendingDraft = !claimGuest && data.user ? storedHandoff : null;
         const authHandoff = !data.user && !!storedHandoff;
-        const draft = pendingDraft ? null : readBookingDraft(owner, { claimGuest }) || (claimGuest ? current.draft : null);
+        const draft = pendingDraft || locked ? null : readBookingDraft(owner, { claimGuest }) || (claimGuest ? current.draft : null);
         // Bind an interrupted guest handoff to the resolved account without
         // exposing its fields or letting a blank form replace it before consent.
-        writeBookingDraft(owner, pendingDraft || draft, { handoff: !!pendingDraft || authHandoff });
-        draftState.current = { owner, draft, pendingDraft, authHandoff, revision: current.revision + 1 };
+        if (!locked) writeBookingDraft(owner, pendingDraft || draft, { handoff: !!pendingDraft || authHandoff });
+        draftState.current = { owner, draft, pendingDraft, authHandoff, locked, revision: current.revision + 1 };
         setDraftSnapshot(draftState.current);
       }
       setUser(data.user); setServices(data.services || []); setMembership(data.user ? data.membership || noMembership : noMembership);
@@ -97,7 +98,7 @@ export function AppProvider({ children }) {
     authGeneration.current += 1;
     notificationUser.current = null;
     writeBookingDraft(null, null);
-    draftState.current = { owner: 'guest', revision: draftState.current.revision + 1, draft: null, pendingDraft: null, authHandoff: false };
+    draftState.current = { owner: 'guest', revision: draftState.current.revision + 1, draft: null, pendingDraft: null, authHandoff: false, locked: false };
     setDraftSnapshot(draftState.current);
     readNotifications.current = new Set();
     setUser(null); setServices([]); setMembership(noMembership); setNotifications([]);
@@ -108,6 +109,6 @@ export function AppProvider({ children }) {
     ...(service.id === 'online' ? { lessonLibrary: { ...old?.lessonLibrary, lessonCents: service.cents, bundleCents: service.bundleCents } } : {}),
   })), []);
   useEffect(() => { refreshConfig().catch(() => setConfig(old => ({ ...old, connected: false, paymentsReady: false }))); refreshUser().catch(() => {}); }, [refreshUser, refreshConfig]);
-  return <Context.Provider value={{ signOut, notifications, refreshNotifications, markNotificationsRead, config, user, services, membership, setUser, authReady, refreshUser, refreshConfig, updateService, bookingDraft, setBookingDraft, discardBookingDraft, draftOwner, draftRevision, beginBookingHandoff, resumeBookingHandoff, hasPendingBookingHandoff: !!draftSnapshot.pendingDraft }}>{children}</Context.Provider>;
+  return <Context.Provider value={{ signOut, notifications, refreshNotifications, markNotificationsRead, config, user, services, membership, setUser, authReady, refreshUser, refreshConfig, updateService, bookingDraft, setBookingDraft, discardBookingDraft, draftOwner, draftRevision, beginBookingHandoff, resumeBookingHandoff, hasPendingBookingHandoff: !!draftSnapshot.pendingDraft, hasLockedBookingDraft: draftSnapshot.locked }}>{children}</Context.Provider>;
 }
 export const useBravo = () => useContext(Context);

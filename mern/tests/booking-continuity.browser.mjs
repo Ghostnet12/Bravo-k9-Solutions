@@ -25,7 +25,7 @@ app.use('/api', (req, res) => {
     data = { user: actor, services: [], membership: { active: false } };
   }
   if (path === '/auth/login' || path === '/auth/register') {
-    actor = { ...fixtureUser, mustChangePassword: passwordSetup }; data = { user: actor };
+    actor = { ...fixtureUser, ...(req.body.identifier === 'different@example.test' ? { id: 'client-b', name: 'Different Client' } : {}), mustChangePassword: passwordSetup }; data = { user: actor };
     if (handoffFailure === 'auth-refresh') failNextAuthRead = true;
     if (handoffFailure === 'login-response') return res.status(503).json({ error: 'Fixture sign-in response lost' });
   }
@@ -285,6 +285,64 @@ try {
         await handoffPage.screenshot({path:`test-results/booking-handoff-${name}-${scenario.register ? 'registration' : scenario.discard ? 'discard' : scenario.switchAccount ? 'switch-account' : scenario.failure}-failure.png`,fullPage:true});
         throw error;
       } finally { await handoffContext.close(); handoffFailure = ''; }
+    }
+    for (const outcome of ['restore', 'discard', 'different-account']) {
+      actor = { ...fixtureUser }; writes = []; stale = false; recoveredBooking = null; failNextAuthRead = false; passwordSetup = false;
+      const expiredContext = await browser.newContext({ viewport: { width: 390, height: 900 }, reducedMotion: 'reduce' });
+      await expiredContext.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+      await expiredContext.addInitScript(({ trainerId }) => {
+        if (sessionStorage.getItem('fixture-expiry-seeded')) return;
+        sessionStorage.setItem('fixture-expiry-seeded', '1');
+        sessionStorage.setItem('bravo-booking-draft-v1', JSON.stringify({ version: 1, owner: 'user:client-a', updatedAt: Date.now(), draft: {
+          entry: 'program=training', ids: ['training'], form: { dogName: 'Private expiry fixture', phone: '6055550100', address: 'Fixture address', notes: 'Keep through sign-in expiry' },
+          visits: [{ date: new Date().toISOString().slice(0,10), time: '10:00', service: 'training' }], trainerId, trainerName: 'Fixture Trainer',
+          introDone: true, bookingStep: 'review', timeConfirmed: true, requestKey: '44444444-4444-4444-8444-444444444444',
+        } }));
+      }, { trainerId });
+      const expiredPage = await expiredContext.newPage(); expiredPage.setDefaultTimeout(10000);
+      try {
+        await expiredPage.goto(`${origin}/portal?resume=1`);
+        await expiredPage.getByRole('heading', { name: 'Review your first visit.', exact: true }).waitFor();
+        actor = null; await expiredPage.reload();
+        await expiredPage.getByRole('heading', { name: 'Sign in to resume your request.', exact: true }).waitFor();
+        assert.ok(!(await expiredPage.locator('body').innerText()).includes('Private expiry fixture'));
+        assert.equal(await expiredPage.evaluate(() => JSON.parse(sessionStorage.getItem('bravo-booking-draft-v1')).owner), 'user:client-a');
+        await expiredPage.goto(`${origin}/portal?program=walking`); await expiredPage.reload();
+        await expiredPage.getByRole('heading', { name: 'Sign in to resume your request.', exact: true }).waitFor();
+        if (outcome === 'restore') {
+          for (const width of [360,390,768,1440]) {
+            await expiredPage.setViewportSize({ width, height: 900 });
+            assert.ok(await expiredPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `signed-out draft fits ${width}px`);
+            await expiredPage.screenshot({path:`test-results/booking-expiry-${name}-${width}.png`,fullPage:true});
+          }
+          await expiredPage.setViewportSize({ width: 390, height: 900 });
+        }
+        if (outcome === 'discard') {
+          await expiredPage.getByRole('button', { name: 'Discard saved draft', exact: true }).click();
+          await expiredPage.getByLabel('Dog’s name', { exact: true }).waitFor();
+          assert.equal(await expiredPage.evaluate(() => sessionStorage.getItem('bravo-booking-draft-v1')), null);
+        } else {
+          await expiredPage.getByRole('link', { name: 'Sign in to restore request', exact: true }).focus(); await expiredPage.keyboard.press('Enter');
+          await expiredPage.getByLabel('Name or email', { exact: true }).fill(outcome === 'restore' ? 'fixture@example.test' : 'different@example.test');
+          await expiredPage.getByLabel('Password', { exact: true }).fill('fixture-password-only');
+          await expiredPage.locator('form').getByRole('button', { name: 'Sign in', exact: true }).click();
+          if (outcome === 'restore') {
+            await expiredPage.getByRole('heading', { name: 'Review your first visit.', exact: true }).waitFor();
+            assert.equal(await expiredPage.getByLabel('Dog’s name', { exact: true }).inputValue(), 'Private expiry fixture');
+            assert.match(await expiredPage.locator('.guided-visit-summary').innerText(), /Fixture Trainer[\s\S]*10:00 AM/);
+            await expiredPage.reload(); await expiredPage.getByRole('heading', { name: 'Review your first visit.', exact: true }).waitFor();
+            assert.equal(await expiredPage.getByLabel('Anything the team should know?', { exact: true }).inputValue(), 'Keep through sign-in expiry');
+          } else {
+            await expiredPage.getByLabel('Dog’s name', { exact: true }).waitFor();
+            assert.equal(await expiredPage.getByLabel('Dog’s name', { exact: true }).inputValue(), '');
+            assert.equal(await expiredPage.evaluate(() => sessionStorage.getItem('bravo-booking-draft-v1')), null);
+          }
+        }
+        assert.equal(writes.filter(write => write.path === '/bookings' || write.path.includes('checkout')).length, 0);
+        console.log(`PASS ${name}/390: expired sign-in keeps account details hidden through refresh and new-program navigation; ${outcome} is isolated. No bookings or charges.`);
+      } catch (error) {
+        await expiredPage.screenshot({path:`test-results/booking-expiry-${name}-${outcome}-failure.png`,fullPage:true}); throw error;
+      } finally { await expiredContext.close(); }
     }
     } finally { await browser.close(); }
   }
