@@ -60,6 +60,22 @@ test('owner/staff workspace contracts over HTTP with isolated model mocks', asyn
     if (role) req.set('Cookie', `bravo_session=${digest(role)}`);
     return body === undefined ? req : req.send(method === 'patch' && path.startsWith('/api/admin/users/') ? { currentPassword: password, ...body } : body);
   };
+  await t.test('booking reconciliation matches one validated request key within the signed-in account', async st => {
+    const requestKey = '22222222-2222-4222-8222-222222222222';
+    const records = [
+      { _id: 'saved-request', userId: ids.member, requestKey },
+      { _id: 'different-request', userId: ids.member, requestKey: '33333333-3333-4333-8333-333333333333' },
+    ];
+    st.mock.method(Booking, 'find', filter => query(records.filter(record => record.userId === String(filter.userId) && (!filter.requestKey || record.requestKey === filter.requestKey))));
+    const path = `/api/bookings?requestKey=${requestKey}`;
+    await call(null, 'get', path).expect(401);
+    const own = await call('member', 'get', path).expect(200);
+    assert.deepEqual(own.body.bookings.map(record => record._id), ['saved-request']);
+    for (const role of ['other', 'staff', 'owner']) assert.deepEqual((await call(role, 'get', path).expect(200)).body.bookings, []);
+    await call('member', 'get', '/api/bookings?requestKey=invalid').expect(400);
+    await call('member', 'get', `/api/bookings?requestKey=${requestKey}&requestKey=${requestKey}`).expect(400);
+    assert.equal((await call('member', 'get', '/api/bookings').expect(200)).body.bookings.length, 2, 'normal account listing stays unchanged');
+  });
   await t.test('owner can promote/demote, staff and clients cannot grant access', async () => {
     for (const role of ['member', 'staff']) await call(role, 'patch', `/api/admin/users/${ids.other}`, { role: 'staff' }).expect(403);
     await call('owner', 'patch', `/api/admin/users/${ids.other}`, { role: 'staff' }).expect(200);

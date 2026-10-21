@@ -11,6 +11,7 @@ const dist = fileURLToPath(new URL('../client/dist/', import.meta.url));
 const html = await readFile(`${dist}/bravo-shell.html`, 'utf8');
 const trainerId = '111111111111111111111111';
 let actor = null, writes = [], availabilityReads = 0, stale = false, liveError = false, passwordSetup = false;
+let recoveredBooking = null, loseBookingResponse = false, hideFirstRecovery = false, bookingCreates = 0;
 const fixtureUser = { id: 'client-a', name: 'Fixture Client', role: 'member', phone: '6055550100', address: 'Fixture address' };
 const app = express(); app.use(express.json());
 app.use('/api', (req, res) => {
@@ -30,7 +31,22 @@ app.use('/api', (req, res) => {
   }
   if (path === '/live' && liveError) return res.status(503).json({error:'Fixture unavailable'});
   if (path === '/live') data = { sessions: [], announcements: [], availability: 'available', serverTime: new Date().toISOString() };
-  if (path === '/bookings' && req.method === 'POST') data = { booking: { _id: 'fixture-booking', status: 'requested', paymentStatus: 'unpaid', quote: { dueNowCents: 20000 } } };
+  if (path === '/bookings' && req.method === 'GET' && req.query.requestKey) {
+    const hidden = recoveredBooking && hideFirstRecovery;
+    if (hidden) hideFirstRecovery = false;
+    data = { bookings: !hidden && recoveredBooking?.requestKey === req.query.requestKey ? [recoveredBooking] : [] };
+  }
+  if (path === '/bookings' && req.method === 'POST') {
+    if (!recoveredBooking || recoveredBooking.requestKey !== req.body.requestKey) {
+      bookingCreates++;
+      recoveredBooking = { ...req.body, _id: 'fixture-booking', status: 'requested', paymentStatus: 'unpaid', quote: { dueNowCents: 20000 } };
+    }
+    data = { booking: recoveredBooking };
+    if (loseBookingResponse) {
+      loseBookingResponse = false; stale = true;
+      return res.status(503).json({ error: 'Fixture response lost after saving' });
+    }
+  }
   res.json(data);
 });
 app.use(express.static(dist)); app.get('/{*path}', (_req,res) => res.type('html').send(html));
@@ -145,6 +161,44 @@ try {
         await writeFile(`test-results/booking-continuity-${name}-${width}-failure.json`,JSON.stringify({error:error.message,errors,navigationDiagnostics,text:await page.locator('body').innerText()},null,2));
         throw error;
       } finally { await context.close(); }
-    } } finally { await browser.close(); }
+    }
+    // A committed booking occupies its own slot even if the response was lost.
+    // Reconcile the original key in-place and after refresh, using only this fixture.
+    for (const refreshBeforeRetry of [false, true]) {
+      actor = { ...fixtureUser }; writes = []; stale = false; recoveredBooking = null;
+      bookingCreates = 0; loseBookingResponse = true; hideFirstRecovery = false;
+      const retryContext = await browser.newContext({ viewport: { width: 390, height: 900 }, reducedMotion: 'reduce' });
+      await retryContext.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+      const requestKey = '22222222-2222-4222-8222-222222222222';
+      await retryContext.addInitScript(({ requestKey, trainerId }) => {
+        if (sessionStorage.getItem('fixture-retry-seeded')) return;
+        sessionStorage.setItem('fixture-retry-seeded', '1');
+        sessionStorage.setItem('bravo-booking-draft-v1', JSON.stringify({ version: 1, owner: 'user:client-a', updatedAt: Date.now(), draft: {
+          entry: 'program=training', ids: ['training'], form: { dogName: 'Retry fixture', phone: '6055550100', address: 'Fixture address', notes: '' },
+          visits: [{ date: new Date().toISOString().slice(0,10), time: '10:00', service: 'training' }], trainerId, trainerName: 'Fixture Trainer',
+          introDone: true, bookingStep: 'review', timeConfirmed: true, requestKey,
+        } }));
+      }, { requestKey, trainerId });
+      const retryPage = await retryContext.newPage(); retryPage.setDefaultTimeout(10000);
+      try {
+        await retryPage.goto(`${origin}/portal?resume=1`); await retryPage.waitForLoadState('networkidle');
+        await retryPage.getByRole('button', { name: 'Send my request • no charge', exact: true }).click();
+        await retryPage.getByText('Fixture response lost after saving', { exact: true }).waitFor();
+        assert.equal(bookingCreates, 1, 'the first request committed despite its lost response');
+        if (refreshBeforeRetry) { await retryPage.reload(); await retryPage.waitForLoadState('networkidle'); }
+        else hideFirstRecovery = true; // Commit visibility can race the first reconciliation read.
+        await retryPage.getByRole('button', { name: 'Send my request • no charge', exact: true }).click();
+        await retryPage.getByRole('link', { name: 'View my saved request →', exact: true }).waitFor();
+        assert.equal(bookingCreates, 1, 'retry must recover the original request without another booking');
+        assert.equal(recoveredBooking.requestKey, requestKey);
+        assert.equal(await retryPage.evaluate(() => sessionStorage.getItem('bravo-booking-draft-v1')), null, 'successful recovery clears the draft');
+        assert.equal(writes.filter(write => write.path.includes('checkout')).length, 0);
+        console.log(`PASS ${name}/390: lost booking response reconciles ${refreshBeforeRetry ? 'after refresh' : 'despite a concurrent commit'} with one fixture booking and no charge.`);
+      } catch (error) {
+        await retryPage.screenshot({path:`test-results/booking-retry-${name}-${refreshBeforeRetry ? 'refresh' : 'race'}-failure.png`,fullPage:true});
+        throw error;
+      } finally { await retryContext.close(); }
+    }
+    } finally { await browser.close(); }
   }
 } finally { server.close(); }
