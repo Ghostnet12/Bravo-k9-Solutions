@@ -219,8 +219,10 @@ try {
       { failure: '', direct: true, next: '/schedule' },
       { failure: 'login-response', direct: true },
       { failure: 'auth-refresh', direct: true, passwordSetup: true },
+      { failure: '', direct: true, initialFailure: true },
+      { failure: '', register: true, initialFailure: true },
     ]) {
-      actor = null; writes = []; stale = false; recoveredBooking = null; failNextAuthRead = false;
+      actor = null; writes = []; stale = false; recoveredBooking = null; failNextAuthRead = !!scenario.initialFailure;
       handoffFailure = scenario.failure; passwordSetup = !!scenario.passwordSetup;
       const handoffContext = await browser.newContext({ viewport: { width: 390, height: 900 }, reducedMotion: 'reduce' });
       await handoffContext.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
@@ -236,6 +238,14 @@ try {
       const handoffPage = await handoffContext.newPage(); handoffPage.setDefaultTimeout(10000);
       try {
         await handoffPage.goto(`${origin}/account${scenario.direct ? scenario.next ? `?next=${encodeURIComponent(scenario.next)}` : '' : `?next=${encodeURIComponent('/portal?resume=1')}`}`);
+        if (scenario.initialFailure) {
+          await handoffPage.getByRole('button', { name: 'Retry account check', exact: true }).waitFor();
+          assert.equal(await handoffPage.getByLabel('Name or email', { exact: true }).count(), 0, 'sign-in waits for draft/identity hydration');
+          assert.ok(!(await handoffPage.locator('body').innerText()).includes('Handoff fixture'), 'unresolved identity does not expose stored fields');
+          assert.equal(await handoffPage.evaluate(() => JSON.parse(sessionStorage.getItem('bravo-booking-draft-v1')).draft.form.dogName), 'Handoff fixture');
+          assert.equal(writes.filter(write => write.path === '/auth/login' || write.path === '/auth/register').length, 0);
+          await handoffPage.getByRole('button', { name: 'Retry account check', exact: true }).click();
+        }
         await handoffPage.getByRole('region', { name: 'Your unsent request', exact: true }).waitFor();
         if (scenario.register) {
           await handoffPage.getByRole('button', { name: 'Create account', exact: true }).click();
@@ -258,7 +268,7 @@ try {
           await handoffPage.reload(); await handoffPage.getByRole('heading', { name: 'Review your first visit.', exact: true }).waitFor();
           assert.equal(await handoffPage.getByLabel('Anything the team should know?', { exact: true }).inputValue(), 'Preserve this handoff');
           assert.equal(writes.filter(write => write.path === '/bookings' || write.path.includes('checkout')).length, 0);
-          console.log(`PASS ${name}/390: ordinary account ${scenario.register ? 'registration' : 'sign-in'}${scenario.passwordSetup ? ' with required password setup' : ''}${scenario.next ? ' with an explicit schedule destination' : ''} preserves the request and return path. No bookings or charges.`);
+          console.log(`PASS ${name}/390: ${scenario.initialFailure ? 'failed initial identity read retries safely before ' : 'ordinary account '}${scenario.register ? 'registration' : 'sign-in'}${scenario.passwordSetup ? ' with required password setup' : ''}${scenario.next ? ' with an explicit schedule destination' : ''} preserves the request and return path. No bookings or charges.`);
           continue;
         }
         await handoffPage.getByText(scenario.failure === 'auth-refresh' ? 'Fixture account refresh failed' : 'Fixture sign-in response lost', { exact: true }).waitFor();
