@@ -116,7 +116,10 @@ try {
           await page.waitForURL('**/#reviews');
           await page.locator('#reviews').waitFor();
           if (collapsed) assert.equal(await page.locator('.menu-toggle').getAttribute('aria-expanded'), 'false');
-          await page.goto(origin + '/', { waitUntil: 'networkidle' });
+          // Stay in the customer navigation flow. A hard reload here tears down
+          // the just-mounted homepage's requests and WebKit reports them as errors.
+          await page.locator('header a[href="/"]').click();
+          await page.waitForURL(origin + '/');
           const homeTools = page.locator('.home-tools-card');
           await homeTools.waitFor({ state: 'visible' });
           assert.equal(await homeTools.getAttribute('href'), '/tools-of-the-trade');
@@ -135,7 +138,8 @@ try {
           if (width < 768) {
             // A customer can jump to Services from another route, then return to
             // the same section again after scrolling, without a hidden heading.
-            await page.goto(origin + '/tools-of-the-trade');
+            await page.locator('footer a[href="/tools-of-the-trade"]').click();
+            await page.waitForURL('**/tools-of-the-trade');
             await page.locator('.mobile-home-nav a[href="/#training-programs"]').click();
             await page.waitForURL('**/#training-programs');
             await page.waitForFunction(() => {
