@@ -100,11 +100,15 @@ try {
         await assertSteps('Your dog'); await assertFit('Your dog');
         await page.getByRole('button', {name:'Choose a trainer →',exact:true}).focus(); await page.keyboard.press('Enter');
         await assertSteps('Trainer'); assert.equal(await page.getByLabel('Choose my trainer',{exact:true}).count(),0,'one trainer picker');
-        await page.locator('.guided-trainer-cards button').first().focus(); await page.keyboard.press('Enter');
+        // Let the intentional stage-heading focus finish before keyboard input.
+        await page.locator('#choose-program h2:focus').waitFor();
+        await page.locator('.guided-trainer-cards button:not([disabled])').first().press('Enter');
+        await page.locator('.guided-trainer-cards button[aria-pressed=true]').waitFor();
         assert.equal(await page.locator('.guided-trainer-cards button[aria-pressed=true]').count(),1); await assertFit('Trainer');
         await page.getByRole('button', {name:'Choose a date & time →',exact:true}).click();
         await assertSteps('Date and time'); assert.equal(await page.locator('#choose-dates .step-heading>span').innerText(),'03');
-        await page.locator('.date-grid button').first().focus(); await page.keyboard.press('Enter');
+        await page.locator('#choose-dates h2:focus').waitFor();
+        await page.locator('.date-grid button').first().press('Enter');
         await page.locator('.bulk-times').getByRole('button', {name:/10:00/}).click();
         await assertFit('Date and time');
         const proximity=await page.evaluate(()=>{const dates=document.querySelector('.date-grid').getBoundingClientRect();const times=document.querySelector('.bulk-times').getBoundingClientRect();return times.top-dates.bottom;});assert.ok(proximity<150,'times stay close to dates');
