@@ -1,4 +1,5 @@
 import FieldStories from './FieldStories';
+import { publishedFieldStories } from '../../shared/field-experience';
 import './field-experience.css';
 import { PROOF_TOPICS, proofMatches } from '../../shared/discovery';
 import { Editable } from './SiteContent';
@@ -128,7 +129,10 @@ export default function ProofVideoCarousel({ initialTopic = 'all' }: { initialTo
     card.focus({ preventScroll: true });
   }, [spotlight, storyJump]);
   return <Editable as="div" contentKey="proof-section" ref={root} className="home-work-proof" aria-labelledby="work-proof-title" data-site-image-ignore="" onPointerDown={event => { if ((event.target as Element).closest("dialog")) return; keyboardFocus.current = false; pointerHeld.current = true; if (!(event.target as Element).closest("[data-proof-video],button,a,input")) beginHold(event, null); }} onPointerUp={() => { pointerHeld.current = false; cancelHold(); setInteraction(value => value + 1); }} onPointerCancel={() => { pointerHeld.current = false; cancelHold(); setInteraction(value => value + 1); }} onPointerLeave={() => { pointerHeld.current = false; cancelHold(); }} onPointerMove={event => { if (gesture.current && Math.hypot(event.clientX - gesture.current.x, event.clientY - gesture.current.y) > 12) cancelHold(); }} onWheel={() => setInteraction(value => value + 1)} onKeyDownCapture={() => { keyboardFocus.current = true; }}>
-    <FieldStories clips={clips} onChoose={id => { root.current?.querySelectorAll('video').forEach(video => video.pause()); setTopic('all'); setPaused(true); setSpotlight(id); setStoryJump(value => value + 1); setStatus('Session selected in the video library. Use Play or the Facebook link to watch.'); }}/>
+    {publishedFieldStories(clips).length > 0 && <details className="proof-stories-details" data-proof-action="">
+      <Editable as="summary" contentKey="proof-stories-disclosure" canEditText>Explore the stories behind these sessions</Editable>
+      <FieldStories clips={clips} onChoose={id => { root.current?.querySelectorAll('video').forEach(video => video.pause()); setTopic('all'); setPaused(true); setSpotlight(id); setStoryJump(value => value + 1); setStatus('Session selected in the video library. Use Play or the Facebook link to watch.'); }}/>
+    </details>}
     <div className="home-work-proof-heading"><div><Editable as="h3" contentKey="proof-title" canEditText id="work-proof-title">Video library</Editable></div><Editable as="p" contentKey="proof-intro" canEditText>Filter by training focus, then choose a session to watch.</Editable></div>
     {canEdit && <button type="button" data-proof-action="" onClick={()=>setToolsOpen(true)}>Manage training videos</button>}
     {(!loaded && loading) && <p role="status">Loading videos…</p>}

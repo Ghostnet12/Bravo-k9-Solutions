@@ -51,6 +51,7 @@ try {for(const width of [320,390,768,1440]){
  assert.equal(await page.locator('.goal-finder').isVisible(),false);
  assert.equal(await page.locator('.conversion-goal').filter({hasText:'Aggression'}).getAttribute('href'),'/portal?program=aggression');
  }
+ await page.getByText('Explore the stories behind these sessions', { exact: true }).click();
  assert.equal(await page.locator('.field-story-card').count(),3);
  await page.locator('.field-story-card').first().locator('summary').click();assert.ok(await page.locator('.field-story-card').first().locator('details').getAttribute('open')!==null);
  await page.waitForFunction(()=>{const image=document.querySelector('.field-story-image img');return image?.complete&&image.naturalWidth>0;});

@@ -62,7 +62,12 @@ try {
      await page.screenshot({path:`test-results/optimization-full-${width}.png`,fullPage:true});
      for (const id of ['training','results','reviews','team']) {
        await page.locator(`#${id}`).scrollIntoViewIfNeeded();
-       await page.locator(`#${id} img`).evaluateAll(images=>Promise.all(images.map(img=>img.decode().catch(()=>{}))));
+       // Collapsed stories and off-screen carousel slides intentionally keep
+       // lazy images unloaded. Only await images painted in this screenshot.
+       await page.waitForFunction(selector => [...document.querySelectorAll(selector)].filter(img => {
+         const rect = img.getBoundingClientRect();
+         return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < innerHeight && rect.right > 0 && rect.left < innerWidth;
+       }).every(img => img.complete && img.naturalWidth > 0), `#${id} img`, { timeout: 10000 });
        await page.screenshot({path:`test-results/optimization-${id}-${width}.png`});
      }
      await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));

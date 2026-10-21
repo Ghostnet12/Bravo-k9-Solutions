@@ -61,7 +61,7 @@ try{for(const [engineName,engine] of Object.entries({chromium,webkit})){
   const content=page.getByRole('dialog',{name:'Edit website section',exact:true});
   try{
    await page.goto(origin);await page.waitForLoadState('networkidle');
-   assert.equal(await page.locator('.home-status-banner').evaluate(el=>el.previousElementSibling.classList.contains('conversion-trust')),true);
+   assert.equal(await page.locator('.home-status-banner').evaluate(el=>el.closest('.home-routine-updates')?.previousElementSibling?.id === 'results'),true);
    await hold(page.locator('#goal-tab-manners'));await content.waitFor();
    await content.getByLabel('Text',{exact:true}).fill('Everyday confidence');
    await content.getByRole('button',{name:'Publish website changes',exact:true}).click();await content.waitFor({state:'hidden'});

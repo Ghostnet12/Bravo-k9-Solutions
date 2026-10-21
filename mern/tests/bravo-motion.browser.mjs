@@ -63,6 +63,7 @@ try{
     assert.equal(await page.locator('.goal-finder').isVisible(),false);
     assert.equal(await page.locator('.conversion-goal').filter({hasText:'Aggression'}).getAttribute('href'),'/portal?program=aggression');
    }
+ await page.getByText('Explore the stories behind these sessions', { exact: true }).click();
    await position(page,'#field-stories');await page.locator('.field-story-card').first().waitFor();
    const rail=page.locator('#field-story-rail');
    if(width<=650){

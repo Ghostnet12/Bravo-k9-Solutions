@@ -77,7 +77,8 @@ app.get('/api/team', async (_req, res) => {
 });
 app.use('/api', sameOrigin, async (req, res, next) => {
   const started = performance.now();
-  try { await connectDb(); } finally { if (req.method === 'GET' && req.path === '/live') res.locals.liveDatabaseMs = Math.round(performance.now() - started); }
+  const liveStatus = req.method === 'GET' && req.path === '/live';
+  try { await connectDb({ statusOnly: liveStatus }); } finally { if (liveStatus) res.locals.liveDatabaseMs = Math.round(performance.now() - started); }
   next();
 }, identify);
 app.use('/api', liveApiRateLimit);

@@ -95,6 +95,17 @@ try {
       };
       try {
         await navigate(() => page.goto(`${origin}/portal?program=training`));
+        await page.getByLabel('Dog’s name', {exact:true}).waitFor();
+        assert.ok((await page.getByLabel('Dog’s name', {exact:true}).boundingBox()).y < 800, 'first dog field appears without a long introductory scroll');
+        assert.match(await page.locator('.first-visit-essential').innerText(), /Manual renewal.*no automatic payment/);
+        assert.equal(await page.locator('.first-visit-details').getAttribute('open'), null);
+        const terms = page.locator('.first-visit-details > summary');
+        await terms.focus(); await terms.press('Enter');
+        assert.ok(await page.locator('[data-site-content-key="first-visit-terms"]').isVisible());
+        await terms.press('Enter');
+        assert.ok(await page.getByRole('button', {name:'Plan my entire month',exact:true}).isVisible());
+        await page.locator('h1').scrollIntoViewIfNeeded();
+        await page.screenshot({path:`test-results/booking-entry-${name}-${width}.png`,fullPage:true});
         await page.getByLabel('Dog’s name', {exact:true}).fill('Biscuit');
         await page.getByLabel('Anything you’d like your trainer to know? (optional)', {exact:true}).fill('Keep this draft through navigation.');
         await assertSteps('Your dog'); await assertFit('Your dog');

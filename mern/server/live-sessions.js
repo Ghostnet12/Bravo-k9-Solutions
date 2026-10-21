@@ -99,6 +99,7 @@ export function liveRoutes(app) {
     const started = performance.now();
     let snapshot;
     try { snapshot = await liveSnapshot(req.user); } finally { res.locals.liveSnapshotMs = Math.round(performance.now() - started); }
+    res.set('Server-Timing', `database;dur=${res.locals.liveDatabaseMs ?? 0}, snapshot;dur=${res.locals.liveSnapshotMs}`);
     res.json(snapshot);
   });
   app.get('/api/live/studio', requireUser, requireStaff, async (req, res) => {
