@@ -52,6 +52,8 @@ The new browser workflow tests Chromium and WebKit at 360, 390, 768 and 1440 pix
 
 Existing release workflows additionally cover actual local server/Mongo fixtures for authorization, reservations, memberships, credits, owner editing, payment safeguards, private live access, publishing, mobile menus and tutorial/media behavior. PR checks and the PR description contain the final commit-specific results.
 
+The complete application/browser regression run passed, then its dependency audit found two existing development-tool vulnerabilities. The focused dependency update pins Vite from 8.0.16 to 8.1.6 and refreshes the Mongo test tool's transitive `follow-redirects` from 1.16.0 to 1.16.1. These are the first fixed versions listed in the [Vite advisory](https://github.com/advisories/GHSA-587h-7wmj-h5pm) and [follow-redirects advisory](https://github.com/advisories/GHSA-q3jh-wrc6-jgq8). Vite's required Rolldown bindings update with it. Stripe, authentication and server dependency versions are unchanged; audit thresholds and release gates are unchanged.
+
 ## Preview and release limitations
 
 The protected Vercel feature preview renders the homepage. Its account API was unavailable during inspection, so real preview authentication/booking is not claimed as verified; browser journey tests use safe fixtures. No production customer account, booking, charge or outbound message was created. A real-device/live-network broadcast and the production timeout cause remain unverified. No production merge or deployment is authorized by this work.
