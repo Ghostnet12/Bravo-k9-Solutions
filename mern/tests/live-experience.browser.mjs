@@ -110,7 +110,7 @@ try {for(const [name,engine] of engines) {
    await page.waitForTimeout(300);
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${name} ${width} horizontal overflow`);
    // Compact layouts place live status in the page flow below the hero and
-   // toolkit card. Check sticky-control clearance when the user reaches it.
+   // training offer. Check sticky-control clearance when the user reaches it.
    // Always center it: scrollIntoViewIfNeeded can stop behind the fixed dock,
    // which does not count as viewport clipping to the browser.
    await page.locator('.hero-live').evaluate(el=>el.scrollIntoView({block:'center',behavior:'instant'}));

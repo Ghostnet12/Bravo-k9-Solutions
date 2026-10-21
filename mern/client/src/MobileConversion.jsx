@@ -15,7 +15,7 @@ const subscribeCompact = notify => {
 const compactSnapshot = () => matchMedia(compactQuery).matches;
 const serverSnapshot = () => false;
 export const useCompactLayout = () => useSyncExternalStore(subscribeCompact, compactSnapshot, serverSnapshot);
-const homeSectionOrder = ['method', 'results', 'reviews', 'team', 'training', 'dogs', 'workshops', 'fci', 'online'];
+const homeSectionOrder = ['training', 'reviews', 'team', 'faq', 'booking', 'method', 'tools', 'results', 'dogs', 'workshops', 'fci', 'online'];
 // One reading order for every viewport, including the server-rendered page.
 // Stable keys preserve media and editor state when the viewport changes.
 export function HomeSectionOrder({ children }) {
@@ -109,14 +109,14 @@ export function MobileHomeNav({ staticFallback = false }) {
   return <nav className="mobile-home-nav mobile-conversion" aria-label="Quick navigation">
     <Link to="/#home-title" aria-label="Home" onClick={event => returnToAnchor(event, 'home-title')}><span aria-hidden="true"><svg width="25" height="29" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" focusable="false"><path d="M3 10 12 3l9 7v11h-6v-7H9v7H3z"/></svg></span>Home</Link>
     <Link to={bookingPath} className="mobile-home-book" onClick={() => trackVisit('sticky_booking_clicked')}><span aria-hidden="true"><svg width="25" height="29" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" focusable="false"><path d="M4 5h16v16H4z M8 3v4 M16 3v4 M4 10h16 M8 14h2 M14 14h2 M8 18h2 M14 18h2"/></svg></span>{user ? 'Schedule' : 'Book now'}</Link>
-    <Link to="/live"><span aria-hidden="true"><svg width="25" height="29" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" focusable="false"><path d="M8 4l13 8-13 8z"/></svg></span>Live cams</Link>
+    <Link to="/#training-programs" onClick={event => returnToAnchor(event, 'training-programs')}><span aria-hidden="true"><svg width="25" height="29" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" focusable="false"><path d="M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z"/></svg></span>Services</Link>
     <Link to="/#reviews" onClick={event => returnToAnchor(event, 'reviews')}><span aria-hidden="true"><svg width="25" height="29" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" focusable="false"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z"/></svg></span>Reviews</Link>
     <Link to="/contact"><span aria-hidden="true"><svg width="25" height="29" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" focusable="false"><path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 11.19 18a19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.09 3.18 2 2 0 0 1 4.08 1h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.69 2.8a2 2 0 0 1-.45 2.11L8.05 8.9a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.33 1.84.56 2.8.69A2 2 0 0 1 22 16.92z"/></svg></span>Contact</Link>
     {!staticFallback && <button type="button" data-navigation-toggle="" onClick={toggleMenu} onKeyDown={closeOnEscape} aria-expanded={menuOpen} aria-controls="bravo-navigation"><span aria-hidden="true"><svg width="25" height="29" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" focusable="false"><path d="M4 6h16 M4 12h16 M4 18h16"/></svg></span>More</button>}
   </nav>;
 }
 export function ConversionFAQ() {
-  return <section className="conversion-faq cinema-shell" aria-labelledby="conversion-faq-title"><Editable as="h2" contentKey="mobile-faq-title" canEditText id="conversion-faq-title">Before your first visit.</Editable>{[
+  return <section id="first-visit-help" className="conversion-faq cinema-shell" aria-labelledby="conversion-faq-title"><Editable as="h2" contentKey="mobile-faq-title" canEditText id="conversion-faq-title">Before your first visit.</Editable>{[
     ['Does choosing a date confirm my appointment?', 'No. Send your request and Bravo will confirm the visit details. Your chosen date and time remain a request until confirmed.'],
     ['Can I plan the whole month?', 'Yes. Choose “Plan my entire month” in the booking flow, or use My Schedule if you already have an active training membership.'],
     ['Does my membership renew automatically?', 'No. Training renews manually each month. Your review shows the current price before you continue.'],

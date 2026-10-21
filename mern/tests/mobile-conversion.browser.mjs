@@ -45,7 +45,7 @@ try {
    const page = await browser.newPage({ viewport: { width, height: 844 }, reducedMotion: 'reduce' });
    const errors = []; page.on('pageerror', error => errors.push(error.message));
    await page.goto(origin, { waitUntil: 'networkidle' });
-   const readingOrder = await page.evaluate(() => ['training','method','results','reviews','team','training-programs','workshops'].map(id=>({id,top:document.getElementById(id).getBoundingClientRect().top})));
+   const readingOrder = await page.evaluate(() => ['training','training-programs','reviews','team','first-visit-help','booking-title','method','home-tools-title','results','workshops'].map(id=>({id,top:document.getElementById(id).getBoundingClientRect().top})));
    assert.deepEqual([...readingOrder].sort((a,b)=>a.top-b.top),readingOrder,'same visual and reading order on every screen');
    assert.equal(await page.locator('.conversion-offer').count(),1,'one primary membership offer');
    const portraitsFillCards=await page.locator('.cinema-team-grid>article').evaluateAll(cards=>cards.every(card=>Math.abs(card.querySelector('.cinema-portrait').getBoundingClientRect().width-card.clientWidth)<2));
