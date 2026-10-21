@@ -85,6 +85,9 @@ try { for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
       await page.goto(origin + '/live/studio');
       assert.ok(await page.evaluate(() => window.fixtureCameraInstalled && navigator.mediaDevices.getUserMedia.name === 'fixtureGetUserMedia'), 'synthetic camera is installed in the application realm');
       await page.getByLabel('Dog’s name').fill('Fixture Dog');
+      // Center the native radio clear of the fixed mobile quick-navigation bar.
+      // WebKit's nearest-edge auto-scroll can leave it underneath that bar.
+      await page.getByRole('radio', { name: /PUBLIC LIVE/ }).evaluate(input => input.scrollIntoView({ block: 'center', behavior: 'instant' }));
       await page.getByRole('radio', { name: /PUBLIC LIVE/ }).check();
       await page.getByRole('checkbox', { name: /I have permission/ }).check();
       await page.getByRole('button', { name: 'Enable camera preview' }).click();

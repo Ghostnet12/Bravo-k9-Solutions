@@ -36,11 +36,11 @@ export function trackVisit(stage) {
 export function bookingTrackingHeaders() {
   const current = visit(); return current ? { 'X-Bravo-Visit': current.token } : {};
 }
-export function reportBrowserError(kind, path = globalThis.location?.pathname || '') {
+export function reportBrowserError(kind, path = globalThis.location?.pathname || '', timing) {
   if (!monitoringEnabled) return;
   const area = routeArea(path), id = `${kind}:${area}`;
   if (errors.has(id) || errors.size >= 10) return;
-  errors.add(id); void send('error', { kind, area });
+  errors.add(id); void send('error', { kind, area, ...(kind === 'request_timeout' && area === 'live' && timing ? { timing } : {}) });
 }
 export function installErrorMonitoring() {
   const scriptError = event => {

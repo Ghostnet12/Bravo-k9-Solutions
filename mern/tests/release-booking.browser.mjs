@@ -99,6 +99,7 @@ try {
    assert.deepEqual(writes,['/auth/login','/quote','/bookings']);
    lessonsOpen=true;
    await page.goto(origin+'/portal?program=training&lessons=1&focus=service-dog');
+   await page.getByRole('button',{name:'Discard draft and start again',exact:true}).click();
    await page.getByLabel('Dog’s name',{exact:true}).fill('Bundle Dog');
    assert.ok((await page.locator('.first-visit-intro .price-total').innerText()).includes('Obedience foundations + lessons'));
    assert.ok((await page.locator('.first-visit-intro .price-total').innerText()).includes('$250/month'));

@@ -96,3 +96,12 @@
 .conversion-dog-terms{font-size:14px;line-height:1.6;color:#d6cfc2;margin:0 0 20px}
 .specialist-scope{margin-block:16px;line-height:1.6}
 .specialist-scope a{display:inline-flex;align-items:center;min-height:44px}
+
+/* Put the decision-making facts beside the main invitation. */
+.cinema-home .hero-booking-facts{margin-top:16px;max-width:540px;line-height:1.55;font-size:14px;color:#e6dfd2;pointer-events:auto}
+.cinema-home .hero-booking-facts p{margin:4px 0}
+.cinema-home .hero-booking-facts strong{color:#e8c789;font-size:18px}
+.cinema-home.conversion-home .cinema-hero-baseline{display:none}
+@media(max-width:700px){.cinema-home .hero-booking-facts{width:100%;max-width:none;margin-top:14px;padding-top:12px;border-top:1px solid #ba9a6444;background:#080808;font-size:13px}.cinema-home.conversion-home .polish-hero-actions .cinema-link{border:0;background:transparent;justify-content:flex-start;text-decoration:underline;text-underline-offset:4px}}
+
+.site-content-owner .cinema-home.conversion-home .cinema-hero-baseline{display:flex}

@@ -27,6 +27,8 @@ export const CONTENT_KEYS = {
   "home-fci-action": {"text": true},
 
   "polish-hero-location": {"text": true},
+  "hero-booking-renewal": {"text": true},
+  "hero-booking-location": {"text": true},
   "polish-hero-explore": {"text": true, "link": true},
   "conversion-hero-title": {"text": true},
   "conversion-hero-intro": {"text": true},

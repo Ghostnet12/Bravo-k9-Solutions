@@ -54,7 +54,7 @@ export default function HowToPage() {
     <section id="guide-chapters" className="how-to-chapters" aria-labelledby="how-to-chapters-title">
       <h2 id="how-to-chapters-title">What would you like to learn?</h2>
       <p>Choose a chapter to play that part of the video. Pause whenever you want to try a step yourself.</p>
-      <ol>{guide.chapters.map(chapter => <li key={chapter.id}><button type="button" onClick={() => playChapter(chapter.start)} aria-label={`Play ${chapter.title} at ${timestamp(chapter.start)}`}><span className="how-to-time">{timestamp(chapter.start)}</span><span>{chapter.title}</span><span aria-hidden="true">↗</span></button></li>)}</ol>
+      <ol>{guide.chapters.map(chapter => <li key={chapter.id} id={`chapter-${chapter.id}`}><button type="button" onClick={() => playChapter(chapter.start)} aria-label={`Play ${chapter.title} at ${timestamp(chapter.start)}`}><span className="how-to-time">{timestamp(chapter.start)}</span><span>{chapter.title}</span><span aria-hidden="true">↗</span></button></li>)}</ol>
     </section>
     <details className="how-to-transcript">
       <summary>Read the full video transcript</summary>

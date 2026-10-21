@@ -96,7 +96,10 @@ async function peersForTrainer(session) {
 export function liveRoutes(app) {
   app.get('/api/live', async (req, res) => {
     if (!liveConfigured()) return res.json({ sessions: [], announcements: [], availability: 'unavailable', serverTime: new Date() });
-    res.json(await liveSnapshot(req.user));
+    const started = performance.now();
+    let snapshot;
+    try { snapshot = await liveSnapshot(req.user); } finally { res.locals.liveSnapshotMs = Math.round(performance.now() - started); }
+    res.json(snapshot);
   });
   app.get('/api/live/studio', requireUser, requireStaff, async (req, res) => {
     const bookings = await Booking.find({ status: { $in: ['requested', 'confirmed'] },
