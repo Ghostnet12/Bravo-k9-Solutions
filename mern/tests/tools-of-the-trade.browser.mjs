@@ -40,7 +40,17 @@ try {
       assert.equal(await raw.locator('.tool-card').count(), 5);
       assert.match(await raw.locator('.tools-assessment').innerText(), /We only use the tools your dog needs/);
       assert.equal(await raw.locator('.tool-purchase').first().getAttribute('href'), links[0]);
+      await raw.goto(origin + '/');
+      assert.equal(await raw.locator('.home-tools-card').getAttribute('href'), '/tools-of-the-trade');
       await raw.close();
+      for (const width of [1280,1281]) {
+        const boundary = await browser.newPage({ viewport: { width, height: 900 } });
+        try {
+          await boundary.goto(origin + '/tools-of-the-trade');
+          assert.equal(await boundary.locator('.menu-toggle').isVisible(), width === 1280);
+          assert.ok(await boundary.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+        } finally { await boundary.close(); }
+      }
       for (const width of [360,390,768,1440]) {
         const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: 'reduce' });
         await context.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
@@ -76,22 +86,42 @@ try {
           }
           assert.match(await page.locator('.tool-card').last().innerText(), /12.inch|12 in/);
           assert.doesNotMatch(await page.locator('.tool-card').last().innerText(), /6.inch/);
-          if (width < 1101) await page.locator('.menu-toggle').click();
-          await page.locator('.nav-about > summary').press('Enter');
-          await page.locator('.nav-about a[href="/tools-of-the-trade"]').waitFor({ state: 'visible' });
-          await page.locator('.nav-about > summary').press('Escape');
-          if (width < 1101) { await page.keyboard.press('Escape'); assert.equal(await page.locator('.menu-toggle').getAttribute('aria-expanded'), 'false'); }
+          const collapsed = await page.locator('.menu-toggle').isVisible();
+          const navTools = page.locator('#bravo-navigation .nav-explore > a[href="/tools-of-the-trade"]');
+          assert.equal(await navTools.count(), 1);
+          assert.equal(await page.locator('.nav-about a[href="/tools-of-the-trade"]').count(), 0);
+          assert.equal(await navTools.evaluate(link => link.previousElementSibling?.getAttribute('href')), '/fci-support');
+          if (collapsed) await page.locator('.menu-toggle').click();
+          await navTools.waitFor({ state: 'visible' });
+          if (collapsed) assert.ok(await navTools.evaluate(link => link.getBoundingClientRect().top >= link.previousElementSibling.getBoundingClientRect().bottom));
+          await navTools.press('Enter');
+          if (collapsed) assert.equal(await page.locator('.menu-toggle').getAttribute('aria-expanded'), 'false');
           if (width < 768) {
             await page.locator('[data-navigation-toggle]').click();
             assert.equal(await page.locator('.menu-toggle').getAttribute('aria-expanded'), 'true');
-            await page.locator('.nav-about > summary').press('Enter');
-            await page.locator('.nav-about a[href="/tools-of-the-trade"]').press('Enter');
+            await navTools.waitFor({ state: 'visible' });
+            await page.screenshot({ path: `test-results/tools-of-the-trade-menu-${name}-${width}.png` });
+            await navTools.press('Enter');
             assert.equal(await page.locator('.menu-toggle').getAttribute('aria-expanded'), 'false');
           }
           await page.locator('h1').scrollIntoViewIfNeeded();
           await page.screenshot({ path: `test-results/tools-of-the-trade-${name}-${width}.png`, fullPage: true });
+          await page.goto(origin + '/');
+          const homeTools = page.locator('.home-tools-card');
+          await homeTools.waitFor({ state: 'visible' });
+          assert.equal(await homeTools.getAttribute('href'), '/tools-of-the-trade');
+          assert.match(await homeTools.innerText(), /We assess your dog first/);
+          assert.ok(await page.locator('.cinema-hero').evaluate(hero => hero.nextElementSibling.matches('.home-tools')));
+          await homeTools.scrollIntoViewIfNeeded();
+          await homeTools.focus();
+          assert.notEqual(await homeTools.evaluate(link => getComputedStyle(link).outlineStyle), 'none');
+          assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+          await page.screenshot({ path: `test-results/tools-of-the-trade-entry-${name}-${width}.png` });
+          await homeTools.press('Enter');
+          await page.locator('.tools-assessment').waitFor();
+          assert.equal(new URL(page.url()).pathname, '/tools-of-the-trade');
           assert.deepEqual(errors, []);
-          console.log(`PASS ${name}/${width}: assessment above products; five verified links and photos; keyboard; responsive layout; both mobile navigation controls where present; no writes.`);
+          console.log(`PASS ${name}/${width}: five products; direct menu link beneath FCI; both mobile toggles; homepage entry immediately after hero; keyboard navigation; responsive layout; no writes.`);
         } finally { await context.close(); }
       }
     } finally { await browser.close(); }

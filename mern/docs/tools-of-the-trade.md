@@ -22,12 +22,12 @@ The added My Pet Command option is presented alongside Dogtra as a budget-friend
 
 ## Integration and review
 
-- The shared About Bravo menu, footer and homepage approach section link to the page. Both mobile menu controls retain their existing shared behavior.
+- The main navigation links directly to Tools of the Trade immediately after FCI Support, outside About Bravo. In the expanded menu it has a highlighted full-width row beneath FCI, accessible through both mobile menu controls. A gold-accented homepage card sits immediately after the hero, replacing the less visible approach-section text link; the footer link remains. The card explains the tools’ purpose and individual-dog assessment, with a clear “Explore Tools of the Trade” action.
 - Public server-rendered HTML, the sitemap, canonical metadata, direct Express routing and Vercel rewrites include the new route. Existing homepage routing stays first.
-- Existing owner controls can edit the new page copy, product links and photos. Existing owner keys and media remain unchanged.
+- Existing owner controls can edit the new page copy, homepage card copy/link, product links and photos. Existing owner keys and media remain unchanged.
 - Five images total approximately 264 KB. Images have descriptive alternative text, fixed layout dimensions and `object-fit: contain`; the page uses a responsive two-column/one-column grid, pairs the e-collar choices on desktop and gives the final hand-leash card a full-width image/copy row. Product links identify Amazon and a new tab.
 - No changes to booking, accounts, Stripe, memberships, credits, live streaming or the how-to video.
 
 Local lint, production build and 251 unit tests pass. The dedicated Chromium/WebKit fixture verifies 360, 390, 768 and 1440-pixel layouts, loaded images, exact purchase links, visible assessment-first copy, keyboard focus and both mobile menu controls where present. It also checks useful product content with JavaScript disabled. It uses local synthetic API responses and blocks off-origin traffic. No purchase, booking, charge or outbound message is created.
 
-Browser and required release results are recorded in the pull request. Production publication is separate from this draft.
+The navigation collapses at 1280px to accommodate its additional primary link; the quick booking action and resize listener use the same boundary. The browser fixture verifies this at 1280/1281px, checks direct menu placement/activation through both toggles, and follows the homepage card to the tools page. Browser and required release results are recorded in the pull request. Production publication is separate from this draft.

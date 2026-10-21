@@ -34,6 +34,7 @@ import LessonOffers from './LessonOffers';
 import './trainer-schedules.css';
 import './home-polish.css';
 import './home-fci.css';
+import './home-tools.css';
 import './field-experience.css';
 
 const secondary = ['walking', 'aggression'];
@@ -81,6 +82,16 @@ export default function Home() {
           <div className="hero-booking-facts" aria-label="Training price and terms"><p><strong><CatalogPrice/> / month</strong> · one dog</p><Editable as="p" contentKey="hero-booking-renewal" canEditText>Manual renewal · no automatic monthly payment</Editable><Editable as="p" contentKey="hero-booking-location" canEditText>Aberdeen, South Dakota · Bravo comes to you</Editable></div>
         </div>
         <div className="cinema-hero-baseline cinema-shell"><Editable as="span" contentKey="copy-home-4" canEditText>REAL DOGS. REAL LIFE. BRAVO.</Editable><Editable as="a" contentKey="copy-home-5" canEditText canEditLink href="#method" aria-label="Discover the Bravo approach">SCROLL TO DISCOVER <span aria-hidden="true">↓</span></Editable></div>
+      </section>
+      <section className="home-tools cinema-shell" aria-label="Tools of the Trade">
+        <Editable as={Link} contentKey="home-tools-of-the-trade" canEditLink href="/tools-of-the-trade" className="home-tools-card" aria-labelledby="home-tools-title home-tools-action" aria-describedby="home-tools-copy">
+          <div>
+            <Editable as="p" contentKey="home-tools-eyebrow" canEditText className="home-tools-eyebrow">THE BRAVO TOOLKIT</Editable>
+            <Editable as="h2" contentKey="home-tools-title" canEditText id="home-tools-title">Know the tools. <span>See the purpose.</span></Editable>
+            <Editable as="p" contentKey="home-tools-copy" canEditText id="home-tools-copy">Explore the equipment we use for basic through advanced obedience. We assess your dog first and use only what they need.</Editable>
+          </div>
+          <Editable as="span" contentKey="home-tools-action" canEditText id="home-tools-action" className="home-tools-action">Explore Tools of the Trade <span aria-hidden="true">→</span></Editable>
+        </Editable>
       </section>
       <ConversionTrust/>
       <HomeBanner/>
@@ -130,7 +141,6 @@ export default function Home() {
         <Editable as="p" contentKey="copy-home-10" canEditText className="cinema-eyebrow">THE BRAVO APPROACH</Editable>
         <Editable as="h2" contentKey="cinema-method-title" canEditText id="method-title">Understand the dog.<br/><span>Build from there.</span></Editable>
         <Editable as="p" contentKey="cinema-method-copy" canEditText>We start with the dog in front of us—their personality, instincts, and environment. Then we build trust through clear, consistent communication.</Editable>
-        <Editable as={Link} contentKey="home-tools-of-the-trade" canEditLink canEditText className="cinema-text-link" to="/tools-of-the-trade">Explore our tools of the trade →</Editable>
         <div className="cinema-method-signature"><Editable as="span" contentKey="copy-home-11" canEditText>Trust.</Editable><Editable as="span" contentKey="copy-home-12" canEditText>Train.</Editable><Editable as="span" contentKey="copy-home-13" canEditText>Deploy.</Editable></div>
       </Editable>
 

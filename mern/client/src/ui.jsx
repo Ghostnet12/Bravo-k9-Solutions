@@ -46,7 +46,7 @@ export function Header() {
     };
   }, []);
   useEffect(() => {
-    const expanded = matchMedia(`(min-width: ${user ? 1601 : 1101}px)`);
+    const expanded = matchMedia(`(min-width: ${user ? 1601 : 1281}px)`);
     const closeExpandedMenu = () => { if (expanded.matches) setMenuOpen(false); };
     expanded.addEventListener('change', closeExpandedMenu); closeExpandedMenu();
     return () => expanded.removeEventListener('change', closeExpandedMenu);
@@ -85,12 +85,12 @@ export function Header() {
           <Editable as={NavLink} contentKey="cinema-nav-workshops" canEditLink canEditText to="/workshops">Workshops</Editable>
           <NavLink to="/live">Live Cams</NavLink>
           <NavLink to="/fci-support">FCI Support</NavLink>
+          <Editable as={NavLink} contentKey="nav-tools-of-the-trade" canEditLink canEditText className="nav-tools-of-the-trade" to="/tools-of-the-trade">Tools of the Trade</Editable>
           <details className="nav-about" ref={about} onBlur={leaveAbout}>
             <summary>About Bravo</summary>
             <div className="nav-about-links">
               <Editable as={Link} contentKey="cinema-nav-about" canEditLink canEditText to="/#team">Meet the team</Editable>
               <Editable as={Link} contentKey="nav-bravo-approach" canEditLink canEditText to="/#method">Our approach</Editable>
-              <Editable as={NavLink} contentKey="nav-tools-of-the-trade" canEditLink canEditText to="/tools-of-the-trade">Tools of the Trade</Editable>
               <Editable as={Link} contentKey="ui-12" canEditLink canEditText to="/#reviews">Reviews</Editable>
               <Editable as={NavLink} contentKey="ui-13" canEditLink canEditText to="/contact">Contact &amp; help</Editable>
               <Editable as="a" contentKey="nav-bravo-phone" canEditLink canEditText href="tel:+16058242767">Call (605) 824-2767</Editable>

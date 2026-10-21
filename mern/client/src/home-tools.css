@@ -1,0 +1,19 @@
+.cinema-home .home-tools { padding-block: 22px; }
+.cinema-home .home-tools-card { display: flex; align-items: center; justify-content: space-between; gap: 32px; padding: 28px 32px; border: 1px solid #ba9a64; border-left: 4px solid #d9b879; border-radius: 12px; background: radial-gradient(ellipse at 100% 100%, #ba9a6424, transparent 65%), #141310; color: #f5f2eb; text-decoration: none; box-shadow: 0 8px 28px #ba9a640c; transition: border-color .2s, box-shadow .2s; }
+.cinema-home .home-tools-eyebrow { margin: 0 0 8px; color: #d9b879; font-size: 11px; line-height: 1.5; font-weight: 700; letter-spacing: .14em; }
+.cinema-home .home-tools-card h2 { margin: 0 0 10px; font-size: clamp(26px, 2.8vw, 38px); line-height: 1.15; }
+.cinema-home .home-tools-card h2 span { color: #d9b879; }
+.cinema-home .home-tools-card #home-tools-copy { margin: 0; max-width: 680px; font-size: 14px; line-height: 1.7; color: #ded8cd; }
+.cinema-home .home-tools-action { display: inline-flex; align-items: center; justify-content: center; gap: 16px; flex-shrink: 0; min-height: 48px; padding: 13px 18px; border-radius: 28px; background: #ba9a64; color: #101010; font-size: 13px; font-weight: 700; }
+.cinema-home .home-tools-card:hover { border-color: #efd49e; box-shadow: 0 8px 32px #ba9a6420; }
+.cinema-home .home-tools-card:focus-visible { outline: 3px solid #efd49e; outline-offset: 5px; }
+@media (max-width: 900px) {
+  .cinema-home .home-tools-card { flex-direction: column; align-items: stretch; gap: 20px; padding: 24px; }
+  .cinema-home .home-tools-action { align-self: flex-start; }
+}
+@media (max-width: 600px) {
+  .cinema-home .home-tools { padding-block: 16px; }
+  .cinema-home .home-tools-card { padding: 22px 18px; }
+  .cinema-home .home-tools-action { align-self: stretch; font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { .cinema-home .home-tools-card { transition: none; } }
