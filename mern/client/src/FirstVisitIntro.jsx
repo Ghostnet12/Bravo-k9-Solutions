@@ -6,7 +6,7 @@ import { money, TRAINING_ADDITIONAL_DOG_CENTS, TRAINING_FOCUSES, isSpecialistFoc
 export default function FirstVisitIntro({ form, setForm, dogCount, setDogCount, focus, setFocus, cents, additionalDogCents = TRAINING_ADDITIONAL_DOG_CENTS, withLessons = false, onContinue, onFullSchedule, onStageChange, trainerReady, visitReady }) {
   const specialist = isSpecialistFocus(focus);
   return <Editable as="section" contentKey="first-visit-intro" className="panel first-visit-intro">
-    <div className="booking-returning"><strong>New to Bravo? Start here.</strong><Editable as={Link} contentKey="copy-firstvisitintro-16" canEditText canEditLink to="/schedule">Already training with Bravo? My Schedule →</Editable></div>
+    <div className="booking-returning"><Editable as={Link} contentKey="copy-firstvisitintro-16" canEditText canEditLink to="/schedule">Already training with Bravo? My Schedule →</Editable></div>
     <BookingProgress current="dog" onChange={onStageChange} trainerReady={trainerReady} visitReady={visitReady}/>
     <Editable as="h2" contentKey="first-visit-title" canEditText>Let’s start with your dog.</Editable>
     <div className="price-total"><span>{specialist ? (withLessons ? 'Obedience foundations + lessons' : 'Obedience foundations') : withLessons ? 'Training + lessons' : 'Private training'} · {dogCount} {dogCount === 1 ? 'dog' : 'dogs'}</span><strong>{money(cents + (dogCount - 1) * additionalDogCents)}<Editable as="small" contentKey="copy-firstvisitintro-1" canEditText>/month</Editable></strong></div>

@@ -20,11 +20,12 @@
 .booking-steps{flex-wrap:wrap;row-gap:6px}.booking-steps a{flex-shrink:0}
 
 /* Get the first field on screen sooner; keep price and renewal terms visible. */
+.app-page.booking-entry-page{padding-top:24px}
 .booking-entry-page .app-page-title{margin-bottom:24px;padding-bottom:20px}
 .booking-entry-page .app-page-title h1{font-size:clamp(2rem,4vw,3.2rem)}
-.first-visit-intro .price-total{margin:12px 0 6px}
-.first-visit-intro .first-visit-essential{margin:0 0 16px;font-size:.9rem;line-height:1.6}
-.first-visit-intro .form-grid{margin-block:16px}
+.booking-entry-page .first-visit-intro .price-total{margin:12px 0 6px}
+.booking-entry-page .first-visit-intro .first-visit-essential{margin:0 0 16px;font-size:.9rem;line-height:1.6}
+.booking-entry-page .first-visit-intro .form-grid{margin-block:16px}
 .first-visit-details{margin:16px 0;border-block:1px solid var(--line);padding:4px 0}
 .first-visit-details>summary{cursor:pointer;min-height:44px;padding:12px 0;color:var(--gold-light);font-weight:600}
 .first-visit-details>summary:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
