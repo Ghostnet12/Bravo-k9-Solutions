@@ -142,7 +142,11 @@ app.post('/api/quote', async (req, res) => {
   const input = z.object({ serviceIds: z.array(z.string()).min(1).max(4), visits: z.array(z.object({ date: z.string(), time: z.string(), service: z.string() })).max(62), dogCount: z.number().int().min(1).max(10).default(1) }).parse(req.body);
   const catalog = await effectiveServices(); validateVisits(input.serviceIds, input.visits, catalog); res.json(quote(input.serviceIds, input.visits, { dogCount: input.dogCount }, catalog));
 });
-app.get('/api/bookings', requireUser, async (req, res) => res.json({ bookings: await Booking.find({ userId: req.user._id }).sort({ createdAt: -1 }).limit(100).lean() }));
+app.get('/api/bookings', requireUser, async (req, res) => {
+  const filter = { userId: req.user._id };
+  if (req.query.requestKey !== undefined) filter.requestKey = z.string().uuid().parse(req.query.requestKey);
+  res.json({ bookings: await Booking.find(filter).sort({ createdAt: -1 }).limit(100).lean() });
+});
 app.get('/api/trainers', requireUser, async (_req, res) => {
   const people = await User.find({ role: { $in: ['staff', 'owner'] }, blocked: { $ne: true } }).select('name publicName role title').sort({ name: 1 }).lean();
   const trainers = await Promise.all(people.map(async person => ({ id: String(person._id), name: person.name, publicName: person.publicName, title: person.title || 'Bravo Trainer', ...(await trainerCapacity(person._id)), limit: TRAINER_DOG_LIMIT })));

@@ -178,17 +178,32 @@ function BookingForm({ entry }) {
     setVisits([...otherServices, ...automatic].sort((a, b) => a.date.localeCompare(b.date)));
     setNotice(`Made a random schedule with ${automatic.length} ${automatic.length === 1 ? 'visit' : 'visits'}. Review every selected date and time before saving.`);
   }
+  function finishBooking(booking) {
+    setSaved(booking); setBookingDraft(null);
+    setNotice(booking.status === 'waitlisted' ? `You joined ${chosenTrainer?.name || 'this trainer'}’s waiting list. Your preferred dates were saved, no calendar time was reserved, and no card was charged.` : bookingRequestNotice({ visits: Array.isArray(booking.visits) ? booking.visits : visits, serviceIds: Array.isArray(booking.serviceIds) ? booking.serviceIds : ids }));
+  }
+  async function reconcileBooking() {
+    const { bookings } = await api(`/bookings?requestKey=${encodeURIComponent(requestKey)}`, { foreground: true });
+    const existing = bookings.find(booking => booking.requestKey === requestKey);
+    if (!existing) return false;
+    finishBooking(existing); return true;
+  }
   async function save(e) {
     e.preventDefault();
     if (requestInFlight.current || saved) return;
     requestInFlight.current = true; setBusy(true); setError('');
     try {
-      if (simpleBooking && (!visitReady || loadingDays || !batchAvailable(visits[0]?.date, visits[0]?.time))) throw new Error('Choose an available date and time before sending your request.');
+      // A lost response may leave this draft's own booking occupying the slot.
+      // Recover the original request before treating that reservation as a conflict.
+      if (!editId && await reconcileBooking()) return;
+      if (simpleBooking && (!visitReady || loadingDays)) throw new Error('Choose an available date and time before sending your request.');
       if (!editId && ids.includes('training') && !trainerId) throw new Error('Choose your trainer before saving this training request.');
       if (!editId && visits.length && !joiningWaitlist) {
         const selectedDates = visits.map(visit => visit.date).sort();
         const fresh = await api(`/availability?from=${selectedDates[0]}&to=${selectedDates.at(-1)}${trainerId ? `&staffId=${encodeURIComponent(trainerId)}` : ''}`, { foreground: true });
         if (visits.some(visit => !fresh.days?.some(day => day.date === visit.date && day.slots.includes(visit.time)))) {
+          // The original POST can commit between the first lookup and this read.
+          if (await reconcileBooking()) return;
           setAvailabilityVersion(value => value + 1);
           if (simpleBooking) { setTimeConfirmed(false); setBookingStep('visit'); }
           throw new Error('A selected time is no longer available. Choose another time before sending your request. Your other details are still here.');
@@ -196,7 +211,7 @@ function BookingForm({ entry }) {
       }
       if (!editId) await api('/quote' , { method: 'POST', body: { serviceIds: ids, visits, dogCount } });
       if (editId) { await api(`/bookings/${editId}/visits`, { method: 'PATCH', body: { visits } }); setNotice('Your updated schedule is saved for Bravo to review.'); }
-      else { const { booking } = await api('/bookings', { method: 'POST', headers: bookingTrackingHeaders(), body: { requestKey, serviceIds: ids, visits, trainingFocus: ids.includes('training') ? trainingFocus : undefined, preferredTrainerId: ids.includes('training') ? trainerId : undefined, dogCount, ...form } }); setSaved(booking); setBookingDraft(null); setNotice(booking.status === 'waitlisted' ? `You joined ${chosenTrainer?.name || 'this trainer'}’s waiting list. Your preferred dates were saved, no calendar time was reserved, and no card was charged.` : bookingRequestNotice({ visits: Array.isArray(booking.visits) ? booking.visits : visits, serviceIds: Array.isArray(booking.serviceIds) ? booking.serviceIds : ids })); }
+      else { const { booking } = await api('/bookings', { method: 'POST', headers: bookingTrackingHeaders(), body: { requestKey, serviceIds: ids, visits, trainingFocus: ids.includes('training') ? trainingFocus : undefined, preferredTrainerId: ids.includes('training') ? trainerId : undefined, dogCount, ...form } }); finishBooking(booking); }
     } catch (e) { setError(e.message); } finally { requestInFlight.current = false; setBusy(false); }
   }
   async function pay() { if (requestInFlight.current || !saved || covered || waitlisted || !config?.paymentsReady) return; requestInFlight.current = true; setBusy(true); setError(''); try { const result = await api(`/bookings/${saved._id}/checkout`, { method: 'POST', body: {} }); window.location.assign(result.url); } catch (e) { requestInFlight.current = false; setError(e.message); setBusy(false); } }
