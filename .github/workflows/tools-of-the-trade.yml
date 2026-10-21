@@ -1,0 +1,36 @@
+name: Tools of the Trade verification
+on:
+  pull_request:
+    branches: [bravo-mern]
+    paths: ['mern/**', '.github/workflows/tools-of-the-trade.yml']
+permissions:
+  contents: read
+concurrency:
+  group: tools-of-the-trade-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  tools-of-the-trade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: mern
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: mern/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: npm install --ignore-scripts --no-save --package-lock=false playwright@1.55.1
+      - run: npx playwright install --with-deps chromium webkit
+      - run: node tests/tools-of-the-trade.browser.mjs
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: tools-of-the-trade-evidence
+          path: mern/test-results/tools-of-the-trade-*.png

@@ -166,7 +166,7 @@ body .banner-editor :is(input,select,textarea) { background: #090909; color: var
   .app-header.bravo-nav[data-signed-in=true] #bravo-navigation { display: none; }
   .app-header.bravo-nav[data-signed-in=true] #bravo-navigation.is-open { display: flex; }
 }
-@media(max-width:1100px) {
+@media(max-width:1280px) {
   .app-header.bravo-nav .header-inner { flex-wrap: wrap; gap: 0; }
   .app-header.bravo-nav .menu-toggle { display: inline-flex; }
   .app-header.bravo-nav #bravo-navigation { display: none; }
