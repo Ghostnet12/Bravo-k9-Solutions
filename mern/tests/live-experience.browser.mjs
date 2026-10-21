@@ -109,6 +109,9 @@ try {for(const [name,engine] of engines) {
    await page.setViewportSize({width,height:1000});await page.evaluate(()=>window.scrollTo({top:0,behavior:"instant"}));
    await page.waitForTimeout(300);
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${name} ${width} horizontal overflow`);
+   // Compact layouts place live status in the page flow below the hero and
+   // toolkit card. Check sticky-control clearance when the user reaches it.
+   await page.locator('.hero-live').scrollIntoViewIfNeeded();
    const geometry=await page.locator('.hero-live').evaluate(el=>{const badge=el.getBoundingClientRect(),nav=document.querySelector('header').getBoundingClientRect(),bottomNav=document.querySelector('.mobile-home-nav');return {top:badge.top,bottom:badge.bottom,nav:nav.bottom,dock:bottomNav?.getBoundingClientRect().height ? bottomNav.getBoundingClientRect().top : innerHeight};});
    assert.ok(geometry.top>=geometry.nav-1,`${name} ${width} hero badge clear of navigation`);assert.ok(geometry.bottom<geometry.dock,`${name} ${width} badge clear of dock`);
    await page.screenshot({path:`test-results/bravo-hero-dock-TEST-${name}-${width}.png`});
