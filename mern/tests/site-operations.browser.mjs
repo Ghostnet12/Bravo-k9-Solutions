@@ -40,7 +40,8 @@ try {
           else if (path === '/api/bookings' && route.request().method() === 'POST') {
             bookingWrites++; sentHeaders = route.request().headers();
             json = { booking: { ...route.request().postDataJSON(), _id: 'bbbbbbbbbbbbbbbbbbbbbbbb', status: 'requested', paymentStatus: 'unpaid', quote: { dueNowCents: 5000 } } };
-          } else if (path === '/api/admin/site-health') {
+          } else if (path === '/api/bookings') json = { bookings: [] };
+          else if (path === '/api/admin/site-health') {
             reportReads++;
             if (reportReads === 1) return route.fulfill({ status: 503, json: { error: 'Temporary reporting issue.' } });
             json = { checkedAt: new Date().toISOString(), totals: { visits: 20, started: 10, saved: 4, paid: 2 }, channels: [{ channel: 'search', visits: 20, started: 10, saved: 4, paid: 2 }], errors: [{ kind: 'request_timeout', area: 'schedule', source: 'browser', count: 2, lastSeen: new Date().toISOString() }] };
