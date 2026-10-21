@@ -111,6 +111,21 @@ try {
         await page.screenshot({path:`test-results/booking-dates-${name}-${width}.png`,fullPage:true});
         await page.getByRole('button', {name:'Review my request →',exact:true}).click();
         await assertSteps('Review'); assert.equal(await page.locator('#visit-details .step-heading>span').innerText(),'04');
+        // Revisiting dog details must follow the CTA back through Trainer,
+        // while preserving the customer's existing trainer/date/time choices.
+        for (const previous of ['visit', 'review']) {
+          if (previous === 'visit') await page.getByRole('navigation', {name:'First visit steps',exact:true}).getByRole('button', {name:'3. Date and time',exact:true}).click();
+          await page.getByRole('button', {name:'Change your dog’s details',exact:true}).click();
+          await assertSteps('Your dog');
+          await page.getByLabel('Number of dogs',{exact:true}).fill(previous === 'visit' ? '2' : '1');
+          await page.getByLabel('What would you like help with?',{exact:true}).selectOption(previous === 'visit' ? 'advanced-obedience' : 'basic-obedience');
+          await page.getByRole('button', {name:'Choose a trainer →',exact:true}).click();
+          await page.getByRole('heading', {name:'Choose your trainer.',exact:true}).waitFor(); await assertSteps('Trainer');
+          assert.equal(await page.locator('.guided-trainer-cards button[aria-pressed=true]').count(),1);
+          await page.getByRole('button', {name:'Choose a date & time →',exact:true}).click(); await assertSteps('Date and time');
+          await page.getByRole('button', {name:'Review my request →',exact:true}).click(); await assertSteps('Review');
+          assert.match(await page.locator('.guided-visit-summary').innerText(),/Fixture Trainer[\s\S]*10:00 AM/);
+        }
         await page.getByRole('link', {name:'Sign in or create your account',exact:true}).click();
         await page.getByLabel('Name or email', {exact:true}).waitFor();
         assert.match(await page.getByRole('region',{name:'Your unsent request'}).innerText(),/Biscuit[\s\S]*Fixture Trainer[\s\S]*10:00 AM/);
@@ -163,7 +178,7 @@ try {
           liveError=true;await navigate(() => page.reload());await page.getByText('Live status is temporarily unavailable. Reconnecting…',{exact:true}).waitFor();assert.equal(await page.getByRole('heading',{name:'OUT IN THE FIELD.',exact:true}).count(),0,'failed status is never presented as offline');liveError=false;
         }
         assert.equal(writes.filter(w=>w.path==='/bookings'||w.path.includes('checkout')).length,0);assert.deepEqual(errors, []);
-        console.log(`PASS ${name}/${width}: four stages; keyboard; date/time proximity; Back/Forward/refresh/auth${passwordSetup ? ' including required password setup' : ''}; resume/discard; account isolation; availability recheck; home and complete guide layouts. No real writes.`);
+        console.log(`PASS ${name}/${width}: four stages and dog-detail re-entry; keyboard; date/time proximity; Back/Forward/refresh/auth${passwordSetup ? ' including required password setup' : ''}; resume/discard; account isolation; availability recheck; home and complete guide layouts. No real writes.`);
       } catch (error) {
         await page.screenshot({path:`test-results/booking-continuity-${name}-${width}-failure.png`,fullPage:true});
         await writeFile(`test-results/booking-continuity-${name}-${width}-failure.json`,JSON.stringify({error:error.message,errors,navigationDiagnostics,text:await page.locator('body').innerText()},null,2));
