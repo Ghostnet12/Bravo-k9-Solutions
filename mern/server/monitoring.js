@@ -35,7 +35,7 @@ export function monitorRequests(req, res, next) {
   const logLiveTiming = outcome => {
     const durationMs = Date.now() - start;
     if (!liveStatus || (outcome === 'finished' && durationMs < 2000 && res.statusCode < 500)) return;
-    console.warn(JSON.stringify({ level: 'warn', event: 'bravo.live_status_timing', requestId, ...(diagnostic.success ? { diagnosticId: diagnostic.data } : {}), durationMs, status: res.statusCode, outcome }));
+    console.warn(JSON.stringify({ level: 'warn', event: 'bravo.live_status_timing', requestId, ...(diagnostic.success ? { diagnosticId: diagnostic.data } : {}), durationMs, databaseMs: res.locals?.liveDatabaseMs ?? null, snapshotMs: res.locals?.liveSnapshotMs ?? null, status: res.statusCode, outcome }));
   };
   res.once('close', () => { if (!finished) logLiveTiming('aborted'); });
   res.once('finish', () => {

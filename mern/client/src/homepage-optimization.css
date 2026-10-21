@@ -102,4 +102,6 @@
 .cinema-home .hero-booking-facts p{margin:4px 0}
 .cinema-home .hero-booking-facts strong{color:#e8c789;font-size:18px}
 .cinema-home.conversion-home .cinema-hero-baseline{display:none}
-@media(max-width:700px){.cinema-home .hero-booking-facts{width:100%;max-width:none;margin-top:14px;padding-top:12px;border-top:1px solid #ba9a6444;background:#080808;font-size:13px}.cinema-home.conversion-home .polish-hero-actions .cinema-link{display:none}}
+@media(max-width:700px){.cinema-home .hero-booking-facts{width:100%;max-width:none;margin-top:14px;padding-top:12px;border-top:1px solid #ba9a6444;background:#080808;font-size:13px}.cinema-home.conversion-home .polish-hero-actions .cinema-link{border:0;background:transparent;justify-content:flex-start;text-decoration:underline;text-underline-offset:4px}}
+
+.site-content-owner .cinema-home.conversion-home .cinema-hero-baseline{display:flex}

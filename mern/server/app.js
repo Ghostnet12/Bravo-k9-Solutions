@@ -75,7 +75,11 @@ app.get('/api/team', async (_req, res) => {
   const team = await User.find({ role: { $in: ['owner', 'staff'] }, blocked: { $ne: true } }).select('name publicName publicProfileRevision role phone title bio showPhone').sort({ role: 1, name: 1 }).lean();
   res.json({ team: team.map(user => publicTrainerProfile(user, publicRole(user))) });
 });
-app.use('/api', sameOrigin, async (_req, _res, next) => { await connectDb(); next(); }, identify);
+app.use('/api', sameOrigin, async (req, res, next) => {
+  const started = performance.now();
+  try { await connectDb(); } finally { if (req.method === 'GET' && req.path === '/live') res.locals.liveDatabaseMs = Math.round(performance.now() - started); }
+  next();
+}, identify);
 app.use('/api', liveApiRateLimit);
 discoveryRoutes(app);
 lessonLibraryRoutes(app);

@@ -16,3 +16,5 @@
 .guided-booking-page .guided-trainer-card small{font-size:.875rem}
 .how-to-chapters li[id]{scroll-margin-top:120px}
 @media(max-width:420px){.app-page .guided-booking-steps{gap:5px}.app-page .guided-booking-steps button{font-size:.75rem;padding:8px 3px}.booking-draft-actions,.booking-draft-summary{padding:14px}.guided-booking-page .guided-trainer-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.booking-steps{flex-wrap:wrap;row-gap:6px}.booking-steps a{flex-shrink:0}

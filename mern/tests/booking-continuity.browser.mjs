@@ -41,7 +41,7 @@ try {
     if (process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(name)) continue;
     const browser = await engine.launch({ ...(name === 'chromium' ? { args: ['--no-sandbox'] } : {}) });
     try { for (const width of (process.env.BRAVO_REPRODUCE ? [390] : [360,390,768,1440])) {
-      actor = null; writes = []; availabilityReads = 0; stale = false;
+      actor = null; writes = []; availabilityReads = 0; stale = false; liveError = false;
       const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: 'reduce' });
       await context.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
       const page = await context.newPage(); page.setDefaultTimeout(10000);
@@ -76,7 +76,7 @@ try {
         await page.getByRole('button',{name:'Sign in',exact:true}).first().click();await assertFit('Account');
         await page.screenshot({path:`test-results/booking-account-${name}-${width}.png`,fullPage:true});
         await page.getByRole('button', {name:'Back',exact:true}).click();
-        await page.waitForLoadState('networkidle');
+        await review();
         assert.equal(await page.getByRole('heading', {name:'Review your first visit.',exact:true}).count(), 1, 'Back from account must retain the request review, not reset to an empty dog form');
         assert.match(await page.locator('.guided-booking-price').innerText(), /Biscuit/);
         assert.match(await page.locator('.guided-visit-summary').innerText(), /10:00 AM/);
@@ -104,6 +104,10 @@ try {
         await page.goto(origin);await page.locator('.hero-booking-facts').waitFor();assert.match(await page.locator('.hero-booking-facts').innerText(),/\$200[\s\S]*Manual renewal[\s\S]*Aberdeen/);await assertFit('Homepage');
         await page.screenshot({path:`test-results/booking-home-${name}-${width}.png`,fullPage:true});
         await page.goto(`${origin}/how-to#chapter-time`);await page.locator('#chapter-time button').waitFor();assert.equal(await page.locator('.how-to-chapters button').count(),22);await assertFit('How-to guide');
+        if (width === 390) {
+          await page.goto(`${origin}/live`);await page.getByRole('heading',{name:'OUT IN THE FIELD.',exact:true}).waitFor();
+          liveError=true;await page.reload();await page.getByText('Live status is temporarily unavailable. Reconnecting…',{exact:true}).waitFor();assert.equal(await page.getByRole('heading',{name:'OUT IN THE FIELD.',exact:true}).count(),0,'failed status is never presented as offline');liveError=false;
+        }
         assert.equal(writes.filter(w=>w.path==='/bookings'||w.path.includes('checkout')).length,0);assert.deepEqual(errors, []);
         console.log(`PASS ${name}/${width}: four stages; keyboard; date/time proximity; Back/Forward/refresh/auth; resume/discard; account isolation; availability recheck; home and complete guide layouts. No real writes.`);
       } catch (error) {
