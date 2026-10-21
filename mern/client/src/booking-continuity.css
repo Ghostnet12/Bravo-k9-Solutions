@@ -1,0 +1,18 @@
+/* One numbered first-visit journey on every screen. */
+.app-page .guided-booking-steps{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.app-page .guided-booking-steps button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:64px;line-height:1.35;padding:10px 6px;font-size:.875rem}
+.app-page .guided-booking-steps button[aria-current=step]{opacity:1}
+.booking-draft-actions,.booking-draft-summary{max-width:780px;margin:20px auto;padding:16px 20px;border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:8px;background:#161610}
+.booking-draft-actions p,.booking-draft-summary p{margin:0 0 8px;line-height:1.65}
+.booking-draft-summary strong{display:block;margin-bottom:8px}
+.booking-draft-actions .quiet-button{min-height:44px;text-align:left}
+.account-page>.booking-guide-link,.booking-account-choices{max-width:780px;margin:16px auto}
+.booking-guide-link{display:block;padding:10px 0;min-height:44px;color:var(--gold-light);text-decoration:underline;text-underline-offset:3px;line-height:1.5}
+.guided-selection-summary{line-height:1.65;margin:12px 0}
+.guided-booking-page .guided-date-rail{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(82px,1fr);grid-template-columns:none;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;padding:4px 4px 12px;max-width:100%;margin:12px 0}
+.guided-booking-page .guided-date-rail button{min-height:120px;scroll-snap-align:start}
+.guided-booking-page .guided-date-rail .date-time-range{display:none}
+.guided-booking-page :is(.guided-trainer-card,.guided-booking-steps button,.date-grid button):focus-visible,.booking-draft-actions button:focus-visible{outline:3px solid var(--gold-light);outline-offset:3px}
+.guided-booking-page .guided-trainer-card small{font-size:.875rem}
+.how-to-chapters li[id]{scroll-margin-top:120px}
+@media(max-width:420px){.app-page .guided-booking-steps{gap:5px}.app-page .guided-booking-steps button{font-size:.75rem;padding:8px 3px}.booking-draft-actions,.booking-draft-summary{padding:14px}.guided-booking-page .guided-trainer-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}

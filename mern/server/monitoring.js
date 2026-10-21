@@ -15,10 +15,10 @@ export const monitoringEnabled = () => !['preview', 'development'].includes(proc
 export async function pingDatabase() {
   await mongoose.connection.db.command({ ping: 1 }, { timeoutMS: 5000 });
 }
-export async function recordError({ source, area, kind, status = 0, requestId = null }) {
+export async function recordError({ source, area, kind, status = 0, requestId = null, timing }) {
   const now = new Date(), day = now.toISOString().slice(0, 10);
   const safe = { source: source === 'server' ? 'server' : 'browser', area: AREAS.includes(area) ? area : 'other', kind: CLIENT_ERRORS.includes(kind) ? kind : 'server_error', status: Number.isInteger(status) && status >= 500 && status <= 599 ? status : 0 };
-  console.error(JSON.stringify({ level: 'error', event: 'bravo.site_error', ...safe, ...(requestId ? { requestId } : {}) }));
+  console.error(JSON.stringify({ level: 'error', event: 'bravo.site_error', ...safe, ...(requestId ? { requestId } : {}), ...(timing ? { timing: liveTimingInput.parse(timing) } : {}) }));
   if (!monitoringEnabled() || mongoose.connection.readyState !== 1) return;
   try {
     const key = [day, safe.source, safe.area, safe.kind, safe.status].join(':');
@@ -28,7 +28,18 @@ export async function recordError({ source, area, kind, status = 0, requestId = 
 export function monitorRequests(req, res, next) {
   const start = Date.now(), requestId = randomUUID();
   res.setHeader('X-Bravo-Request-Id', requestId);
+  // Only status polling, never media, signalling, private streams or broadcast traffic.
+  const liveStatus = req.method === 'GET' && /^\/api\/live(?:\?|$)/.test(req.originalUrl);
+  const diagnostic = tokenInput.safeParse(req.get('X-Bravo-Diagnostic-Id'));
+  let finished = false;
+  const logLiveTiming = outcome => {
+    const durationMs = Date.now() - start;
+    if (!liveStatus || (outcome === 'finished' && durationMs < 2000 && res.statusCode < 500)) return;
+    console.warn(JSON.stringify({ level: 'warn', event: 'bravo.live_status_timing', requestId, ...(diagnostic.success ? { diagnosticId: diagnostic.data } : {}), durationMs, status: res.statusCode, outcome }));
+  };
+  res.once('close', () => { if (!finished) logLiveTiming('aborted'); });
   res.once('finish', () => {
+    finished = true; logLiveTiming('finished');
     if (res.statusCode < 500) return;
     const area = routeArea(req.originalUrl);
     console.error(JSON.stringify({ level: 'error', event: 'bravo.request_failed', area, status: res.statusCode, requestId, durationMs: Date.now() - start }));
@@ -38,7 +49,8 @@ export function monitorRequests(req, res, next) {
   next();
 }
 const visitInput = z.object({ token: tokenInput, channel: z.enum(CHANNELS), stage: z.enum(FUNNEL_STAGES) }).strict();
-const errorInput = z.object({ kind: z.enum(CLIENT_ERRORS), area: z.enum(AREAS) }).strict();
+export const liveTimingInput = z.object({ diagnosticId: tokenInput, elapsedMs: z.number().int().min(0).max(3600000), queueMs: z.number().int().min(0).max(3600000), timeoutMs: z.number().int().min(1).max(60000) }).strict();
+export const errorInput = z.object({ kind: z.enum(CLIENT_ERRORS), area: z.enum(AREAS), timing: liveTimingInput.optional() }).strict().refine(value => !value.timing || (value.kind === 'request_timeout' && value.area === 'live'), 'Timing is only accepted for live status timeouts');
 export async function ingestVisit(req, res) {
   const input = visitInput.parse(req.body);
   if (!monitoringEnabled() || optedOut(req) || staff(req.user)) return res.status(204).end();

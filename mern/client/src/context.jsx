@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { api } from './api';
+import { readBookingDraft, writeBookingDraft } from './booking-draft';
 import { publicCatalogSnapshot } from '../../shared/catalog';
 const Context = createContext(null);
 const noMembership = { active: false, manual: false, onlineAccess: false };
@@ -39,24 +40,47 @@ export function AppProvider({ children }) {
     return () => { current = false; clearInterval(timer); };
   }, [user?.id, user?.mustChangePassword, refreshNotifications]);
   const [membership, setMembership] = useState(noMembership);
-  const [bookingDraft, setBookingDraft] = useState(null);
-  const previousUserId = useRef(null), authGeneration = useRef(0);
-  const refreshUser = useCallback(async () => {
+  const draftState = useRef({ owner: null, revision: 0, draft: null });
+  const [draftSnapshot, setDraftSnapshot] = useState(draftState.current);
+  const { owner: draftOwner, revision: draftRevision, draft: bookingDraft } = draftSnapshot;
+  const setBookingDraft = useCallback(value => {
+    const current = draftState.current;
+    // A previous account/component cannot write into the newly resolved scope.
+    if (!draftOwner || current.owner !== draftOwner || current.revision !== draftRevision) return;
+    const draft = writeBookingDraft(draftOwner, value);
+    draftState.current = { ...current, draft };
+    setDraftSnapshot(draftState.current);
+  }, [draftOwner, draftRevision]);
+  const discardBookingDraft = useCallback(() => {
+    writeBookingDraft(null, null);
+    draftState.current = { ...draftState.current, draft: null, revision: draftState.current.revision + 1 };
+    setDraftSnapshot(draftState.current);
+  }, []);
+  const authGeneration = useRef(0);
+  const refreshUser = useCallback(async ({ claimBookingDraft = false } = {}) => {
     const generation = authGeneration.current;
     try {
       const data = await api('/auth/me');
       if (generation !== authGeneration.current) return;
-      if (previousUserId.current && previousUserId.current !== data.user?.id) setBookingDraft(null);
-      previousUserId.current = data.user?.id || null;
+      const owner = data.user?.id ? `user:${data.user.id}` : 'guest';
+      if (draftState.current.owner !== owner) {
+        const draft = readBookingDraft(owner, { claimGuest: claimBookingDraft && draftState.current.owner === 'guest' && !!data.user });
+        writeBookingDraft(owner, draft);
+        draftState.current = { owner, draft, revision: draftState.current.revision + 1 };
+        setDraftSnapshot(draftState.current);
+      }
       setUser(data.user); setServices(data.services || []); setMembership(data.user ? data.membership || noMembership : noMembership);
     } finally { setAuthReady(true); }
   }, []);
   const signOut = useCallback(async () => {
     await api('/auth/logout', { method: 'POST', body: {} });
     authGeneration.current += 1;
-    notificationUser.current = null; previousUserId.current = null;
+    notificationUser.current = null;
+    writeBookingDraft(null, null);
+    draftState.current = { owner: 'guest', revision: draftState.current.revision + 1, draft: null };
+    setDraftSnapshot(draftState.current);
     readNotifications.current = new Set();
-    setUser(null); setServices([]); setMembership(noMembership); setNotifications([]); setBookingDraft(null);
+    setUser(null); setServices([]); setMembership(noMembership); setNotifications([]);
   }, []);
   const refreshConfig = useCallback(() => api('/config', { foreground: true }).then(setConfig), []);
   const updateService = useCallback(service => setConfig(old => ({ ...old,
@@ -64,6 +88,6 @@ export function AppProvider({ children }) {
     ...(service.id === 'online' ? { lessonLibrary: { ...old?.lessonLibrary, lessonCents: service.cents, bundleCents: service.bundleCents } } : {}),
   })), []);
   useEffect(() => { refreshConfig().catch(() => setConfig(old => ({ ...old, connected: false, paymentsReady: false }))); refreshUser().catch(() => {}); }, [refreshUser, refreshConfig]);
-  return <Context.Provider value={{ signOut, notifications, refreshNotifications, markNotificationsRead, config, user, services, membership, setUser, authReady, refreshUser, refreshConfig, updateService, bookingDraft, setBookingDraft }}>{children}</Context.Provider>;
+  return <Context.Provider value={{ signOut, notifications, refreshNotifications, markNotificationsRead, config, user, services, membership, setUser, authReady, refreshUser, refreshConfig, updateService, bookingDraft, setBookingDraft, discardBookingDraft, draftOwner, draftRevision }}>{children}</Context.Provider>;
 }
 export const useBravo = () => useContext(Context);
