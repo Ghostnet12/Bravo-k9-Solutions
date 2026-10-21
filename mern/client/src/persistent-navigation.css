@@ -5,6 +5,8 @@ html { scroll-padding-top: 96px; }
   margin:0;border-radius:0;border-inline:0;z-index:90;
 }
 .cinema-home .app-header.bravo-nav { position:absolute; }
+/* Expanded navigation must stay opaque in browsers without backdrop blur. */
+.app-header.bravo-nav:has(nav.is-open){background:#101010}
 .cinema-hero-still{display:block;width:100%;height:100%;object-fit:cover;object-position:center 40%}
 @media(max-width:700px){
   .app-header.bravo-nav,.cinema-home .app-header.bravo-nav{position:fixed;top:0;width:100%;max-width:none;transform:none;padding:env(safe-area-inset-top) 16px 0;border-radius:0}
@@ -18,7 +20,7 @@ html { scroll-padding-top: 96px; }
   .app-header.bravo-nav .menu-toggle{font-size:0!important;border:0;background:transparent;padding:8px;min-width:44px;border-radius:0;margin-left:0}
   .app-header.bravo-nav .menu-lines i{width:24px;height:2px;background:#fff}
   .app-header.bravo-nav .conversion-header-phone{font-size:9px}
-  .app-header.bravo-nav:has(nav.is-open){max-height:calc(100dvh - var(--ad-dock-height,0px) - 76px);overflow:auto;background:#101010}
+  .app-header.bravo-nav:has(nav.is-open){max-height:calc(100dvh - var(--ad-dock-height,0px) - 76px);overflow:auto}
   .cinema-home.conversion-home .cinema-hero-media{inset:74px 0 0}
   .mobile-home-nav{display:grid}
   .app-header.bravo-nav #bravo-navigation .nav-workspace>.nav-book{display:inline-flex!important}
