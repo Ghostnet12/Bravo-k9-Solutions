@@ -89,7 +89,7 @@ try {for(const [name,engine] of engines) {
   assert.equal(failedRequests.filter(item => new URL(item.url).pathname === '/api/live').length, 0, 'cold status request is not aborted');
   assert.equal(await page.locator('.home-ad-dock').count(),0);
   assert.equal(await page.locator('.hero-live').count(),0);
-  assert.ok(!(await page.locator('.home-status-banner').innerText()).includes('Bravo is live now'));
+  assert.equal(await page.locator('.home-status-banner, .banner-digest').count(),0);
   for(const path of ['/workshops','/live','/contact','/']){
    await waitForApiIdle();
    await visit(origin+path,{waitUntil:'domcontentloaded'});

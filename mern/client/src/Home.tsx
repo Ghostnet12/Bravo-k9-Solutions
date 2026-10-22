@@ -22,7 +22,6 @@ import { getSiteImages } from './site-image-state.js';
 import HeroPhotoCarousel from './HeroPhotoCarousel';
 
 import useCinematicMotion from './useCinematicMotion';
-import HomeBanner from './HomeBanner';
 import ProofVideoCarousel from './ProofVideoCarousel';
 import FacebookRecommendations from './FacebookRecommendations';
 import ReviewPreview from './ReviewPreview';
@@ -88,7 +87,6 @@ export default function Home() {
       <div className="cinema-shell site-media-tools-slot site-media-tools-slot--home" data-site-media-tools=""/>
 
       <HomeSectionOrder>
-      <div key="updates" className="home-routine-updates"><HomeBanner/></div>
       <section key="tools" className="home-tools cinema-shell" aria-label="Tools of the Trade">
         <Editable as={Link} contentKey="home-tools-of-the-trade" canEditLink href="/tools-of-the-trade" className="home-tools-card" aria-labelledby="home-tools-title home-tools-action" aria-describedby="home-tools-copy">
           <div>

@@ -128,7 +128,7 @@ try {
           const order = await page.evaluate(() => ['#training','#training-programs','#reviews','#team','#first-visit-help','.cinema-close','#method','.home-tools','#results'].map(selector => document.querySelector(selector).getBoundingClientRect().top));
           assert.deepEqual([...order].sort((a,b) => a-b), order, 'services and booking confidence before background and equipment');
           assert.equal(await page.locator('#results #dogs').count(), 1, 'photos and video share one proof section');
-          assert.ok(await page.locator('.home-routine-updates').evaluate(node => node.previousElementSibling.id === 'results'), 'routine announcements follow the primary decision path');
+          assert.ok(await page.locator('#workshops').evaluate(node => node.previousElementSibling.id === 'results'), 'workshops follow proof without a banner or empty slot');
           assert.ok(await page.locator('.conversion-dog-terms').evaluate(node => {
             const button = node.parentElement.querySelector('.conversion-button');
             return node.getBoundingClientRect().bottom <= button.getBoundingClientRect().top;
