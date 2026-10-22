@@ -10,100 +10,51 @@ const server = app.listen(0, '127.0.0.1'); await once(server, 'listening'); cons
 await mkdir('test-results', { recursive: true });
 try {
   for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
-    if(process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(engineName))continue;
+    if (process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(engineName)) continue;
     const browser = await engine.launch();
     try {
       for (const width of [390, 1440]) {
         const context = await browser.newContext({ viewport: { width, height: 900 } }), page = await context.newPage();
-        let saved = { revision: 0, alerts: ['Bravo fixture announcement'] }, role = 'owner', failSave = false, weatherAvailable = true;
-        const errors = []; page.on('pageerror', e => errors.push(e.message));
+        let role = null;
+        const errors = [], bannerRequests = [];
+        page.on('pageerror', error => errors.push(error.message));
         await page.route('**/api/**', async route => {
           const path = new URL(route.request().url()).pathname;
-          let json = { services: [], team: [], images: {}, reviews: [], schedules: [], clips: [], count: 0 }, status = 200;
+          let json = { services: [], team: [], images: {}, reviews: [], schedules: [], clips: [], count: 0 };
           if (path === '/api/auth/me') json = { user: role ? { id: 'fixture', role, name: 'Fixture' } : null, services: [] };
           if (path === '/api/live') json = { sessions: [], announcements: [], availability: 'available', serverTime: new Date().toISOString() };
-          if (path === '/api/site-banner') {
-            if (route.request().method() === 'PUT') {
-              if (failSave) { status = 409; json = { error: 'Alerts changed while you were editing.' }; }
-              else { const body = route.request().postDataJSON(); assert.equal(body.expectedRevision, saved.revision); saved = { alerts: body.alerts, settings: body.settings, revision: saved.revision + 1 }; json = saved; }
-            } else json = saved;
+          if (path.startsWith('/api/site-banner')) {
+            bannerRequests.push(path);
+            // Previously published settings must not bring the removed strip back.
+            json = path.endsWith('/weather')
+              ? { weather: { temperature: 63, description: 'Cloudy', observedAt: new Date().toISOString() } }
+              : { revision: 1, alerts: ['Bravo fixture announcement'], settings: { motion: 'always' } };
           }
-          if (path === '/api/site-banner/weather') json = { weather: weatherAvailable ? { temperature: 63, description: 'Cloudy', observedAt: new Date().toISOString() } : null };
-          await route.fulfill({ status, json });
+          await route.fulfill({ json });
         });
         try {
-          await page.goto(origin); await page.locator('[data-banner-editable]').waitFor();
-          assert.equal(await page.getByRole('button', { name: 'Edit banner', exact: true }).count(), 0);
-          const banner = page.locator('.home-status-banner');
-          assert.equal(await banner.evaluate(el => el.closest('.home-routine-updates')?.previousElementSibling?.id === 'results'), true, 'routine banner follows proof, outside the main booking path');
-          assert.ok((await banner.innerText()).includes('63°F'));assert.match(await banner.innerText(),/[A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2}, \d{4} ·/);assert.ok((await banner.boundingBox()).height < 100, 'moving banner stays one compact strip');
-          weatherAvailable = false; await page.reload(); await page.waitForLoadState('networkidle');
-          assert.equal((await banner.innerText()).includes('Weather temporarily unavailable'), false, 'failed weather stays invisible to visitors');
-          assert.equal((await banner.innerText()).includes('63°F'), false, 'stale weather is removed instead of displayed');
-          weatherAvailable = true; await page.reload(); await page.waitForLoadState('networkidle');
-          assert.equal(await page.locator('.banner-track').evaluate(el => getComputedStyle(el).animationName), 'bravo-banner-left');
-          await banner.scrollIntoViewIfNeeded();
-          await page.screenshot({ path: `test-results/banner-moving-${engineName}-${width}.png` });
-          const digest = page.locator('.banner-digest'), digestToggle = digest.locator('summary');
-          await digestToggle.press('Enter');
-          await page.waitForFunction(() => document.querySelector('.banner-digest').open);
-          assert.match(await digest.innerText(), /Bravo fixture announcement/);
-          assert.match(await digest.innerText(), /63°F/);
-          assert.equal(await page.locator('.banner-track').evaluate(el => getComputedStyle(el).animationPlayState), 'paused', 'reading updates temporarily pauses movement');
-          assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'complete announcements wrap on small screens');
-          assert.equal(await digest.getByRole('link', { name: /Explore workshops/ }).getAttribute('href'), '/workshops');
-          assert.equal(await digest.getByRole('link', { name: /Explore online learning/ }).getAttribute('href'), '/learn');
-          await page.screenshot({ path: `test-results/banner-readable-${engineName}-${width}.png` });
-          await digestToggle.press('Enter'); await page.mouse.move(0,0);
-          assert.equal(await page.locator('.banner-track').evaluate(el => getComputedStyle(el).animationPlayState), 'running', 'closing updates restores the selected motion setting');
-          await page.getByRole('button', { name: 'Pause banner', exact: true }).click();
-          assert.equal(await page.locator('.banner-track').evaluate(el => getComputedStyle(el).animationName), 'none');assert.ok((await banner.boundingBox()).height < 100, 'paused or reduced-motion banner stays compact');assert.equal(await page.locator('.banner-viewport').evaluate(el=>getComputedStyle(el).overflowX),'auto');
-          await page.getByRole('button', { name: 'Resume banner', exact: true }).click();await page.mouse.move(0,0);assert.equal(await page.locator('.banner-track').evaluate(el=>getComputedStyle(el).animationPlayState),'running');await page.getByRole('button',{name:'Pause banner',exact:true}).click();
-          await banner.scrollIntoViewIfNeeded();
-          const openByHold = async () => { const b = await banner.boundingBox(); await page.mouse.move(b.x + 40, b.y + 20); await page.mouse.down(); await page.waitForTimeout(750); await page.mouse.up(); };
-          await openByHold(); await page.getByRole('dialog').waitFor();
-          for (const label of ['Location label', 'Time label', 'Weather label', 'Alert label', 'Default message label']) await page.getByLabel(label, { exact: true }).fill('');
-          await page.getByLabel('Location text', { exact: true }).fill('Aberdeen & Bath');
-          await page.getByLabel('Custom time text (blank = automatic Central Time)', { exact: true }).fill('Training hours: call Bravo');
-          await page.getByLabel('Custom weather text (blank = automatic Aberdeen weather)', { exact: true }).fill('Outdoor sessions available');
-          await page.getByText('Colors, text size & scrolling', { exact: true }).click();
-          assert.equal(await page.getByLabel('Outline color', { exact: true }).inputValue(), '#ba9a64');
-          assert.equal(await page.getByLabel('Center color', { exact: true }).inputValue(), '#ba9a64');
-          assert.equal(await page.getByLabel('Edge color', { exact: true }).inputValue(), '#ba9a64');
-          await page.getByLabel('Text size: 14', { exact: true }).press('ArrowRight');
-          await page.getByRole('button', { name: '+ Add alert', exact: true }).click();
-          await page.getByLabel('Alert 2', { exact: true }).fill('New training notice <script>not executable</script>');
-          failSave = true; await page.getByRole('button', { name: 'Publish banner', exact: true }).click(); await page.getByRole('alert').waitFor();
-          assert.ok((await page.getByLabel('Alert 2', { exact: true }).inputValue()).includes('New training notice'));
-          failSave = false; await page.getByRole('button', { name: 'Publish banner', exact: true }).click(); await page.getByRole('dialog').waitFor({ state: 'hidden' });
-          assert.equal(saved.settings.fontSize, 15);
-          assert.ok((await banner.innerText()).includes('New training notice')); assert.ok((await banner.innerText()).includes('Aberdeen & Bath')); assert.ok((await banner.innerText()).includes('Outdoor sessions available'));
-          assert.equal(await page.locator('.banner-item strong').count(), 0);
-          await page.reload(); await page.locator('[data-banner-editable]').waitFor();
-          await page.waitForLoadState('networkidle'); assert.equal(await page.locator('.banner-item strong').count(), 0);
-          assert.ok((await banner.innerText()).includes('New training notice')); assert.ok((await banner.innerText()).includes('Aberdeen & Bath')); assert.ok((await banner.innerText()).includes('Outdoor sessions available'));
-          // Hold without moving opens the same editor; normal scroll cancels it.
-          await banner.scrollIntoViewIfNeeded(); const box = await banner.boundingBox();
-          await page.mouse.move(box.x + 40, box.y + 20); await page.mouse.down(); await page.waitForTimeout(750); await page.mouse.up();
-          await page.getByRole('dialog').waitFor(); await page.getByRole('button', { name: 'Close banner editor' }).click();
-          await page.getByRole('button', { name: 'Pause banner' }).click();
-          assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
-          await page.screenshot({ path: `test-results/banner-${engineName}-${width}.png`, fullPage: false });
-          await page.getByRole('button',{name:'Accessibility',exact:true}).click();await page.getByRole('button',{name:/^Reduce motion/}).click();
-          await page.waitForFunction(()=>document.querySelector('.home-status-banner').classList.contains('is-paused'));
-          assert.equal(await page.locator('.banner-viewport').evaluate(el=>getComputedStyle(el).overflowX),'auto');assert.ok((await banner.boundingBox()).height < 100);
-          assert.equal(await page.locator('.banner-controls button').count(),0);
-          await page.getByRole('button',{name:/^Reduce motion/}).click();await page.getByRole('button',{name:'Close accessibility options',exact:true}).click();
-          await page.emulateMedia({ reducedMotion: 'reduce' });
-          assert.equal(await page.locator('.banner-track').evaluate(el => getComputedStyle(el).animationName), 'none');assert.ok((await banner.boundingBox()).height < 100, 'paused or reduced-motion banner stays compact');assert.equal(await page.locator('.banner-viewport').evaluate(el=>getComputedStyle(el).overflowX),'auto');
-          for (const visitorRole of ['staff', 'member', null]) {
-            role = visitorRole; await page.reload(); await page.waitForLoadState('networkidle'); assert.equal(await page.getByRole('button', { name: 'Edit banner' }).count(), 0);
-            await banner.scrollIntoViewIfNeeded(); await openByHold(); assert.equal(await page.getByRole('dialog').count(), 0); assert.equal(await page.locator('[data-banner-editable]').count(), 0);
+          for (const visitorRole of [null, 'member', 'staff', 'owner']) {
+            role = visitorRole;
+            await page.goto(origin); await page.waitForLoadState('networkidle');
+            assert.equal(await page.locator('.home-status-banner, .home-routine-updates, .banner-digest').count(), 0, 'banner and updates panel stay removed for every visitor role');
+            assert.equal(await page.getByText('Read every Bravo update', { exact: true }).count(), 0);
+            assert.equal(await page.getByText('Bravo fixture announcement', { exact: true }).count(), 0);
+            assert.ok(await page.locator('#workshops').evaluate(node => node.previousElementSibling.id === 'results'), 'results flow directly into workshops with no empty banner slot');
+            assert.equal(await page.locator('.conversion-trust a').count(), 4, 'hero navigation stays intact');
+            assert.equal(await page.locator('#method .home-method-step').count(), 3, 'training approach cards stay intact');
+            assert.match(await page.locator('#training').innerText(), /\$200/, 'training pricing stays intact');
+            assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'removing the banner preserves the responsive layout');
+            if (visitorRole === null) {
+              await page.locator('#workshops').scrollIntoViewIfNeeded();
+              await page.screenshot({ path: `test-results/banner-removed-${engineName}-${width}.png` });
+            }
           }
-          assert.deepEqual(errors, []); console.log(`PASS ${engineName} ${width}: placement, weather, movement, pause, long-press, editing, persistence, conflicts and restricted editor`);
+          assert.deepEqual(bannerRequests, [], 'homepage no longer fetches banner announcements or weather');
+          assert.deepEqual(errors, []);
+          console.log(`PASS ${engineName} ${width}: no banner, updates panel or banner requests; adjacent sections, pricing, icons and approach preserved`);
         } catch (error) {
           await page.screenshot({ path: `test-results/banner-failure-${engineName}-${width}.png`, fullPage: true });
-          await writeFile(`test-results/banner-failure-${engineName}-${width}.json`, JSON.stringify({ error: error.message, errors, text: await page.locator('body').innerText() }, null, 2));
+          await writeFile(`test-results/banner-failure-${engineName}-${width}.json`, JSON.stringify({ error: error.message, errors, bannerRequests, text: await page.locator('body').innerText() }, null, 2));
           throw error;
         } finally { await context.close(); }
       }
