@@ -159,13 +159,13 @@
 .cinema-home.conversion-home #method .home-method-step::before{grid-column:1;grid-row:1 / span 2;width:44px;height:44px}
 .cinema-home.conversion-home #method .home-method-step:hover{border-color:#ba9a6499}
 .cinema-home.conversion-home #method .home-method-step strong{grid-column:2;display:block;font:400 36px/1.15 'Bebas Neue',sans-serif;color:#e1c99d}
-.cinema-home.conversion-home #method .home-method-step .home-method-copy{grid-column:2;display:block;font:400 14px/1.7 Montserrat,sans-serif;color:#d6cfc2}
+.cinema-home.conversion-home #method .home-method-step .home-method-copy{grid-column:2;display:block;font:400 .875rem/1.7 Montserrat,sans-serif;color:#d6cfc2}
 .cinema-home.conversion-home .home-method-action{display:inline-flex;align-items:center;justify-content:center;min-height:44px;margin-top:22px}
 @media(max-width:700px){
  .cinema-home.conversion-home #method .home-method-steps{grid-template-columns:1fr;gap:10px;margin-top:22px}
  .cinema-home.conversion-home #method .home-method-step{padding:20px;gap:8px 16px}
  .cinema-home.conversion-home #method .home-method-step strong{font-size:29px}
- .cinema-home.conversion-home #method .home-method-step .home-method-copy{font-size:13px}
+ .cinema-home.conversion-home #method .home-method-step .home-method-copy{font-size:.8125rem}
 }
 @media(prefers-reduced-motion:reduce){.cinema-home.conversion-home #method .home-method-step{transition:none}}
 .access-reduced-motion .cinema-home.conversion-home #method .home-method-step{transition:none}
