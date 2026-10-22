@@ -6,6 +6,8 @@ import { isLiveAnnouncement } from '../../shared/live-policy.js';
 import './home-banner.css';
 import { isImageEditor } from '../../shared/site-images.js';
 import { DEFAULT_BANNER, bannerDate } from '../../shared/site-banner.js';
+import { Editable } from './SiteContent';
+import Link from './Link';
 
 const AlertEditor = lazy(() => import('./BannerEditor'));
 const localTime = date => new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }).format(date);
@@ -64,6 +66,16 @@ export default function HomeBanner() {
       </div></div>
       <div className="banner-controls">{!reduced && <button type="button" aria-label={stopped ? 'Resume banner' : 'Pause banner'} aria-pressed={stopped} onClick={() => setPaused(!stopped)}>{stopped ? '▶' : 'Ⅱ'}</button>}</div>
     </section>
+    {items.length > 0 && <details className="banner-digest">
+      <summary><Editable as="span" contentKey="home-updates-summary" canEditText>Read every Bravo update</Editable><span aria-hidden="true">+</span></summary>
+      <div className="banner-digest-content">
+        <ul>{items.map((item, index) => <li key={index}>{item.label.trim() && <strong>{item.label}</strong>}<p>{item.text}</p></li>)}</ul>
+        <div className="banner-digest-actions">
+          <Editable as={Link} contentKey="home-updates-workshops" canEditText canEditLink href="/workshops">Explore workshops <span aria-hidden="true">→</span></Editable>
+          <Editable as={Link} contentKey="home-updates-learning" canEditText canEditLink href="/learn">Explore online learning <span aria-hidden="true">→</span></Editable>
+        </div>
+      </div>
+    </details>}
     {canEdit && <button type="button" className="section-edit-button" onClick={openEditor}>Edit information banner</button>}
     {editError && <p className="shell" role="alert">{editError}</p>}
     {editing && canEdit && saved && <Suspense fallback={<p role="status">Opening banner editor…</p>}><AlertEditor saved={saved} publish={setSaved} close={() => setEditing(false)}/></Suspense>}

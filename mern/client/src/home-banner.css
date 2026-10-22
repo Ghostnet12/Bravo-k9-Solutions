@@ -36,3 +36,25 @@
 .banner-settings{display:grid;gap:14px;margin:16px 0}.banner-settings label{color:#101010;font-size:14px}.banner-settings input:not([type=checkbox]){display:block;width:100%;box-sizing:border-box;margin-top:5px;min-height:44px;background:#fff;color:#101010;border:1px solid #101010;padding:8px;border-radius:5px;font:inherit}.banner-settings input[type=color]{padding:3px}.banner-settings .banner-check{display:flex;align-items:center;gap:10px;min-height:44px}.banner-settings input[type=checkbox]{width:20px;height:20px;accent-color:#101010}.banner-editor details{margin:16px 0;border-bottom:1px solid #10101040;padding-bottom:12px}.banner-editor summary{cursor:pointer;min-height:44px;font-weight:700;align-content:center}.banner-editor h3{color:#101010}
 
 .home-status-banner[data-banner-editable] .banner-viewport{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}.banner-controls:empty{display:none}
+
+/* Give every announcement a readable home without changing the owner's ticker settings. */
+.banner-digest{border:1px solid #ba9a644a;border-top:0;border-radius:0 0 12px 12px;background:#151411;color:#eee9df;font-family:Montserrat,sans-serif}
+.banner-digest>summary{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:12px 20px;box-sizing:border-box;cursor:pointer;list-style:none;font:600 13px/1.5 Montserrat,sans-serif;color:#e1c99d}
+.banner-digest>summary::-webkit-details-marker{display:none}
+.banner-digest>summary>span[aria-hidden]{font-size:23px;font-weight:400;transition:transform .2s}
+.banner-digest[open]>summary>span[aria-hidden]{transform:rotate(45deg)}
+.banner-digest>summary:hover{background:#ba9a640c}
+.banner-digest>summary:focus-visible,.banner-digest-actions a:focus-visible{outline:2px solid #e1c99d;outline-offset:-3px}
+.banner-digest-content{padding:0 20px 20px}
+.banner-digest-content>ul{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px;margin:0;padding:0;list-style:none}
+.banner-digest-content>ul>li{min-width:0;padding:16px;border:1px solid #ba9a642e;border-radius:8px;background:#ba9a6408;overflow-wrap:anywhere}
+.banner-digest-content strong{display:block;margin-bottom:6px;color:#e1c99d;font:700 10px/1.5 Montserrat,sans-serif;letter-spacing:.1em}
+.banner-digest-content p{margin:0;font:400 14px/1.7 Montserrat,sans-serif;color:#eee9df}
+.banner-digest-actions{display:flex;flex-wrap:wrap;gap:8px 28px;margin-top:16px}
+.banner-digest-actions a{display:inline-flex;align-items:center;gap:14px;min-height:44px;color:#e1c99d;font:600 13px/1.5 Montserrat,sans-serif;text-decoration:underline;text-underline-offset:5px}
+.home-routine-updates:has(.banner-digest[open]) .banner-track{animation-play-state:paused}
+@media(max-width:600px){.banner-digest>summary{padding-inline:16px}.banner-digest-content{padding:0 16px 16px}.banner-digest-content>ul>li{padding:14px}.banner-digest-content p{font-size:13px}.banner-digest-actions{gap:4px 20px}}
+@media(max-width:700px){.cinema-home.conversion-home .banner-digest{width:calc(100% - 32px);margin:0 auto;box-sizing:border-box}}
+@media(prefers-reduced-motion:reduce){.banner-digest>summary>span[aria-hidden]{transition:none}}
+.access-reduced-motion .banner-digest>summary>span[aria-hidden]{transition:none}
+@media(forced-colors:active){.banner-digest,.banner-digest-content>ul>li{border:1px solid CanvasText}}
