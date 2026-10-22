@@ -174,5 +174,12 @@ export const CONTENT_KEYS = {
   'page-hunting-dog-training-layout': {},
   'page-hunting-dog-training-heading': {},
   'page-hunting-dog-training-heading-inner': {},
+  'home-updates-summary': { text: true },
+  'home-updates-workshops': { text: true, link: true },
+  'home-updates-learning': { text: true, link: true },
+  'home-method-trust-copy': { text: true },
+  'home-method-train-copy': { text: true },
+  'home-method-deploy-copy': { text: true },
+  'home-method-action': { text: true, link: true },
 };
 

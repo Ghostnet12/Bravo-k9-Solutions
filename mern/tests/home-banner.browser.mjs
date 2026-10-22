@@ -44,6 +44,18 @@ try {
           assert.equal(await page.locator('.banner-track').evaluate(el => getComputedStyle(el).animationName), 'bravo-banner-left');
           await banner.scrollIntoViewIfNeeded();
           await page.screenshot({ path: `test-results/banner-moving-${engineName}-${width}.png` });
+          const digest = page.locator('.banner-digest'), digestToggle = digest.locator('summary');
+          await digestToggle.press('Enter');
+          await page.waitForFunction(() => document.querySelector('.banner-digest').open);
+          assert.match(await digest.innerText(), /Bravo fixture announcement/);
+          assert.match(await digest.innerText(), /63°F/);
+          assert.equal(await page.locator('.banner-track').evaluate(el => getComputedStyle(el).animationPlayState), 'paused', 'reading updates temporarily pauses movement');
+          assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'complete announcements wrap on small screens');
+          assert.equal(await digest.getByRole('link', { name: /Explore workshops/ }).getAttribute('href'), '/workshops');
+          assert.equal(await digest.getByRole('link', { name: /Explore online learning/ }).getAttribute('href'), '/learn');
+          await page.screenshot({ path: `test-results/banner-readable-${engineName}-${width}.png` });
+          await digestToggle.press('Enter'); await page.mouse.move(0,0);
+          assert.equal(await page.locator('.banner-track').evaluate(el => getComputedStyle(el).animationPlayState), 'running', 'closing updates restores the selected motion setting');
           await page.getByRole('button', { name: 'Pause banner', exact: true }).click();
           assert.equal(await page.locator('.banner-track').evaluate(el => getComputedStyle(el).animationName), 'none');assert.ok((await banner.boundingBox()).height < 100, 'paused or reduced-motion banner stays compact');assert.equal(await page.locator('.banner-viewport').evaluate(el=>getComputedStyle(el).overflowX),'auto');
           await page.getByRole('button', { name: 'Resume banner', exact: true }).click();await page.mouse.move(0,0);assert.equal(await page.locator('.banner-track').evaluate(el=>getComputedStyle(el).animationPlayState),'running');await page.getByRole('button',{name:'Pause banner',exact:true}).click();

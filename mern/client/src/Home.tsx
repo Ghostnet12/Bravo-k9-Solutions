@@ -146,8 +146,13 @@ export default function Home() {
       <Editable as="section" key="method" contentKey="copy-home-9" id="method" className="cinema-intro cinema-shell" aria-labelledby="method-title" data-reveal="">
         <Editable as="p" contentKey="copy-home-10" canEditText className="cinema-eyebrow">THE BRAVO APPROACH</Editable>
         <Editable as="h2" contentKey="cinema-method-title" canEditText id="method-title">Understand the dog.<br/><span>Build from there.</span></Editable>
-        <Editable as="p" contentKey="cinema-method-copy" canEditText>We start with the dog in front of us—their personality, instincts, and environment. Then we build trust through clear, consistent communication.</Editable>
-        <div className="cinema-method-signature"><Editable as="span" contentKey="copy-home-11" canEditText>Trust.</Editable><Editable as="span" contentKey="copy-home-12" canEditText>Train.</Editable><Editable as="span" contentKey="copy-home-13" canEditText>Deploy.</Editable></div>
+        <Editable as="p" contentKey="cinema-method-copy" canEditText>A clear path from understanding your dog to practicing together in everyday life.</Editable>
+        <div className="cinema-method-signature home-method-steps">
+          <span className="home-method-step"><Editable as="strong" contentKey="copy-home-11" canEditText>Trust.</Editable><Editable as="span" contentKey="home-method-trust-copy" canEditText className="home-method-copy">Start with your dog’s personality, instincts, and everyday surroundings.</Editable></span>
+          <span className="home-method-step"><Editable as="strong" contentKey="copy-home-12" canEditText>Train.</Editable><Editable as="span" contentKey="home-method-train-copy" canEditText className="home-method-copy">Practice clear, consistent communication together.</Editable></span>
+          <span className="home-method-step"><Editable as="strong" contentKey="copy-home-13" canEditText>Deploy.</Editable><Editable as="span" contentKey="home-method-deploy-copy" canEditText className="home-method-copy">Bring that practice into real walks, public places, and daily routines.</Editable></span>
+        </div>
+        <Editable as="a" contentKey="home-method-action" canEditText canEditLink href="#training" className="cinema-link home-method-action">Explore training <span aria-hidden="true">→</span></Editable>
       </Editable>
 
       <Editable as="section" key="workshops" contentKey="copy-home-50" id="workshops" className="cinema-events" aria-labelledby="workshops-title"><div className="cinema-shell cinema-section-heading" data-reveal=""><div><Editable as="p" contentKey="copy-home-51" canEditText className="cinema-eyebrow">MORE WAYS TO LEARN</Editable><Editable as="h2" contentKey="cinema-workshops-title" canEditText id="workshops-title">Come. Learn.<br/><span>Go further.</span></Editable></div><Editable as="p" contentKey="copy-home-52" canEditText>Hands-on workshops and upcoming Bravo education.</Editable></div><div className="cinema-shell"><WorkshopDetails compact/></div></Editable>

@@ -151,3 +151,22 @@
 .home-results .proof-photos .cinema-section-heading{margin-bottom:24px}
 .home-results .proof-photos h3{font:400 clamp(1.6rem,3vw,2.5rem)/1.15 'Bebas Neue',sans-serif;margin:8px 0}
 .home-routine-updates{margin-top:32px}
+
+/* Turn the brand promise into three concrete steps. */
+.cinema-home.conversion-home #method .home-method-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;max-width:none;margin:28px 0 0;text-align:left;letter-spacing:normal}
+.cinema-home.conversion-home #method .home-method-steps::before{display:none}
+.cinema-home.conversion-home #method .home-method-step{position:relative;display:grid;grid-template-columns:44px minmax(0,1fr);align-items:start;gap:10px 18px;min-width:0;padding:26px;border:1px solid #ba9a6440;border-radius:12px;background:linear-gradient(135deg,#ba9a640d,transparent 70%),#141312;transition:border-color .2s,background .2s}
+.cinema-home.conversion-home #method .home-method-step::before{grid-column:1;grid-row:1 / span 2;width:44px;height:44px}
+.cinema-home.conversion-home #method .home-method-step:hover{border-color:#ba9a6499}
+.cinema-home.conversion-home #method .home-method-step strong{grid-column:2;display:block;font:400 36px/1.15 'Bebas Neue',sans-serif;color:#e1c99d}
+.cinema-home.conversion-home #method .home-method-step .home-method-copy{grid-column:2;display:block;font:400 .875rem/1.7 Montserrat,sans-serif;color:#d6cfc2}
+.cinema-home.conversion-home .home-method-action{display:inline-flex;align-items:center;justify-content:center;min-height:44px;margin-top:22px}
+@media(max-width:700px){
+ .cinema-home.conversion-home #method .home-method-steps{grid-template-columns:1fr;gap:10px;margin-top:22px}
+ .cinema-home.conversion-home #method .home-method-step{padding:20px;gap:8px 16px}
+ .cinema-home.conversion-home #method .home-method-step strong{font-size:29px}
+ .cinema-home.conversion-home #method .home-method-step .home-method-copy{font-size:.8125rem}
+}
+@media(prefers-reduced-motion:reduce){.cinema-home.conversion-home #method .home-method-step{transition:none}}
+.access-reduced-motion .cinema-home.conversion-home #method .home-method-step{transition:none}
+@media(forced-colors:active){.cinema-home.conversion-home #method .home-method-step{border:1px solid CanvasText}}
