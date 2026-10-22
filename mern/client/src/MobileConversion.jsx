@@ -34,7 +34,17 @@ const trustIcons = [
   <path d="m12 2 3 6.5 7 1-5 5 1.2 7-6.2-3.3-6.2 3.3 1.2-7-5-5 7-1Z"/>,
 ];
 export function ConversionTrust() {
-  return <div className="conversion-trust mobile-conversion" aria-label="The Bravo approach">{[['All breeds','All ages'],['Real-world','Environments'],['Professional','Trainers'],['See our','Results']].map(([a,b],index)=><div key={a}><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">{trustIcons[index]}</svg><strong>{a}<br/>{b}</strong></div>)}</div>;
+  const links = [
+    { id: 'dogs', lines: ['All breeds', 'All ages'], href: '#training-programs', action: 'Find your fit' },
+    { id: 'method', lines: ['Real-world', 'Environments'], href: '#method', action: 'Our approach' },
+    { id: 'team', lines: ['Professional', 'Trainers'], href: '#team', action: 'Meet the team' },
+    { id: 'results', lines: ['See our', 'Results'], href: '#results', action: 'Watch the work' },
+  ];
+  return <nav className="conversion-trust cinema-shell" aria-label="Explore the Bravo approach">{links.map(({id,lines,href,action},index)=><Editable as="a" key={id} contentKey={`home-trust-${id}`} canEditLink href={href}>
+    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">{trustIcons[index]}</svg>
+    <Editable as="strong" contentKey={`home-trust-${id}-label`} canEditText>{lines[0]}<br/>{lines[1]}</Editable>
+    <span className="trust-action"><Editable as="span" contentKey={`home-trust-${id}-action`} canEditText>{action}</Editable> <span aria-hidden="true">↗</span></span>
+  </Editable>)}</nav>;
 }
 export function TrainingOffer() {
   const { config } = useBravo();
@@ -52,12 +62,18 @@ export function TrainingOffer() {
   return <div className="conversion-opening cinema-shell">
     <Editable as="section" contentKey="mobile-training-offer" ref={offer} className="conversion-offer" aria-labelledby="conversion-price-title" data-site-service="training">
       <div className="conversion-offer-copy">
+        <Editable as="p" contentKey="home-training-benefit" canEditText className="conversion-offer-intro">Calmer walks. Better manners. More confidence together.</Editable>
         <Editable as="h2" contentKey="mobile-training-heading" canEditText id="conversion-price-title">Private dog training</Editable>
         <p className="conversion-price"><CatalogPrice/><span> / month · one dog</span></p>
-        <p className="conversion-dog-terms">Additional dogs: <CatalogPrice field="additionalDogCents"/>/month each. Manual renewal.</p>
-        <ul>{['Up to one hour per scheduled training day','Monday through Friday','Up to five training visits per week','Client-selected scheduling, subject to availability'].map((term,index)=><Editable as="li" key={term} contentKey={`mobile-training-term-${index + 1}`} canEditText>{term}</Editable>)}</ul>
+        <p className="conversion-dog-terms">Additional dogs: <CatalogPrice field="additionalDogCents"/>/month each. <Editable as="span" contentKey="hero-booking-renewal" canEditText>Manual renewal · no automatic monthly payment</Editable></p>
+        <ul className="conversion-benefits">{[
+          ['Time to train', 'Up to one hour per scheduled training day'],
+          ['Built into your week', 'Monday through Friday'],
+          ['Keep the momentum', 'Up to five training visits per week'],
+          ['Your schedule', 'Client-selected scheduling, subject to availability'],
+        ].map(([title,term],index)=><li key={title}><Editable as="strong" contentKey={`home-training-benefit-${index}`} canEditText>{title}</Editable><Editable as="span" contentKey={`mobile-training-term-${index + 1}`} canEditText>{term}</Editable></li>)}</ul>
         <Editable as={Link} contentKey="mobile-training-start" canEditText canEditLink className="conversion-button" to={training?.enabled === false ? '/contact' : '/portal?program=training'} onClick={() => trackVisit('pricing_booking_clicked')}>{training?.enabled === false ? 'Ask about training' : 'Start my training plan'} <span aria-hidden="true">→</span></Editable>
-        <details className="conversion-catalog-terms"><summary>Current program terms</summary><p>{training?.description}</p><ul>{[[0,'Personalized training'],[5,'Training in real-world environments'],[6,'Bravo comes to you'],[7,'Manual monthly renewal']].map(([index,term]) => <Editable as="li" key={index} contentKey={`mobile-training-term-${index}`} canEditText>{term}</Editable>)}</ul><p>Aggression assessments and specialist programs are separate.</p></details>
+        <details className="conversion-catalog-terms"><summary><Editable as="span" contentKey="home-training-details" canEditText>What’s included & how it works</Editable><span aria-hidden="true">+</span></summary><p>{training?.description}</p><ul>{[[0,'Personalized training'],[5,'Training in real-world environments'],[6,'Bravo comes to you'],[7,'Manual monthly renewal']].map(([index,term]) => <Editable as="li" key={index} contentKey={`mobile-training-term-${index}`} canEditText>{term}</Editable>)}</ul><p>Aggression assessments and specialist programs are separate.</p></details>
       </div>
     </Editable>
   </div>;
@@ -68,7 +84,7 @@ export function MobileDiscovery() {
   return <section className="mobile-conversion" aria-labelledby="conversion-goal-title">
     <div className="conversion-discovery">
       <Editable as="h2" contentKey="mobile-discovery-title" canEditText id="conversion-goal-title">What does your dog struggle with?</Editable>
-      <Editable as="p" contentKey="mobile-discovery-intro" canEditText className="conversion-subtitle">Find the right training plan and book today.</Editable>
+      <Editable as="p" contentKey="mobile-discovery-intro" canEditText className="conversion-subtitle">Pick the challenge. Let’s build your next step.</Editable>
       <div className="conversion-goals">{MOBILE_GOALS.map(goal => {
         const enabled = catalog.find(item => item.id === goal.service)?.enabled !== false;
         return <Editable as={Link} key={goal.id} contentKey={`mobile-goal-${goal.id}`} className="conversion-goal" data-site-photo-surface="" to={enabled ? goal.href : '/contact'} onClick={() => trackVisit('goal_selected')}>
@@ -121,5 +137,5 @@ export function ConversionFAQ() {
     ['Can I plan the whole month?', 'Yes. Choose “Plan my entire month” in the booking flow, or use My Schedule if you already have an active training membership.'],
     ['Does my membership renew automatically?', 'No. Training renews manually each month. Your review shows the current price before you continue.'],
     ['What if my dog is aggressive or reactive?', 'Start with the separate two-trainer assessment. Bravo will discuss handling, suitability and the next steps with you.'],
-  ].map(([q,a],i)=><details key={q}><Editable as="summary" contentKey={`mobile-faq-${i}-question`} canEditText>{q}</Editable><Editable as="p" contentKey={`mobile-faq-${i}-answer`} canEditText>{a}</Editable></details>)}</section>;
+  ].map(([q,a],i)=><details key={q}><Editable as="summary" contentKey={`mobile-faq-${i}-question`} canEditText>{q}</Editable><Editable as="p" contentKey={`mobile-faq-${i}-answer`} canEditText>{a}</Editable></details>)}<Editable as={Link} contentKey="home-guide-link" canEditLink className="conversion-guide-link" to="/how-to"><span aria-hidden="true">▶</span><span><Editable as="strong" contentKey="home-guide-title" canEditText>See how easy getting started can be.</Editable><Editable as="span" contentKey="home-guide-description" canEditText>Watch the booking and scheduling walkthrough</Editable></span><span aria-hidden="true">→</span></Editable></section>;
 }

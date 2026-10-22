@@ -124,7 +124,7 @@ try {
           await homeTools.waitFor({ state: 'visible' });
           assert.equal(await homeTools.getAttribute('href'), '/tools-of-the-trade');
           assert.match(await homeTools.innerText(), /We assess your dog first/);
-          assert.ok(await page.locator('.cinema-hero').evaluate(hero => hero.nextElementSibling.id === 'training'));
+          assert.ok(await page.locator('.cinema-hero').evaluate(hero => hero.nextElementSibling.classList.contains('conversion-trust') && hero.nextElementSibling.nextElementSibling.id === 'training'));
           const order = await page.evaluate(() => ['#training','#training-programs','#reviews','#team','#first-visit-help','.cinema-close','#method','.home-tools','#results'].map(selector => document.querySelector(selector).getBoundingClientRect().top));
           assert.deepEqual([...order].sort((a,b) => a-b), order, 'services and booking confidence before background and equipment');
           assert.equal(await page.locator('#results #dogs').count(), 1, 'photos and video share one proof section');

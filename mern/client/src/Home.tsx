@@ -79,12 +79,11 @@ export default function Home() {
           <p className="cinema-hero-intro"><Editable as="span" contentKey="conversion-hero-intro" canEditText>Personalized training built around your dog. No treats or toys as the foundation. Real-world results.</Editable></p>
           {!compact && <LiveBanner/>}
           <div className="polish-hero-actions"><Editable as={Link} contentKey="mobile-hero-book" canEditText canEditLink href="/portal?program=training" className="cinema-button conversion-button" onClick={() => trackVisit('hero_booking_clicked')}>BOOK YOUR FIRST SESSION <span aria-hidden="true">→</span></Editable><Editable as="a" contentKey="polish-hero-explore" canEditText canEditLink href="#training" className="cinema-link">EXPLORE TRAINING <span aria-hidden="true">→</span></Editable></div>
-          <div className="hero-booking-facts" aria-label="Training price and terms"><p><strong><CatalogPrice/> / month</strong> · one dog</p><Editable as="p" contentKey="hero-booking-renewal" canEditText>Manual renewal · no automatic monthly payment</Editable><Editable as="p" contentKey="hero-booking-location" canEditText>Aberdeen, South Dakota · Bravo comes to you</Editable></div>
         </div>
         <div className="cinema-hero-baseline cinema-shell"><Editable as="span" contentKey="copy-home-4" canEditText>REAL DOGS. REAL LIFE. BRAVO.</Editable><Editable as="a" contentKey="copy-home-5" canEditText canEditLink href="#method" aria-label="Discover the Bravo approach">SCROLL TO DISCOVER <span aria-hidden="true">↓</span></Editable></div>
       </section>
-      <div id="training" className="home-primary-training"><TrainingOffer/></div>
       <ConversionTrust/>
+      <div id="training" className="home-primary-training"><TrainingOffer/></div>
       {compact && <div className="home-live-status cinema-shell"><LiveBanner/></div>}
       <div className="cinema-shell site-media-tools-slot site-media-tools-slot--home" data-site-media-tools=""/>
 
