@@ -36,3 +36,24 @@
   .how-to-chapters button { gap: 10px; padding: 14px; }
   .how-to-transcript { padding: 16px; }
 }
+
+/* The same two clearly labeled paths on every screen. */
+.how-to-paths { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-bottom:32px; }
+.how-to-paths a { display:flex; align-items:center; min-height:52px; padding:16px; border:1px solid var(--gold); border-radius:8px; color:var(--gold-light); line-height:1.5; }
+.first-visit-guide { padding:clamp(20px,4vw,36px); margin-bottom:56px; border:1px solid var(--line); border-radius:12px; background:var(--panel); scroll-margin-top:100px; }
+.first-visit-guide > p { max-width:700px; line-height:1.7; }
+.first-guide-steps { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin:24px 0; }
+.first-guide-steps button { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; min-height:80px; padding:12px 6px; color:var(--cream); background:#101010; border:1px solid var(--line); border-radius:8px; font:500 .875rem/1.4 Montserrat,sans-serif; cursor:pointer; }
+.first-guide-steps button span { font-size:20px; color:var(--gold-light); }
+.first-guide-steps button[aria-pressed=true] { background:#ba9a64; color:#101010; border-color:#e1c99d; }
+.first-guide-steps button[aria-pressed=true] span { color:#101010; }
+.first-guide-detail { min-height:250px; }
+.first-guide-detail p { max-width:720px; line-height:1.75; }
+.first-guide-count { color:var(--gold-light); font-size:13px; }
+.first-guide-tip { border-left:2px solid var(--gold); padding-left:16px; color:var(--muted); }
+.first-guide-controls { display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; }
+.first-guide-storage { color:var(--muted); font-size:13px !important; margin:22px 0 0; }
+.how-to-page .how-to-watch { grid-template-columns:minmax(0,1fr); gap:28px; }
+.how-to-page .how-to-player { width:100%; max-width:380px; margin-inline:auto; }
+.how-to-page .how-to-intro { max-width:720px; margin-inline:auto; padding:0; }
+@media(max-width:480px) { .how-to-paths{grid-template-columns:1fr} .first-guide-steps{gap:5px} .first-guide-steps button{font-size:12px} .first-guide-detail{min-height:340px} }

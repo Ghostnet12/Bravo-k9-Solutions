@@ -11,6 +11,6 @@ export default function BulkTimes({ dates, options, available, onApply, selected
       return <div key={time}><button type="button" className={`button button-ghost ${selected ? 'time-selected' : ''}`} aria-pressed={selected} disabled={blocked.length > 0} onClick={() => onApply(time)}>{selected && <span aria-hidden="true">✓ </span>}{formatTime(time)}{selected && <span className="time-selected-label" aria-hidden="true">Selected</span>}</button>{blocked.length > 0 && <small>Unavailable: {blocked.map(formatDate).join(', ')}</small>}</div>;
     })}</div>
     {dates.length > 0 && times.length === 0 && <p>No available times for these dates. Choose different dates or check the trainer’s availability.</p>}
-    <p className="helper">{single ? 'Your selected date and time are a request. Bravo confirms availability. Nothing is saved until you send your request.' : 'Need different times? Open “Change one date” below. Nothing is saved until you save your changes.'}</p>
+    <p className="helper">{single ? 'Your choices are an unsent draft. This browser tab keeps them for up to 12 hours when storage is available. Nothing is booked until Bravo confirms.' : 'Need different times? Open “Change one date” below. Nothing is saved until you save your changes.'}</p>
   </fieldset>;
 }

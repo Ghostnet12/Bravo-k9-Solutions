@@ -62,11 +62,8 @@ try {
      await route.fulfill({json});
     });
     await page.goto(origin); const book=page.locator('.polish-hero-actions a').first(); await book.waitFor(); await page.screenshot({path:'test-results/polish-debug.png'});
-    // The approved portrait hero scrolls naturally on very short phones.
-    if (height < 650) {
-      await page.mouse.wheel(0, 300);
-      await page.waitForFunction(() => { const link=document.querySelector('.polish-hero-actions a').getBoundingClientRect(), nav=document.querySelector('.mobile-home-nav').getBoundingClientRect(); return link.top >= 74 && link.bottom < nav.top; });
-    }
+    // The shared portrait hero scrolls naturally on every screen.
+    await book.scrollIntoViewIfNeeded();
     const box=await book.boundingBox(); assert.ok(box.y>=0&&box.y+box.height<=height,`booking ${width}: ${JSON.stringify(box)}`);
     assert.equal(await page.locator('.home-ad-dock').count(),0,'public ads removed');
     const methodArt=await page.locator('#method').evaluate(el=>{const s=getComputedStyle(el,'::before');return {background:s.backgroundImage,height:parseFloat(s.height)};});
@@ -75,7 +72,7 @@ try {
     assert.equal(await contact.locator('svg').getAttribute('fill'),'none');
     assert.equal(await contact.locator('svg').getAttribute('stroke'),'currentColor');
     assert.doesNotMatch(await contact.innerText(),/☎|📞/);
-    const barrier = width<=700 ? await page.locator('.mobile-home-nav').boundingBox() : null;
+    const barrier = await page.locator('.mobile-home-nav').boundingBox();
     if(barrier) assert.ok(box.y+box.height<=barrier.y, 'booking clears navigation');
     if(width<=700){
      const art=await page.locator('.cinema-hero-still').boundingBox();
@@ -98,7 +95,7 @@ try {
     await page.locator('.polish-hero-actions').getByRole('link',{name:/^Explore Training$/i}).click();
     await page.waitForFunction(()=>{const target=document.querySelector('#training');const top=target?.getBoundingClientRect().top;return top>=74 && top<150;}).catch(async error=>{console.error('Anchor geometry',width,await page.evaluate(()=>({url:location.href,top:document.querySelector('#training')?.getBoundingClientRect().top,padding:getComputedStyle(document.documentElement).scrollPaddingTop,margin:getComputedStyle(document.querySelector('#training')).scrollMarginTop})));throw error;});
     assert.equal(await page.locator('#training').count(),1,'one training anchor across screen sizes');
-    assert.ok(await page.locator(width<=700?'.conversion-price':'.goal-price').isVisible(),'primary training price is the destination');
+    assert.ok(await page.locator('.conversion-price').isVisible(),'primary training price is the destination');
     assert.match(await page.locator('#training h2:visible').first().evaluate(el=>getComputedStyle(el).fontFamily),/Bebas Neue/);
     // A real scroll gesture ends the route's brief layout stabilization.
     await page.mouse.wheel(0,-10000);

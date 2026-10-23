@@ -1,146 +1,68 @@
-/* The approved photo-casual hero. All rules stay inside this one section. */
+/* One approved portrait composition on phone, tablet and desktop. */
 .cinema-home.conversion-home .home-hero--confidence {
-  display: flex;
-  align-items: center;
+  --confidence-width: min(100vw, 460px);
+  display: block;
   height: auto;
-  min-height: clamp(650px, calc(52vw + 74px), 894px);
+  min-height: 0;
   max-height: none;
-  padding: 74px 0 32px;
+  padding: calc(74px + env(safe-area-inset-top)) 0 28px;
   box-sizing: border-box;
   background: #101010;
+  isolation: isolate;
 }
 .cinema-home.conversion-home .home-hero--confidence .cinema-hero-media {
-  inset: 74px 0 0 auto;
-  width: min(52%, 820px);
-  height: auto;
+  inset: calc(74px + env(safe-area-inset-top)) auto auto 50%;
+  width: var(--confidence-width);
+  height: calc(var(--confidence-width) * 1.5);
   z-index: 0;
-  transform: none;
+  transform: translateX(-50%) !important;
   opacity: 1;
   will-change: auto;
 }
 .cinema-home.conversion-home .home-hero--confidence .cinema-film { background: #101010; }
 .cinema-home.conversion-home .home-hero--confidence .cinema-hero-still {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center top;
-  filter: none;
+  display: block; width: 100%; height: 100%; object-fit: contain; object-position: center top; filter: none;
 }
 .cinema-home.conversion-home .home-hero--confidence .cinema-hero-shade {
   z-index: 1;
-  background: linear-gradient(90deg, #101010, #10101000 22%), linear-gradient(0deg, #101010, #10101000 28%);
+  background: linear-gradient(180deg, #10101000 57%, #101010d9 73%, #101010 86%);
 }
 .cinema-home.conversion-home .home-hero--confidence .cinema-hero-copy {
-  position: relative;
-  z-index: 2;
-  width: min(1240px, calc(100% - 112px));
-  min-height: 0;
-  margin-inline: auto;
-  padding: 32px 0;
-  transform: none;
-  opacity: 1;
-  text-align: left;
+  position: relative; display: block; z-index: 2;
+  width: calc(var(--confidence-width) - 40px);
+  min-height: 0; margin-inline: auto;
+  padding: calc(var(--confidence-width) * .95 + 12px) 0 0;
+  transform: none; opacity: 1; text-align: left;
 }
-.cinema-home.conversion-home .home-hero--confidence .cinema-hero-copy > * { max-width: 46%; }
+.cinema-home.conversion-home .home-hero--confidence .cinema-hero-copy > * { max-width: none; }
 .cinema-home.conversion-home .home-hero--confidence .cinema-eyebrow {
-  margin: 0 0 12px;
-  color: #BA9A64;
-  font: 600 clamp(11px, 1.1vw, 15px)/1.6 Montserrat, sans-serif;
-  letter-spacing: .28em;
+  margin: 0 0 7px; color: #d5b77f;
+  font: 600 clamp(10px, 2.55vw, 12px)/1.6 Montserrat, sans-serif; letter-spacing: .28em;
 }
 .cinema-home.conversion-home .home-hero--confidence h1 {
-  margin: 0;
-  color: #f5f3ee;
-  font: 400 clamp(42px, 5.2vw, 76px)/1 'Bebas Neue', sans-serif;
-  letter-spacing: .005em;
-  text-wrap: initial;
+  margin: 0; color: #f5f3ee;
+  font: 400 clamp(40px, 10.7vw, 48px)/1 'Bebas Neue', sans-serif;
+  letter-spacing: .005em; text-wrap: initial;
+}
+.cinema-home.conversion-home .home-hero--confidence .hero-service-location {
+  margin: 12px 0 0; color: #e1c99d; font: 500 13px/1.6 Montserrat, sans-serif;
 }
 .cinema-home.conversion-home .home-hero--confidence .cinema-hero-intro {
-  margin: 16px 0 22px;
-  color: #f5f3ee;
-  font: 400 clamp(14px, 1.35vw, 19px)/1.55 Montserrat, sans-serif;
-  letter-spacing: 0;
-  text-shadow: none;
+  margin: 10px 0 16px; color: #f5f3ee;
+  font: 400 clamp(14px, 3.3vw, 15px)/1.55 Montserrat, sans-serif; letter-spacing: 0; text-shadow: none;
 }
 .cinema-home.conversion-home .home-hero--confidence .polish-hero-actions {
-  display: grid;
-  gap: 10px;
-  position: relative;
-  inset: auto;
-  width: 100%;
-  margin: 0;
-  padding: 0;
+  display: grid; gap: 10px; position: relative; inset: auto; width: 100%; margin: 0; padding: 0;
 }
 .cinema-home.conversion-home .home-hero--confidence .polish-hero-actions a {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  justify-self: stretch;
-  width: 100%;
-  min-height: 52px;
-  box-sizing: border-box;
-  padding: 14px 16px;
-  border: 1px solid #BA9A64;
-  border-radius: 6px;
-  background: #101010;
-  color: #f5f3ee;
-  font: 600 clamp(14px, 1.2vw, 17px)/1.4 Montserrat, sans-serif;
-  letter-spacing: 0;
-  text-transform: none;
-  text-align: center;
-  text-decoration: none;
-  gap: 12px;
+  display: flex; align-items: center; justify-content: center; justify-self: stretch;
+  width: 100%; min-height: 52px; box-sizing: border-box; padding: 14px 16px;
+  border: 1px solid #BA9A64; border-radius: 6px; background: #101010; color: #f5f3ee;
+  font: 600 clamp(14px, 3.2vw, 15px)/1.4 Montserrat, sans-serif;
+  letter-spacing: 0; text-transform: none; text-align: center; text-decoration: none; gap: 12px;
 }
-.cinema-home.conversion-home .home-hero--confidence .polish-hero-actions .conversion-button {
-  background: #BA9A64;
-  color: #101010;
-}
+.cinema-home.conversion-home .home-hero--confidence .polish-hero-actions .conversion-button { background: #BA9A64; color: #101010; }
 .cinema-home.conversion-home .home-hero--confidence .polish-hero-actions a:hover { border-color: #dec48f; }
 .cinema-home.conversion-home .home-hero--confidence .polish-hero-actions .conversion-button:hover { background: #c9ab77; }
+.cinema-home.conversion-home .home-hero--confidence .hero-plan-explainer { margin: 12px 0 0; color: #d2cec5; font: 400 12px/1.6 Montserrat, sans-serif; }
 .cinema-home.conversion-home .home-hero--confidence .cinema-hero-baseline { display: none; }
-
-@media (max-width: 700px) {
-  .cinema-home.conversion-home .home-hero--confidence {
-    display: block;
-    min-height: 0;
-    padding: 74px 0 24px;
-  }
-  .cinema-home.conversion-home .home-hero--confidence .cinema-hero-media {
-    inset: 74px 0 auto;
-    width: 100%;
-    height: 150vw;
-  }
-  .cinema-home.conversion-home .home-hero--confidence .cinema-hero-still { object-fit: contain; }
-  .cinema-home.conversion-home .home-hero--confidence .cinema-hero-shade {
-    background: linear-gradient(180deg, #10101000 57%, #101010d9 73%, #101010 86%);
-  }
-  .cinema-home.conversion-home .home-hero--confidence .cinema-hero-copy {
-    display: block;
-    width: calc(100% - 40px);
-    padding: calc(95vw + 12px) 0 0;
-  }
-  .cinema-home.conversion-home .home-hero--confidence .cinema-hero-copy > * { max-width: none; }
-  .cinema-home.conversion-home .home-hero--confidence .cinema-eyebrow {
-    font-size: clamp(10px, 2.55vw, 16px);
-    margin-bottom: 7px;
-    letter-spacing: .28em;
-  }
-  .cinema-home.conversion-home .home-hero--confidence h1 { font-size: clamp(40px, 10.7vw, 74px); }
-  .cinema-home.conversion-home .home-hero--confidence .cinema-hero-intro {
-    font-size: clamp(12px, 3.3vw, 18px);
-    margin: 12px 0 16px;
-  }
-  .cinema-home.conversion-home .home-hero--confidence .polish-hero-actions { width: 100%; }
-}
-
-@media (min-width: 701px) and (max-height: 500px) {
-  .cinema-home.conversion-home .home-hero--confidence { min-height: 390px; padding-bottom: 16px; }
-  .cinema-home.conversion-home .home-hero--confidence .cinema-hero-still { object-fit: contain; }
-  .cinema-home.conversion-home .home-hero--confidence .cinema-hero-copy { width: calc(100% - 48px); padding: 12px 0; }
-  .cinema-home.conversion-home .home-hero--confidence .cinema-eyebrow { font-size: 9px; margin-bottom: 6px; }
-  .cinema-home.conversion-home .home-hero--confidence h1 { font-size: 38px; }
-  .cinema-home.conversion-home .home-hero--confidence .cinema-hero-intro { font-size: 12px; margin: 10px 0 12px; }
-  .cinema-home.conversion-home .home-hero--confidence .polish-hero-actions { gap: 8px; }
-  .cinema-home.conversion-home .home-hero--confidence .polish-hero-actions a { min-height: 44px; padding: 10px; font-size: 12px; }
-}

@@ -43,6 +43,7 @@ jobs:
           node tests/live.browser.mjs
           node tests/public-startup.browser.mjs
           node tests/program-editor.browser.mjs
+          node tests/shared-goal-editor.browser.mjs
           node tests/seo.browser.mjs
           node tests/owner-reviews.browser.mjs
           node tests/mobile-conversion.browser.mjs

@@ -20,9 +20,9 @@ test('everyday goals retain the correct training focus', () => {
   assert.match(goal.label, /Pulling, jumping & puppy manners/);
   assert.equal(goalBookingPath(goal), '/portal?program=training&focus=basic-obedience');
 });
-test('homepage services, reviews and booking help precede the longer brand story in DOM order', () => {
+test('homepage presents the membership, reviews and shared training goals before the longer brand story', () => {
   const home = readFileSync(new URL('../client/dist/bravo-shell.html', import.meta.url), 'utf8');
-  const order = ['id="training"', 'id="training-programs"', 'id="reviews"', 'id="team"', 'id="first-visit-help"', 'id="booking-title"', 'id="method"', 'id="home-tools-title"', 'id="results"', 'id="dogs"'];
+  const order = ['id="training"', 'id="reviews"', 'id="training-programs"', 'id="team"', 'id="method"', 'id="results"', 'id="dogs"', 'id="home-tools-title"', 'id="first-visit-help"', 'id="booking-title"'];
   const indices = order.map(value => home.indexOf(value));
   assert.ok(indices.every(index => index >= 0));
   assert.deepEqual([...indices].sort((a, b) => a - b), indices);

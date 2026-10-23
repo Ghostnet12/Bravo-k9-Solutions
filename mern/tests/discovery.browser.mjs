@@ -32,30 +32,6 @@ try {
       // Wait for the requested reactive state, not merely the prior button in
       // the same location. Keep URL and rendered-page assertions independent
       // of unrelated media finishing a document's load event.
-      async function selectGoal(label, expected) {
-        const preview=page.getByRole('button',{name:`Preview ${label}`,exact:true});
-        await preview.click();
-        await page.waitForFunction(({label,expected})=>
-          [...document.querySelectorAll('.goal-preview')].some(el=>el.getAttribute('aria-label')===`Preview ${label}`&&el.getAttribute('aria-pressed')==='true')
-          && document.querySelector('.goal-result .goal-actions .button')?.getAttribute('href')===expected,{label,expected});
-        // Goal selection schedules a smooth scroll on the next animation frame.
-        // WebKit can briefly report a stable link between scroll ticks and then
-        // move it between pointerdown and pointerup. Wait for the real motion to
-        // finish; do not disable animation, force clicks or relax navigation checks.
-        await page.evaluate(() => new Promise((resolve, reject) => {
-          const started = performance.now(); let lastPosition = '', stableSince = started;
-          function sample(now) {
-            const box = document.querySelector('.goal-result .goal-actions .button')?.getBoundingClientRect();
-            const position = box ? [window.scrollY, box.x, box.y, box.width, box.height].map(value => Math.round(value * 10)).join(':') : '';
-            if (!position || position !== lastPosition) { lastPosition = position; stableSince = now; }
-            if (position && now - stableSince >= 250) return resolve();
-            if (now - started > 5000) return reject(new Error('Selected plan did not settle after scrolling'));
-            requestAnimationFrame(sample);
-          }
-          requestAnimationFrame(sample);
-        }));
-        return page.locator('.goal-result .goal-actions .button').and(page.locator(`a[href="${expected}"]`));
-      }
       async function follow(link, destination) {
         await settleApi();
         assert.equal(await link.getAttribute('href'),destination);
@@ -103,7 +79,7 @@ try {
           const configured=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/config' && response.ok());
           await visit(origin+path,{waitUntil:'domcontentloaded'});await configured;
           await page.locator('.accessibility-trigger').waitFor();
-          if(path==='/')await page.locator('.goal-proof figcaption').waitFor();
+          if(path==='/')await page.locator('.conversion-goal').first().waitFor();
           if(path==='/workshops')await page.getByRole('heading',{name:'Saturday dog-training workshop',exact:true}).waitFor();
           if(path==='/contact')await page.getByText('Ashley Leverock',{exact:true}).waitFor();
           await settleApi();await page.evaluate(()=>document.fonts.ready);
@@ -112,26 +88,26 @@ try {
           assert.ok(layout.scroll<=layout.width+1,`${path} ${width} no overflow: ${JSON.stringify(layout)}`);
         }
         await visit(origin);
-        await page.locator('.goal-proof figcaption').waitFor();await settleApi();
-        await page.locator('.goal-choices').screenshot({path:`test-results/program-cards-${engineName}-${width}.png`});
+        await page.locator('.conversion-goal').first().waitFor();await settleApi();
+        await page.locator('.conversion-goals').screenshot({path:`test-results/program-cards-${engineName}-${width}.png`});
         for(const [label,price,program,focus,details] of [
-          ['Pulling, jumping & puppy manners','$200','training','basic-obedience','/dog-training'],
+          ['Pulling','$200','training','basic-obedience','/dog-training'],
           ['Dog walking','$25','walking',null,'/dog-walking'],
-          ['Aggression concerns','$400','aggression',null,'/behavior-assessment'],
+          ['Aggression','$400','aggression',null,'/behavior-assessment'],
         ]){
-          const card=page.getByRole('button',{name:`Preview ${label}`,exact:true});
-          assert.ok((await card.innerText()).includes(price),`${label} has its own service price`);
           const expected=`/portal?program=${program}${focus ? `&focus=${focus}` : ''}`;
-          await selectGoal(label,expected);
-          assert.ok((await page.locator('.goal-price').innerText()).includes(price));
-          assert.equal(await page.locator('.goal-result').getByRole('link',{name:'Full program details →'}).getAttribute('href'),details);
-          assert.equal(await card.getAttribute('aria-pressed'),'true','the card selects the plan without navigation');
-          assert.equal(new URL(page.url()).pathname,'/');
-          assert.equal(await page.locator('.goal-result .goal-actions .button').getAttribute('href'),expected);
-          await follow(page.locator('.goal-program-link'),details);
-          await visit(origin);await page.locator('.goal-proof figcaption').waitFor();await settleApi();
-          const bookingAction=await selectGoal(label,expected);
-          await follow(bookingAction,expected);
+          if(program==='walking') {
+            const detailsLink=page.locator('#training-programs a[href="/dog-walking"]');
+            await follow(detailsLink,details);
+          } else {
+            const card=page.locator('.conversion-goal').filter({hasText:label});
+            assert.equal(await card.getAttribute('href'),expected,'shared goal cards keep the correct booking focus');
+            assert.doesNotMatch(await card.innerText(),/\$\d+/,'goals do not repeat the membership offer');
+            await visit(origin+details);
+          }
+          await visit(origin);await page.locator('.conversion-goal').first().waitFor();await settleApi();
+          if(program==='walking') await visit(origin+expected);
+          else await follow(page.locator('.conversion-goal').filter({hasText:label}),expected);
           if(program==='walking'){
             // The previous training comparison entered two dogs. A different
             // program must offer a choice before replacing that unsent request.
@@ -152,25 +128,19 @@ try {
             assert.match(await selected.innerText(),program==='walking' ? /Dog Walking/ : /Aggressive-dog intake/);
             assert.equal(await page.getByRole('combobox',{name:'Schedule visits for',exact:true}).inputValue(),program);
           }
-          await visit(origin);await page.locator('.goal-proof figcaption').waitFor();await settleApi();
+          await visit(origin);await page.locator('.conversion-goal').first().waitFor();await settleApi();
         }
-        const specialistCard=page.getByRole('button',{name:'Preview Advanced & working-dog goals',exact:true});
-        const specialistText=await specialistCard.innerText();
-        assert.equal(specialistText.includes('$200'),false,'specialist card does not promise the standard monthly rate');
-        assert.match(specialistText,/Talk with Bravo/);assert.match(specialistText,/Individually scoped/);
-        assert.equal(await specialistCard.getAttribute('type'),'button');
-        await selectGoal('Advanced & working-dog goals','/contact');
-        assert.equal(await page.locator('.goal-result .goal-price').count(),0,'specialist preview has no standard membership price');
-        assert.match(await page.locator('.goal-result').innerText(),/scoped individually/i);
-        assert.equal(await page.locator('.goal-result .goal-actions .button').getAttribute('href'),'/contact');
-        assert.equal(await page.locator('.goal-result').getByRole('link',{name:'Explore working-dog goals'}).getAttribute('href'),'/#specialist-training');
-        await follow(page.locator('.goal-result .goal-actions .button'),'/contact');await page.getByRole('heading',{name:'Talk to Bravo.',exact:true}).waitFor();
+        const specialistCard=page.locator('.conversion-goal').filter({hasText:'Advanced'});
+        assert.doesNotMatch(await specialistCard.innerText(),/\$200/,'specialist inquiry does not promise the standard monthly rate');
+        assert.equal(await specialistCard.getAttribute('href'),'/contact?interest=advanced-training');
+        assert.match(await page.locator('#specialist-training').innerText(),/scoped individually/);
+        await follow(specialistCard,'/contact?interest=advanced-training');await page.getByRole('heading',{name:'Talk to Bravo.',exact:true}).waitFor();
         assert.equal(await page.getByRole('link',{name:'Call Bravo · (605) 824-2767',exact:true}).getAttribute('href'),'tel:+16058242767');
         await page.getByRole('link',{name:'Message Ashley',exact:true}).click();await page.getByRole('link',{name:'Sign in to Bravo',exact:true}).waitFor();
         const returnLink=await page.getByRole('link',{name:'Sign in to Bravo',exact:true}).getAttribute('href');
         assert.equal(new URL(returnLink,origin).searchParams.get('next'),'/community?tab=direct&to=cccccccccccccccccccccccc');
         await visit(origin+'/contact');
-        await visit(origin);await page.locator('.goal-proof figcaption').waitFor();await settleApi();
+        await visit(origin);await page.locator('.conversion-goal').first().waitFor();await settleApi();
         const proof=page.locator('.home-work-proof');await proof.getByRole('button',{name:'Working dogs',exact:true}).click();assert.equal(await proof.locator('article[data-proof-video]').count(),1);await proof.getByRole('button',{name:'All training',exact:true}).click();assert.equal(await proof.locator('article[data-proof-video]').count(),3);
         await visit(origin+'/learn');await page.getByLabel('Email address',{exact:true}).fill('visitor@example.test');await page.getByLabel('Email me once when Bravo online courses launch.').check();await page.getByRole('button',{name:'Request a launch update'}).click();await page.getByText('Your launch-update request is saved.',{exact:false}).waitFor();assert.equal(signup.consent,true);assert.equal(signup.email,'visitor@example.test');
         owner=true;await visit(origin+'/workshops');await page.getByRole('button',{name:'Edit workshop details'}).click();await page.getByLabel('Time (Central)',{exact:true}).fill('10:00 a.m.');await page.getByLabel('Location',{exact:true}).fill('Fixture venue');await page.getByRole('button',{name:'Save workshop'}).click();await page.getByText('Workshop details saved.',{exact:true}).waitFor();await reload();await page.getByText('10:00 a.m. · Central',{exact:true}).waitFor();
@@ -199,10 +169,10 @@ try {
         await page.getByText(/Showing the last verified workshop schedule/).waitFor();
         assert.match(await page.locator('.workshop-details').innerText(),/12:00 PM–2:00 PM/);
         failWorkshop=false;await page.evaluate(()=>window.dispatchEvent(new Event('bravo-workshop-changed')));await settleApi();
-        await visit(origin);await page.getByRole('button',{name:'Edit page text & design'}).click();const dialog=page.getByRole('dialog',{name:'Edit website section'});await dialog.getByLabel('Edit this part',{exact:true}).selectOption('discovery-goal-title');await dialog.getByLabel('Text',{exact:true}).fill('Find your next step.');failSave=true;await dialog.getByRole('button',{name:'Publish website changes'}).click();await dialog.getByText('Fixture connection interrupted').waitFor();assert.equal(await dialog.getByLabel('Text',{exact:true}).inputValue(),'Find your next step.');failSave=false;await dialog.getByRole('button',{name:'Publish website changes'}).click();await dialog.waitFor({state:'hidden'});await page.getByText('Saved. Your website changes are published.',{exact:true}).waitFor();await reload();await page.getByRole('heading',{name:'Find your next step.',exact:true}).waitFor();
+        await visit(origin);await page.getByRole('button',{name:'Edit page text & design'}).click();const dialog=page.getByRole('dialog',{name:'Edit website section'});await dialog.getByLabel('Edit this part',{exact:true}).selectOption('mobile-discovery-title');await dialog.getByLabel('Text',{exact:true}).fill('Find your next step.');failSave=true;await dialog.getByRole('button',{name:'Publish website changes'}).click();await dialog.getByText('Fixture connection interrupted').waitFor();assert.equal(await dialog.getByLabel('Text',{exact:true}).inputValue(),'Find your next step.');failSave=false;await dialog.getByRole('button',{name:'Publish website changes'}).click();await dialog.waitFor({state:'hidden'});await page.getByText('Saved. Your website changes are published.',{exact:true}).waitFor();await reload();await page.getByRole('heading',{name:'Find your next step.',exact:true}).waitFor();
         // Cancelling preserves drafts; publishing saves changed sections atomically.
         await page.getByRole('button',{name:'Edit page text & design'}).click();
-        await dialog.getByLabel('Edit this part',{exact:true}).selectOption('discovery-goal-title');
+        await dialog.getByLabel('Edit this part',{exact:true}).selectOption('mobile-discovery-title');
         await dialog.getByLabel('Text',{exact:true}).fill('A preserved draft.');
         await dialog.getByLabel('Edit this part',{exact:true}).selectOption('site-theme');
         const priorConfirmations=confirmations;discard=false;
@@ -211,7 +181,7 @@ try {
         await dialog.getByLabel('Text color',{exact:true}).fill('#ba9a65');
         await dialog.getByRole('button',{name:'Publish website changes'}).click();
         await dialog.waitFor({state:'hidden'});
-        assert.equal(entries['discovery-goal-title'].value.text,'A preserved draft.');
+        assert.equal(entries['mobile-discovery-title'].value.text,'A preserved draft.');
         assert.equal(entries['site-theme'].value.color,'#ba9a65');
         discard=true;await reload();await page.getByRole('heading',{name:'A preserved draft.',exact:true}).waitFor();
         await visit(origin+'/learn?preview=launch');await page.getByRole('heading',{name:'Bravo. Anywhere.',exact:true}).waitFor();await page.getByRole('button',{name:'Edit page text & design'}).click();await page.getByRole('dialog',{name:'Edit website section'}).getByLabel('Edit this part',{exact:true}).selectOption('discovery-course-copy');assert.match(await page.getByRole('dialog',{name:'Edit website section'}).getByLabel('Text',{exact:true}).inputValue(),/David and Ashley/);

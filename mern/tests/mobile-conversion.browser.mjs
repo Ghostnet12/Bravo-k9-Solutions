@@ -45,7 +45,7 @@ try {
    const page = await browser.newPage({ viewport: { width, height: 844 }, reducedMotion: 'reduce' });
    const errors = []; page.on('pageerror', error => errors.push(error.message));
    await page.goto(origin, { waitUntil: 'networkidle' });
-   const readingOrder = await page.evaluate(() => ['training','training-programs','reviews','team','first-visit-help','booking-title','method','home-tools-title','results','workshops'].map(id=>({id,top:document.getElementById(id).getBoundingClientRect().top})));
+   const readingOrder = await page.evaluate(() => ['training','reviews','training-programs','team','method','results','home-tools-title','workshops','first-visit-help','booking-title'].map(id=>({id,top:document.getElementById(id).getBoundingClientRect().top})));
    assert.deepEqual([...readingOrder].sort((a,b)=>a.top-b.top),readingOrder,'same visual and reading order on every screen');
    assert.equal(await page.locator('.conversion-offer').count(),1,'one primary membership offer');
    const portraitsFillCards=await page.locator('.cinema-team-grid>article').evaluateAll(cards=>cards.every(card=>Math.abs(card.querySelector('.cinema-portrait').getBoundingClientRect().width-card.clientWidth)<2));
@@ -73,19 +73,23 @@ try {
      await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));
    }
    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${engineName}-${width} overflow`);
-   if (width <= 700) {
+   {
     assert.ok(await page.locator('.brand-lockup').first().isVisible());
     const brandBox = await page.locator('.brand-lockup').first().boundingBox(); assert.ok(brandBox.x >= 0 && brandBox.x + brandBox.width <= width);
-    const hero = page.locator('.polish-hero-actions').getByRole('link', { name: /Book your first session/i });
+    const hero = page.locator('.polish-hero-actions').getByRole('link', { name: /Start my training plan/i });
+    await hero.scrollIntoViewIfNeeded();
     const box = await hero.boundingBox(), nav = await page.locator('.mobile-home-nav').boundingBox();
-    assert.ok(box.y > 0 && box.y + box.height < nav.y, 'hero action immediately visible above sticky controls');
+    assert.ok(box.y >= 74 && box.y + box.height <= nav.y, 'hero action is reachable without overlap from sticky controls');
+    const media = await page.locator('.cinema-hero-media').boundingBox();
+    assert.ok(Math.abs(media.x + media.width / 2 - width / 2) < 2, 'same centered portrait composition on every screen');
     assert.equal(await page.locator('.home-ad-dock').count(),0); assert.ok(Math.abs(nav.y+nav.height-page.viewportSize().height)<2, 'navigation sits at the phone bottom without ad space');
     const access = await page.locator('.accessibility-tools').boundingBox(); assert.ok(access.y + access.height <= nav.y, 'accessibility stays above navigation');
     assert.equal(await hero.getAttribute('href'), '/portal?program=training');
     assert.equal(await page.locator('.conversion-goal').count(), 4);
-    assert.equal(await page.locator('.goal-finder').isVisible(), false, 'no duplicate mobile training selector');
+    assert.equal(await page.locator('.goal-finder').count(), 0, 'one shared training selector');
     assert.equal(await page.locator('.home-training-offer').count(), 0, 'one visible standard offer');
     assert.equal(await page.locator('.conversion-goal').filter({hasText:'Aggression'}).getAttribute('href'), '/portal?program=aggression');
+    await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));
     await page.screenshot({ path:`test-results/mobile-first-${engineName}-${width}.png` });
     await page.locator('.conversion-opening').scrollIntoViewIfNeeded();
     await page.screenshot({ path:`test-results/mobile-goals-${engineName}-${width}.png` });
@@ -93,7 +97,11 @@ try {
     assert.match(await page.locator('.conversion-price').innerText(), /\$200/);
     await page.screenshot({ path:`test-results/mobile-pricing-${engineName}-${width}.png` });
     await page.locator('.mobile-home-nav').getByRole('button', {name:'More'}).click();
-    await page.getByRole('navigation', {name:'Primary navigation'}).getByRole('link', {name:/FCI Support/}).waitFor({state:'visible'});
+    const primary = page.getByRole('navigation', {name:'Primary navigation'});
+    await primary.getByRole('link', {name:/FCI Support/}).waitFor({state:'visible'});
+    assert.ok(await primary.getByRole('link', {name:/Tools of the trade/i}).isVisible());
+    const paths = await primary.locator('a').evaluateAll(links=>links.map(link=>link.getAttribute('href')));
+    assert.equal(paths.indexOf('/tools-of-the-trade'), paths.indexOf('/fci-support') + 1, 'Tools immediately follows FCI');
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('href')), '/#training', 'bottom menu moves keyboard focus to the revealed links');
     await page.keyboard.press('Escape');
     assert.equal(await page.evaluate(() => document.activeElement?.hasAttribute('data-navigation-toggle')), true, 'Escape returns focus to the opener');
@@ -109,7 +117,7 @@ try {
       assert.match(await page.locator('.conversion-price').innerText(), /\$275/); trainingCents = 20000;
     }
    }
-   if (width === 390) {
+   if ([390,768,1440].includes(width)) {
     for (const route of ['/contact','/fci-support','/account','/portal']) {
       await page.goto(origin+route, {waitUntil:'networkidle'});
       await page.locator('.mobile-home-nav').waitFor();
@@ -134,7 +142,18 @@ try {
     await page.waitForFunction(()=>{const r=document.querySelector('#reviews')?.getBoundingClientRect();return r && r.top>=74 && r.top<150;});
    }
    assert.equal(await page.locator('.cinema-hero video').count(),0,'hero remains image-only');
-   assert.deepEqual(errors, []); await page.close();
+   await page.goto(origin+'/how-to#first-visit-guide',{waitUntil:'networkidle'});
+   const guide=page.locator('#first-visit-guide');
+   for (let step=0;step<4;step++) {
+     assert.equal(await guide.locator('.first-guide-count').innerText(),`Step ${step+1} of 4`);
+     if(step<3) await guide.getByRole('button',{name:/Next step/}).click();
+   }
+   assert.equal(await guide.getByRole('link',{name:/Start my training plan/}).getAttribute('href'),'/portal?program=training');
+   assert.equal(await page.locator('.how-to-chapters button').count(),22);
+   assert.equal(await page.locator('.how-to-player track[kind=captions]').count(),1);
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   await page.screenshot({path:`test-results/first-visit-${engineName}-${width}.png`});
+   assert.deepEqual(errors, []); console.log(`PASS shared layout, navigation, draft entry and first-visit guide: ${engineName}/${width}`); await page.close();
   }} finally { await browser.close(); }
  }
 } finally { await new Promise(resolve => server.close(resolve)); }
