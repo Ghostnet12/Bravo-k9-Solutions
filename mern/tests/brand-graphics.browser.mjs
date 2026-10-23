@@ -31,7 +31,7 @@ try {
   const page=await context.newPage();page.setDefaultTimeout(15000);
   page.on('pageerror',e=>errors.push(e.message));
   page.on('response',r=>{if(new URL(r.url()).pathname.startsWith('/graphics/'))requests.push({path:new URL(r.url()).pathname,status:r.status()});});
-  await page.goto(origin,{waitUntil:'domcontentloaded'});await page.locator('.goal-result').waitFor();
+  await page.goto(origin,{waitUntil:'domcontentloaded'});await page.getByText('See training examples by goal',{exact:true}).click();await page.locator('.goal-result').waitFor();
   await page.evaluate(()=>document.fonts.ready);
   for(const width of [320,390,768,1440]) {
     await page.setViewportSize({width,height:1000});
@@ -47,7 +47,7 @@ try {
     await page.getByRole('button',{name:'Preview Pulling, jumping & puppy manners',exact:true}).click();
     }else{
       assert.equal(await page.locator('.conversion-goal').count(),4);
-      assert.equal(await page.locator('.goal-finder').isVisible(),false);
+      assert.equal(await page.locator('.goal-finder').isVisible(),true);
       assert.equal(await page.locator('.conversion-goal').filter({hasText:'Aggression'}).getAttribute('href'),'/portal?program=aggression');
     }
     await page.locator('#method').scrollIntoViewIfNeeded();
@@ -70,7 +70,7 @@ try {
   assert.ok(await page.locator('.goal-choice-link').first().evaluate(el=>document.activeElement===el));
   await page.keyboard.press('Enter');assert.equal(new URL(page.url()).pathname,'/');
   await page.locator('.goal-program-link').focus();await page.keyboard.press('Enter');await page.waitForURL(origin+'/dog-training',{waitUntil:'domcontentloaded'});
-  await page.goto(origin,{waitUntil:'domcontentloaded'});await page.locator('.goal-result').waitFor();
+  await page.goto(origin,{waitUntil:'domcontentloaded'});await page.getByText('See training examples by goal',{exact:true}).click();await page.locator('.goal-result').waitFor();
   await page.evaluate(()=>document.documentElement.classList.add('access-reduced-motion'));
   assert.ok(await page.locator('.goal-choice-link').first().evaluate(el=>parseFloat(getComputedStyle(el,'::before').transitionDuration)<=0.00001 && getComputedStyle(el,'::before').transform==='none'));
   await page.evaluate(()=>document.documentElement.classList.add('access-high-contrast'));

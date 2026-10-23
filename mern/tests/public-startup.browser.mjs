@@ -49,7 +49,7 @@ try {
         page.on('pageerror', error => errors.push(error.message));
         try {
           await page.goto(origin, { waitUntil: 'domcontentloaded' });
-          const heroBooking = page.locator('.polish-hero-actions').getByRole('link', { name: /^Book Your First Session$/i });
+          const heroBooking = page.locator('.polish-hero-actions').getByRole('link', { name: /^Start My Training Plan$/i });
           await heroBooking.waitFor();
           // Read real server activity while public content is deliberately held.
           const deadline = Date.now() + 5000;
