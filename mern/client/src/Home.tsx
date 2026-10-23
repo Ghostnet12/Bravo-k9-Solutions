@@ -1,5 +1,5 @@
 import LiveBanner from './LiveBanner';
-import { CINEMATIC_HERO_SRCSET, CINEMATIC_HERO_SIZES } from '../../shared/cinematic-hero.js';
+import { CINEMATIC_HERO_SOURCE, CINEMATIC_HERO_KEY, CINEMATIC_HERO_ALT, CINEMATIC_HERO_SRCSET, CINEMATIC_HERO_SIZES } from '../../shared/cinematic-hero.js';
 import { ConversionTrust, MobileDiscovery, TrainingOffer, ConversionFAQ, HomeSectionOrder, useCompactLayout } from './MobileConversion';
 import { trackVisit } from './telemetry';
 import './mobile-conversion.css';
@@ -70,14 +70,14 @@ export default function Home() {
   return <div ref={root} className="bravo-home cinema-home conversion-home">
     <Header/>
     <Editable as="main" contentKey="copy-home-1" id="main-content" tabIndex={-1}>
-      <section className="home-hero cinema-hero" aria-labelledby="home-title">
-        <div className="cinema-hero-media"><div className="cinema-film"><img className="cinema-hero-still" data-site-image-key="asset-mobile-bravo-cinematic.webp" src="/images/mobile-bravo-cinematic.webp" srcSet={CINEMATIC_HERO_SRCSET} sizes={CINEMATIC_HERO_SIZES} width="1536" height="1024" alt="Bravo cinematic dog portrait" fetchPriority="high"/><div className="cinema-hero-shade" aria-hidden="true"/></div></div>
+      <section className="home-hero cinema-hero home-hero--confidence" aria-labelledby="home-title">
+        <div className="cinema-hero-media"><div className="cinema-film"><img className="cinema-hero-still" data-site-image-key={CINEMATIC_HERO_KEY} src={CINEMATIC_HERO_SOURCE} srcSet={CINEMATIC_HERO_SRCSET} sizes={CINEMATIC_HERO_SIZES} width="1024" height="1536" alt={CINEMATIC_HERO_ALT} fetchPriority="high"/><div className="cinema-hero-shade" aria-hidden="true"/></div></div>
         <div className="cinema-hero-copy cinema-shell">
-          <Editable as="p" contentKey="polish-hero-location" canEditText className="cinema-eyebrow">ABERDEEN, SOUTH DAKOTA — WE COME TO YOU.</Editable>
-          <h1 id="home-title"><Editable as="span" contentKey="conversion-hero-title" canEditText>REAL DOGS.<br/><em>REAL CONTROL.</em></Editable></h1>
-          <p className="cinema-hero-intro"><Editable as="span" contentKey="conversion-hero-intro" canEditText>Personalized training built around your dog. No treats or toys as the foundation. Real-world results.</Editable></p>
+          <Editable as="p" contentKey="polish-hero-location" canEditText className="cinema-eyebrow">TRUST. TRAIN. DEPLOY.</Editable>
+          <h1 id="home-title"><Editable as="span" contentKey="conversion-hero-title" canEditText>REAL LIFE.<br/>REAL CONFIDENCE.</Editable></h1>
+          <p className="cinema-hero-intro"><Editable as="span" contentKey="conversion-hero-intro" canEditText>Real-world training. A calmer life together.</Editable></p>
           {!compact && <LiveBanner/>}
-          <div className="polish-hero-actions"><Editable as={Link} contentKey="mobile-hero-book" canEditText canEditLink href="/portal?program=training" className="cinema-button conversion-button" onClick={() => trackVisit('hero_booking_clicked')}>BOOK YOUR FIRST SESSION <span aria-hidden="true">→</span></Editable><Editable as="a" contentKey="polish-hero-explore" canEditText canEditLink href="#training" className="cinema-link">EXPLORE TRAINING <span aria-hidden="true">→</span></Editable></div>
+          <div className="polish-hero-actions"><Editable as={Link} contentKey="mobile-hero-book" canEditText canEditLink href="/portal?program=training" className="cinema-button conversion-button" onClick={() => trackVisit('hero_booking_clicked')}>Book Your First Session <span aria-hidden="true">→</span></Editable><Editable as="a" contentKey="polish-hero-explore" canEditText canEditLink href="#training" className="cinema-link">Explore Training</Editable></div>
         </div>
         <div className="cinema-hero-baseline cinema-shell"><Editable as="span" contentKey="copy-home-4" canEditText>REAL DOGS. REAL LIFE. BRAVO.</Editable><Editable as="a" contentKey="copy-home-5" canEditText canEditLink href="#method" aria-label="Discover the Bravo approach">SCROLL TO DISCOVER <span aria-hidden="true">↓</span></Editable></div>
       </section>

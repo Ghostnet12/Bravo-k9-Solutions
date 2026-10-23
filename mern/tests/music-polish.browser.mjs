@@ -62,6 +62,11 @@ try {
      await route.fulfill({json});
     });
     await page.goto(origin); const book=page.locator('.polish-hero-actions a').first(); await book.waitFor(); await page.screenshot({path:'test-results/polish-debug.png'});
+    // The approved portrait hero scrolls naturally on very short phones.
+    if (height < 650) {
+      await page.mouse.wheel(0, 300);
+      await page.waitForFunction(() => { const link=document.querySelector('.polish-hero-actions a').getBoundingClientRect(), nav=document.querySelector('.mobile-home-nav').getBoundingClientRect(); return link.top >= 74 && link.bottom < nav.top; });
+    }
     const box=await book.boundingBox(); assert.ok(box.y>=0&&box.y+box.height<=height,`booking ${width}: ${JSON.stringify(box)}`);
     assert.equal(await page.locator('.home-ad-dock').count(),0,'public ads removed');
     const methodArt=await page.locator('#method').evaluate(el=>{const s=getComputedStyle(el,'::before');return {background:s.backgroundImage,height:parseFloat(s.height)};});
@@ -77,7 +82,8 @@ try {
      const intro=await page.locator('.cinema-hero-intro').boundingBox();
      const secondary=await page.locator('.polish-hero-actions .cinema-link').boundingBox();
      assert.ok(box.y>=intro.y+intro.height && box.y<intro.y+intro.height+24,'booking directly below hero copy');
-     assert.ok(box.y<art.y+art.height && box.width<width*.65,'booking stays in left hero area');
+     assert.ok(intro.y >= art.y + art.width * .94, 'copy stays below the dog’s paws');
+     assert.ok(box.width > width * .85 && Math.abs(box.width-secondary.width) < 2, 'approved full-width buttons have matching widths');
      assert.ok(Math.abs(box.x-intro.x)<2 && Math.abs(secondary.x-box.x)<2,'both hero buttons align with intro');
      assert.ok(secondary.y>=box.y+box.height && secondary.height>=44,'secondary button stacked with touch target');
      const more=page.locator('.mobile-home-nav button[aria-controls="bravo-navigation"]');
@@ -89,7 +95,7 @@ try {
     assert.match(await book.getAttribute('href'),/portal/);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`overflow ${width}`);
     await page.screenshot({path:`test-results/polish-${name}-${width}.png`});
-    await page.getByRole('link',{name:'EXPLORE TRAINING',exact:true}).click();
+    await page.locator('.polish-hero-actions').getByRole('link',{name:/^Explore Training$/i}).click();
     await page.waitForFunction(()=>{const target=document.querySelector('#training');const top=target?.getBoundingClientRect().top;return top>=74 && top<150;}).catch(async error=>{console.error('Anchor geometry',width,await page.evaluate(()=>({url:location.href,top:document.querySelector('#training')?.getBoundingClientRect().top,padding:getComputedStyle(document.documentElement).scrollPaddingTop,margin:getComputedStyle(document.querySelector('#training')).scrollMarginTop})));throw error;});
     assert.equal(await page.locator('#training').count(),1,'one training anchor across screen sizes');
     assert.ok(await page.locator(width<=700?'.conversion-price':'.goal-price').isVisible(),'primary training price is the destination');
@@ -108,7 +114,7 @@ try {
      await page.getByRole('dialog',{name:'Edit this photo',exact:true}).waitFor();
      await page.getByRole('button',{name:'Close media editor'}).click();
      await page.waitForFunction(()=>document.querySelector('[data-site-soundtrack]')?.dataset.policyTested === 'true');
-     await page.getByText('ABERDEEN, SOUTH DAKOTA — WE COME TO YOU.', {exact:true}).click();
+     await page.locator('.cinema-hero .cinema-eyebrow').click();
      await page.waitForFunction(()=>!document.querySelector('[data-site-soundtrack]').paused);
      await page.locator('[data-site-soundtrack]').evaluate(el=>el.dispatchEvent(new Event('error')));
      assert.equal(await page.locator('[data-site-soundtrack]').evaluate(el=>el.paused),true);
@@ -147,7 +153,7 @@ try {
      await page.getByRole('button',{name:'Pause music',exact:true}).click();
      assert.equal(await page.locator('[data-site-soundtrack]').evaluate(el=>el.paused),true);
      await page.getByRole('button',{name:'Close accessibility options'}).click();
-     await page.getByText('ABERDEEN, SOUTH DAKOTA — WE COME TO YOU.', {exact:true}).click();
+     await page.locator('.cinema-hero .cinema-eyebrow').click();
      await page.keyboard.press('Shift');
      assert.equal(await page.locator('[data-site-soundtrack]').evaluate(el=>el.paused),true,'ordinary gestures must preserve an explicit pause');
      await page.locator('[data-site-soundtrack]').evaluate(el=>el.dataset.testIdentity='same');

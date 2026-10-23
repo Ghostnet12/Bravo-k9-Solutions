@@ -35,11 +35,11 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){if(proce
   assert.equal(await page.locator('.home-hero-image').evaluate(el=>el.complete && el.naturalWidth>0),true);
   await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
   assert.equal(await page.locator('.home-hero-image').evaluate(el=>getComputedStyle(el).objectFit),'contain');
-  assert.match(await page.locator('h1').innerText(), /REAL DOGS.\s*REAL CONTROL/i);
+  assert.match(await page.locator('h1').innerText(), /REAL LIFE.\s*REAL CONFIDENCE/i);
   const visiblePrice=page.locator('.conversion-price');
   assert.ok(await visiblePrice.isVisible());
   assert.match(await visiblePrice.innerText(), /\$200/);
-  assert.ok(await page.getByText('Personalized training built around your dog. No treats or toys as the foundation. Real-world results.',{exact:true}).isVisible());
+  assert.ok(await page.getByText('Real-world training. A calmer life together.',{exact:true}).isVisible());
   assert.ok(await page.getByText(width<=700?'Up to one hour per scheduled training day':'Private visits. Monday–Friday, up to one hour per day. We come to you in Aberdeen.',{exact:true}).isVisible());
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth + 1),'homepage fits viewport');
   await page.evaluate(()=>document.documentElement.style.fontSize='200%');
@@ -49,7 +49,7 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){if(proce
   await page.screenshot({path:`test-results/authentic-home-${engineName}-${width}.png`});
   assert.equal(await page.locator('[data-site-content-key="home-53"] .review-stars').count(),0);
   assert.equal(await page.locator('.facebook-recommendations .review-stars[aria-label="5 out of 5 stars"]').count(),6);assert.equal(await page.locator('.banner-track, .banner-digest').count(),0);
-  await page.getByRole('link',{name:'BOOK YOUR FIRST SESSION',exact:true}).click();await page.getByRole('heading',{name:'Let’s start with your dog.',exact:true}).waitFor();
+  await page.locator('.polish-hero-actions').getByRole('link',{name:/^Book Your First Session$/i}).click();await page.getByRole('heading',{name:'Let’s start with your dog.',exact:true}).waitFor();
   assert.equal(await page.getByText('IMPORTANT APPOINTMENT NOTICE',{exact:true}).count(),0);assert.equal(await page.getByRole('heading',{name:'Build your schedule',exact:true}).count(),0);
   await page.getByLabel('Dog’s name',{exact:true}).fill('Biscuit');await page.getByLabel('Number of dogs',{exact:true}).fill('2');await page.getByLabel('What would you like help with?',{exact:true}).selectOption('hunting-dog');await page.getByLabel('Anything you’d like your trainer to know? (optional)',{exact:true}).fill('Jumps when visitors arrive.');await page.waitForFunction(()=>document.querySelector('textarea[aria-label="Anything you’d like your trainer to know? (optional)"]')?.value==='Jumps when visitors arrive.');
   assert.ok((await page.locator('.first-visit-intro .price-total').innerText()).includes('$300/month'));

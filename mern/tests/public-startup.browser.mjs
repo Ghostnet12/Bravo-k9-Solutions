@@ -49,7 +49,8 @@ try {
         page.on('pageerror', error => errors.push(error.message));
         try {
           await page.goto(origin, { waitUntil: 'domcontentloaded' });
-          await page.getByRole('link', { name: 'BOOK YOUR FIRST SESSION', exact: true }).waitFor();
+          const heroBooking = page.locator('.polish-hero-actions').getByRole('link', { name: /^Book Your First Session$/i });
+          await heroBooking.waitFor();
           // Read real server activity while public content is deliberately held.
           const deadline = Date.now() + 5000;
           while (Date.now() < deadline && (!sample.seen.includes('/auth/me') || !sample.seen.includes('/live') || !sample.seen.includes('/config') || sample.active < 2)) await delay(20);
@@ -57,11 +58,11 @@ try {
           assert.ok(sample.seen.includes('/auth/me'), 'sign-in readiness is not queued');
           assert.ok(sample.seen.includes('/live'), 'live polling is not queued');
           assert.ok(sample.seen.includes('/config'), 'current catalog and connection state are not queued');
-          assert.ok(await page.getByRole('link', { name: 'BOOK YOUR FIRST SESSION', exact: true }).isVisible());
+          assert.ok(await heroBooking.isVisible());
           // Enter booking before any background content is released. Its trainer
           // list must not wait behind the unmounted homepage's pending reads.
           sample.booking = true;
-          await page.getByRole('link', { name: 'BOOK YOUR FIRST SESSION', exact: true }).click();
+          await heroBooking.click();
           await page.getByRole('heading', { name: 'Let’s start with your dog.', exact: true }).waitFor();
           await page.getByLabel('Dog’s name', { exact: true }).fill('Unsent queue fixture');
           await page.getByRole('button', { name: 'Choose a trainer →', exact: true }).click();

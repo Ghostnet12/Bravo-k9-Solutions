@@ -28,7 +28,7 @@ try {
           const req = route.request(), url = new URL(req.url());
           if (url.origin !== origin) return route.abort();
           if (!url.pathname.startsWith('/api/')) return route.continue();
-          let json = { images: saved ? { 'asset-mobile-bravo-cinematic.webp': saved } : {}, entries: {}, reviews: [], recommendations: [], team: [], schedules: [], clips: [], alerts: [], revision: 0 };
+          let json = { images: saved ? { 'asset-hero-real-confidence.webp': saved } : {}, entries: {}, reviews: [], recommendations: [], team: [], schedules: [], clips: [], alerts: [], revision: 0 };
           if (url.pathname === '/api/config') json = { connected: false, services: SERVICES, paymentsReady: false, schedule: { enabled: false, hours: [], weekdays: [1,2,3,4,5] } };
           if (url.pathname === '/api/auth/me') json = { user: owner ? { id: 'fixture-owner', role: 'owner', name: 'Fixture owner' } : null, services: [] };
           if (url.pathname === '/api/live') json = { announcements: [], sessions: [], availability: 'available', serverTime: new Date().toISOString() };
@@ -42,10 +42,10 @@ try {
           const image = page.locator('.cinema-hero-still');
           await image.evaluate(img => img.decode());
           const source = await image.evaluate(img => img.currentSrc);
-          const pixels = width * deviceScaleFactor;
-          const expectedImage = pixels <= 600 ? 'mobile-bravo-cinematic-600.webp' : pixels <= 900 ? 'mobile-bravo-cinematic-900.webp' : pixels <= 1200 ? 'mobile-bravo-cinematic-1200.webp' : 'mobile-bravo-cinematic.webp';
+          const pixels = (width > 700 ? Math.min(width * .52, 820) : width) * deviceScaleFactor;
+          const expectedImage = pixels <= 600 ? 'hero-real-confidence-600.webp' : pixels <= 900 ? 'hero-real-confidence-900.webp' : 'hero-real-confidence.webp';
           assert.ok(source.endsWith(expectedImage), source);
-          const heroRequests = requests.filter(path => /\/mobile-bravo-cinematic(?:-\d+)?\.webp$/.test(path));
+          const heroRequests = requests.filter(path => /\/hero-real-confidence(?:-\d+)?\.webp$/.test(path));
           assert.equal(new Set(heroRequests).size, 1, 'preload and image choose the same responsive asset');
           assert.ok(!requests.some(path => /\/(ContentEditor|AdEditor|BannerEditor)-.*\.js$/.test(path)), 'public loads exclude editing dialogs');
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
