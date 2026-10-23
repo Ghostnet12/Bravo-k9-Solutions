@@ -31,7 +31,7 @@
     "react-router-dom": "^7.13.0",
     "stripe": "^20.0.0",
     "web-vitals": "^5.3.0",
-    "zod": "^4.3.6"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "6.0.2",
@@ -41,5 +41,10 @@
     "mongodb-memory-server": "^11.0.0",
     "supertest": "^7.2.2",
     "vite": "8.1.6"
+  },
+  "overrides": {
+    "@vercel/cli-config": {
+      "zod": "$zod"
+    }
   }
 }
