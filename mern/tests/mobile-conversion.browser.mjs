@@ -29,6 +29,7 @@ app.get('/api/site-ads', (_req, res) => res.json({ revision: 0, settings: { auto
 app.get('/api/config', (_req, res) => res.json({ connected: false, paymentsReady: false, services: SERVICES.map(service => service.id === 'training' ? { ...service, cents: trainingCents } : service), schedule: { enabled: false, weekdays: [1,2,3,4,5], hours: [] } }));
 app.get('/api/auth/me', (_req, res) => res.json({ user: null, services: [], membership: { active: false } }));
 app.get('/api/site-images', (_req, res) => res.json({ images: {} }));
+app.get('/api/site-content', (_req, res) => res.json({ entries: {} }));
 app.get('/api/team', (_req, res) => publicTeam === null ? res.status(503).json({ error: 'Fixture team unavailable' }) : res.json({ team: publicTeam }));
 app.get('/api/team/schedules', (_req, res) => res.json({ schedules: [], checkedAt: new Date().toISOString() }));
 app.get('/api/reviews', (_req, res) => res.json({ reviews, average: 5, count: reviews.length, recommendations: DEFAULT_REVIEWS }));
@@ -43,12 +44,36 @@ try {
   const browser = await engine.launch();
   try { for (const width of [320,375,390,430,768,1024,1440]) {
    const page = await browser.newPage({ viewport: { width, height: 844 }, reducedMotion: 'reduce' });
-   const errors = []; page.on('pageerror', error => errors.push(error.message));
+   const errors = [], navigationDiagnostics = []; let navigating = false;
+   page.on('pageerror', error => {
+     // WebKit emits protocol pageerrors for handled fetch cancellations when
+     // either a document or a React route unmounts. Keep the precise local
+     // diagnostic separately; native errors/rejections are always failures.
+     if (engineName === 'webkit' && navigating && ['team','reviews','site-content'].some(path => error.message.endsWith(`${new URL(origin).host}/api/${path} due to access control checks.`))) {
+       navigationDiagnostics.push({ message: error.message, url: page.url() });
+     } else errors.push(error.message);
+   });
+   await page.exposeFunction('recordConversionRuntimeError', message => errors.push(message));
+   await page.addInitScript(() => {
+     window.addEventListener('error', event => {
+       if (event instanceof ErrorEvent) void window.recordConversionRuntimeError(event.error?.stack || event.message).catch(() => {});
+     });
+     window.addEventListener('unhandledrejection', event => {
+       void window.recordConversionRuntimeError(event.reason?.stack || event.reason?.message || String(event.reason)).catch(() => {});
+     });
+   });
    // Finish the old page's deferred reads before replacing its document.
    // WebKit otherwise reports cancelled reads as access-control pageerrors.
    async function navigate(url) {
      await page.waitForLoadState('networkidle');
-     await page.goto(url, { waitUntil: 'networkidle' });
+     navigating = true;
+     try { await page.goto(url, { waitUntil: 'networkidle' }); }
+     finally { navigating = false; }
+   }
+   async function follow(link) {
+     navigating = true;
+     try { await link.click(); await page.waitForLoadState('networkidle'); }
+     finally { navigating = false; }
    }
    await navigate(origin);
    const readingOrder = await page.evaluate(() => ['training','reviews','training-programs','team','method','results','home-tools-title','workshops','first-visit-help','booking-title'].map(id=>({id,top:document.getElementById(id).getBoundingClientRect().top})));
@@ -111,12 +136,12 @@ try {
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('href')), '/#training', 'bottom menu moves keyboard focus to the revealed links');
     await page.keyboard.press('Escape');
     assert.equal(await page.evaluate(() => document.activeElement?.hasAttribute('data-navigation-toggle')), true, 'Escape returns focus to the opener');
-    await page.locator('.mobile-home-nav').getByRole('link', {name:/Book now/}).click();
+    await follow(page.locator('.mobile-home-nav').getByRole('link', {name:/Book now/}));
     await page.getByRole('heading', {name:'Let’s start with your dog.'}).waitFor();
     assert.equal(await page.locator('.mobile-home-nav').count(), 1, 'navigation persists on booking');
-    await page.locator('.mobile-home-nav').getByRole('link', {name:'Reviews',exact:true}).click();
+    await follow(page.locator('.mobile-home-nav').getByRole('link', {name:'Reviews',exact:true}));
     await page.waitForFunction(() => { const r=document.querySelector('#reviews')?.getBoundingClientRect(); return r && r.top >= 74 && r.top < 150; }).catch(async error=>{console.error('Review geometry',width,await page.evaluate(()=>({top:document.querySelector('#reviews')?.getBoundingClientRect().top,padding:getComputedStyle(document.documentElement).scrollPaddingTop,margin:getComputedStyle(document.querySelector('#reviews')).scrollMarginTop})));throw error;});
-    await page.locator('.mobile-home-nav').getByRole('link', {name:/Book now/}).click();
+    await follow(page.locator('.mobile-home-nav').getByRole('link', {name:/Book now/}));
     await page.getByRole('button', {name:'Plan my entire month',exact:true}).waitFor();
     if (width === 390) {
       trainingCents = 27500; await navigate(origin);
@@ -139,12 +164,12 @@ try {
       assert.ok(Math.abs(chrome.left)<1 && Math.abs(chrome.right-width)<1 && Math.abs(chrome.top)<1, 'full-width header stays fixed across routes');
       assert.ok(Math.abs(chrome.nav-chrome.screen)<2, 'shared navigation stays at the viewport bottom');
     }
-    await page.locator('.mobile-home-nav').getByRole('link',{name:'Reviews',exact:true}).click();
+    await follow(page.locator('.mobile-home-nav').getByRole('link',{name:'Reviews',exact:true}));
     await page.waitForFunction(()=>{const r=document.querySelector('#reviews')?.getBoundingClientRect();return r && r.top>=74 && r.top<150;});
    }
    if (width === 390) {
     await page.evaluate(()=>scrollTo(0,0));
-    await page.locator('.mobile-home-nav').getByRole('link',{name:'Reviews',exact:true}).click();
+    await follow(page.locator('.mobile-home-nav').getByRole('link',{name:'Reviews',exact:true}));
     await page.waitForFunction(()=>{const r=document.querySelector('#reviews')?.getBoundingClientRect();return r && r.top>=74 && r.top<150;});
    }
    assert.equal(await page.locator('.cinema-hero video').count(),0,'hero remains image-only');
@@ -159,6 +184,13 @@ try {
    assert.equal(await page.locator('.how-to-player track[kind=captions]').count(),1);
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
    await page.screenshot({path:`test-results/first-visit-${engineName}-${width}.png`});
+   const contentReads = await page.evaluate(async () => Promise.all(['team','reviews','site-content'].map(async path => {
+     const response = await fetch(`/api/${path}`, { cache: 'no-store' });
+     const data = await response.json();
+     return { path, status: response.status, valid: path === 'site-content' ? !!data.entries : Array.isArray(data[path]) };
+   })));
+   assert.deepEqual(contentReads, ['team','reviews','site-content'].map(path => ({ path, status: 200, valid: true })), 'content reads succeed after navigation');
+   await writeFile(`test-results/mobile-navigation-${engineName}-${width}.json`, JSON.stringify({ errors, navigationDiagnostics, contentReads }, null, 2));
    assert.deepEqual(errors, []); console.log(`PASS shared layout, navigation, draft entry and first-visit guide: ${engineName}/${width}`); await page.close();
   }} finally { await browser.close(); }
  }
