@@ -65,7 +65,6 @@ try {
     // The approved portrait hero scrolls naturally on very short phones.
     if (height < 650) {
       await page.mouse.wheel(0, 300);
-      await book.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
       await page.waitForFunction(() => { const link=document.querySelector('.polish-hero-actions a').getBoundingClientRect(), nav=document.querySelector('.mobile-home-nav').getBoundingClientRect(); return link.top >= 74 && link.bottom < nav.top; });
     }
     const box=await book.boundingBox(); assert.ok(box.y>=0&&box.y+box.height<=height,`booking ${width}: ${JSON.stringify(box)}`);
