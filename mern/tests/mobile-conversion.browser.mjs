@@ -44,7 +44,13 @@ try {
   try { for (const width of [320,375,390,430,768,1024,1440]) {
    const page = await browser.newPage({ viewport: { width, height: 844 }, reducedMotion: 'reduce' });
    const errors = []; page.on('pageerror', error => errors.push(error.message));
-   await page.goto(origin, { waitUntil: 'networkidle' });
+   // Finish the old page's deferred reads before replacing its document.
+   // WebKit otherwise reports cancelled reads as access-control pageerrors.
+   async function navigate(url) {
+     await page.waitForLoadState('networkidle');
+     await page.goto(url, { waitUntil: 'networkidle' });
+   }
+   await navigate(origin);
    const readingOrder = await page.evaluate(() => ['training','reviews','training-programs','team','method','results','home-tools-title','workshops','first-visit-help','booking-title'].map(id=>({id,top:document.getElementById(id).getBoundingClientRect().top})));
    assert.deepEqual([...readingOrder].sort((a,b)=>a.top-b.top),readingOrder,'same visual and reading order on every screen');
    assert.equal(await page.locator('.conversion-offer').count(),1,'one primary membership offer');
@@ -113,13 +119,13 @@ try {
     await page.locator('.mobile-home-nav').getByRole('link', {name:/Book now/}).click();
     await page.getByRole('button', {name:'Plan my entire month',exact:true}).waitFor();
     if (width === 390) {
-      trainingCents = 27500; await page.goto(origin, {waitUntil:'networkidle'});
+      trainingCents = 27500; await navigate(origin);
       assert.match(await page.locator('.conversion-price').innerText(), /\$275/); trainingCents = 20000;
     }
    }
    if ([390,768,1440].includes(width)) {
     for (const route of ['/contact','/fci-support','/account','/portal']) {
-      await page.goto(origin+route, {waitUntil:'networkidle'});
+      await navigate(origin+route);
       await page.locator('.mobile-home-nav').waitFor();
       const more=page.locator('.mobile-home-nav button[aria-controls="bravo-navigation"]');
       await more.click();
@@ -142,7 +148,7 @@ try {
     await page.waitForFunction(()=>{const r=document.querySelector('#reviews')?.getBoundingClientRect();return r && r.top>=74 && r.top<150;});
    }
    assert.equal(await page.locator('.cinema-hero video').count(),0,'hero remains image-only');
-   await page.goto(origin+'/how-to#first-visit-guide',{waitUntil:'networkidle'});
+   await navigate(origin+'/how-to#first-visit-guide');
    const guide=page.locator('#first-visit-guide');
    for (let step=0;step<4;step++) {
      assert.equal(await guide.locator('.first-guide-count').innerText(),`Step ${step+1} of 4`);
