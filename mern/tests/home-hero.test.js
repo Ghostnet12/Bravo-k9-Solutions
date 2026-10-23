@@ -14,7 +14,7 @@ test('public homepage uses the cinematic still even when saved hero films exist'
   const realTemplate = await readFile(new URL('../client/dist/bravo-shell.html', import.meta.url), 'utf8');
   const html = renderHomepage(realTemplate, null, DEFAULT_HERO_FILM);
   assert.doesNotMatch(html, /<video[^>]*data-hero-film/);
-  assert.match(html, /class="cinema-hero-still"[^>]*src="\/images\/mobile-bravo-cinematic.webp"/);
+  assert.match(html, /class="cinema-hero-still"[^>]*src="\/images\/hero-real-confidence.webp"/);
   assert.match(html, /fetchpriority="high"/);
 });
 
@@ -31,7 +31,7 @@ test('opening film bootstrap excludes private records and untrusted URLs', () =>
 test('cinematic still has the only image preload while the saved gallery snapshot remains available', () => {
   const html = renderHomepage(template, hero);
   assert.equal((html.match(/as="image"/g) || []).length, 1);
-  assert.match(html, /href="\/images\/mobile-bravo-cinematic.webp"/);
+  assert.match(html, /href="\/images\/hero-real-confidence.webp"/);
   assert.doesNotMatch(html, /<link[^>]*href="\/api\/site-images/);
   assert.doesNotMatch(html, /hero-bravo-launch/);
   assert.match(html, /bravo-home-hero/);
@@ -79,7 +79,7 @@ test('missing media and unavailable database still return usable HTML', async ()
   for (const loadHero of [async () => null, async () => { throw new Error('private database detail'); }]) {
     const app = express().get('/', createHomepageHandler({ loadTemplate: async () => template, loadHero }));
     const response = await request(app).get('/').expect(200);
-    assert.ok(response.text.includes('/images/mobile-bravo-cinematic.webp'));
+    assert.ok(response.text.includes('/images/hero-real-confidence.webp'));
     assert.doesNotMatch(response.text, /private database detail/);
   }
 });

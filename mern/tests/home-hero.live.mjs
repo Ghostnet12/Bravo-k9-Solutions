@@ -48,7 +48,7 @@ for (const [name, engine, width] of [['webkit', webkit, 390], ['chromium', chrom
         return { src: image.getAttribute('src'), samples: window.heroSamples };
       });
       assert.equal(await page.locator('video[data-hero-film]').count(), 0);
-      assert.equal(state.src, '/images/mobile-bravo-cinematic.webp');
+      assert.equal(state.src, '/images/hero-real-confidence.webp');
       assert.ok(state.samples.length > 5);
       for (const key of ['height', 'top']) assert.ok(Math.max(...state.samples.map(row => row[key])) - Math.min(...state.samples.map(row => row[key])) < 1, `Live ${name} ${width}: ${key} shifted`);
       assert.deepEqual(errors, []);
