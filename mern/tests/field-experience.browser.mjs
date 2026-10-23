@@ -37,6 +37,7 @@ try {for(const width of [320,390,768,1440]){
  await page.locator('.field-story-image img').first().waitFor({state:'attached'});
  if(width===390)assert.equal(await page.locator('.field-story-image img').first().getAttribute('src'),null,'below-fold story posters wait until nearby');
  if(width>700){
+ await page.getByText('See training examples by goal',{exact:true}).click();
  assert.equal(await page.locator('.goal-choice').count(),4);assert.equal(await page.locator('.goal-choice a').count(),0);assert.equal(await page.locator('.goal-choice button').count(),4);
  const ids=['manners','walks','handling','specialist'];const details=['/dog-training','/dog-walking','/behavior-assessment','/#specialist-training'];
  for(let i=0;i<ids.length;i++){
