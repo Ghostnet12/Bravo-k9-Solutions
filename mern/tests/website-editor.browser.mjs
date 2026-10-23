@@ -5,6 +5,7 @@ import {readFile,mkdir,writeFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import {chromium,webkit} from 'playwright';
 import {SERVICES} from '../shared/catalog.js';
+import {BOOKING_DRAFT_KEY} from '../client/src/booking-draft.js';
 import {CONTENT_KEYS} from '../shared/site-content-keys.js';
 import {renderSiteContent} from '../server/content-html.js';
 const dist=fileURLToPath(new URL('../client/dist/',import.meta.url)),html=await readFile(`${dist}/bravo-shell.html`,'utf8');
@@ -94,7 +95,11 @@ try{for(const [engineName,engine] of Object.entries({chromium,webkit})){
    // The legacy program preview now belongs to tablet/desktop only.
    await page.setViewportSize({width:Math.max(width,768),height:900});
    await page.locator('.goal-choice-link').first().click();assert.equal(new URL(page.url()).pathname,'/');await page.locator('.goal-program-link').click();await page.waitForURL(url=>url.pathname==='/portal');await page.waitForLoadState('networkidle');
-   role=null;await page.goto(origin);await page.waitForLoadState('networkidle');await page.locator('.goal-choice-link').first().click();assert.equal(new URL(page.url()).pathname,'/');await page.locator('.goal-program-link').click();await page.getByRole('heading',{name:'Let’s start with your dog.',exact:true}).waitFor();await page.getByLabel('Number of dogs',{exact:true}).fill('2');assert.match(await page.locator('.price-total').innerText(),/\$350/);assert.equal(new URL(page.url()).searchParams.get('focus'),'puppy-foundations');await page.waitForLoadState('networkidle');
+   role=null;await page.goto(origin);await page.waitForLoadState('networkidle');
+   // Start the independent guest case without the previous fixture owner's
+   // autosaved request; account-bound draft privacy is covered separately.
+   await page.evaluate(key=>sessionStorage.removeItem(key),BOOKING_DRAFT_KEY);
+   await page.reload();await page.waitForLoadState('networkidle');await page.locator('.goal-choice-link').first().click();assert.equal(new URL(page.url()).pathname,'/');await page.locator('.goal-program-link').click();await page.getByRole('heading',{name:'Let’s start with your dog.',exact:true}).waitFor();await page.getByLabel('Number of dogs',{exact:true}).fill('2');assert.match(await page.locator('.price-total').innerText(),/\$350/);assert.equal(new URL(page.url()).searchParams.get('focus'),'puppy-foundations');await page.waitForLoadState('networkidle');
    // Complete normal link navigation before changing the next test account.
    for(const outsider of [null,'member','staff']){role=outsider;await page.goto(origin);await page.waitForLoadState('networkidle');await hold(page.locator('#goal-price-manners'));await page.waitForLoadState('networkidle');assert.equal(await page.locator('dialog[open]').count(),0);assert.equal(await page.getByRole('button',{name:'Edit page text & design'}).count(),0);}
    role=null;failConfig=true;
