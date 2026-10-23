@@ -8,6 +8,9 @@ import { fileURLToPath } from 'node:url';
 import { chromium, webkit } from 'playwright';
 import { SERVICES } from '../shared/catalog.js';
 import { DEFAULT_PROOF_VIDEOS } from '../shared/proof-videos.js';
+import { DEFAULT_HERO_CAROUSEL } from '../shared/hero-carousel.js';
+import { DEFAULT_WORKSHOP } from '../shared/workshops.js';
+import { resolveWorkshop } from '../shared/workshop-schedule.js';
 
 const dist = fileURLToPath(new URL('../client/dist/', import.meta.url));
 const html = await readFile(`${dist}/bravo-shell.html`, 'utf8');
@@ -24,6 +27,14 @@ const team = [
 let publicTeam = team;
 let trainingCents = 20000;
 const app = express();
+const publicReads = { team: 'team', reviews: 'reviews', 'site-content': 'entries', 'site-images': 'images', live: 'sessions', 'site-ads': 'ads', 'site-banner': 'alerts', 'proof-videos': 'clips', 'team/schedules': 'schedules', 'site-music': 'tracks', 'hero-carousel': 'carousel', 'hero-videos': 'clips', workshops: 'event', 'fci-updates': 'items' };
+app.get('/api/live', (_req, res) => res.set('Cache-Control', 'no-store').json({ sessions: [], announcements: [], availability: 'available', serverTime: new Date().toISOString() }));
+app.get('/api/site-banner', (_req, res) => res.json({ alerts: [], settings: { motion: 'never' }, revision: 0 }));
+app.get('/api/site-music', (_req, res) => res.json({ enabled: false, tracks: [], startId: null, revision: 0 }));
+app.get('/api/hero-carousel', (_req, res) => res.json({ carousel: DEFAULT_HERO_CAROUSEL }));
+app.get('/api/hero-videos', (_req, res) => res.json({ clips: [], nextCursor: null }));
+app.get('/api/workshops', (_req, res) => res.json({ event: resolveWorkshop(DEFAULT_WORKSHOP), configuration: DEFAULT_WORKSHOP }));
+app.get('/api/fci-updates', (_req, res) => res.json({ items: [], lastSuccessAt: new Date().toISOString(), stale: false }));
 app.get('/api/proof-videos', (_req, res) => res.json({ clips: DEFAULT_PROOF_VIDEOS, nextCursor: null }));
 app.get('/api/site-ads', (_req, res) => res.json({ revision: 0, settings: { autoplaySeconds: 7 }, ads: [{ id: 'fci-support-bravo', title: 'FCI Support', src: '/images/fci-official-identity.jpeg', creative: 'fci', link: '/fci-support', enabled: true }] }));
 app.get('/api/config', (_req, res) => res.json({ connected: false, paymentsReady: false, services: SERVICES.map(service => service.id === 'training' ? { ...service, cents: trainingCents } : service), schedule: { enabled: false, weekdays: [1,2,3,4,5], hours: [] } }));
@@ -49,7 +60,7 @@ try {
      // WebKit emits protocol pageerrors for handled fetch cancellations when
      // either a document or a React route unmounts. Keep the precise local
      // diagnostic separately; native errors/rejections are always failures.
-     if (engineName === 'webkit' && navigating && ['team','reviews','site-content'].some(path => error.message.endsWith(`${new URL(origin).host}/api/${path} due to access control checks.`))) {
+     if (engineName === 'webkit' && navigating && Object.keys(publicReads).some(path => error.message.endsWith(`${new URL(origin).host}/api/${path} due to access control checks.`))) {
        navigationDiagnostics.push({ message: error.message, url: page.url() });
      } else errors.push(error.message);
    });
@@ -184,12 +195,12 @@ try {
    assert.equal(await page.locator('.how-to-player track[kind=captions]').count(),1);
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
    await page.screenshot({path:`test-results/first-visit-${engineName}-${width}.png`});
-   const contentReads = await page.evaluate(async () => Promise.all(['team','reviews','site-content'].map(async path => {
+   const contentReads = await page.evaluate(async specs => Promise.all(Object.entries(specs).map(async ([path, key]) => {
      const response = await fetch(`/api/${path}`, { cache: 'no-store' });
      const data = await response.json();
-     return { path, status: response.status, valid: path === 'site-content' ? !!data.entries : Array.isArray(data[path]) };
-   })));
-   assert.deepEqual(contentReads, ['team','reviews','site-content'].map(path => ({ path, status: 200, valid: true })), 'content reads succeed after navigation');
+     return { path, status: response.status, valid: ['entries','images','carousel','event'].includes(key) ? !!data[key] && typeof data[key] === 'object' : Array.isArray(data[key]) };
+   })), publicReads);
+   assert.deepEqual(contentReads, Object.keys(publicReads).map(path => ({ path, status: 200, valid: true })), 'all public content reads succeed after navigation');
    await writeFile(`test-results/mobile-navigation-${engineName}-${width}.json`, JSON.stringify({ errors, navigationDiagnostics, contentReads }, null, 2));
    assert.deepEqual(errors, []); console.log(`PASS shared layout, navigation, draft entry and first-visit guide: ${engineName}/${width}`); await page.close();
   }} finally { await browser.close(); }

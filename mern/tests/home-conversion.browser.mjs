@@ -89,8 +89,10 @@ try {
           await page.waitForURL(originalUrl);
           await page.getByText('Facebook destination fixture').waitFor();
           assert.equal(context.pages().length, 1);
-          await page.goBack();
-          await page.waitForURL(`${origin}/`);
+          // A cached Back navigation can restore the page without a new load
+          // event. Verify the committed URL and the visible carousel instead.
+          await page.goBack({ waitUntil: 'commit' });
+          await page.waitForURL(`${origin}/`, { waitUntil: 'commit' });
           await watch.waitFor();
           assert.equal(await card.locator('iframe').count(), 0);
           assert.equal(await watch.isVisible(), true, `${engineName}-${width}: Back must return to the Bravo carousel`);
