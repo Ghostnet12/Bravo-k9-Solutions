@@ -36,10 +36,13 @@ async function setup(width, owner = false) {
     window.scrollTo = (...args) => { window.goalScrollCalls.push(args[0]); return scroll(...args); };
   });
   await page.goto(origin, { waitUntil: 'domcontentloaded' });
+  await page.locator('.conversion-goal').first().waitFor();
+  assert.equal(await page.evaluate(() => scrollY), 0, 'default entry never moves the page');
+  await page.getByText('See training examples by goal',{exact:true}).click();
   await page.locator('.goal-select').first().waitFor();
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(250);
-  assert.equal(await page.evaluate(() => scrollY), 0, 'default selected card must not scroll on page entry');
+
   return { context, page, errors };
 }
 async function showCards(page) {

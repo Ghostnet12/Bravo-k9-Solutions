@@ -65,10 +65,12 @@ try {
         });
         try {
           // Expand using the disclosure area; the row also contains a removal button.
-          await page.goto(`${origin}/admin?tab=people`); await page.locator('.owner-person > summary').click({ position: { x: 8, y: 20 } });
+          await page.goto(`${origin}/admin?tab=people`, { waitUntil: 'networkidle' }); await page.locator('.owner-person > summary').click({ position: { x: 8, y: 20 } });
           const access = page.getByRole('region', { name: 'Member access for Current Client', exact: true });
+          await access.getByText('Client · no manual access', { exact: true }).waitFor();
           await access.getByLabel('Membership start date', { exact: true }).fill(startDate);
           await access.getByLabel('Dogs covered by this training membership', { exact: true }).fill('2');
+          await access.getByLabel('Dogs covered by this training membership', { exact: true }).press('Tab');
           await access.getByRole('button', { name: 'Make Member', exact: true }).click();
           const setup = page.getByRole('region', { name: 'Training setup for Current Client', exact: true });
           const trainer = setup.getByLabel('Assigned trainer', { exact: true });
@@ -93,13 +95,13 @@ try {
           assert.equal(calendarBody.bookingId, bookingId); assert.equal(calendarBody.additions.length, 2); assert.ok(calendarBody.additions.some(v => v.time === '10:00'));
           await setup.locator('.saved-calendar button.has-visits').first().waitFor();
           assert.equal(await setup.locator('.saved-calendar button.has-visits').count(), 2);
-          await page.reload(); await page.locator('.owner-person > summary').click({ position: { x: 8, y: 20 } });
+          await page.reload({ waitUntil: 'networkidle' }); await page.locator('.owner-person > summary').click({ position: { x: 8, y: 20 } });
           await page.getByRole('region', { name: 'Training setup for Current Client', exact: true }).getByRole('button', { name: 'Add or Cancel Date', exact: true }).waitFor();
           assert.equal(await access.getByLabel('Dogs covered by this training membership', { exact: true }).inputValue(), '2');
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)); assert.deepEqual(errors, []);
           await page.screenshot({ path: `test-results/make-member-${engineName}-${width}.png`, fullPage: true });
           booking = null;
-          await page.goto(`${origin}/schedule?client=${client._id}`);
+          await page.goto(`${origin}/schedule?client=${client._id}`, { waitUntil: 'networkidle' });
           await page.getByRole('heading', { name: 'Finish this client’s training setup' }).waitFor();
           assert.equal(await page.getByRole('button', { name: 'Add or Cancel Date', exact: true }).count(), 0);
           await page.getByLabel('Dogs covered', { exact: true }).fill('2');
@@ -123,7 +125,7 @@ try {
           console.log(`${engineName} ${width}: legacy online-only schedule → recovered dates/dogs → joint trainer → saved calendar passed`);
           console.log(`${engineName} ${width}: Make Member → dates/dogs → joint trainer → batch calendar → saved schedule and reload passed`);
         } catch (error) {
-          await page.screenshot({ path: `test-results/make-member-failure-${engineName}-${width}.png`, fullPage: true }); console.log(await page.locator('body').innerText()); throw error;
+          await page.screenshot({ path: `test-results/make-member-failure-${engineName}-${width}.png`, fullPage: true }); console.log({ engineName, width, savedBody, membership, errors }); console.log(await page.locator('body').innerText()); throw error;
         } finally { await context.close(); }
       }
     } finally { await browser.close(); }

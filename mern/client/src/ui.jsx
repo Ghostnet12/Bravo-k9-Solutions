@@ -46,12 +46,6 @@ export function Header() {
     };
   }, []);
   useEffect(() => {
-    const expanded = matchMedia(`(min-width: ${user ? 1601 : 1281}px)`);
-    const closeExpandedMenu = () => { if (expanded.matches) setMenuOpen(false); };
-    expanded.addEventListener('change', closeExpandedMenu); closeExpandedMenu();
-    return () => expanded.removeEventListener('change', closeExpandedMenu);
-  }, [user?.id]);
-  useEffect(() => {
     const outside = event => { if (header.current && !header.current.contains(event.target) && !event.target.closest('[data-navigation-toggle]')) { setMenuOpen(false); if (about.current) about.current.open = false; } };
     document.addEventListener('pointerdown', outside);
     document.addEventListener('focusin', outside);
@@ -86,6 +80,7 @@ export function Header() {
           <Editable as={NavLink} contentKey="cinema-nav-workshops" canEditLink canEditText to="/workshops">Workshops</Editable>
           <NavLink to="/live">Live Cams</NavLink>
           <NavLink to="/fci-support">FCI Support</NavLink>
+          <Editable as={NavLink} contentKey="nav-tools-of-the-trade" canEditLink canEditText to="/tools-of-the-trade">Tools of the Trade</Editable>
           <details className="nav-about" ref={about} onBlur={leaveAbout}>
             <summary>About Bravo</summary>
             <div className="nav-about-links">

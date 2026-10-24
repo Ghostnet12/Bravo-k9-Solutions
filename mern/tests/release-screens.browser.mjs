@@ -48,7 +48,7 @@ for(const role of ['guest','member','staff','owner']) {
   if(role!=='guest')await page.waitForFunction(()=>document.querySelector('.app-header')?.dataset.signedIn==='true');
   for(const width of [320,390,768]) {
    await page.setViewportSize({width,height:900});
-   const task=page.locator(width<=700?'.mobile-home-book':'.header-quick-action');
+   const task=page.locator('.mobile-home-book');
    assert.ok(await task.isVisible());
    assert.ok(await task.evaluate(el=>el.getBoundingClientRect().height>=44));
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${role}/${width}: home fits`);

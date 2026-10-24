@@ -1,0 +1,95 @@
+/* Mobile is the shared visual system. Wider screens gain space, not a second UI. */
+:root { --bravo-chrome-top: calc(74px + env(safe-area-inset-top)); --bravo-chrome-bottom: calc(72px + env(safe-area-inset-bottom)); }
+html { scroll-padding-top: calc(var(--bravo-chrome-top) + 20px); scroll-padding-bottom: calc(var(--bravo-chrome-bottom) + 16px); }
+body:has(.mobile-home-nav) #root { padding-bottom: var(--bravo-chrome-bottom); }
+body:has(.mobile-home-nav):not(:has(.conversion-home)) #root { padding-top: var(--bravo-chrome-top); }
+.app-header.bravo-nav, .cinema-home .app-header.bravo-nav, .app-header.bravo-nav[data-signed-in=true] {
+  position: fixed; inset: 0 0 auto; width: 100%; max-width: none; margin: 0; transform: none;
+  border-radius: 0; padding: env(safe-area-inset-top) 16px 0; background: #101010f5; z-index: 90;
+}
+.app-header.bravo-nav .header-inner { width: 100%; max-width: 960px; min-height: 74px; margin: auto; padding: 8px 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.app-header.bravo-nav .brand-lockup { flex: 1; min-width: 0; gap: 6px; margin-right: auto; }
+.app-header.bravo-nav .brand-lockup > span { display: flex !important; }
+.app-header.bravo-nav .brand-lockup img { width: 37px; height: 43px; }
+.app-header.bravo-nav .brand-lockup strong { font-size: 21px; color: #dcb778; }
+.app-header.bravo-nav .brand-lockup small { font-size: 7px; }
+.app-header.bravo-nav .header-quick-action { display: none !important; }
+.app-header.bravo-nav .conversion-header-phone { display: flex; align-items: center; gap: 5px; min-height: 44px; color: #e1c99d; font-size: 12px; text-decoration: none; }
+.app-header.bravo-nav .menu-toggle { display: inline-flex; align-items: center; justify-content: center; font-size: 0; border: 0; background: transparent; padding: 8px; min-width: 44px; min-height: 44px; border-radius: 4px; margin-left: 0; }
+.app-header.bravo-nav .menu-lines i { width: 24px; height: 2px; background: #fff; }
+.app-header.bravo-nav #bravo-navigation { display: none; }
+.app-header.bravo-nav #bravo-navigation.is-open { display: flex; flex: 1 0 100%; width: 100%; max-height: none; margin-top: 0; padding: 12px 0 20px; gap: 16px; overflow: visible; }
+.app-header.bravo-nav:has(#bravo-navigation.is-open) { background: #101010; max-height: calc(100dvh - var(--bravo-chrome-bottom)); overflow-y: auto; overscroll-behavior: contain; }
+.app-header.bravo-nav #bravo-navigation .nav-group { display: flex; flex-direction: column; align-items: stretch; gap: 0; }
+.app-header.bravo-nav #bravo-navigation .nav-group-label { display: block; margin: 8px 12px; color: #e1c99d; font-size: 12px; text-transform: uppercase; letter-spacing: .12em; }
+.app-header.bravo-nav #bravo-navigation a, .app-header.bravo-nav #bravo-navigation summary { display: flex; align-items: center; min-height: 48px; padding: 12px; font-size: 15px; white-space: normal; line-height: 1.5; border-bottom: 1px solid #ba9a6433; }
+.app-header.bravo-nav #bravo-navigation .nav-explore a { flex: none; }
+.app-header.bravo-nav #bravo-navigation .nav-workspace > .nav-book { display: flex !important; }
+.app-header.bravo-nav #bravo-navigation .nav-about { width: 100%; }
+.app-header.bravo-nav #bravo-navigation .nav-about-links { position: static; width: 100%; min-width: 0; box-shadow: none; padding-left: 16px; background: #101010; }
+.app-header.bravo-nav #bravo-navigation .nav-workspace { order: -1; }
+body:has(.app-header.bravo-nav #bravo-navigation.is-open) { overflow: hidden; }
+.mobile-home-nav.mobile-conversion { position: fixed; inset: auto 0 0; z-index: 82; display: grid; grid-template-columns: repeat(6,minmax(0,110px)); justify-content: center; background: #080808fa; border-top: 2px solid #ba9a64; min-height: 64px; padding: 4px 8px max(4px,env(safe-area-inset-bottom)); }
+.mobile-home-nav > a, .mobile-home-nav > button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 0; min-height: 48px; padding: 3px 0; background: transparent; border: 0; text-decoration: none; color: #eee; font: 11px Montserrat,sans-serif; touch-action: manipulation; }
+.mobile-home-nav svg { display: block; }
+.mobile-home-nav .mobile-home-book { color: #e1c99d; }
+body:has(dialog[open]) .mobile-home-nav { visibility: hidden; }
+body:has(.mobile-home-nav) .mobile-booking-bar { position: static; margin-top: 20px; }
+body:has(.mobile-home-nav) .accessibility-tools, body:has(.mobile-home-nav) .action-feedback, body:has(.mobile-home-nav) .media-rights-toast { bottom: calc(var(--bravo-chrome-bottom) + 12px) !important; }
+body:has(.mobile-home-nav) .content-edit-launcher { bottom: calc(var(--bravo-chrome-bottom) + 16px) !important; }
+body:has(.mobile-home-nav) .content-save-status { bottom: calc(var(--bravo-chrome-bottom) + 70px) !important; }
+body:has(.mobile-home-nav) .accessibility-panel { max-height: calc(100dvh - var(--bravo-chrome-top) - var(--bravo-chrome-bottom) - 40px) !important; }
+body:has(.mobile-home-nav) :is(a,button,summary):focus-visible { outline: 3px solid #e1c99d; outline-offset: 3px; }
+.cinema-home.conversion-home :is(#reviews,#training,#training-programs,#results,#team,#method) { scroll-margin-top: 0; }
+.cinema-home.conversion-home .mobile-conversion { display: block; }
+.cinema-home.conversion-home .cinema-shell { width: min(960px,calc(100% - 40px)); margin-inline: auto; }
+.cinema-home.conversion-home .conversion-discovery { padding-top: 0; }
+.cinema-home.conversion-home .conversion-discovery h2 { color: #e1c99d; text-align: center; margin: 0 0 12px; font-size: clamp(30px,5vw,48px); }
+.cinema-home.conversion-home .conversion-subtitle { color: #d2cec5; text-align: center; font-size: 14px; line-height: 1.6; margin-bottom: 24px; text-transform: none; letter-spacing: 0; }
+.conversion-goals { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+.conversion-goal { position: relative; isolation: isolate; display: flex; align-items: flex-end; min-height: clamp(190px,30vw,290px); overflow: hidden; border: 1px solid #ba9a64; border-radius: 8px; text-decoration: none; color: #fff; background: #161616; }
+.conversion-goal > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; }
+.conversion-goal::before { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(0deg,#000 2%,#000d 50%,#0002); }
+.conversion-goal > div { width: 100%; padding: 20px; }
+.cinema-home.conversion-home .conversion-goal h3 { font-size: clamp(24px,3.5vw,34px); line-height: 1.1; margin: 0 0 8px; color: #fff; }
+.conversion-goal p { font-size: 14px; line-height: 1.55; margin: 0; padding-right: 24px; max-width: 350px; color: #f4f1eb; }
+.conversion-arrow { position: absolute; bottom: 16px; right: 12px; display: grid; place-items: center; width: 26px; height: 26px; border: 1px solid #d8b571; border-radius: 50%; color: #e8ca91; }
+.conversion-talk { display: flex; align-items: center; justify-content: center; gap: 18px; min-height: 48px; margin: 16px 0; border: 1px solid #ba9a64; border-radius: 5px; color: #fff; text-decoration: none; font: 400 22px 'Bebas Neue',sans-serif; }
+.cinema-home.conversion-home .conversion-offer-copy { grid-template-columns: 1fr; }
+.cinema-home.conversion-home .conversion-offer-copy > * { grid-column: auto; grid-row: auto; }
+.cinema-home.conversion-home .conversion-benefits { grid-template-columns: repeat(2,minmax(0,1fr)); max-width: none; }
+.cinema-home.conversion-home .conversion-offer .conversion-button { width: 100%; max-width: none; }
+.cinema-home.conversion-home :is(.cinema-section-heading,.cinema-online-inner,.home-fci-card) { grid-template-columns: 1fr; }
+.cinema-home.conversion-home .cinema-section-heading { display: grid; gap: 16px; }
+.cinema-home.conversion-home :is(.cinema-section-heading > p,.cinema-online-inner > div > p) { max-width: 680px; }
+.cinema-home.conversion-home .home-method-steps { grid-template-columns: 1fr !important; }
+.cinema-home.conversion-home .home-fci-identity { max-width: 180px; }
+.cinema-home.conversion-home .cinema-learning-visual { width: 100%; max-width: 540px; }
+.cinema-home.conversion-home :is(.cinema-programs,.cinema-proof,.cinema-team,.cinema-intro,.cinema-events,.cinema-online,.cinema-close) { padding-block: clamp(28px,5vw,48px); }
+.cinema-home.conversion-home .cinema-proof-intro { margin-bottom: 20px; }
+.cinema-home.conversion-home #reviews .cinema-proof-intro > img { display: none; }
+.cinema-home.conversion-home #reviews .facebook-recommendations { margin-top: 16px; }
+.cinema-home.conversion-home #reviews #facebook-recommendations-title, .cinema-home.conversion-home #reviews .facebook-recommendations > p { display: none; }
+.app-page .app-page-title { display: block; }
+.app-page .app-page-title > p { max-width: 680px; margin-top: 20px; }
+.app-page :is(.booking-layout,.account-layout,.community-layout,.contact-grid) { grid-template-columns: minmax(0,1fr); }
+.app-page .order-summary { position: static; }
+@media(max-width:700px) {
+  .app-header.bravo-nav .brand-lockup strong { font-size: 18px; }
+  .app-header.bravo-nav .brand-lockup small { font-size: 6px; }
+  .app-header.bravo-nav .conversion-header-phone { font-size: 9px; }
+  .mobile-home-nav.mobile-conversion { grid-template-columns: repeat(6,minmax(0,1fr)); }
+  .conversion-goals { gap: 10px; }
+  .conversion-goal > div { padding: 12px 10px; }
+  .conversion-goal p { font-size: 12px; line-height: 1.5; }
+  .cinema-home.conversion-home .conversion-goal h3 { font-size: 24px; }
+}
+@media(prefers-reduced-motion:reduce) { .conversion-goal > img { transition: none; } }
+
+.training-examples { margin: 20px 0; border-block: 1px solid #ba9a6455; }
+.training-examples > summary { min-height: 48px; padding: 16px 0; color: #e1c99d; cursor: pointer; }
+.cinema-home.conversion-home .training-examples .goal-finder { display: block; width: 100%; padding: 20px 0; }
+.cinema-home.conversion-home .training-examples .goal-result { grid-template-columns: 1fr; }
+.cinema-home.conversion-home .training-examples .goal-choices { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+.cinema-home.conversion-home .training-examples .goal-choice-link { min-height: 80px; }
+.cinema-home.conversion-home .cinema-secondary-programs { display: grid; grid-template-columns: 1fr; }

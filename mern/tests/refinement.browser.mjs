@@ -42,7 +42,7 @@ try {
           const image = page.locator('.cinema-hero-still');
           await image.evaluate(img => img.decode());
           const source = await image.evaluate(img => img.currentSrc);
-          const pixels = (width > 700 ? Math.min(width * .52, 820) : width) * deviceScaleFactor;
+          const pixels = Math.min(width, 460) * deviceScaleFactor;
           const expectedImage = pixels <= 600 ? 'hero-real-confidence-600.webp' : pixels <= 900 ? 'hero-real-confidence-900.webp' : 'hero-real-confidence.webp';
           assert.ok(source.endsWith(expectedImage), source);
           const heroRequests = requests.filter(path => /\/hero-real-confidence(?:-\d+)?\.webp$/.test(path));
@@ -54,8 +54,10 @@ try {
           assert.equal(await page.locator('.cinema-dog-gallery').count(),1,'editable original photo gallery remains');
           if (height === 390) {
             for (const link of await page.locator('.polish-hero-actions a').all()) {
+              await link.scrollIntoViewIfNeeded();
               const box = await link.boundingBox();
-              assert.ok(box.y > 74 && box.y + box.height <= height, 'landscape hero actions remain visible below the header');
+              const bottomNav = await page.locator('.mobile-home-nav').boundingBox();
+              assert.ok(box.y > 74 && box.y + box.height <= bottomNav.y, 'landscape hero actions scroll into view between the fixed controls');
             }
             assert.equal(await image.evaluate(img => getComputedStyle(img).objectFit), 'contain', 'short landscape preserves the complete photo');
           }

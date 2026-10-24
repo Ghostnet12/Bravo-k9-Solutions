@@ -32,7 +32,7 @@ export const TRAINING_TOOLS = [
   {
     id: 'hand-leash', category: 'Short hand leash', name: 'PetBonus Traffic Tab Leash',
     image: '/images/tool-hand-leash.jpg', alt: 'Army-green PetBonus short leash with a padded handle and quick-release metal clip',
-    description: 'A 12-inch nylon lead with a padded handle, reflective stitching and a quick-release clip for close handling. Bravo will help you choose a length that suits your dog and the task.',
+    description: 'A 12-inch nylon lead with a padded handle, reflective stitching and a quick-release clip for close handling. The linked option is 12 inches. If your trainer recommends a 6-inch hand leash, ask Bravo for the exact item before ordering.',
     detail: 'Linked option: 12 in · Army green',
     buyUrl: 'https://a.co/d/0bMLFa5W',
   },

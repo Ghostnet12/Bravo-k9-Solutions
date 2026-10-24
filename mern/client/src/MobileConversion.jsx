@@ -15,7 +15,7 @@ const subscribeCompact = notify => {
 const compactSnapshot = () => matchMedia(compactQuery).matches;
 const serverSnapshot = () => false;
 export const useCompactLayout = () => useSyncExternalStore(subscribeCompact, compactSnapshot, serverSnapshot);
-const homeSectionOrder = ['training', 'reviews', 'team', 'faq', 'booking', 'method', 'tools', 'results', 'workshops', 'fci', 'online'];
+const homeSectionOrder = ['reviews', 'training', 'team', 'method', 'results', 'tools', 'workshops', 'fci', 'online', 'faq', 'booking'];
 // One reading order for every viewport, including the server-rendered page.
 // Stable keys preserve media and editor state when the viewport changes.
 export function HomeSectionOrder({ children }) {
@@ -137,5 +137,5 @@ export function ConversionFAQ() {
     ['Can I plan the whole month?', 'Yes. Choose “Plan my entire month” in the booking flow, or use My Schedule if you already have an active training membership.'],
     ['Does my membership renew automatically?', 'No. Training renews manually each month. Your review shows the current price before you continue.'],
     ['What if my dog is aggressive or reactive?', 'Start with the separate two-trainer assessment. Bravo will discuss handling, suitability and the next steps with you.'],
-  ].map(([q,a],i)=><details key={q}><Editable as="summary" contentKey={`mobile-faq-${i}-question`} canEditText>{q}</Editable><Editable as="p" contentKey={`mobile-faq-${i}-answer`} canEditText>{a}</Editable></details>)}<Editable as={Link} contentKey="home-guide-link" canEditLink className="conversion-guide-link" to="/how-to"><span aria-hidden="true">▶</span><span><Editable as="strong" contentKey="home-guide-title" canEditText>See how easy getting started can be.</Editable><Editable as="span" contentKey="home-guide-description" canEditText>Watch the booking and scheduling walkthrough</Editable></span><span aria-hidden="true">→</span></Editable></section>;
+  ].map(([q,a],i)=><details key={q}><Editable as="summary" contentKey={`mobile-faq-${i}-question`} canEditText>{q}</Editable><Editable as="p" contentKey={`mobile-faq-${i}-answer`} canEditText>{a}</Editable></details>)}<Editable as={Link} contentKey="home-guide-link" canEditLink className="conversion-guide-link" to="/how-to#first-visit-guide"><span aria-hidden="true">▶</span><span><Editable as="strong" contentKey="home-guide-title" canEditText>See how easy getting started can be.</Editable><Editable as="span" contentKey="home-guide-description" canEditText>Preview your first visit in four simple steps</Editable></span><span aria-hidden="true">→</span></Editable></section>;
 }

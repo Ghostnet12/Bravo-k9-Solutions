@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Page } from './ui';
 import guide from './website-guide.json';
+import FirstVisitGuide from './FirstVisitGuide';
 import './how-to.css';
 
 const timestamp = seconds => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
@@ -25,7 +26,9 @@ export default function HowToPage() {
     player.play().catch(() => setPlaybackError('Press Play on the video to continue, or open the video using the link below.'));
   }
   return <Page className="how-to-page" eyebrow="YOUR BRAVO WEBSITE GUIDE" title="How to use the website." intro="Get comfortable with your account, your schedule and the little changes life brings. Watch, pause and follow along at your own pace.">
-    <section className="how-to-watch" aria-labelledby="how-to-watch-title">
+    <nav className="how-to-paths" aria-label="Choose your website guide"><a href="#first-visit-guide">New here? Book your first visit</a><a href="#member-guide">Already a member? Manage your schedule</a></nav>
+    <FirstVisitGuide/>
+    <section id="member-guide" className="how-to-watch" aria-labelledby="how-to-watch-title">
       <div className="how-to-player">
         <video ref={video} controls playsInline preload="metadata" poster={guide.poster} width="1080" height="1920" tabIndex={0} aria-label="Bravo website walkthrough: sign in and manage your schedule" aria-describedby="how-to-player-help" onLoadedMetadata={seek} onError={() => setPlaybackError('The video could not load. Try opening it directly below, or read the full transcript.')}>
           <source src={guide.video} type="video/mp4"/>
@@ -38,8 +41,8 @@ export default function HowToPage() {
       </div>
       <div className="how-to-intro">
         <p className="how-to-meta">9 MIN 14 SEC <span aria-hidden="true">·</span> 22 SHORT CHAPTERS</p>
-        <h2 id="how-to-watch-title">Feel confident before your next visit.</h2>
-        <p>This guided tour shows the actual website, one step at a time. Start at the beginning or jump straight to the part you need.</p>
+        <h2 id="how-to-watch-title">Manage your schedule.</h2>
+        <p>This member guide walks through your account and saved schedule, one step at a time. Start at the beginning or jump straight to the part you need.</p>
         <ul>
           <li>Sign in and set your first password.</li>
           <li>Choose training days, pick times and save your schedule.</li>

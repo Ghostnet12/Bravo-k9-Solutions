@@ -49,7 +49,7 @@ try {
         await page.goto(origin, { waitUntil: 'networkidle' });
         assert.equal(await page.locator('.cinema-film video').count(), 0);
         await page.waitForFunction(()=>document.querySelector('.cinema-hero-still')?.naturalWidth>0);
-        const heroBooking = await page.locator('.cinema-hero').getByRole('link', { name: /Book your first session/i }).boundingBox();
+        const heroBooking = await page.locator('.cinema-hero').getByRole('link', { name: /Start my training plan/i }).boundingBox();
         assert.ok(heroBooking && heroBooking.y > 0 && heroBooking.y + heroBooking.height <= (width === 390 ? 844 : 1000), 'hero booking is immediately visible');
         assert.equal(await page.locator('.cinema-film-controls').count(), 0, 'hero playback controls are intentionally hidden');
         assert.equal(await page.getByRole('button', { name: 'Pause training film', exact: true }).count(), 0);
@@ -68,7 +68,7 @@ try {
         for (const review of reviews) await accountReviews.getByText(review.authorName, { exact: true }).waitFor();
         assert.equal(await page.locator('.facebook-recommendations article').count(), 7);
         assert.equal(await page.locator('.facebook-recommendations-more[open]').count(), 0, 'additional reviews start collapsed');
-        assert.equal((await page.locator('.goal-choice').filter({ hasText: 'Advanced & working-dog goals' }).innerText()).includes('$200'), false, 'specialist goals do not inherit the standard monthly price');
+        assert.equal((await page.locator('.conversion-goal').filter({ hasText: 'Advanced' }).innerText()).includes('$200'), false, 'specialist goals do not inherit the standard monthly price');
         for (const author of ['Tamyra Borg', 'Waneta Malsom']) {
           const card = page.locator('.facebook-recommendations article').filter({ hasText: author });
           await card.getByText('Google review', { exact: true }).waitFor();
@@ -89,8 +89,10 @@ try {
           await page.waitForURL(originalUrl);
           await page.getByText('Facebook destination fixture').waitFor();
           assert.equal(context.pages().length, 1);
-          await page.goBack();
-          await page.waitForURL(`${origin}/`);
+          // A cached Back navigation can restore the page without a new load
+          // event. Verify the committed URL and the visible carousel instead.
+          await page.goBack({ waitUntil: 'commit' });
+          await page.waitForURL(`${origin}/`, { waitUntil: 'commit' });
           await watch.waitFor();
           assert.equal(await card.locator('iframe').count(), 0);
           assert.equal(await watch.isVisible(), true, `${engineName}-${width}: Back must return to the Bravo carousel`);
@@ -98,7 +100,7 @@ try {
         // Back restores the static carousel before the asynchronous roster.
         await page.locator('#team').getByText('David Northrop', { exact: true }).waitFor();
         assert.equal(await page.locator('#team').getByText('David Northrop', { exact: true }).count(), 1);
-        assert.ok((await page.locator(width === 390 ? '.conversion-offer .conversion-button' : '.goal-result .goal-actions .button').getAttribute('href')).startsWith('/portal?program=training'));
+        assert.ok((await page.locator('.conversion-offer .conversion-button').getAttribute('href')).startsWith('/portal?program=training'));
         assert.equal(await page.locator('.home-training-offer').count(), 0, 'no repeated standard offer');
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${engineName}-${width}: homepage overflow`);
         assert.deepEqual(errors, [], `${engineName}-${width}: homepage runtime errors`);

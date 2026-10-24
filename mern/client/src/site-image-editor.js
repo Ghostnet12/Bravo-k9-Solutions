@@ -101,7 +101,8 @@ export function mountSiteImages({ canEdit = false } = {}) {
       record.applied = next;
       if (!record.isVideo) {
         if (next !== record.original) element.removeAttribute('srcset'); else if (record.srcset && element.getAttribute('srcset') !== record.srcset) element.setAttribute('srcset', record.srcset);
-        const alt = custom ? saved.alt : record.alt;
+        const description = custom ? saved.alt : record.alt;
+        const alt = key === 'team-ashley-northrop' ? description?.replace(/Ashley Northrop/g, 'Ashley Leverock') : description;
         if (element.alt !== alt) element.alt = alt;
       } else { const label = custom ? saved.alt : record.alt; if (label) element.setAttribute('aria-label', label); else element.removeAttribute('aria-label'); }
       const signature = JSON.stringify([next, custom ? normalizeFraming(saved) : null]);

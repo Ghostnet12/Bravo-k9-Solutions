@@ -41,9 +41,10 @@ test('hunting page exists in public route, server, metadata and deployment confi
  const html=readFileSync(new URL('../client/dist/hunting-dog-training.html',import.meta.url),'utf8');
  assert.match(html,/Drive meets direction/);assert.match(html,/Individually scoped/);assert.ok(!html.includes('$200'));
 });
-test('goal selection preserves editable destination keys in the selected panel and price authority', () => {
+test('training examples preserve editable destinations without repeating catalog prices', () => {
  const source=readFileSync(new URL('../client/src/GoalFinder.jsx',import.meta.url),'utf8');
  assert.match(source,/as="button" contentKey=\{`goal-\$\{item.id\}-selector`\}/);
  assert.match(source,/contentKey=\{`goal-\$\{goal.id\}-choice`\} canEditLink/);
- assert.match(source,/aria-controls="goal-result"/);assert.match(source,/goalBookingPath\(goal\)/);assert.match(source,/CatalogPrice/);
+ assert.match(source,/aria-controls="goal-result"/);assert.match(source,/goalBookingPath\(goal\)/);assert.doesNotMatch(source,/CatalogPrice/);
+ assert.match(readFileSync(new URL('../client/src/MobileConversion.jsx',import.meta.url),'utf8'),/CatalogPrice/);
 });

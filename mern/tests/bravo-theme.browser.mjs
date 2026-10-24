@@ -86,8 +86,10 @@ try {
               assert.equal(await page.getByRole('button', { name: 'Menu', exact: true }).getAttribute('aria-expanded'), 'false');
               await page.getByRole('button', { name: 'Menu', exact: true }).click();
               await page.setViewportSize({ width: 1440, height: 900 });
-              await page.waitForFunction(() => !document.querySelector('#bravo-navigation').classList.contains('is-open'));
+              assert.equal(await page.locator('.menu-toggle').getAttribute('aria-expanded'), 'true', 'the shared menu stays open when resizing to desktop');
               await fits(page, 'resize to desktop');
+              await page.keyboard.press('Escape');
+              assert.equal(await page.getByRole('button', { name: 'Menu', exact: true }).getAttribute('aria-expanded'), 'false');
               await page.setViewportSize({ width, height: 900 });
             }
           } else {
@@ -102,11 +104,12 @@ try {
           const menu = page.getByRole('button', { name: 'Menu', exact: true });
           await menu.click();
           const nav = page.getByRole('navigation', { name: 'Primary navigation' });
-          const task = width <= 700 ? nav.locator('.nav-book') : page.locator('.header-quick-action');
+          const task = nav.locator('.nav-book');
           await task.waitFor();
           assert.equal(await task.innerText(), role === 'member' ? 'My Schedule' : 'Team schedule');
           assert.equal(await task.getAttribute('href'), role === 'member' ? '/schedule' : '/admin?tab=schedule');
-          assert.equal(await nav.locator('.nav-book').isVisible(), width <= 700, 'the compact header keeps one visible primary task');
+          assert.equal(await task.isVisible(), true, 'the shared menu keeps the primary task visible at every width');
+          assert.equal(await page.locator('.header-quick-action').isVisible(), false, 'the shared header avoids a duplicate primary task');
           await fits(page, `${role} menu/${width}`);
           await page.keyboard.press('Escape');
           assert.equal(await menu.getAttribute('aria-expanded'), 'false');

@@ -33,6 +33,7 @@ const links = ['https://a.co/d/0cWLPuAY','https://a.co/d/07p2Zd9F','https://a.co
 await mkdir('test-results', { recursive: true });
 try {
   for (const [name,engine] of Object.entries({ chromium, webkit })) {
+    if(process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(name))continue;
     const browser = await engine.launch();
     try {
       const raw = await browser.newPage({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
@@ -47,7 +48,7 @@ try {
         const boundary = await browser.newPage({ viewport: { width, height: 900 } });
         try {
           await boundary.goto(origin + '/tools-of-the-trade');
-          assert.equal(await boundary.locator('.menu-toggle').isVisible(), width === 1280);
+          assert.equal(await boundary.locator('.menu-toggle').isVisible(), true, 'same menu on both sides of the old desktop breakpoint');
           assert.ok(await boundary.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
         } finally { await boundary.close(); }
       }
@@ -85,9 +86,9 @@ try {
             assert.notEqual(await link.evaluate(node => getComputedStyle(node).outlineStyle), 'none');
           }
           assert.match(await page.locator('.tool-card').last().innerText(), /12.inch|12 in/);
-          assert.doesNotMatch(await page.locator('.tool-card').last().innerText(), /6.inch/);
+          assert.match(await page.locator('.tool-card').last().innerText(), /6-inch hand leash, ask Bravo for the exact item before ordering/);
           const collapsed = await page.locator('.menu-toggle').isVisible();
-          assert.equal(await page.locator('#bravo-navigation a[href="/tools-of-the-trade"]').count(), 0);
+          assert.equal(await page.locator('#bravo-navigation a[href="/tools-of-the-trade"]').count(), 1);
           assert.equal(await page.locator('footer a[href="/tools-of-the-trade"]').count(), 1);
           const navReviews = page.locator('#bravo-navigation .nav-explore > a[href="/#reviews"]');
           assert.equal(await navReviews.count(), 1);
@@ -125,10 +126,10 @@ try {
           assert.equal(await homeTools.getAttribute('href'), '/tools-of-the-trade');
           assert.match(await homeTools.innerText(), /We assess your dog first/);
           assert.ok(await page.locator('.cinema-hero').evaluate(hero => hero.nextElementSibling.classList.contains('conversion-trust') && hero.nextElementSibling.nextElementSibling.id === 'training'));
-          const order = await page.evaluate(() => ['#training','#training-programs','#reviews','#team','#first-visit-help','.cinema-close','#method','.home-tools','#results'].map(selector => document.querySelector(selector).getBoundingClientRect().top));
-          assert.deepEqual([...order].sort((a,b) => a-b), order, 'services and booking confidence before background and equipment');
+          const order = await page.evaluate(() => ['#training','#reviews','#training-programs','#team','#method','#results','.home-tools','#first-visit-help','.cinema-close'].map(selector => document.querySelector(selector).getBoundingClientRect().top));
+          assert.deepEqual([...order].sort((a,b) => a-b), order, 'membership and reviews lead into shared training choices');
           assert.equal(await page.locator('#results #dogs').count(), 1, 'photos and video share one proof section');
-          assert.ok(await page.locator('#workshops').evaluate(node => node.previousElementSibling.id === 'results'), 'workshops follow proof without a banner or empty slot');
+          assert.ok(await page.locator('#workshops').evaluate(node => node.previousElementSibling.classList.contains('home-tools')), 'workshops follow the equipment section without a banner or empty slot');
           assert.ok(await page.locator('.conversion-dog-terms').evaluate(node => {
             const button = node.parentElement.querySelector('.conversion-button');
             return node.getBoundingClientRect().bottom <= button.getBoundingClientRect().top;
@@ -165,7 +166,7 @@ try {
           await page.locator('.tools-assessment').waitFor();
           assert.equal(new URL(page.url()).pathname, '/tools-of-the-trade');
           assert.deepEqual(errors, []);
-          console.log(`PASS ${name}/${width}: five products preserved; Tools absent from shared menu; direct Reviews; both mobile toggles; service-first homepage; repeatable Services shortcut; keyboard navigation; responsive layout; no writes.`);
+          console.log(`PASS ${name}/${width}: five products preserved; Tools present in shared menu; direct Reviews; both mobile toggles; membership and reviews first; repeatable Services shortcut; keyboard navigation; responsive layout; no writes.`);
         } finally { await context.close(); }
       }
     } finally { await browser.close(); }
