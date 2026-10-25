@@ -17,7 +17,7 @@ export default function TransportPage() {
   return <div className="transport-page"><Header/><main id="main-content" tabIndex={-1}>
     <TransportHero/>
     <section id="transport-updates" className="transport-signup panel" tabIndex={-1} aria-labelledby="transport-signup-title">
-      <div><Editable as="h2" contentKey="transport-signup-title" canEditText id="transport-signup-title">Be first to hear.</Editable><Editable as="p" contentKey="transport-signup-copy" canEditText>Leave your email for a launch update. Routes, pricing and a launch date will be announced when the service is ready.</Editable></div>
+      <div><Editable as="h2" contentKey="transport-signup-title" canEditText id="transport-signup-title">Be first to hear.</Editable><Editable as="p" contentKey="transport-signup-copy" canEditText>Leave your email and we’ll let you know when K9 transport launches.</Editable></div>
       {saved ? <p role="status">Your request is saved. Bravo can email you when K9 transport launches.</p> : <form onSubmit={join}>
         <label>Email address<input name="email" type="email" required maxLength={254} autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} disabled={busy}/></label>
         <label className="signup-trap" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" value={website} onChange={event => setWebsite(event.target.value)}/></label>

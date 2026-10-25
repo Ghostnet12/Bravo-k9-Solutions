@@ -14,7 +14,7 @@ export default function TransportHero({ home = false }) {
       <Editable as="p" contentKey="transport-intro" canEditText className="transport-intro">Dedicated canine transport is on the way.</Editable>
       <div className="transport-actions">
         {home ? <Link className="button transport-primary" to="/k9-transport#transport-updates">Get launch updates <span aria-hidden="true">→</span></Link> : <a className="button transport-primary" href="#transport-updates">Get launch updates <span aria-hidden="true">→</span></a>}
-        <Link className="transport-contact" to="/contact?interest=k9-transport">Ask about transport <span aria-hidden="true">↗</span></Link>
+        <Editable as={Link} contentKey="transport-contact" canEditText canEditLink className="transport-contact" to="/contact?interest=k9-transport">Ask about our local and out-of-state rates <span aria-hidden="true">↗</span></Editable>
       </div>
     </div>
   </section>;
