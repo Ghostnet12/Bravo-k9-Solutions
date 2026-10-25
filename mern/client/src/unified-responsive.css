@@ -102,6 +102,30 @@ body:has(.mobile-home-nav) :is(a,button,summary):focus-visible { outline: 3px so
 .training-help-links a { display: inline-flex; align-items: center; min-height: 48px; font-size: 14px; color: #e1c99d; text-underline-offset: 4px; }
 .training-help-links .button { color: #101010; }
 .training-next-step p { max-width: 680px; line-height: 1.7; }
+
+/* Secondary destinations stay easy to find without competing with training. */
+.cinema-home.conversion-home .home-secondary { padding-block: 16px; }
+.cinema-home.conversion-home .home-secondary h2 { font-size: 30px; line-height: 1.15; margin: 0 0 12px; }
+.cinema-home.conversion-home .home-secondary .workshop-details { padding: 20px; border: 1px solid #ba9a6444; border-radius: 12px; background: #171612; }
+.cinema-home.conversion-home .home-secondary .workshop-details h3 { font-size: 24px; margin: 8px 0 16px; }
+.cinema-home.conversion-home .home-secondary .workshop-facts { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px 20px; margin: 12px 0; }
+.cinema-home.conversion-home .home-secondary .workshop-facts :is(dt,dd),
+.cinema-home.conversion-home .home-secondary .helper { font-size: 13px; line-height: 1.6; }
+.cinema-home.conversion-home .home-secondary .workshop-details .goal-actions { margin: 12px 0 0; }
+.cinema-home.conversion-home .home-secondary .home-fci-card { padding: 20px; gap: 12px; }
+.cinema-home.conversion-home .home-secondary .home-fci-identity { max-width: 120px; }
+.cinema-home.conversion-home .home-secondary .home-fci-copy h2 { margin: 0 0 8px; }
+.cinema-home.conversion-home .home-secondary .home-fci-copy small { font-size: 12px; }
+.cinema-home.conversion-home .home-secondary .cinema-online-inner { padding: 20px; border: 1px solid #ba9a6444; border-radius: 12px; background: #171612; gap: 0; }
+.cinema-home.conversion-home .home-secondary .cinema-online-inner p { font-size: 14px; line-height: 1.6; }
+.cinema-home.conversion-home .home-secondary .cinema-button { font-size: 14px; padding: 12px 16px; min-height: 48px; }
+.cinema-home.conversion-home .home-secondary .cinema-eyebrow { margin: 0 0 8px; }
+.cinema-home.conversion-home .home-secondary [role="status"]:empty { display: none; }
+.client-story-card h4 { font: 400 28px/1.15 'Bebas Neue',sans-serif; color: #f6ebd8; margin: 14px 0; }
+.client-story-context { display: grid; gap: 12px; margin: 0 0 16px; }
+.client-story-context dt, .client-story-outcome-label { color: #e1c99d; font-size: 12px; font-weight: 700; margin: 0 0 4px; }
+.client-story-context dd { margin: 0; color: #ded8cd; font-size: 14px; line-height: 1.6; }
+.cinema-home.conversion-home .client-story-card .client-story-outcome-label { color: #e1c99d; font-size: 12px; margin: 0 0 6px; }
 @media(max-width:700px) {
   .cinema-home.conversion-home .conversion-benefits li > span,
   .cinema-home.conversion-home .conversion-goal p,

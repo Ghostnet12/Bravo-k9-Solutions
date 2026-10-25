@@ -69,6 +69,7 @@ try {
         assert.equal(await page.locator('.facebook-recommendations article').count(), 7);
         assert.equal(await page.locator('.facebook-recommendations-more[open]').count(), 0, 'additional reviews start collapsed');
         assert.equal((await page.locator('.conversion-goal').filter({ hasText: 'Advanced' }).innerText()).includes('$200'), false, 'specialist goals do not inherit the standard monthly price');
+        await page.locator('.facebook-recommendations-more > summary').click();
         for (const author of ['Tamyra Borg', 'Waneta Malsom']) {
           const card = page.locator('.facebook-recommendations article').filter({ hasText: author });
           await card.getByText('Google review', { exact: true }).waitFor();

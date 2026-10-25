@@ -36,6 +36,16 @@ Sources consulted:
 
 ## Validation and limits
 
+### Follow-up: homepage focus, documented stories and outcomes
+
+Workshops now show the next date, time, price and a link to complete details. FCI support and online lessons use smaller sections with their existing destination links. The online lesson offers remain available when the library is open. The main training content, black-and-gold identity, hero, pricing and live-stream implementation are unchanged.
+
+Three stories summarize existing published reviews from Waneta Malsom (Benny and Huck), Jessica Post (a five-month-old rescue pup) and Sherrie Humphries (Daisy). Their starting points and training themes are drawn from those reviews; reported outcomes are exact excerpts, attributed to each reviewer, with the complete original review expandable. These are client reports, not independently verified case records or guaranteed results. The current public `/api/reviews` response was checked before implementation. A story disappears if its review is removed, disabled or edited so it no longer supports the summary. All seven existing reviews remain accessible.
+
+The owner report adds currently confirmed appointments, distinct clients with those appointments, and daily results. Booking records determine confirmation; a browser event cannot claim it. Existing privacy exclusions, owner access rules and 30-day retention remain in place. See `site-operations.md` for definitions.
+
+Controlled Chromium layout comparisons used the same public-review and weekly-workshop fixtures before and after the change. The combined height of workshop, FCI and online sections fell from 2,220 to 1,099px at 390px width and from 2,263 to 1,018px at 1440px width. This is a layout measurement, not evidence of better customer conversion. Browser regression coverage checks all four supported widths, review expansion, report filtering and the absence of horizontal page overflow. Database coverage adds cancelled/waitlisted bookings, online-only purchases, duplicate client sessions and rejection of fabricated confirmation events.
+
 Run the production build before the unit tests: SEO tests read the rendered output. Release checks include lint, unit/security/indexing regressions, browser journeys, secret scanning and CodeQL. The marketing journey uses synthetic APIs and checks 320, 390, 768 and 1440px layouts, program context, trainer retry and absence of external writes. The existing booking regression covers account handoff and request payloads. WebKit checks run in CI where its operating-system dependencies are available; local Chromium is not a physical iPhone test.
 
 No production booking, payment, lesson or live stream is created for testing. Authenticated owner/client behavior is tested with isolated fixtures, not a review of private production account data. Vercel's one-hour error-log query returned no error groups at review time; this is a limited observation window, not proof of zero incidents. Live publication depends on the required repository release checks and the resulting Vercel deployment.

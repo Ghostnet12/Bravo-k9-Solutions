@@ -76,13 +76,13 @@ test('owner monitoring and server-authoritative booking funnel', { timeout: 1800
       await call(null, 'post', '/api/telemetry/visit', visit).expect(204);
       await call('client', 'post', '/api/telemetry/visit', { ...visit, stage: 'booking_started' }).expect(204);
       await call('client', 'post', '/api/telemetry/visit', { ...visit, stage: 'paid' }).expect(400);
-      assert.deepEqual((await report()).body.totals, { visits: 1, started: 1, saved: 0, paid: 0, abandoned: 0 });
+      assert.deepEqual((await report()).body.totals, { visits: 1, started: 1, saved: 0, confirmed: 0, paid: 0, abandoned: 0 });
       const body = bookingBody();
       saved = (await call('client', 'post', '/api/bookings', body).set('X-Bravo-Visit', visit.token).expect(201)).body.booking;
       const retry = await call('client', 'post', '/api/bookings', body).set('X-Bravo-Visit', visit.token).expect(201);
       assert.equal(retry.body.booking._id, saved._id); assert.equal(retry.body.booking.analyticsSession, undefined);
       assert.equal(await Booking.countDocuments(), 1);
-      assert.deepEqual((await report()).body.totals, { visits: 1, started: 1, saved: 1, paid: 0, abandoned: 0 });
+      assert.deepEqual((await report()).body.totals, { visits: 1, started: 1, saved: 1, confirmed: 0, paid: 0, abandoned: 0 });
       const all = await call('client', 'get', '/api/bookings').expect(200); assert.equal(all.body.bookings[0].analyticsSession, undefined);
     });
     await t.test('payment requires persisted verified status; coverage and checkout URLs do not count', async () => {
@@ -100,6 +100,30 @@ test('owner monitoring and server-authoritative booking funnel', { timeout: 1800
       assert.equal((await report()).body.totals.saved, 1);
       await call('client', 'post', '/api/bookings', bookingBody()).set('X-Bravo-Visit', nextVisit.token).set('Sec-GPC', '1').expect(201);
       assert.equal((await report()).body.totals.saved, 1);
+    });
+    await t.test('confirmed appointments require scheduled visits; clients deduplicate across sessions and cancelled requests stop counting', async () => {
+      await call('client', 'post', '/api/telemetry/visit', { ...visit, stage: 'confirmed' }).expect(400);
+      await Booking.updateOne({ _id: saved._id }, { $set: { status: 'confirmed', visits: [] } });
+      assert.equal((await report()).body.totals.confirmed, 0, 'an online-only purchase is not an appointment');
+      await Booking.updateOne({ _id: saved._id }, { $set: { visits: [{ date: '2030-10-01', time: '10:00', service: 'training' }] } });
+      let result = (await report()).body;
+      assert.equal(result.totals.confirmed, 1); assert.equal(result.confirmedClients, 1);
+      const another = { token: randomUUID(), channel: 'social', stage: 'visit' };
+      await call(null, 'post', '/api/telemetry/visit', another).expect(204);
+      const second = (await call('client', 'post', '/api/bookings', bookingBody()).set('X-Bravo-Visit', another.token).expect(201)).body.booking;
+      await Booking.updateOne({ _id: second._id }, { $set: { status: 'confirmed', visits: [{ date: '2030-10-02', time: '10:00', service: 'training' }] } });
+      result = (await report()).body;
+      assert.equal(result.totals.confirmed, 2); assert.equal(result.confirmedClients, 1, 'returning sessions are not new clients');
+      assert.equal(result.daily.reduce((sum, row) => sum + row.confirmed, 0), 2);
+      assert.equal(result.channels.find(row => row.channel === 'social').confirmed, 1);
+      assert.doesNotMatch(JSON.stringify(result), /userId|analyticsSession|token/);
+      for (const status of ['cancelled', 'waitlisted', 'requested']) {
+        await Booking.updateOne({ _id: second._id }, { $set: { status } });
+        assert.equal((await report()).body.totals.confirmed, 1);
+      }
+      await Booking.updateOne({ _id: saved._id }, { $set: { status: 'cancelled' } });
+      result = (await report()).body;
+      assert.equal(result.totals.confirmed, 0); assert.equal(result.confirmedClients, 0);
     });
     await t.test('telemetry storage failure cannot fail a saved booking', async () => {
       const original = FunnelVisit.findOne;
