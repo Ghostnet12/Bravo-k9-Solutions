@@ -126,6 +126,19 @@ body:has(.mobile-home-nav) :is(a,button,summary):focus-visible { outline: 3px so
 .client-story-context dt, .client-story-outcome-label { color: #e1c99d; font-size: 12px; font-weight: 700; margin: 0 0 4px; }
 .client-story-context dd { margin: 0; color: #ded8cd; font-size: 14px; line-height: 1.6; }
 .cinema-home.conversion-home .client-story-card .client-story-outcome-label { color: #e1c99d; font-size: 12px; margin: 0 0 6px; }
+
+/* A complete client story is readable without horizontal browsing. */
+.cinema-home.conversion-home .cinema-proof .client-review-list { display: grid; grid-template-columns: minmax(0,1fr); gap: 16px; overflow: visible; padding: 0; margin: 16px 0; }
+.cinema-home.conversion-home .cinema-proof .client-review-list .panel { min-width: 0; min-height: 0; padding: 20px; gap: 8px; }
+.client-review-list .client-story-card h4 { margin: 4px 0; }
+.client-review-list .client-story-context { gap: 10px; margin: 0; }
+.client-review-list .review-copy { margin: 4px 0 8px; }
+
+/* Keep the session walkthrough compact and consistent across screen sizes. */
+.cinema-home.conversion-home #method .home-method-steps { gap: 0; margin-top: 20px; }
+.cinema-home.conversion-home #method .home-method-step { padding: 16px 0; gap: 4px 14px; border: 0; border-bottom: 1px solid #ba9a6440; border-radius: 0; background: none; }
+.cinema-home.conversion-home #method .home-method-step strong { font-size: 28px; }
+.cinema-home.conversion-home #method .home-method-step .home-method-copy { font-size: 14px; }
 @media(max-width:700px) {
   .cinema-home.conversion-home .conversion-benefits li > span,
   .cinema-home.conversion-home .conversion-goal p,

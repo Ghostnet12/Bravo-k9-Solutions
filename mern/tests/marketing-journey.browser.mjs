@@ -54,10 +54,17 @@ try {
           await visit('/');
           assert.equal(await page.locator('.client-story-card').count(), 3, 'published client outcomes become three sourced case summaries');
           assert.equal(await page.locator('.facebook-recommendations article').count(), DEFAULT_REVIEWS.length, 'every review appears once');
+          assert.match(await page.locator('#home-title').innerText(), /DOG TRAINING.\s*AT YOUR HOME/);
+          assert.equal(await page.locator('.facebook-recommendations > .client-review-list article').count(), 1, 'one complete result is visible without swiping');
+          assert.ok(await page.locator('.client-review-list').first().evaluate(element => element.scrollWidth <= element.clientWidth), 'featured story needs no horizontal scroll');
           const story = page.locator('.client-story-card').first();
           await story.getByText('Read full review', { exact: true }).click();
           assert.match(await story.locator('.review-full blockquote').innerText(), /Benny and Huck/);
           await story.getByText('Show less', { exact: true }).click();
+          await page.locator('.facebook-recommendations-more > summary').click();
+          assert.equal(await page.locator('.facebook-recommendations article:visible').count(), DEFAULT_REVIEWS.length, 'every published review is reachable');
+          assert.ok(await page.locator('.client-review-list').last().evaluate(element => element.scrollWidth <= element.clientWidth), 'additional reviews need no horizontal scroll');
+          await page.locator('.facebook-recommendations-more > summary').click();
           const secondaryHeight = await page.locator('.home-secondary').evaluateAll(sections => sections.reduce((sum, section) => sum + section.getBoundingClientRect().height, 0));
           assert.ok(secondaryHeight < 1250, `${width}: secondary topics remain compact (${secondaryHeight}px)`);
           assert.equal(await page.locator('#online .cinema-learning-visual').count(), 0, 'coming-soon lessons do not add a full photo section');
@@ -77,6 +84,8 @@ try {
           await page.locator('#team').getByRole('heading', { name: 'Fixture Trainer', exact: true }).waitFor();
           assert.equal(await page.locator('.home-team-recovery').count(), 0);
           await fits();
+          await page.locator('.home-hero').screenshot({ path: `test-results/clarity-hero-${engineName}-${width}.png` });
+          await page.locator('#method').screenshot({ path: `test-results/clarity-method-${engineName}-${width}.png` });
           await page.locator('#training').scrollIntoViewIfNeeded();
           await page.screenshot({ path: `test-results/marketing-offer-${engineName}-${width}.png` });
           await page.locator('#reviews').screenshot({ path: `test-results/client-stories-${engineName}-${width}.png` });
