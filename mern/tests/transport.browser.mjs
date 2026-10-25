@@ -78,7 +78,10 @@ try {
           await page.locator('.transport-contact').click();
           await page.waitForURL('**/contact?interest=k9-transport');
           assert.match(await page.locator('.contact-interest').innerText(), /K9 transport is coming soon/);
-          await page.goto(origin + '/');
+          // Follow the customer path. Reloading here aborts the contact page's
+          // pending content read, which WebKit reports as an access-control error.
+          await page.locator('header a[href="/"]').click();
+          await page.waitForURL(origin + '/');
           await page.locator('#k9-transport').scrollIntoViewIfNeeded();
           await page.waitForFunction(() => { const img = document.querySelector('#k9-transport img'); return img?.complete && img.naturalWidth > 0; });
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
@@ -89,6 +92,7 @@ try {
           await page.waitForURL('**/k9-transport#transport-updates');
           await page.getByLabel('Email address', { exact: true }).waitFor();
           assert.deepEqual(errors, []);
+          console.log(`PASS ${name}/${width}: transport layout, navigation, consent, retry and signup`);
         } finally { await context.close(); }
       }
     } finally { await browser.close(); }
