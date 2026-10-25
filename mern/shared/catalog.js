@@ -1,6 +1,5 @@
 export const SERVICES = [
   { id: 'training', name: 'Professional training', cents: 20000, additionalDogCents: 10000, interval: 'month', includes: ['training'], description: 'Private mobile training, Monday–Friday, one hour per day. Customize your schedule in your profile. Monthly pricing is per household, with an additional rate for each extra dog.' },
-  { id: 'walking', name: 'Dog Walking', cents: 2500, interval: 'walk', durationMinutes: 30, includes: ['walking'], description: 'A focused 30-minute walk, priced per dog.' },
   { id: 'online', name: 'Online training', cents: 7500, bundleCents: 25000, interval: 'month', includes: ['online'], description: 'Member lessons, captions, and written transcripts.' },
   { id: 'aggression', name: 'Aggressive-dog intake', cents: 40000, interval: 'once', includes: ['aggression'], description: 'Initial assessment with two trainers.' },
 ];
@@ -35,6 +34,7 @@ export const trainingFocusName = id => TRAINING_FOCUSES.find(focus => focus.id =
 // Retained only to label historical records. These programs are never exposed
 // to new quotes, bookings, checkout, or owner service controls.
 export const LEGACY_SERVICES = [
+  { id: 'walking', name: 'Retired dog-walking service', cents: 2500, interval: 'walk', durationMinutes: 30, includes: ['walking'] },
   { id: 'sitting', name: 'Retired dog-care service', cents: 2000, interval: 'day', includes: ['sitting'] },
   { id: 'complete', name: 'Retired training + care package', cents: 35000, interval: 'month', includes: ['training', 'sitting'], bundle: true },
   { id: 'all-access', name: 'Retired all-access package', cents: 40000, interval: 'month', includes: ['training', 'sitting', 'online'], bundle: true },

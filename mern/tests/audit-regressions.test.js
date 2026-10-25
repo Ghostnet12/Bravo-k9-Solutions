@@ -5,7 +5,7 @@ import mongoose from 'mongoose';
 import { checkout, refundBooking, processStripeEvent } from '../server/payments.js';
 import { Booking, User, Subscription, StripeEvent, BillingLock, Settings, Slot } from '../server/models.js';
 import { cancelBooking, getAvailability, trainerCapacity, TRAINER_DOG_LIMIT } from '../server/bookings.js';
-import { quote, rescheduledQuote, SERVICES } from '../shared/catalog.js';
+import { quote, rescheduledQuote, SERVICES, ALL_SERVICES } from '../shared/catalog.js';
 import { publicUser } from '../server/auth.js';
 import { clientError } from '../server/errors.js';
 import { api } from '../client/src/api.js';
@@ -17,8 +17,8 @@ const query = value => {
   return chain;
 };
 function fixture() {
-  const booking = { _id: '68c20f8f5c734fa0f944ad10', userId: '68c20f8f5c734fa0f944ad11', status: 'requested', paymentStatus: 'unpaid', serviceIds: ['walking'], dogCount: 2, visits: [{ date: '2026-09-21', time: '10:00', service: 'walking' }] };
-  booking.quote = quote(booking.serviceIds, booking.visits, { dogCount: 2 });
+  const booking = { _id: '68c20f8f5c734fa0f944ad10', userId: '68c20f8f5c734fa0f944ad11', status: 'requested', paymentStatus: 'unpaid', serviceIds: ['aggression'], dogCount: 1, visits: [{ date: '2026-09-21', time: '10:00', service: 'aggression' }] };
+  booking.quote = quote(booking.serviceIds, booking.visits, { dogCount: booking.dogCount });
   return { booking, user: { _id: booking.userId, email: 'fixture@example.test', name: 'Test Customer', stripeCustomerId: 'cus_fixture' } };
 }
 function checkoutMocks(t, booking) {
@@ -33,7 +33,8 @@ function checkoutMocks(t, booking) {
 }
 test('rescheduling preserves recorded unit prices and recomputes walk quantities', () => {
   const { booking } = fixture();
-  booking.quote = quote(['walking'], booking.visits, { dogCount: 2 }, SERVICES.map(service => ({ ...service, cents: 3300 })));
+  booking.serviceIds = ['walking']; booking.dogCount = 2; booking.visits = [{ date: '2026-09-21', time: '10:00', service: 'walking' }];
+  booking.quote = quote(['walking'], booking.visits, { dogCount: 2 }, ALL_SERVICES.map(service => ({ ...service, cents: 3300 })));
   const result = rescheduledQuote(booking, [...booking.visits, { date: '2026-09-22', time: '11:00', service: 'walking' }]);
   assert.equal(result.lines[0].unitCents, 3300); assert.equal(result.lines[0].quantity, 4); assert.equal(result.dueNowCents, 13200);
   assert.equal(booking.quote.dueNowCents, 6600);
@@ -149,15 +150,15 @@ test('subscription refunds resolve the modern Invoice Payments mapping', async t
   const { booking, user } = fixture(); booking.paymentStatus = 'paid'; booking.stripeSessionId = 'cs_fixture';
   const write = t.mock.method(Booking, 'updateOne', async () => ({ matchedCount: 1, modifiedCount: 1 }));
   let listed, refundInput;
-  const stripe = { checkout: { sessions: { retrieve: async () => ({ invoice: 'in_fixture', amount_total: 5000 }) } }, invoicePayments: { list: async params => { listed = params; return { data: [{ payment: { type: 'payment_intent', payment_intent: 'pi_fixture' } }], has_more: false }; } }, refunds: { create: async params => { refundInput = params; return { id: 're_fixture', status: 'succeeded', currency: 'usd', amount: 5000 }; } } };
+  const stripe = { checkout: { sessions: { retrieve: async () => ({ invoice: 'in_fixture', amount_total: 40000 }) } }, invoicePayments: { list: async params => { listed = params; return { data: [{ payment: { type: 'payment_intent', payment_intent: 'pi_fixture' } }], has_more: false }; } }, refunds: { create: async params => { refundInput = params; return { id: 're_fixture', status: 'succeeded', currency: 'usd', amount: 40000 }; } } };
   await refundBooking(booking, user, stripe);
-  assert.equal(listed.invoice, 'in_fixture'); assert.equal(refundInput.payment_intent, 'pi_fixture'); assert.equal(refundInput.amount, 5000);
+  assert.equal(listed.invoice, 'in_fixture'); assert.equal(refundInput.payment_intent, 'pi_fixture'); assert.equal(refundInput.amount, 40000);
   assert.equal(write.mock.calls.at(-1).arguments[1].$set.paymentStatus, 'refunded');
 });
 test('a pending refund is not falsely marked refunded and can be checked without another refund', async t => {
   const { booking, user } = fixture(); Object.assign(booking, { paymentStatus: 'review', stripeSessionId: 'cs_fixture', stripePaymentIntentId: 'pi_fixture', refundId: 're_existing' });
   const write = t.mock.method(Booking, 'updateOne', async () => ({ matchedCount: 1, modifiedCount: 1 }));
-  const stripe = { checkout: { sessions: { retrieve: async () => ({ payment_intent: 'pi_fixture', amount_total: 5000 }) } }, refunds: { retrieve: async id => ({ id, status: 'pending', currency: 'usd', amount: 5000 }), create: async () => { throw new Error('Must never create a second refund'); } } };
+  const stripe = { checkout: { sessions: { retrieve: async () => ({ payment_intent: 'pi_fixture', amount_total: 40000 }) } }, refunds: { retrieve: async id => ({ id, status: 'pending', currency: 'usd', amount: 40000 }), create: async () => { throw new Error('Must never create a second refund'); } } };
   const result = await refundBooking(booking, user, stripe);
   assert.match(result.message, /pending/); assert.equal(write.mock.calls.at(-1).arguments[1].$set.paymentStatus, 'review'); assert.equal(write.mock.calls.at(-1).arguments[1].$set.refundedAt, undefined);
 });
@@ -167,7 +168,7 @@ test('webhook rejects mismatched customer/session and preserves refunded state o
   t.mock.method(StripeEvent, 'exists', async () => false); t.mock.method(StripeEvent, 'create', async () => ({}));
   t.mock.method(Booking, 'findById', () => query(booking)); t.mock.method(User, 'findById', () => query(user));
   const write = t.mock.method(Booking, 'updateOne', async () => ({})); t.mock.method(BillingLock, 'deleteOne', async () => ({}));
-  const object = { id: 'cs_fixture', customer: 'cus_other', client_reference_id: String(booking._id), metadata: { app: 'bravo-k9', userId: String(user._id), bookingId: String(booking._id) }, payment_status: 'paid', currency: 'usd', amount_total: 5000 };
+  const object = { id: 'cs_fixture', customer: 'cus_other', client_reference_id: String(booking._id), metadata: { app: 'bravo-k9', userId: String(user._id), bookingId: String(booking._id) }, payment_status: 'paid', currency: 'usd', amount_total: 40000 };
   const event = { id: 'evt_fixture', type: 'checkout.session.completed', created: 1, data: { object } };
   await assert.rejects(processStripeEvent(event, {}), /customer mismatch/);
   object.customer = user.stripeCustomerId; object.id = 'cs_wrong'; await assert.rejects(processStripeEvent(event, {}), /session mismatch/);
@@ -253,4 +254,39 @@ test('closing checkout links bounds concurrency, request timeouts and retry work
   },expire:async(_id,_params,options)=>{assert.equal(options.timeout,3000);assert.equal(options.maxNetworkRetries,0);}}}};
   assert.equal(await expireLessonCheckouts(stripe),3);assert.equal(limit,5);assert.equal(peak,5);
   assert.ok(pending.has('0'),'failed expiration remains available to retry');
+});
+
+test('a previously opened paid checkout still activates training after walking is retired', async t => {
+  const booking = {
+    _id: '68c20f8f5c734fa0f944ad70', userId: '68c20f8f5c734fa0f944ad71',
+    status: 'requested', paymentStatus: 'unpaid', stripeSessionId: 'cs_legacy_open',
+    serviceIds: ['training', 'walking'], dogCount: 2,
+    visits: [{ date: '2026-10-20', time: '10:00', service: 'walking' }],
+  };
+  booking.quote = quote(booking.serviceIds, booking.visits, { dogCount: 2 }, ALL_SERVICES);
+  const user = { _id: booking.userId, stripeCustomerId: 'cus_existing_legacy' };
+  const membershipWrites = [], bookingWrites = [];
+  t.mock.method(mongoose.connection, 'transaction', async work => work({}));
+  t.mock.method(StripeEvent, 'exists', async () => false);
+  t.mock.method(StripeEvent, 'create', async () => ({}));
+  t.mock.method(Booking, 'findById', () => query(booking));
+  t.mock.method(User, 'findById', () => query(user));
+  t.mock.method(User, 'updateOne', async () => ({}));
+  t.mock.method(Booking, 'updateOne', async (_filter, change) => { bookingWrites.push(change); return {}; });
+  t.mock.method(Subscription, 'findOneAndUpdate', async (_filter, update) => {
+    membershipWrites.push(update.$setOnInsert);
+    return { validFrom: new Date('2026-10-20T00:00:00Z'), validUntil: new Date('2026-11-20T00:00:00Z') };
+  });
+  t.mock.method(BillingLock, 'deleteOne', async () => ({}));
+  const object = {
+    id: booking.stripeSessionId, currency: 'usd', mode: 'payment',
+    amount_total: booking.quote.dueNowCents, payment_status: 'paid',
+    customer: user.stripeCustomerId, client_reference_id: String(booking._id),
+    metadata: { app: 'bravo-k9', billing: 'manual-month-v1', bookingId: String(booking._id), userId: String(user._id) },
+  };
+  await processStripeEvent({ id: 'evt_retired_paid', created: 1792522800, type: 'checkout.session.completed', data: { object } }, {});
+  assert.equal(membershipWrites.length, 1);
+  assert.deepEqual(membershipWrites[0].serviceIds, ['training']);
+  assert.equal(membershipWrites[0].dogCount, 2);
+  assert.ok(bookingWrites.some(update => update.$set?.paymentStatus === 'paid'));
 });

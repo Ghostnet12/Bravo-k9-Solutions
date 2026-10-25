@@ -13,14 +13,13 @@ import { MobileHomeNav } from './MobileConversion';
 import DogTrainingPage from './DogTrainingPage';
 import HuntingPage from './HuntingPage';
 import BehaviorAssessmentPage from './BehaviorAssessmentPage';
-import DogWalkingPage from './DogWalkingPage';
 import LearnPage from './LearnPage';
 import ContactPage from './ContactPage';
 import AccessibilityPage from './AccessibilityPage';
 import MediaRightsPage from './MediaRightsPage';
 import NotFoundPage from './NotFoundPage';
 
-const pages = { '/tools-of-the-trade': ToolsOfTheTradePage, '/how-to': HowToPage, '/fci-support': FCISupportPage, '/live': LivePage, '/workshops': WorkshopPage, '/': Home, '/dog-training': DogTrainingPage, '/hunting-dog-training': HuntingPage, '/behavior-assessment': BehaviorAssessmentPage, '/dog-walking': DogWalkingPage, '/learn': LearnPage, '/contact': ContactPage, '/accessibility': AccessibilityPage, '/media-rights': MediaRightsPage, '/404': NotFoundPage };
+const pages = { '/tools-of-the-trade': ToolsOfTheTradePage, '/how-to': HowToPage, '/fci-support': FCISupportPage, '/live': LivePage, '/workshops': WorkshopPage, '/': Home, '/dog-training': DogTrainingPage, '/hunting-dog-training': HuntingPage, '/behavior-assessment': BehaviorAssessmentPage, '/learn': LearnPage, '/contact': ContactPage, '/accessibility': AccessibilityPage, '/media-rights': MediaRightsPage, '/404': NotFoundPage };
 export function renderPublicPage(route) {
   const Component = pages[route];
   if (!Component) throw new Error(`No public component for ${route}`);

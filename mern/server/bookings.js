@@ -7,7 +7,7 @@ import { assignedTrainerIds, requestedTrainerIds, acceptedTrainerIds } from '../
 import { Booking, Settings, Slot, Subscription, User, Notification, AuditEvent } from './models.js';
 import { transaction } from './db.js';
 import { availability, validateVisits, dateTime, dateRange } from './scheduling.js';
-import { quote, serviceSelection, TRAINING_FOCUSES, ALL_SERVICES } from '../shared/catalog.js';
+import { quote, serviceSelection, TRAINING_FOCUSES, SERVICES, ALL_SERVICES } from '../shared/catalog.js';
 import { effectiveServices } from './services.js';
 import { filterTrainerAvailability, checkTrainerVisits } from './trainer-schedules.js';
 import { activeTermQuery, monthTerm } from '../shared/membership-terms.js';
@@ -50,6 +50,7 @@ export async function getEntitlements(userId, { includeFuture = false } = {}) {
   return { subscriptions: subs, services, serviceDogCounts };
 }
 export function bookingCoveredByEntitlements(serviceIds, dogCount, entitlements) {
+  if (serviceIds.some(id => !SERVICES.some(service => service.id === id))) return false;
   return serviceSelection(serviceIds).every(service => service.interval === 'month' && service.includes.every(id => entitlements.services.includes(id)))
     && (!serviceIds.includes('training') || (entitlements.serviceDogCounts?.training || 0) >= dogCount);
 }

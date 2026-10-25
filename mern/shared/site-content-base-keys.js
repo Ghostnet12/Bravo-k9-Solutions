@@ -3269,15 +3269,15 @@ Object.assign(CONTENT_KEYS, {
 
 CONTENT_KEYS['training-booking-allowance'] = {text:true};
 
-for (const id of ['manners','walks','handling','specialist']) {
+for (const id of ['manners','handling','specialist']) {
   for (const part of ['label','title','description','details']) CONTENT_KEYS[`goal-${id}-${part}`] = {text:true};
   for (const part of ['book','included']) CONTENT_KEYS[`goal-${id}-${part}`] = {text:true,link:true};
   CONTENT_KEYS[`goal-${id}-media`] = {text:false,media:true};
 }
 for (const key of ['goal-eyebrow','goal-consult-title','goal-consult-copy','journey-title']) CONTENT_KEYS[key]={text:true};
-for (const program of ['training','walking','aggression']) for(let i=0;i<4;i++) for(const part of ['title','copy']) CONTENT_KEYS[`journey-${program}-${i}-${part}`]={text:true};
+for (const program of ['training','aggression']) for(let i=0;i<4;i++) for(const part of ['title','copy']) CONTENT_KEYS[`journey-${program}-${i}-${part}`]={text:true};
 
-for(const id of ['manners','walks','handling','specialist']) CONTENT_KEYS[`goal-${id}-copy`]={text:false};
+for(const id of ['manners','handling','specialist']) CONTENT_KEYS[`goal-${id}-copy`]={text:false};
 
 CONTENT_KEYS['course-public-1']={text:true};
 CONTENT_KEYS['course-public-2']={text:true};
@@ -4189,7 +4189,7 @@ for (const key of ['copy-bookingpage-10', 'copy-lessonoffers-10']) CONTENT_KEYS[
 CONTENT_KEYS['copy-home-16'].text = false;
 for (let i = 0; i < 3; i++) CONTENT_KEYS[`home-story-line-${i}`] = { text: true };
 for (let i = 0; i < 4; i++) CONTENT_KEYS[`home-specialist-${i}`] = { text: true, link: true };
-for (const id of ['walking', 'aggression']) {
+for (const id of ['aggression']) {
   for (const part of ['eyebrow', 'title', 'copy']) CONTENT_KEYS[`home-service-${id}-${part}`] = { text: true };
   CONTENT_KEYS[`home-service-${id}-link`] = { text: true, link: true };
 }
