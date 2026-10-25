@@ -37,7 +37,7 @@ try {
     assert.ok((await page.locator('.specialist-scope').innerText()).includes('not a quote for a complete specialist program'));
     assert.ok((await page.locator('.first-visit-intro .price-total').innerText()).includes('Obedience foundations'));
     assert.equal(await page.getByRole('button',{name:'Choose a trainer →',exact:true}).count(),0);
-    assert.equal(await page.getByRole('link',{name:'Discuss your specialist goal with Bravo →',exact:true}).getAttribute('href'),'/contact');
+    assert.equal(await page.getByRole('link',{name:'Discuss your specialist goal with Bravo →',exact:true}).getAttribute('href'),`/contact?interest=${focus === 'hunting-dog' ? 'hunting' : focus}`);
    }
    await page.getByRole('button',{name:'Choose a trainer for obedience →',exact:true}).click();
    await page.getByRole('heading',{name:'Choose your trainer.',exact:true}).waitFor();

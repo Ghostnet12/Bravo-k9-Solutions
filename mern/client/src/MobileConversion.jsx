@@ -24,8 +24,8 @@ export function HomeSectionOrder({ children }) {
 export const MOBILE_GOALS = [
   { id: 'manners', title: 'Pulling & jumping', copy: 'Everyday obedience and better control.', image: '/images/obedience-real-world.webp', href: '/portal?program=training&focus=basic-obedience', service: 'training' },
   { id: 'reactivity', title: 'Aggression & reactivity', copy: 'Start with a separate two-trainer assessment.', image: '/images/protection-training.webp', href: '/portal?program=aggression', service: 'aggression' },
-  { id: 'puppy', title: 'Puppy obedience', copy: 'Build the right foundation early.', image: '/images/dog-sitting-care.webp', href: '/portal?program=training&focus=basic-obedience', service: 'training' },
-  { id: 'advanced', title: 'Advanced training', copy: 'Higher-level obedience. Working goals scoped individually.', image: '/images/tracking-training.webp', href: '/contact?interest=advanced-training', service: 'training' },
+  { id: 'puppy', title: 'Puppy obedience', copy: 'Build routines, manners and confidence early.', image: '/images/dog-sitting-care.webp', href: '/portal?program=training&focus=puppy-foundations', service: 'training' },
+  { id: 'advanced', title: 'Advanced training', copy: 'Build on the basics. Discuss your next training goal.', image: '/images/tracking-training.webp', href: '/contact?interest=advanced-training', service: 'training' },
 ];
 const trustIcons = [
   <><ellipse cx="7" cy="7" rx="2.4" ry="3"/><ellipse cx="17" cy="7" rx="2.4" ry="3"/><ellipse cx="3" cy="12" rx="2" ry="2.5"/><ellipse cx="21" cy="12" rx="2" ry="2.5"/><path d="M6 18c0-4 3-7 6-7s6 3 6 7c0 4-4 1-6 1s-6 3-6-1Z"/></>,
@@ -73,6 +73,8 @@ export function TrainingOffer() {
           ['Your schedule', 'Client-selected scheduling, subject to availability'],
         ].map(([title,term],index)=><li key={title}><Editable as="strong" contentKey={`home-training-benefit-${index}`} canEditText>{title}</Editable><Editable as="span" contentKey={`mobile-training-term-${index + 1}`} canEditText>{term}</Editable></li>)}</ul>
         <Editable as={Link} contentKey="mobile-training-start" canEditText canEditLink className="conversion-button" to={training?.enabled === false ? '/contact' : '/portal?program=training'} onClick={() => trackVisit('pricing_booking_clicked')}>{training?.enabled === false ? 'Ask about training' : 'Start my training plan'} <span aria-hidden="true">→</span></Editable>
+        <Editable as="p" contentKey="training-request-reassurance" canEditText className="training-request-reassurance">Explore trainers and available dates before creating an account. Sending a request does not charge your card; Bravo confirms your visits.</Editable>
+        <div className="training-help-links"><Editable as={Link} contentKey="training-booking-guide" canEditText canEditLink to="/how-to#first-visit-guide">How booking works →</Editable><Editable as={Link} contentKey="training-tools-guide" canEditText canEditLink to="/tools-of-the-trade">Tools we use →</Editable></div>
         <details className="conversion-catalog-terms"><summary><Editable as="span" contentKey="home-training-details" canEditText>What’s included & how it works</Editable><span aria-hidden="true">+</span></summary><p>{training?.description}</p><ul>{[[0,'Personalized training'],[5,'Training in real-world environments'],[6,'Bravo comes to you'],[7,'Manual monthly renewal']].map(([index,term]) => <Editable as="li" key={index} contentKey={`mobile-training-term-${index}`} canEditText>{term}</Editable>)}</ul><p>Aggression assessments and specialist programs are separate.</p></details>
       </div>
     </Editable>
@@ -137,5 +139,6 @@ export function ConversionFAQ() {
     ['Can I plan the whole month?', 'Yes. Choose “Plan my entire month” in the booking flow, or use My Schedule if you already have an active training membership.'],
     ['Does my membership renew automatically?', 'No. Training renews manually each month. Your review shows the current price before you continue.'],
     ['What if my dog is aggressive or reactive?', 'Start with the separate two-trainer assessment. Bravo will discuss handling, suitability and the next steps with you.'],
+    ['What happens at my first training visit?', 'Your trainer meets you and your dog, discusses your goals and observes the behavior in your everyday surroundings. Together, you decide what to work on and what to practice between visits.'],
   ].map(([q,a],i)=><details key={q}><Editable as="summary" contentKey={`mobile-faq-${i}-question`} canEditText>{q}</Editable><Editable as="p" contentKey={`mobile-faq-${i}-answer`} canEditText>{a}</Editable></details>)}<Editable as={Link} contentKey="home-guide-link" canEditLink className="conversion-guide-link" to="/how-to#first-visit-guide"><span aria-hidden="true">▶</span><span><Editable as="strong" contentKey="home-guide-title" canEditText>See how easy getting started can be.</Editable><Editable as="span" contentKey="home-guide-description" canEditText>Preview your first visit in four simple steps</Editable></span><span aria-hidden="true">→</span></Editable></section>;
 }

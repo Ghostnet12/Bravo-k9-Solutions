@@ -5,9 +5,9 @@ export const GOALS = [
   { id: 'handling', label: 'Aggression concerns', title: 'Start with understanding.', description: 'Begin with a two-trainer intake. Discuss your dog’s history and handling concerns before deciding on an ongoing plan.', focus: 'behavior-modification', program: 'aggression', proof: null },
   { id: 'specialist', label: 'Advanced & working-dog goals', title: 'Talk through the goal.', description: 'Discuss suitability and preparation for advanced obedience, hunting, service, search and rescue, law enforcement or other working-dog goals with Bravo.', focus: 'job-specific', program: 'training', proof: 'working' },
 ];
-export const goalBookingPath = goal => goal.id === 'specialist' ? '/contact' : `/portal?program=${goal.program}${goal.program === 'training' ? `&focus=${goal.focus}` : ''}`;
+export const goalBookingPath = goal => goal.id === 'specialist' ? '/contact?interest=job-specific' : `/portal?program=${goal.program}${goal.program === 'training' ? `&focus=${goal.focus}` : ''}`;
 export const goalDetailsPath = goal => goal.id === 'specialist' ? '/#specialist-training' : ({ training: '/dog-training', aggression: '/behavior-assessment' })[goal.program];
-export const PROOF_TOPICS = [ { id: 'all', label: 'All training' }, { id: 'foundations', label: 'Foundations' }, { id: 'walking', label: 'Leash walking' }, { id: 'distractions', label: 'Distractions' }, { id: 'working', label: 'Working dogs' } ];
+export const PROOF_TOPICS = [ { id: 'all', label: 'All training' }, { id: 'foundations', label: 'Foundations' }, { id: 'walking', label: 'Leash skills' }, { id: 'distractions', label: 'Distractions' }, { id: 'working', label: 'Working dogs' } ];
 // Topics describe published words; they never assert a diagnosis or result.
 export function proofMatches(clip, topic) {
   const text = `${clip.title || ''} ${clip.description || ''}`;

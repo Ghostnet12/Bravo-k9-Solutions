@@ -10,7 +10,7 @@ export default function LessonLibraryControls({ onChange }) {
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState('');
   async function load() { const data = await api('/admin/lesson-library'); setLibrary(data.library); setPendingCheckouts(data.library.pendingCheckouts || 0); setSections(data.sections); }
   useEffect(() => { load().catch(e => setError(e.message)); }, []);
-  async function act(work) { setBusy(true); setError(''); setNotice(''); try { await work(); await load(); await refreshConfig(); onChange(); } catch(e) { setError(e.message); await load().catch(()=>{}); } finally { setBusy(false); } }
+  async function act(work) { setBusy(true); setError(''); setNotice(''); try { await work(); await load(); await refreshConfig(); await onChange(); } catch(e) { setError(e.message); await load().catch(()=>{}); } finally { setBusy(false); } }
   function setOpen(open) { return act(async () => {
     const result = await api('/admin/lesson-library', { method: 'PUT', body: { open, expectedRevision: library.revision } });
     setPendingCheckouts(result.pendingCheckouts || 0);
