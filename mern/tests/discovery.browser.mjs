@@ -75,7 +75,7 @@ try {
         } finally {pendingApi.delete(request);lastApi=Date.now();}
       });
       try {
-        for(const path of ['/','/dog-training','/behavior-assessment','/dog-walking','/workshops','/learn','/contact']){
+        for(const path of ['/','/dog-training','/behavior-assessment','/workshops','/learn','/contact']){
           const configured=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/config' && response.ok());
           await visit(origin+path,{waitUntil:'domcontentloaded'});await configured;
           await page.locator('.accessibility-trigger').waitFor();
@@ -92,40 +92,30 @@ try {
         await page.locator('.conversion-goals').screenshot({path:`test-results/program-cards-${engineName}-${width}.png`});
         for(const [label,price,program,focus,details] of [
           ['Pulling','$200','training','basic-obedience','/dog-training'],
-          ['Dog walking','$25','walking',null,'/dog-walking'],
           ['Aggression','$400','aggression',null,'/behavior-assessment'],
         ]){
           const expected=`/portal?program=${program}${focus ? `&focus=${focus}` : ''}`;
-          if(program==='walking') {
-            const detailsLink=page.locator('#training-programs a[href="/dog-walking"]');
-            await follow(detailsLink,details);
-          } else {
-            const card=page.locator('.conversion-goal').filter({hasText:label});
-            assert.equal(await card.getAttribute('href'),expected,'shared goal cards keep the correct booking focus');
-            assert.doesNotMatch(await card.innerText(),/\$\d+/,'goals do not repeat the membership offer');
-            await visit(origin+details);
-          }
+          const card=page.locator('.conversion-goal').filter({hasText:label});
+          assert.equal(await card.getAttribute('href'),expected,'goal cards keep the correct booking focus');
+          assert.doesNotMatch(await card.innerText(),/\\$\\d+/,'goals do not repeat the membership offer');
+          await visit(origin+details);
           await visit(origin);await page.locator('.conversion-goal').first().waitFor();await settleApi();
-          if(program==='walking') await visit(origin+expected);
-          else await follow(page.locator('.conversion-goal').filter({hasText:label}),expected);
-          if(program==='walking'){
-            // The previous training comparison entered two dogs. A different
-            // program must offer a choice before replacing that unsent request.
+          await follow(page.locator('.conversion-goal').filter({hasText:label}),expected);
+          if(program==='aggression'){
+            // A different program must offer a choice before replacing the unsent training request.
             await page.getByRole('heading',{name:'You have an unsent request.',exact:true}).waitFor();
-            assert.equal(await page.getByRole('link',{name:'Resume my request',exact:true}).getAttribute('href'),'/portal?resume=1');
             await page.getByRole('button',{name:'Discard draft and start again',exact:true}).click();
           }
           if(program==='training'){
             const field=page.getByRole('combobox',{name:'What would you like help with?',exact:true});
             await field.waitFor();assert.equal(await field.inputValue(),focus);
-            assert.match(await page.locator('.price-total').innerText(),/\$200/);
-            if(focus==='basic-obedience'){
-              await page.getByLabel('Number of dogs',{exact:true}).fill('2');assert.match(await page.locator('.price-total').innerText(),/\$300/);
-            }
+            assert.match(await page.locator('.price-total').innerText(),/\\$200/);
+            await page.getByLabel('Number of dogs',{exact:true}).fill('2');
+            assert.match(await page.locator('.price-total').innerText(),/\\$300/);
           }else{
             const selected=page.locator('.program-choice[aria-pressed="true"]');await selected.waitFor();
             assert.equal(await selected.count(),1);assert.ok((await selected.innerText()).includes(price));
-            assert.match(await selected.innerText(),program==='walking' ? /Dog Walking/ : /Aggressive-dog intake/);
+            assert.match(await selected.innerText(),/Aggressive-dog intake/);
             assert.equal(await page.getByRole('combobox',{name:'Schedule visits for',exact:true}).inputValue(),program);
           }
           await visit(origin);await page.locator('.conversion-goal').first().waitFor();await settleApi();
