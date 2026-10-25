@@ -97,7 +97,7 @@ try {
           const expected=`/portal?program=${program}${focus ? `&focus=${focus}` : ''}`;
           const card=page.locator('.conversion-goal').filter({hasText:label});
           assert.equal(await card.getAttribute('href'),expected,'goal cards keep the correct booking focus');
-          assert.doesNotMatch(await card.innerText(),/\\$\\d+/,'goals do not repeat the membership offer');
+          assert.doesNotMatch(await card.innerText(),/\$\d+/,'goals do not repeat the membership offer');
           await visit(origin+details);
           await visit(origin);await page.locator('.conversion-goal').first().waitFor();await settleApi();
           await follow(page.locator('.conversion-goal').filter({hasText:label}),expected);
@@ -109,9 +109,9 @@ try {
           if(program==='training'){
             const field=page.getByRole('combobox',{name:'What would you like help with?',exact:true});
             await field.waitFor();assert.equal(await field.inputValue(),focus);
-            assert.match(await page.locator('.price-total').innerText(),/\\$200/);
+            assert.match(await page.locator('.price-total').innerText(),/\$200/);
             await page.getByLabel('Number of dogs',{exact:true}).fill('2');
-            assert.match(await page.locator('.price-total').innerText(),/\\$300/);
+            assert.match(await page.locator('.price-total').innerText(),/\$300/);
           }else{
             const selected=page.locator('.program-choice[aria-pressed="true"]');await selected.waitFor();
             assert.equal(await selected.count(),1);assert.ok((await selected.innerText()).includes(price));
