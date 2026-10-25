@@ -23,7 +23,7 @@ test('published rates flow through multi-dog quotes, bundles, checkout and histo
  const legacyCatalog = [...catalog, { ...ALL_SERVICES.find(row => row.id === 'walking'), cents: 3500 }];
  const booking={serviceIds:['walking'],dogCount:2,visits,quote:quote(['walking'],visits,{dogCount:2},legacyCatalog)};
  assert.equal(booking.quote.dueNowCents,7000);
- assert.throws(() => validatedCheckoutPricing(booking), /Unknown program/,'retired walking cannot start checkout');
+ assert.throws(() => validatedCheckoutPricing(booking), /saved price is incomplete/,'retired walking cannot start checkout');
  const next=[...visits,{date:'2026-10-06',time:'09:00',service:'walking'}];
  const rescheduled={...booking,visits:next,quote:rescheduledQuote(booking,next)};
  assert.equal(rescheduled.quote.dueNowCents,14000);
