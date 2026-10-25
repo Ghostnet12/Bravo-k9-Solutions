@@ -34,7 +34,7 @@ export const trainingFocusName = id => TRAINING_FOCUSES.find(focus => focus.id =
 // Retained only to label historical records. These programs are never exposed
 // to new quotes, bookings, checkout, or owner service controls.
 export const LEGACY_SERVICES = [
-  // Historical records remain readable and reschedulable. This retired offering is not in SERVICES and cannot be newly booked.
+  // Past records retain their historical pricing; this retired offering is not in SERVICES and cannot be newly booked.
   { id: 'walking', name: 'Retired dog-walking service', cents: 2500, interval: 'walk', durationMinutes: 30, includes: ['walking'] },
   { id: 'sitting', name: 'Retired dog-care service', cents: 2000, interval: 'day', includes: ['sitting'] },
   { id: 'complete', name: 'Retired training + care package', cents: 35000, interval: 'month', includes: ['training', 'sitting'], bundle: true },

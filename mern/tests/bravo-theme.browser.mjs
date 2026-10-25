@@ -67,7 +67,7 @@ try {
         let role = null;
         page.on('pageerror', error => errors.push(error.message));
         await fixtures(page, () => role);
-        for (const route of ['/', '/dog-training', '/behavior-assessment', '/dog-walking', '/contact', '/learn', '/account', '/portal?program=training']) {
+        for (const route of ['/', '/dog-training', '/behavior-assessment', '/tools-of-the-trade', '/contact', '/learn', '/account', '/portal?program=training']) {
           await page.goto(origin + route, { waitUntil: 'networkidle' });
           await page.locator('h1').waitFor();
           await darkSurface(page.locator('body'), route);

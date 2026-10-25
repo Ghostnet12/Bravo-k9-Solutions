@@ -39,7 +39,8 @@ test('owner toolkit persists real catalog prices and trainer profiles with permi
   assert.equal(published.cents,22500);assert.equal(published.additionalDogCents,12500);assert.equal(published.revision,1);
   await call('administrator','patch','/api/admin/services/training',training).expect(409);
   await call('administrator','patch','/api/admin/services/online',{expectedRevision:0,cents:9000,bundleCents:30000}).expect(200);
-  await call('administrator','patch','/api/admin/services/walking',{expectedRevision:0,cents:3500,enabled:true}).expect(200);
+  await call('administrator','patch','/api/admin/services/walking',{expectedRevision:0,cents:3500,enabled:true}).expect(404);
+   assert.equal((await call(null,'get','/api/config').expect(200)).body.services.some(row=>row.id==='walking'),false);
   await call('owner','patch','/api/admin/services/online',{expectedRevision:1,cents:9000,bundleCents:10000}).expect(400);
   const config=(await call(null,'get','/api/config').expect(200)).body;
   assert.equal(config.services.find(row=>row.id==='training').name,training.name);
