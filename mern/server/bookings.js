@@ -40,7 +40,7 @@ export async function getEntitlements(userId, { includeFuture = false } = {}) {
   const filter = activeTermQuery();
   if (includeFuture) delete filter.$or;
   const subs = await Subscription.find({ userId, ...filter }).lean();
-  const active = new Set(['training', 'walking', 'sitting', 'online', 'aggression']);
+  const active = new Set(['training', 'sitting', 'online', 'aggression']);
   const legacy = { complete: ['training', 'sitting'], 'all-access': ['training', 'sitting', 'online'] };
   const services = [...new Set(subs.flatMap(subscription => subscription.serviceIds.flatMap(id => legacy[id] || (active.has(id) ? [id] : []))))];
   const serviceDogCounts = subs.reduce((counts, subscription) => {
