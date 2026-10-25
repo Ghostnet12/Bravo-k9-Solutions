@@ -25,6 +25,7 @@ export function contactInquiryContext(search = '') {
   const hunting = huntingInquiryContext(search);
   if (hunting) return { ...hunting, subject: 'hunting training', backPath: '/hunting-dog-training', backLabel: 'Back to hunting training' };
   const interest = new URLSearchParams(search).get('interest');
+  if (interest === 'k9-transport') return { subject: 'K9 transport', kind: 'transport', goal: '', backPath: '/k9-transport', backLabel: 'Back to K9 transport' };
   if (!Object.hasOwn(interests, interest)) return null;
   return { subject: interests[interest], goal: '', backPath: '/#specialist-training', backLabel: 'Explore training options' };
 }

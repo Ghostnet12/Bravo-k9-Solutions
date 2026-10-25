@@ -45,6 +45,7 @@ jobs:
           node tests/marketing-journey.browser.mjs
           node tests/refinement.browser.mjs
           node tests/discovery.browser.mjs
+          node tests/transport.browser.mjs
           node tests/music-polish.browser.mjs
           node tests/live.browser.mjs
           node tests/public-startup.browser.mjs

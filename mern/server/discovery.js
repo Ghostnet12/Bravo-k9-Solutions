@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { transportInterestRoutes } from './transport-interest.js';
 import { z } from 'zod';
 import { requireUser, requireOwner, rateLimit } from './auth.js';
 import { transaction } from './db.js';
@@ -15,6 +16,7 @@ export const workshopInput = z.object({ expectedRevision: z.number().int().min(0
 
 const interestInput = z.object({ email: z.string().trim().email().max(254).transform(value => value.toLowerCase()), consent: z.literal(true), website: z.string().max(200).optional() }).strict();
 export function discoveryRoutes(app) {
+  transportInterestRoutes(app);
   app.get('/api/workshops/schedule-preview', requireUser, requireOwner, (_req, res) => {
     res.set('Cache-Control', 'private, no-store').json({ event: resolveWorkshop({ scheduleMode: 'weekly' }) });
   });

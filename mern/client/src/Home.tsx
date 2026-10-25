@@ -2,6 +2,7 @@ import LiveBanner from './LiveBanner';
 import { SPECIALIST_LINKS, specialistInquiryPath } from '../../shared/contact-interest';
 import GoalFinder from './GoalFinder';
 import { CINEMATIC_HERO_SOURCE, CINEMATIC_HERO_KEY, CINEMATIC_HERO_ALT, CINEMATIC_HERO_SRCSET, CINEMATIC_HERO_SIZES } from '../../shared/cinematic-hero.js';
+import TransportHero from './TransportHero';
 import { ConversionTrust, MobileDiscovery, TrainingOffer, ConversionFAQ, HomeSectionOrder } from './MobileConversion';
 import { trackVisit } from './telemetry';
 import './mobile-conversion.css';
@@ -101,6 +102,7 @@ export default function Home() {
       <div className="cinema-shell site-media-tools-slot site-media-tools-slot--home" data-site-media-tools=""/>
 
       <HomeSectionOrder>
+      <TransportHero key="transport" home/>
       <section key="tools" className="home-tools cinema-shell" aria-label="Tools of the Trade">
         <Editable as={Link} contentKey="home-tools-of-the-trade" canEditLink href="/tools-of-the-trade" className="home-tools-card" aria-labelledby="home-tools-title home-tools-action" aria-describedby="home-tools-copy">
           <div>

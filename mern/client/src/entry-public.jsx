@@ -1,3 +1,4 @@
+import TransportPage from './TransportPage';
 import ToolsOfTheTradePage from './ToolsOfTheTradePage';
 import HowToPage from './HowToPage';
 import FCISupportPage from './FCISupportPage';
@@ -19,7 +20,7 @@ import AccessibilityPage from './AccessibilityPage';
 import MediaRightsPage from './MediaRightsPage';
 import NotFoundPage from './NotFoundPage';
 
-const pages = { '/tools-of-the-trade': ToolsOfTheTradePage, '/how-to': HowToPage, '/fci-support': FCISupportPage, '/live': LivePage, '/workshops': WorkshopPage, '/': Home, '/dog-training': DogTrainingPage, '/hunting-dog-training': HuntingPage, '/behavior-assessment': BehaviorAssessmentPage, '/learn': LearnPage, '/contact': ContactPage, '/accessibility': AccessibilityPage, '/media-rights': MediaRightsPage, '/404': NotFoundPage };
+const pages = { '/k9-transport': TransportPage, '/tools-of-the-trade': ToolsOfTheTradePage, '/how-to': HowToPage, '/fci-support': FCISupportPage, '/live': LivePage, '/workshops': WorkshopPage, '/': Home, '/dog-training': DogTrainingPage, '/hunting-dog-training': HuntingPage, '/behavior-assessment': BehaviorAssessmentPage, '/learn': LearnPage, '/contact': ContactPage, '/accessibility': AccessibilityPage, '/media-rights': MediaRightsPage, '/404': NotFoundPage };
 export function renderPublicPage(route) {
   const Component = pages[route];
   if (!Component) throw new Error(`No public component for ${route}`);
