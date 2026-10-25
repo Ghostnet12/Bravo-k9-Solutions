@@ -10,6 +10,7 @@
     }
   ],
   "redirects": [
+    { "source": "/k9-transport.html", "destination": "/k9-transport", "permanent": true },
     { "source": "/tools-of-the-trade.html", "destination": "/tools-of-the-trade", "permanent": true },
     { "source": "/how-to.html", "destination": "/how-to", "permanent": true },
     { "source": "/fci-support.html", "destination": "/fci-support", "permanent": true },
@@ -51,6 +52,7 @@
   },
   "rewrites": [
     { "source": "/", "destination": "/api/homepage" },
+    { "source": "/k9-transport", "destination": "/api/public-page?path=/k9-transport" },
     { "source": "/tools-of-the-trade", "destination": "/api/public-page?path=/tools-of-the-trade" },
     { "source": "/how-to", "destination": "/api/public-page?path=/how-to" },
     { "source": "/fci-support", "destination": "/api/public-page?path=/fci-support" },

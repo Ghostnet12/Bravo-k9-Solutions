@@ -15,7 +15,7 @@ const subscribeCompact = notify => {
 const compactSnapshot = () => matchMedia(compactQuery).matches;
 const serverSnapshot = () => false;
 export const useCompactLayout = () => useSyncExternalStore(subscribeCompact, compactSnapshot, serverSnapshot);
-const homeSectionOrder = ['reviews', 'training', 'team', 'method', 'results', 'tools', 'workshops', 'fci', 'online', 'faq', 'booking'];
+const homeSectionOrder = ['reviews', 'training', 'transport', 'team', 'method', 'results', 'tools', 'workshops', 'fci', 'online', 'faq', 'booking'];
 // One reading order for every viewport, including the server-rendered page.
 // Stable keys preserve media and editor state when the viewport changes.
 export function HomeSectionOrder({ children }) {

@@ -92,6 +92,30 @@ test('discovery publishing, consent, privacy and performance reporting persist',
     await call('owner','delete',`/api/admin/course-interest/${list[0]._id}`,{}).expect(200);
     assert.equal((await call('owner','get','/api/admin/course-interest')).body.interests.length,0);
   });
+  await t.test('transport launch consent is private, durable and isolated from courses', async () => {
+    await call(null,'post','/api/transport-interest',{ email:'traveler@example.test',consent:false }).expect(400);
+    const first = await call(null,'post','/api/transport-interest',{ email:'traveler@example.test',consent:true }).expect(202);
+    const duplicate = await call(null,'post','/api/transport-interest',{ email:'TRAVELER@example.test',consent:true }).expect(202);
+    assert.deepEqual(first.body,duplicate.body);
+    await call(null,'post','/api/transport-interest',{ email:'robot@example.test',consent:true,website:'spam' }).expect(202);
+    await call(null,'get','/api/admin/transport-interest').expect(401);
+    await call('member','get','/api/admin/transport-interest').expect(403);
+    await call('staff','get','/api/admin/transport-interest').expect(403);
+    const response = await call('owner','get','/api/admin/transport-interest').expect(200);
+    assert.match(response.headers['cache-control'],/no-store/);
+    assert.equal(response.body.interests.length,1);
+    const row = response.body.interests[0];
+    assert.equal(row.email,'traveler@example.test');
+    assert.match(row.consent,/K9 transport/);
+    assert.equal((await call('owner','get','/api/admin/course-interest')).body.interests.length,0);
+    const stored = await mongoose.model('BravoTransportInterest').findById(row._id).lean();
+    assert.ok(stored.expiresAt > new Date(Date.now() + 364 * 86400000));
+    await call('owner','get','/api/admin/transport-interest?before=invalid').expect(400);
+    await call('member','delete',`/api/admin/transport-interest/${row._id}`,{}).expect(403);
+    await call('owner','delete','/api/admin/transport-interest/invalid',{}).expect(400);
+    await call('owner','delete',`/api/admin/transport-interest/${row._id}`,{}).expect(200);
+    assert.equal((await call('owner','get','/api/admin/transport-interest')).body.interests.length,0);
+  });
   await t.test('metrics validate input, honor privacy and report genuine samples', async () => {
     const metric = { id:'v5-test-metric',name:'LCP',value:1250,area:'home',device:'mobile' };
     await call(null,'post','/api/telemetry/vitals',{...metric,email:'private@example.test'}).expect(400);

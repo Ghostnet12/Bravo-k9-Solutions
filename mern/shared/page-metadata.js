@@ -1,6 +1,7 @@
 import { CINEMATIC_HERO_SOURCE, CINEMATIC_HERO_ALT } from './cinematic-hero.js';
 export const SITE_ORIGIN = 'https://bravounleashed.com';
 export const PAGE_METADATA = {
+  '/k9-transport': { title: 'K9 Transport — Coming Soon | Bravo K9 Solutions', description: 'Dedicated canine transport from Bravo K9 Solutions is on the way. Meet our Durango and request a launch update.', label: 'K9 transport', image: '/images/bravo-k9-transport.webp', imageAlt: 'Bravo’s black Dodge Durango on a road at sunset' },
   '/tools-of-the-trade': { title: 'Tools of the Trade | Bravo K9 Solutions', description: 'Explore tools for Bravo’s basic through advanced obedience courses and training. We assess each dog first and recommend only the tools their individual training plan needs.', label: 'Tools of the trade' },
   '/how-to': { title: 'How to Use the Website | Bravo K9 Solutions', description: 'Watch the step-by-step Bravo website guide. Learn to sign in, create a training schedule, add or cancel days, download your schedule and get help.', label: 'How-to video' },
   '/fci-support': { title: 'FCI Support | Bravo K9 Solutions', description: 'Explore Bravo K9 Solutions support for responsible breeding, breed heritage, canine welfare and official FCI resources.', label: 'FCI Support' },

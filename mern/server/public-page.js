@@ -4,7 +4,7 @@ import { renderSiteContent } from './content-html.js';
 import { loadSiteContent } from './site-content-store.js';
 import { connectDb } from './db.js';
 import { effectiveServices } from './services.js';
-export const publicPagePaths=['tools-of-the-trade','how-to','fci-support','live','workshops','dog-training','hunting-dog-training','behavior-assessment','learn','contact','accessibility','media-rights'].map(path=>'/' + path);
+export const publicPagePaths=['k9-transport','tools-of-the-trade','how-to','fci-support','live','workshops','dog-training','hunting-dog-training','behavior-assessment','learn','contact','accessibility','media-rights'].map(path=>'/' + path);
 const pages=new Set(publicPagePaths.map(path=>path.slice(1)));
 export function resolvePublicPagePath(requestUrl = '/') {
   try {
