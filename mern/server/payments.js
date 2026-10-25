@@ -187,7 +187,9 @@ export async function processStripeEvent(event, stripe) {
       await Booking.updateOne({ _id: booking._id }, { $min: { paidAt } }, { session });
 
       if (object.mode === 'payment' && object.metadata.billing === 'manual-month-v1' && booking.quote.monthlyCents > 0 && booking.status !== 'cancelled') {
-        const ids = serviceSelection(booking.serviceIds).filter(service => service.interval === 'month').map(service => service.id);
+        // A paid Stripe session may have been opened before service retirement.
+        // Honor its existing membership without reopening retired programs for new purchases.
+        const ids = serviceSelection(booking.serviceIds, ALL_SERVICES).filter(service => service.interval === 'month').map(service => service.id);
         let start = new Date(event.created * 1000);
         if (booking.renewalOf) {
           // A simultaneous day credit must finish before the next month is dated.

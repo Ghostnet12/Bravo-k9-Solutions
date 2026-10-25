@@ -255,3 +255,38 @@ test('closing checkout links bounds concurrency, request timeouts and retry work
   assert.equal(await expireLessonCheckouts(stripe),3);assert.equal(limit,5);assert.equal(peak,5);
   assert.ok(pending.has('0'),'failed expiration remains available to retry');
 });
+
+test('a previously opened paid checkout still activates training after walking is retired', async t => {
+  const booking = {
+    _id: '68c20f8f5c734fa0f944ad70', userId: '68c20f8f5c734fa0f944ad71',
+    status: 'requested', paymentStatus: 'unpaid', stripeSessionId: 'cs_legacy_open',
+    serviceIds: ['training', 'walking'], dogCount: 2,
+    visits: [{ date: '2026-10-20', time: '10:00', service: 'walking' }],
+  };
+  booking.quote = quote(booking.serviceIds, booking.visits, { dogCount: 2 }, ALL_SERVICES);
+  const user = { _id: booking.userId, stripeCustomerId: 'cus_existing_legacy' };
+  const membershipWrites = [], bookingWrites = [];
+  t.mock.method(mongoose.connection, 'transaction', async work => work({}));
+  t.mock.method(StripeEvent, 'exists', async () => false);
+  t.mock.method(StripeEvent, 'create', async () => ({}));
+  t.mock.method(Booking, 'findById', () => query(booking));
+  t.mock.method(User, 'findById', () => query(user));
+  t.mock.method(User, 'updateOne', async () => ({}));
+  t.mock.method(Booking, 'updateOne', async (_filter, change) => { bookingWrites.push(change); return {}; });
+  t.mock.method(Subscription, 'findOneAndUpdate', async (_filter, update) => {
+    membershipWrites.push(update.$setOnInsert);
+    return { validFrom: new Date('2026-10-20T00:00:00Z'), validUntil: new Date('2026-11-20T00:00:00Z') };
+  });
+  t.mock.method(BillingLock, 'deleteOne', async () => ({}));
+  const object = {
+    id: booking.stripeSessionId, currency: 'usd', mode: 'payment',
+    amount_total: booking.quote.dueNowCents, payment_status: 'paid',
+    customer: user.stripeCustomerId, client_reference_id: String(booking._id),
+    metadata: { app: 'bravo-k9', billing: 'manual-month-v1', bookingId: String(booking._id), userId: String(user._id) },
+  };
+  await processStripeEvent({ id: 'evt_retired_paid', created: 1792522800, type: 'checkout.session.completed', data: { object } }, {});
+  assert.equal(membershipWrites.length, 1);
+  assert.deepEqual(membershipWrites[0].serviceIds, ['training']);
+  assert.equal(membershipWrites[0].dogCount, 2);
+  assert.ok(bookingWrites.some(update => update.$set?.paymentStatus === 'paid'));
+});
