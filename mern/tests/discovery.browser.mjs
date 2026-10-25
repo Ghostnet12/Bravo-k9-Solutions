@@ -102,10 +102,14 @@ try {
           await visit(origin);await page.locator('.conversion-goal').first().waitFor();await settleApi();
           await follow(page.locator('.conversion-goal').filter({hasText:label}),expected);
           if(program==='aggression'){
+            // The first main heading can still be the authentication loading state.
+            // Wait for either a displayed service choice or the saved-draft decision.
+            await page.waitForFunction(() => document.querySelector('.program-choice[aria-pressed="true"]') || document.querySelector('main h1')?.textContent?.trim()==='You have an unsent request.');
             const pending=page.getByRole('heading',{name:'You have an unsent request.',exact:true});
-            if(await pending.count()){
+            if(await pending.isVisible()){
               assert.equal(await page.getByRole('link',{name:'Resume my request',exact:true}).getAttribute('href'),'/portal?resume=1');
               await page.getByRole('button',{name:'Discard draft and start again',exact:true}).click();
+              await page.locator('.program-choice[aria-pressed="true"]').waitFor();
             }
           }
           if(program==='training'){
