@@ -3,6 +3,15 @@ import { TRAINING_TOOLS } from './training-tools.js';
 import { CONTENT_KEYS as BASE_CONTENT_KEYS } from './site-content-base-keys.js';
 export const CONTENT_KEYS = {
   ...BASE_CONTENT_KEYS,
+  'training-request-reassurance': { text: true },
+  'training-booking-guide': { text: true, link: true },
+  'training-tools-guide': { text: true, link: true },
+  'training-next-title': { text: true },
+  'training-next-copy': { text: true },
+  'training-next-book': { text: true, link: true },
+  'training-next-guide': { text: true, link: true },
+  'mobile-faq-4-question': { text: true },
+  'mobile-faq-4-answer': { text: true },
   "nav-tools-of-the-trade": {"text": true, "link": true},
   "footer-tools-of-the-trade": {"text": true, "link": true},
   "home-tools-of-the-trade": {"text": true, "link": true},

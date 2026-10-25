@@ -1,4 +1,5 @@
 import LiveBanner from './LiveBanner';
+import { SPECIALIST_LINKS, specialistInquiryPath } from '../../shared/contact-interest';
 import GoalFinder from './GoalFinder';
 import { CINEMATIC_HERO_SOURCE, CINEMATIC_HERO_KEY, CINEMATIC_HERO_ALT, CINEMATIC_HERO_SRCSET, CINEMATIC_HERO_SIZES } from '../../shared/cinematic-hero.js';
 import { ConversionTrust, MobileDiscovery, TrainingOffer, ConversionFAQ, HomeSectionOrder } from './MobileConversion';
@@ -51,6 +52,7 @@ export default function Home() {
   const [recommendations, setRecommendations] = useState(initialRecommendations);
   const [team, setTeam] = useState<Trainer[]>([]);
   const [teamVisible, setTeamVisible] = useState(false);
+  const [teamError, setTeamError] = useState(false), [teamAttempt, setTeamAttempt] = useState(0);
   const liveSchedules = useLiveTrainerSchedules(teamVisible);
   const [reviews, setReviews] = useState<{reviews: Array<{_id: string; authorName: string; rating: number; body: string; editedByOwner?: boolean}>; average: number; count: number}>({ reviews: [], average: 0, count: 0 });
   const lessonsOpen = lessonLibraryVisible(config, user);
@@ -58,7 +60,6 @@ export default function Home() {
     let live = true;
     // The server snapshot seeds only this visit; later navigation reads fresh reviews.
     document.querySelector('meta[name="bravo-reviews"]')?.remove();
-    api('/team').then(data => { if (live) setTeam(Array.isArray(data.team) ? [...data.team].sort((a, b) => Number(b.role === 'owner') - Number(a.role === 'owner')) : []); }).catch(() => { if (live) setTeam([]); });
     api('/reviews').then(data => { if (live) { setReviews(data); if (Array.isArray(data.recommendations)) setRecommendations(data.recommendations); } }).catch(() => {});
     const published = event => setTeam(people => people.map(person => person.id === event.detail.id ? event.detail : person));
     window.addEventListener('bravo-team-published', published);
@@ -67,6 +68,18 @@ export default function Home() {
     if (section) observer.observe(section);
     return () => { live = false; observer.disconnect(); window.removeEventListener('bravo-team-published', published); };
   }, []);
+  useEffect(() => {
+    let active = true;
+    const controller = new AbortController();
+    setTeamError(false);
+    api('/team', { signal: controller.signal }).then(data => {
+      if (!active) return;
+      const people = Array.isArray(data.team) ? [...data.team] : [];
+      setTeam(people.sort((a, b) => Number(b.role === 'owner') - Number(a.role === 'owner')));
+      setTeamError(people.length === 0);
+    }).catch(() => { if (active) setTeamError(true); });
+    return () => { active = false; controller.abort(); };
+  }, [teamAttempt]);
   return <div ref={root} className="bravo-home cinema-home conversion-home">
     <Header/>
     <Editable as="main" contentKey="copy-home-1" id="main-content" tabIndex={-1}>
@@ -78,7 +91,7 @@ export default function Home() {
           <Editable as="p" contentKey="hero-booking-location" canEditText className="hero-service-location">Mobile dog training in Aberdeen, SD · We come to you</Editable>
           <p className="cinema-hero-intro"><Editable as="span" contentKey="conversion-hero-intro" canEditText>Real-world training. A calmer life together.</Editable></p>
           <div className="polish-hero-actions"><Editable as={Link} contentKey="mobile-hero-book" canEditText canEditLink href="/portal?program=training" className="cinema-button conversion-button" onClick={() => trackVisit('hero_booking_clicked')}>Start My Training Plan <span aria-hidden="true">→</span></Editable><Editable as="a" contentKey="polish-hero-explore" canEditText canEditLink href="#training" className="cinema-link">Explore Training</Editable></div>
-          <Editable as="p" contentKey="hero-plan-explainer" canEditText className="hero-plan-explainer">Monthly training membership. Requested visits are confirmed by Bravo.</Editable>
+          <Editable as="p" contentKey="hero-plan-explainer" canEditText className="hero-plan-explainer">Choose your trainer. Request a visit. Bravo confirms the details.</Editable>
         </div>
         <div className="cinema-hero-baseline cinema-shell"><Editable as="span" contentKey="copy-home-4" canEditText>REAL DOGS. REAL LIFE. BRAVO.</Editable><Editable as="a" contentKey="copy-home-5" canEditText canEditLink href="#method" aria-label="Discover the Bravo approach">SCROLL TO DISCOVER <span aria-hidden="true">↓</span></Editable></div>
       </section>
@@ -114,7 +127,7 @@ export default function Home() {
         <MobileDiscovery/>
         <details className="training-examples" onToggle={event => { if (event.currentTarget.open) setExamplesOpened(true); }}><summary>See training examples by goal</summary>{examplesOpened && <GoalFinder/>}</details>
         <div className="cinema-secondary-programs">{secondary.map(id => { const service = catalog.find(s => s.id === id); return service && service.enabled !== false ? <article data-site-service={id} key={id} data-reveal=""><Editable as="p" contentKey={`home-service-${id}-eyebrow`} canEditText className="cinema-eyebrow">EXPERIENCE. CONTROL. STRUCTURE.</Editable><Editable as="h3" contentKey={`home-service-${id}-title`} canEditText>Start with an assessment.</Editable><Editable as="p" contentKey={`home-service-${id}-copy`} canEditText>Aggressive-dog intake with two trainers. Review the behavior first; decide what comes next second.</Editable><div><span><CatalogPrice service={id}/> <small>initial intake</small></span><Editable as={Link} contentKey={`home-service-${id}-link`} canEditText canEditLink href="/behavior-assessment" aria-label="Explore aggressive dog intake">Explore <span aria-hidden="true">↗</span></Editable></div></article> : null; })}</div>
-        <details id="specialist-training" open className="cinema-details cinema-specialists"><Editable as="summary" contentKey="copy-home-37" canEditText>Specialist and working-dog programs <span aria-hidden="true">+</span></Editable><Editable as="p" contentKey="copy-home-38" canEditText>Specialist and working-dog goals are scoped individually. Contact Bravo to discuss suitability, preparation, and pricing.</Editable><div>{['Service Dogs', 'Law Enforcement', 'Executive Protection', 'Search & Rescue', 'Hunting Dog Training'].map((name, index) => <Editable as={Link} contentKey={`home-specialist-${index}`} canEditText canEditLink key={name} href={index === 4 ? '/hunting-dog-training' : '/contact'}>{name}<span aria-hidden="true">↗</span></Editable>)}</div></details>
+        <details id="specialist-training" open className="cinema-details cinema-specialists"><Editable as="summary" contentKey="copy-home-37" canEditText>Specialist and working-dog programs <span aria-hidden="true">+</span></Editable><Editable as="p" contentKey="copy-home-38" canEditText>Specialist and working-dog goals are scoped individually. Contact Bravo to discuss suitability, preparation, and pricing.</Editable><div>{SPECIALIST_LINKS.map(({ name, interest }, index) => <Editable as={Link} contentKey={`home-specialist-${index}`} canEditText canEditLink key={name} href={interest === 'hunting-dog' ? '/hunting-dog-training' : specialistInquiryPath(interest)}>{name}<span aria-hidden="true">↗</span></Editable>)}</div></details>
       </Editable>
 
       <Editable as="section" key="results" contentKey="home-results-section" id="results" className="cinema-proof home-results" aria-labelledby="results-title"><div className="cinema-shell">
@@ -140,13 +153,14 @@ export default function Home() {
 
       <Editable as="section" key="team" contentKey="copy-home-39" id="team" className="cinema-team" aria-labelledby="team-title"><div className="cinema-shell">
         <div className="cinema-section-heading" data-reveal=""><div><Editable as="p" contentKey="copy-home-40" canEditText className="cinema-eyebrow">MEET THE BRAVO TEAM</Editable><Editable as="h2" contentKey="cinema-team-title" canEditText id="team-title">The people<br/><span>behind the work.</span></Editable></div><Editable as="p" contentKey="copy-home-41" canEditText>Meet the trainers your dog will actually work with.</Editable></div>
+        {teamError && <div className="home-team-recovery" role="status"><p>Trainer profiles are temporarily unavailable. You can retry or call Bravo to discuss the right trainer for your dog.</p><div className="training-help-links"><button className="cinema-button" type="button" onClick={() => setTeamAttempt(value => value + 1)}>Retry trainer profiles</button><a href="tel:+16058242767">Call (605) 824-2767</a></div></div>}
         <div className="home-team-grid cinema-team-grid">{team.map(person => <Editable as="article" contentKey={`trainer-${['david','ashley','janet'].includes(person.profileKey) ? person.profileKey : 'other'}-card`} data-site-trainer={person.id} key={person.id || person.name} data-reveal=""><div className="cinema-portrait"><img src={person.image || `/images/${portraits[person.name] || 'bravo-logo-small'}.webp`} data-site-image-key={person.imageKey || `team-${(person.name === 'Ashley Leverock' ? 'Ashley Northrop' : person.name).toLowerCase().replaceAll(' ', '-')}`} width="1000" height="1400" loading="lazy" alt={`${publicTrainerName(person.name)}, ${person.title}`}/></div><div className="home-person cinema-person"><p className="cinema-eyebrow">{person.title}</p><h3>{publicTrainerName(person.name)}</h3><p className="home-trainer-focus">{trainerIntroductions[person.name] ? <Editable as="span" contentKey={trainerIntroductions[person.name].focusKey} canEditText>{trainerIntroductions[person.name].focus}</Editable> : person.bio}</p><details className="cinema-details"><summary>Meet {person.name.split(' ')[0]} <span aria-hidden="true">+</span></summary><TrainerIntroduction person={person}/>{person.id && <><details className="home-availability"><summary>View {person.name.split(' ')[0]}’s working hours</summary><TrainerScheduleCard person={person} live={liveSchedules}/></details><Link className="cinema-link" href={`/portal?program=training&trainer=${encodeURIComponent(person.id)}`}>Request a visit with {person.name.split(' ')[0]} →</Link></>}</details></div></Editable>)}</div>
       </div></Editable>
 
       <Editable as="section" key="method" contentKey="copy-home-9" id="method" className="cinema-intro cinema-shell" aria-labelledby="method-title" data-reveal="">
         <Editable as="p" contentKey="copy-home-10" canEditText className="cinema-eyebrow">THE BRAVO APPROACH</Editable>
         <Editable as="h2" contentKey="cinema-method-title" canEditText id="method-title">Understand the dog.<br/><span>Build from there.</span></Editable>
-        <Editable as="p" contentKey="cinema-method-copy" canEditText>A clear path from understanding your dog to practicing together in everyday life.</Editable>
+        <Editable as="p" contentKey="cinema-method-copy" canEditText>No treats. No toys. We build clear communication around your dog’s behavior, your household and the places you go together.</Editable>
         <div className="cinema-method-signature home-method-steps">
           <span className="home-method-step"><Editable as="strong" contentKey="copy-home-11" canEditText>Trust.</Editable><Editable as="span" contentKey="home-method-trust-copy" canEditText className="home-method-copy">Start with your dog’s personality, instincts, and everyday surroundings.</Editable></span>
           <span className="home-method-step"><Editable as="strong" contentKey="copy-home-12" canEditText>Train.</Editable><Editable as="span" contentKey="home-method-train-copy" canEditText className="home-method-copy">Practice clear, consistent communication together.</Editable></span>

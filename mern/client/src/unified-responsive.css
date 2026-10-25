@@ -93,3 +93,23 @@ body:has(.mobile-home-nav) :is(a,button,summary):focus-visible { outline: 3px so
 .cinema-home.conversion-home .training-examples .goal-choices { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
 .cinema-home.conversion-home .training-examples .goal-choice-link { min-height: 80px; }
 .cinema-home.conversion-home .cinema-secondary-programs { display: grid; grid-template-columns: 1fr; }
+
+/* Keep the buying decision readable and its next steps within reach. */
+.cinema-home.conversion-home .training-request-reassurance { color: #ded8cd; font-size: 14px; line-height: 1.7; margin: 12px 0 0; max-width: 680px; }
+.cinema-home.conversion-home .conversion-offer-copy > :is(.conversion-button,.conversion-catalog-terms) { grid-column: auto; grid-row: auto; }
+.training-help-links { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; }
+.training-help-links a { display: inline-flex; align-items: center; min-height: 48px; font-size: 14px; color: #e1c99d; text-underline-offset: 4px; }
+.training-help-links .button { color: #101010; }
+.training-next-step p { max-width: 680px; line-height: 1.7; }
+.cinema-home.conversion-home .training-approach { margin: 24px 0; text-align: left; }
+.cinema-home.conversion-home .training-approach h3 { font-size: clamp(24px,3vw,30px); color: #e1c99d; margin-bottom: 10px; }
+.cinema-home.conversion-home .training-approach p { color: #ded8cd; font-size: 15px; line-height: 1.7; }
+@media(max-width:700px) {
+  .cinema-home.conversion-home .conversion-benefits li > span,
+  .cinema-home.conversion-home .conversion-goal p,
+  .cinema-home.conversion-home .conversion-dog-terms { font-size: 14px; line-height: 1.65; }
+  .cinema-home.conversion-home .conversion-benefits strong { font-size: 14px; }
+  .cinema-home.conversion-home .conversion-subtitle { font-size: 15px; }
+  .cinema-home.conversion-home .conversion-offer-intro { font-size: 15px; line-height: 1.65; }
+  .cinema-home.conversion-home .conversion-goal { min-height: 230px; }
+}

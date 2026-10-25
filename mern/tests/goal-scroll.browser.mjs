@@ -59,7 +59,7 @@ async function revealed(page, goal, behavior = 'smooth') {
   const panel = page.locator('#goal-result');
   assert.equal(await panel.locator('h3').innerText(), goal.title);
   assert.equal(await page.locator('.goal-select[aria-pressed=true]').count(), 1);
-  assert.equal(await panel.locator('.goal-actions > .button').getAttribute('href'), goal.id === 'specialist' ? '/contact' : goalBookingPath(goal));
+  assert.equal(await panel.locator('.goal-actions > .button').getAttribute('href'), goalBookingPath(goal));
   assert.equal(new URL(page.url()).pathname, '/'); assert.equal(new URL(page.url()).hash, '');
   assert.equal(await page.evaluate(() => window.goalScrollCalls.at(-1)?.behavior), behavior);
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));

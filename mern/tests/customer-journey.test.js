@@ -6,7 +6,7 @@ const source = name => readFileSync(new URL(`../client/src/${name}`, import.meta
 
 test('working-dog inquiries never inherit ordinary monthly booking', () => {
   const goal = GOALS.find(item => item.id === 'specialist');
-  assert.equal(goalBookingPath(goal), '/contact');
+  assert.equal(goalBookingPath(goal), '/contact?interest=job-specific');
   assert.equal(goalDetailsPath(goal), '/#specialist-training');
   assert.match(goal.description, /hunting/);
 });
