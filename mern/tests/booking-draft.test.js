@@ -47,3 +47,8 @@ test('an expired sign-in hides an account draft without deleting it before reaut
  assert.equal(readBookingDraft('user:a',{store,now:102}).requestKey,fixture.requestKey,'the same account can restore the request');
  assert.equal(readBookingDraft('user:b',{store,now:103,claimGuest:true}),null);assert.equal(store.getItem(BOOKING_DRAFT_KEY),undefined,'a confirmed different account clears the draft');
 });
+
+test('retired dog-walking links cannot restart an obsolete request', () => {
+  assert.equal(bookingEntry(new URLSearchParams('program=walking')), 'program=training');
+  assert.equal(cleanBookingDraft({ ...fixture, entry: 'program=walking', ids: ['walking'], visits: [{ date: '2026-11-02', time: '10:00', service: 'walking' }] }), null);
+});

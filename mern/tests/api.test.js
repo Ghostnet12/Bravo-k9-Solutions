@@ -6,7 +6,7 @@ test('public routes remain useful without a database', async () => {
   delete process.env.MONGODB_URI;
   const health = await request(app).get('/api/health').expect(200); assert.equal(health.body.ok,true);
   const config = await request(app).get('/api/config').expect(200); assert.equal(config.body.connected,false); assert.equal(config.body.paymentsReady,false);
-  await request(app).get('/api/lessons').expect(404); assert.equal(config.body.lessonLibrary.open,false); assert.equal(config.body.services.find(s=>s.id==='online').enabled,false);
+  await request(app).get('/api/lessons').expect(404); assert.equal(config.body.lessonLibrary.open,false); assert.equal(config.body.services.find(s=>s.id==='online').enabled,false); assert.equal(config.body.services.some(s=>s.id==='walking'),false);
 });
 test('cross-origin writes and missing database fail closed', async () => {
   await request(app).post('/api/auth/register').set('Origin','https://evil.example').send({}).expect(403);
@@ -28,6 +28,6 @@ test('public search files have route-specific metadata and private routes are no
   const account = await request(app).get('/account').expect(200);
   assert.match(account.headers['x-robots-tag'], /noindex/);
   const sitemap = await request(app).get('/sitemap.xml').expect(200);
-  assert.match(sitemap.text, /\/contact/); assert.match(sitemap.text, /\/dog-walking/); assert.doesNotMatch(sitemap.text, /\/admin|\/account|\/community/);
+  assert.match(sitemap.text, /\/contact/); assert.doesNotMatch(sitemap.text, /\/dog-walking/); assert.doesNotMatch(sitemap.text, /\/admin|\/account|\/community/);
   await request(app).get('/not-a-bravo-page').expect(404);
 });
