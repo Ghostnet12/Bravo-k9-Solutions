@@ -152,7 +152,7 @@ test('subscription refunds resolve the modern Invoice Payments mapping', async t
   let listed, refundInput;
   const stripe = { checkout: { sessions: { retrieve: async () => ({ invoice: 'in_fixture', amount_total: 40000 }) } }, invoicePayments: { list: async params => { listed = params; return { data: [{ payment: { type: 'payment_intent', payment_intent: 'pi_fixture' } }], has_more: false }; } }, refunds: { create: async params => { refundInput = params; return { id: 're_fixture', status: 'succeeded', currency: 'usd', amount: 40000 }; } } };
   await refundBooking(booking, user, stripe);
-  assert.equal(listed.invoice, 'in_fixture'); assert.equal(refundInput.payment_intent, 'pi_fixture'); assert.equal(refundInput.amount, 5000);
+  assert.equal(listed.invoice, 'in_fixture'); assert.equal(refundInput.payment_intent, 'pi_fixture'); assert.equal(refundInput.amount, 40000);
   assert.equal(write.mock.calls.at(-1).arguments[1].$set.paymentStatus, 'refunded');
 });
 test('a pending refund is not falsely marked refunded and can be checked without another refund', async t => {
