@@ -46,9 +46,13 @@ test('cancelled and timed-out queued reads never start; failures release capacit
   assert.equal(calls.length, 2);
   const failure = assert.rejects(first, { message: 'Unavailable', status: 503 });
   const next = api('/config');
-  calls[0].finish(503); await failure; await turn(); assert.equal(calls.length, 3);
-  assert.equal(calls[2].url, '/api/config');
-  calls[1].finish(); calls[2].finish(); await Promise.all([second, next]);
+  calls[0].finish(503);
+  await new Promise(resolve => setTimeout(resolve, 230));
+  assert.equal(calls.length, 3, 'transient public request retries only once before releasing its queue slot');
+  assert.equal(calls[2].url, '/api/team');
+  calls[2].finish(503); await failure; await turn(); assert.equal(calls.length, 4);
+  assert.equal(calls[3].url, '/api/config');
+  calls[1].finish(); calls[3].finish(); await Promise.all([second, next]);
 });
 
 test('active cancellation releases capacity and later reads get fresh responses', async t => {
@@ -60,4 +64,18 @@ test('active cancellation releases capacity and later reads get fresh responses'
   calls.slice(1).forEach(call => call.finish()); await Promise.all([second, next]);
   const fresh = api('/reviews'); await turn(); assert.equal(calls.length, 4);
   calls[3].finish(); await fresh;
+});
+
+test('only public content retries a temporary server error, not availability or account requests', async t => {
+  const calls = requests(t);
+  const publicRequest = api('/reviews');
+  const bookingRequest = assert.rejects(api('/availability'), { status: 503 });
+  await turn();
+  calls[0].finish(503); calls[1].finish(503);
+  await bookingRequest;
+  await new Promise(resolve => setTimeout(resolve, 230));
+  assert.equal(calls.length, 3);
+  assert.equal(calls[2].url, '/api/reviews');
+  calls[2].finish();
+  await publicRequest;
 });
