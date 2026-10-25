@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DateTime } from 'luxon';
-import { quote, serviceSelection, TRAINING_FOCUSES } from '../shared/catalog.js';
+import { quote, serviceSelection, ALL_SERVICES, rescheduledQuote, TRAINING_FOCUSES } from '../shared/catalog.js';
 import { availability, autoSchedule, dateTime, validateVisits, HOURS, dateRange } from '../server/scheduling.js';
 import { hashPassword, verifyPassword } from '../server/auth.js';
 import { privatePath } from '../server/lessons.js';
@@ -17,12 +17,12 @@ test('Bravo pricing stays exact and recurring charges are separated', () => {
   assert.equal(threeDogTraining.lines[1].quantity, 2);
   const q = quote(['aggression', 'online']);
   assert.equal(q.monthlyCents, 7500); assert.equal(q.oneTimeCents, 40000);
-  const walking = quote(['walking'], [{ date: '2026-10-10', time: '09:00', service: 'walking' }, { date: '2026-10-11', time: '10:00', service: 'walking' }], { dogCount: 3 });
-  assert.equal(walking.oneTimeCents, 15000); assert.equal(walking.lines[0].quantity, 6); assert.equal(walking.lines[0].durationMinutes, 30);
+  assert.throws(() => quote(['walking'], [{ date: '2026-10-10', time: '09:00', service: 'walking' }]), /Unknown program/);
 });
 test('duplicate programs, unknown services, and conflicting selections are rejected', () => {
   for (const ids of [[], ['training','training'], ['free'], ['sitting'], ['complete'], ['all-access'], ['training','aggression']]) assert.throws(() => serviceSelection(ids));
-  assert.doesNotThrow(() => serviceSelection(['walking']));
+  assert.throws(() => serviceSelection(['walking']), /Unknown program/);
+  assert.equal(serviceSelection(['walking'], ALL_SERVICES)[0].id, 'walking', 'past bookings remain readable');
 });
 test('professional training exposes the complete focus menu with stable unique values', () => {
   const names = TRAINING_FOCUSES.map(focus => focus.name);
@@ -34,7 +34,7 @@ test('training coverage never silently extends to unpaid additional dogs', () =>
   assert.equal(bookingCoveredByEntitlements(['training'], 1, oneDog), true);
   assert.equal(bookingCoveredByEntitlements(['training'], 2, oneDog), false);
   assert.equal(bookingCoveredByEntitlements(['training'], 3, { services: ['training'], serviceDogCounts: { training: 3 } }), true);
-  assert.equal(bookingCoveredByEntitlements(['walking'], 1, { services: ['walking'], serviceDogCounts: { walking: 1 } }), false);
+  assert.throws(() => bookingCoveredByEntitlements(['walking'], 1, { services: ['walking'], serviceDogCounts: { walking: 1 } }), /Unknown program/);
 });
 test('checkout rejects a saved training quote that predates the additional-dog rule', () => {
   assert.throws(() => validatedCheckoutPricing({ serviceIds: ['training'], dogCount: 2, quote: { currency: 'usd', lines: [{ id: 'training', unitCents: 20000, quantity: 1 }] } }), /pricing changed/);
@@ -89,4 +89,11 @@ test('live Stripe keys require an explicit launch switch', () => {
 test('lesson checkout rejects stale standalone prices and preserves the exact bundle discount', () => {
   assert.throws(() => validatedCheckoutPricing({ serviceIds: ['online'], quote: { currency: 'usd', lines: [{ id: 'online', unitCents: 5000, quantity: 1 }] } }), /Lesson pricing changed/);
   for (const ids of [['online'], ['training','online']]) assert.doesNotThrow(() => validatedCheckoutPricing({ serviceIds: ids, dogCount: 2, quote: quote(ids, [], { dogCount: 2 }) }));
+});
+
+test('retired walking quotes can still display and recalculate preserved historical visit totals', () => {
+  const historic = { dogCount: 2, quote: { lines: [{ id: 'walking', name: 'Retired dog-walking service', interval: 'walk', unitCents: 2500, quantity: 2 }] } };
+  const adjusted = rescheduledQuote(historic, [{ service: 'walking' }, { service: 'walking' }]);
+  assert.equal(adjusted.oneTimeCents, 10000);
+  assert.equal(adjusted.lines[0].quantity, 4);
 });

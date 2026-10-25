@@ -90,6 +90,7 @@ body:has(.mobile-home-nav) :is(a,button,summary):focus-visible { outline: 3px so
 .training-examples > summary { min-height: 48px; padding: 16px 0; color: #e1c99d; cursor: pointer; }
 .cinema-home.conversion-home .training-examples .goal-finder { display: block; width: 100%; padding: 20px 0; }
 .cinema-home.conversion-home .training-examples .goal-result { grid-template-columns: 1fr; }
-.cinema-home.conversion-home .training-examples .goal-choices { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+.cinema-home.conversion-home .training-examples .goal-choices { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); }
+@media(max-width:700px) { .cinema-home.conversion-home .training-examples .goal-choices { grid-template-columns: 1fr; } }
 .cinema-home.conversion-home .training-examples .goal-choice-link { min-height: 80px; }
 .cinema-home.conversion-home .cinema-secondary-programs { display: grid; grid-template-columns: 1fr; }

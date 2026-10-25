@@ -11,6 +11,13 @@ const contentPaths = new Set([
 let active = 0;
 const waiting = [];
 const abortError = () => new DOMException('The request was aborted.', 'AbortError');
+const transient = error => [502, 503, 504].includes(error?.status) || (error instanceof TypeError && !error.status);
+const pause = signal => new Promise((resolve, reject) => {
+  if (signal.aborted) { reject(abortError()); return; }
+  const cancel = () => { clearTimeout(timer); reject(abortError()); };
+  const timer = setTimeout(() => { signal.removeEventListener('abort', cancel); resolve(); }, 180);
+  signal.addEventListener('abort', cancel, { once: true });
+});
 
 function drain() {
   while (active < 2 && waiting.length) {
@@ -19,7 +26,17 @@ function drain() {
     if (item.signal.aborted) { item.reject(abortError()); continue; }
     active += 1;
     const finish = () => { active -= 1; drain(); };
-    Promise.resolve().then(item.read).then(
+    // A single bounded retry is safe only here: known public GETs, never bookings,
+    // account data, payment requests or the live-streaming pipeline.
+    const read = async () => {
+      try { return await item.read(); }
+      catch (error) {
+        if (!transient(error) || item.signal.aborted) throw error;
+        await pause(item.signal);
+        return item.read();
+      }
+    };
+    Promise.resolve().then(read).then(
       value => { finish(); item.resolve(value); },
       error => { finish(); item.reject(error); },
     );

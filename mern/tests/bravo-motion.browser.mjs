@@ -50,7 +50,7 @@ try{
    {
    await page.getByText('See training examples by goal',{exact:true}).click();
    await position(page,'#find-training');
-   await page.locator('.goal-select').nth(2).click();
+   await page.locator('.goal-select').nth(1).click();
    assert.equal(await page.locator('.goal-result').count(),1);
    assert.equal(await page.locator('.goal-select[aria-pressed=true]').count(),1);
    await page.waitForFunction(()=>getComputedStyle(document.querySelector('.goal-select[aria-pressed=true]')).color==='rgb(16, 16, 16)',null,{timeout:2000});

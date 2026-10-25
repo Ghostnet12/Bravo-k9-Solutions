@@ -105,3 +105,10 @@ test('pre-rendered home image uses the saved framing before the browser runs', a
   assert.doesNotMatch(output, /<script>private<\/script>/);
   assert.equal((output.match(/as="image"/g) || []).length, 1);
 });
+
+test('retired dog-walking service has no public SEO landing page or sitemap entry', async () => {
+  assert.equal(PAGE_METADATA['/dog-walking'], undefined);
+  assert.ok(!publicRoutes().some(([route]) => route === '/dog-walking'));
+  const response = await request(app).get('/sitemap.xml').expect(200);
+  assert.doesNotMatch(response.text, /dog-walking/);
+});
