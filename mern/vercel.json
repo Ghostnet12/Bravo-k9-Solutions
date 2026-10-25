@@ -3,36 +3,136 @@
   "buildCommand": "npm run build",
   "outputDirectory": "client/dist",
   "crons": [
-    { "path": "/api/cron/fci-updates", "schedule": "0 13 * * *" },
+    {
+      "path": "/api/cron/fci-updates",
+      "schedule": "0 13 * * *"
+    },
     {
       "path": "/api/cron/memberships",
       "schedule": "0 14 * * *"
     }
   ],
   "redirects": [
-    { "source": "/tools-of-the-trade.html", "destination": "/tools-of-the-trade", "permanent": true },
-    { "source": "/how-to.html", "destination": "/how-to", "permanent": true },
-    { "source": "/fci-support.html", "destination": "/fci-support", "permanent": true },
-    { "source": "/dog-sitting", "destination": "/portal", "permanent": true },
-    { "source": "/dog-training.html", "destination": "/dog-training", "permanent": true },
-    { "source": "/behavior-assessment.html", "destination": "/behavior-assessment", "permanent": true },
-    { "source": "/dog-walking.html", "destination": "/dog-walking", "permanent": true },
-    { "source": "/portal.html", "destination": "/portal", "permanent": true },
-    { "source": "/learn.html", "destination": "/learn", "permanent": true },
-    { "source": "/contact.html", "destination": "/contact", "permanent": true },
-    { "source": "/account.html", "destination": "/account", "permanent": true },
-    { "source": "/schedule.html", "destination": "/schedule", "permanent": true },
-    { "source": "/reset-password.html", "destination": "/reset-password", "permanent": true },
-    { "source": "/community.html", "destination": "/community", "permanent": true },
-    { "source": "/admin.html", "destination": "/admin", "permanent": true },
-    { "source": "/accessibility.html", "destination": "/accessibility", "permanent": true },
-    { "source": "/media-rights.html", "destination": "/media-rights", "permanent": true },
-    { "source": "/index.html", "destination": "/", "permanent": true },
-    { "source": "/bravo-shell.html", "destination": "/", "permanent": true },
-    { "source": "/workshops.html", "destination": "/workshops", "permanent": true },
-    { "source": "/live.html", "destination": "/live", "permanent": true },
-    { "source": "/live/studio.html", "destination": "/live/studio", "permanent": true },
-    { "source": "/hunting-dog-training.html", "destination": "/hunting-dog-training", "permanent": true }
+    {
+      "source": "/dog-walking",
+      "destination": "/dog-training",
+      "permanent": true
+    },
+    {
+      "source": "/tools-of-the-trade.html",
+      "destination": "/tools-of-the-trade",
+      "permanent": true
+    },
+    {
+      "source": "/how-to.html",
+      "destination": "/how-to",
+      "permanent": true
+    },
+    {
+      "source": "/fci-support.html",
+      "destination": "/fci-support",
+      "permanent": true
+    },
+    {
+      "source": "/dog-sitting",
+      "destination": "/portal",
+      "permanent": true
+    },
+    {
+      "source": "/dog-training.html",
+      "destination": "/dog-training",
+      "permanent": true
+    },
+    {
+      "source": "/behavior-assessment.html",
+      "destination": "/behavior-assessment",
+      "permanent": true
+    },
+    {
+      "source": "/dog-walking.html",
+      "destination": "/dog-training",
+      "permanent": true
+    },
+    {
+      "source": "/portal.html",
+      "destination": "/portal",
+      "permanent": true
+    },
+    {
+      "source": "/learn.html",
+      "destination": "/learn",
+      "permanent": true
+    },
+    {
+      "source": "/contact.html",
+      "destination": "/contact",
+      "permanent": true
+    },
+    {
+      "source": "/account.html",
+      "destination": "/account",
+      "permanent": true
+    },
+    {
+      "source": "/schedule.html",
+      "destination": "/schedule",
+      "permanent": true
+    },
+    {
+      "source": "/reset-password.html",
+      "destination": "/reset-password",
+      "permanent": true
+    },
+    {
+      "source": "/community.html",
+      "destination": "/community",
+      "permanent": true
+    },
+    {
+      "source": "/admin.html",
+      "destination": "/admin",
+      "permanent": true
+    },
+    {
+      "source": "/accessibility.html",
+      "destination": "/accessibility",
+      "permanent": true
+    },
+    {
+      "source": "/media-rights.html",
+      "destination": "/media-rights",
+      "permanent": true
+    },
+    {
+      "source": "/index.html",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/bravo-shell.html",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/workshops.html",
+      "destination": "/workshops",
+      "permanent": true
+    },
+    {
+      "source": "/live.html",
+      "destination": "/live",
+      "permanent": true
+    },
+    {
+      "source": "/live/studio.html",
+      "destination": "/live/studio",
+      "permanent": true
+    },
+    {
+      "source": "/hunting-dog-training.html",
+      "destination": "/hunting-dog-training",
+      "permanent": true
+    }
   ],
   "functions": {
     "api/index.js": {
@@ -49,58 +149,175 @@
     }
   },
   "rewrites": [
-    { "source": "/", "destination": "/api/homepage" },
-    { "source": "/tools-of-the-trade", "destination": "/api/public-page?path=/tools-of-the-trade" },
-    { "source": "/how-to", "destination": "/api/public-page?path=/how-to" },
-    { "source": "/fci-support", "destination": "/api/public-page?path=/fci-support" },
-    { "source": "/api/:path*", "destination": "/api" },
-    { "source": "/workshops", "destination": "/api/public-page?path=/workshops" },
-    { "source": "/dog-training", "destination": "/api/public-page?path=/dog-training" },
-    { "source": "/behavior-assessment", "destination": "/api/public-page?path=/behavior-assessment" },
-    { "source": "/dog-walking", "destination": "/api/public-page?path=/dog-walking" },
-    { "source": "/portal", "destination": "/portal.html" },
-    { "source": "/learn", "destination": "/api/public-page?path=/learn" },
-    { "source": "/contact", "destination": "/api/public-page?path=/contact" },
-    { "source": "/account", "destination": "/account.html" },
-    { "source": "/schedule", "destination": "/schedule.html" },
-    { "source": "/reset-password", "destination": "/reset-password.html" },
-    { "source": "/community", "destination": "/community.html" },
-    { "source": "/admin", "destination": "/admin.html" },
-    { "source": "/accessibility", "destination": "/api/public-page?path=/accessibility" },
-    { "source": "/media-rights", "destination": "/api/public-page?path=/media-rights" },
-    { "source": "/live", "destination": "/api/public-page?path=/live" },
-    { "source": "/live/studio", "destination": "/live/studio.html" },
-    { "source": "/hunting-dog-training", "destination": "/api/public-page?path=/hunting-dog-training" }
+    {
+      "source": "/",
+      "destination": "/api/homepage"
+    },
+    {
+      "source": "/tools-of-the-trade",
+      "destination": "/api/public-page?path=/tools-of-the-trade"
+    },
+    {
+      "source": "/how-to",
+      "destination": "/api/public-page?path=/how-to"
+    },
+    {
+      "source": "/fci-support",
+      "destination": "/api/public-page?path=/fci-support"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "/api"
+    },
+    {
+      "source": "/workshops",
+      "destination": "/api/public-page?path=/workshops"
+    },
+    {
+      "source": "/dog-training",
+      "destination": "/api/public-page?path=/dog-training"
+    },
+    {
+      "source": "/behavior-assessment",
+      "destination": "/api/public-page?path=/behavior-assessment"
+    },
+    {
+      "source": "/portal",
+      "destination": "/portal.html"
+    },
+    {
+      "source": "/learn",
+      "destination": "/api/public-page?path=/learn"
+    },
+    {
+      "source": "/contact",
+      "destination": "/api/public-page?path=/contact"
+    },
+    {
+      "source": "/account",
+      "destination": "/account.html"
+    },
+    {
+      "source": "/schedule",
+      "destination": "/schedule.html"
+    },
+    {
+      "source": "/reset-password",
+      "destination": "/reset-password.html"
+    },
+    {
+      "source": "/community",
+      "destination": "/community.html"
+    },
+    {
+      "source": "/admin",
+      "destination": "/admin.html"
+    },
+    {
+      "source": "/accessibility",
+      "destination": "/api/public-page?path=/accessibility"
+    },
+    {
+      "source": "/media-rights",
+      "destination": "/api/public-page?path=/media-rights"
+    },
+    {
+      "source": "/live",
+      "destination": "/api/public-page?path=/live"
+    },
+    {
+      "source": "/live/studio",
+      "destination": "/live/studio.html"
+    },
+    {
+      "source": "/hunting-dog-training",
+      "destination": "/api/public-page?path=/hunting-dog-training"
+    }
   ],
   "headers": [
     {
       "source": "/assets/:path*",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     },
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; media-src 'self' blob:; connect-src 'self'; frame-src https://www.facebook.com; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" },
-        { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "Permissions-Policy", "value": "camera=(self), microphone=(self), geolocation=(), accelerometer=(), gyroscope=(), magnetometer=(), usb=(), serial=(), hid=(), midi=()" },
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; media-src 'self' blob:; connect-src 'self'; frame-src https://www.facebook.com; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(self), microphone=(self), geolocation=(), accelerometer=(), gyroscope=(), magnetometer=(), usb=(), serial=(), hid=(), midi=()"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
       ]
     },
     {
       "source": "/(account|admin|community|schedule|reset-password|portal)(.*)",
-      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
     },
-    { "source": "/404.html", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }] },
-    { "source": "/sitemap.xml", "headers": [{ "key": "Content-Type", "value": "application/xml; charset=utf-8" }] },
+    {
+      "source": "/404.html",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/sitemap.xml",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/xml; charset=utf-8"
+        }
+      ]
+    },
     {
       "source": "/live/studio(.*)",
       "headers": [
-        { "key": "X-Robots-Tag", "value": "noindex, nofollow" },
-        { "key": "Cache-Control", "value": "private, no-store" }
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "private, no-store"
+        }
       ]
     },
-    { "source": "/live-sw.js", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
+    {
+      "source": "/live-sw.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    }
   ],
   "trailingSlash": false,
   "installCommand": "npm ci --include=dev --ignore-scripts"
