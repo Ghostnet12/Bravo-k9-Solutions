@@ -150,7 +150,7 @@ test('subscription refunds resolve the modern Invoice Payments mapping', async t
   const { booking, user } = fixture(); booking.paymentStatus = 'paid'; booking.stripeSessionId = 'cs_fixture';
   const write = t.mock.method(Booking, 'updateOne', async () => ({ matchedCount: 1, modifiedCount: 1 }));
   let listed, refundInput;
-  const stripe = { checkout: { sessions: { retrieve: async () => ({ invoice: 'in_fixture', amount_total: 5000 }) } }, invoicePayments: { list: async params => { listed = params; return { data: [{ payment: { type: 'payment_intent', payment_intent: 'pi_fixture' } }], has_more: false }; } }, refunds: { create: async params => { refundInput = params; return { id: 're_fixture', status: 'succeeded', currency: 'usd', amount: 5000 }; } } };
+  const stripe = { checkout: { sessions: { retrieve: async () => ({ invoice: 'in_fixture', amount_total: 40000 }) } }, invoicePayments: { list: async params => { listed = params; return { data: [{ payment: { type: 'payment_intent', payment_intent: 'pi_fixture' } }], has_more: false }; } }, refunds: { create: async params => { refundInput = params; return { id: 're_fixture', status: 'succeeded', currency: 'usd', amount: 40000 }; } } };
   await refundBooking(booking, user, stripe);
   assert.equal(listed.invoice, 'in_fixture'); assert.equal(refundInput.payment_intent, 'pi_fixture'); assert.equal(refundInput.amount, 5000);
   assert.equal(write.mock.calls.at(-1).arguments[1].$set.paymentStatus, 'refunded');
@@ -158,7 +158,7 @@ test('subscription refunds resolve the modern Invoice Payments mapping', async t
 test('a pending refund is not falsely marked refunded and can be checked without another refund', async t => {
   const { booking, user } = fixture(); Object.assign(booking, { paymentStatus: 'review', stripeSessionId: 'cs_fixture', stripePaymentIntentId: 'pi_fixture', refundId: 're_existing' });
   const write = t.mock.method(Booking, 'updateOne', async () => ({ matchedCount: 1, modifiedCount: 1 }));
-  const stripe = { checkout: { sessions: { retrieve: async () => ({ payment_intent: 'pi_fixture', amount_total: 5000 }) } }, refunds: { retrieve: async id => ({ id, status: 'pending', currency: 'usd', amount: 5000 }), create: async () => { throw new Error('Must never create a second refund'); } } };
+  const stripe = { checkout: { sessions: { retrieve: async () => ({ payment_intent: 'pi_fixture', amount_total: 40000 }) } }, refunds: { retrieve: async id => ({ id, status: 'pending', currency: 'usd', amount: 40000 }), create: async () => { throw new Error('Must never create a second refund'); } } };
   const result = await refundBooking(booking, user, stripe);
   assert.match(result.message, /pending/); assert.equal(write.mock.calls.at(-1).arguments[1].$set.paymentStatus, 'review'); assert.equal(write.mock.calls.at(-1).arguments[1].$set.refundedAt, undefined);
 });
@@ -168,7 +168,7 @@ test('webhook rejects mismatched customer/session and preserves refunded state o
   t.mock.method(StripeEvent, 'exists', async () => false); t.mock.method(StripeEvent, 'create', async () => ({}));
   t.mock.method(Booking, 'findById', () => query(booking)); t.mock.method(User, 'findById', () => query(user));
   const write = t.mock.method(Booking, 'updateOne', async () => ({})); t.mock.method(BillingLock, 'deleteOne', async () => ({}));
-  const object = { id: 'cs_fixture', customer: 'cus_other', client_reference_id: String(booking._id), metadata: { app: 'bravo-k9', userId: String(user._id), bookingId: String(booking._id) }, payment_status: 'paid', currency: 'usd', amount_total: 5000 };
+  const object = { id: 'cs_fixture', customer: 'cus_other', client_reference_id: String(booking._id), metadata: { app: 'bravo-k9', userId: String(user._id), bookingId: String(booking._id) }, payment_status: 'paid', currency: 'usd', amount_total: 40000 };
   const event = { id: 'evt_fixture', type: 'checkout.session.completed', created: 1, data: { object } };
   await assert.rejects(processStripeEvent(event, {}), /customer mismatch/);
   object.customer = user.stripeCustomerId; object.id = 'cs_wrong'; await assert.rejects(processStripeEvent(event, {}), /session mismatch/);
