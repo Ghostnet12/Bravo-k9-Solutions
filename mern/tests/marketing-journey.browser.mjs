@@ -51,6 +51,11 @@ try {
           assert.match(await page.locator('.training-request-reassurance').innerText(), /does not charge your card/);
           assert.equal(await page.locator('.training-help-links a[href="/how-to#first-visit-guide"]').count(), 1);
           assert.equal(await page.locator('.training-help-links a[href="/tools-of-the-trade"]').count(), 1);
+          const offerOrder = await page.locator('.conversion-offer-copy').evaluate(element => {
+            const top = selector => element.querySelector(selector).getBoundingClientRect().top;
+            return top('.conversion-button') < top('.training-request-reassurance') && top('.training-request-reassurance') < top('.training-help-links');
+          });
+          assert.ok(offerOrder, 'main action, reassurance and help follow the same visual and keyboard order');
           assert.match(await page.locator('#method').innerText(), /No treats\. No toys\./);
           await page.getByRole('button', { name: 'Retry trainer profiles', exact: true }).waitFor();
           teamUnavailable = false;
