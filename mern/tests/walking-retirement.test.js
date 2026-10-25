@@ -16,10 +16,10 @@ test('dog-walking service is retired from the public catalog, quotes and goal fi
 test('dog walking is absent from public routes, marketing and search metadata', () => {
   assert.equal(PAGE_METADATA['/dog-walking'], undefined);
   assert.equal(publicPagePaths.includes('/dog-walking'), false);
-  for (const path of ['mern/client/src/Home.tsx','mern/client/src/ui.jsx','mern/client/src/ContactPage.jsx','mern/shared/page-metadata.js']) {
+  for (const path of ['client/src/Home.tsx','client/src/ui.jsx','client/src/ContactPage.jsx','client/src/NotFoundPage.jsx','shared/page-metadata.js']) {
     assert.doesNotMatch(source(path), /(?:Dog Walking|dog walking|dog-walking|Better walks\.)/i, path);
   }
-  const vercel = JSON.parse(source('mern/vercel.json'));
+  const vercel = JSON.parse(source('vercel.json'));
   assert.ok(vercel.redirects.some(rule => rule.source === '/dog-walking' && rule.destination === '/dog-training' && rule.permanent));
   assert.ok(vercel.redirects.some(rule => rule.source === '/dog-walking.html' && rule.destination === '/dog-training' && rule.permanent));
   assert.ok(!vercel.rewrites.some(rule => rule.source === '/dog-walking'));

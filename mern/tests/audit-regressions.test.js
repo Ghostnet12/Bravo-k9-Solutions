@@ -17,8 +17,8 @@ const query = value => {
   return chain;
 };
 function fixture() {
-  const booking = { _id: '68c20f8f5c734fa0f944ad10', userId: '68c20f8f5c734fa0f944ad11', status: 'requested', paymentStatus: 'unpaid', serviceIds: ['walking'], dogCount: 2, visits: [{ date: '2026-09-21', time: '10:00', service: 'walking' }] };
-  booking.quote = quote(booking.serviceIds, booking.visits, { dogCount: 2 }, ALL_SERVICES);
+  const booking = { _id: '68c20f8f5c734fa0f944ad10', userId: '68c20f8f5c734fa0f944ad11', status: 'requested', paymentStatus: 'unpaid', serviceIds: ['aggression'], dogCount: 1, visits: [{ date: '2026-09-21', time: '10:00', service: 'aggression' }] };
+  booking.quote = quote(booking.serviceIds, booking.visits, { dogCount: booking.dogCount });
   return { booking, user: { _id: booking.userId, email: 'fixture@example.test', name: 'Test Customer', stripeCustomerId: 'cus_fixture' } };
 }
 function checkoutMocks(t, booking) {
@@ -33,6 +33,7 @@ function checkoutMocks(t, booking) {
 }
 test('rescheduling preserves recorded unit prices and recomputes walk quantities', () => {
   const { booking } = fixture();
+  booking.serviceIds = ['walking']; booking.dogCount = 2; booking.visits = [{ date: '2026-09-21', time: '10:00', service: 'walking' }];
   booking.quote = quote(['walking'], booking.visits, { dogCount: 2 }, ALL_SERVICES.map(service => ({ ...service, cents: 3300 })));
   const result = rescheduledQuote(booking, [...booking.visits, { date: '2026-09-22', time: '11:00', service: 'walking' }]);
   assert.equal(result.lines[0].unitCents, 3300); assert.equal(result.lines[0].quantity, 4); assert.equal(result.dueNowCents, 13200);

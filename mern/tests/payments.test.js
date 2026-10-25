@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { checkout } from '../server/payments.js';
 import { Booking, Subscription, BillingLock } from '../server/models.js';
-import { quote, ALL_SERVICES } from '../shared/catalog.js';
+import { quote } from '../shared/catalog.js';
 
 const query = value => {
   const chain = { then: (resolve, reject) => Promise.resolve(value).then(resolve, reject) };
@@ -17,10 +17,10 @@ test('checkout uses the verified server quote and safe Stripe return flow', asyn
 
   const booking = {
     _id: '68c20f8f5c734fa0f944ad10', userId: '68c20f8f5c734fa0f944ad11', status: 'requested', paymentStatus: 'unpaid',
-    serviceIds: ['training', 'walking'], dogCount: 2,
-    visits: [{ date: '2026-09-21', time: '10:00', service: 'walking' }],
+    serviceIds: ['training'], dogCount: 2,
+    visits: [{ date: '2026-09-21', time: '10:00', service: 'training' }],
   };
-  booking.quote = quote(booking.serviceIds, booking.visits, { dogCount: booking.dogCount }, ALL_SERVICES);
+  booking.quote = quote(booking.serviceIds, booking.visits, { dogCount: booking.dogCount });
   const user = { _id: booking.userId, email: 'client@example.test', name: 'Bravo Client', stripeCustomerId: 'cus_test_bravo' };
   let persistedParams;
   t.mock.method(Subscription, 'find', () => query([]));
@@ -39,8 +39,6 @@ test('checkout uses the verified server quote and safe Stripe return flow', asyn
   assert.equal(received.params.line_items[1].price_data.unit_amount, 10000);
   assert.equal(received.params.line_items[1].quantity, 1);
   assert.equal(received.params.line_items[1].price_data.recurring, undefined);
-  assert.equal(received.params.line_items[2].price_data.unit_amount, 2500);
-  assert.equal(received.params.line_items[2].quantity, 2);
   assert.equal(received.params.metadata.dogCount, '2');
   assert.equal(received.params.line_items.reduce((total, line) => total + line.price_data.unit_amount * line.quantity, 0), booking.quote.dueNowCents);
   assert.equal(received.params.payment_method_types, undefined);
@@ -56,10 +54,10 @@ test('checkout recovers an abandoned lock that has no Stripe session', async t =
 
   const booking = {
     _id: '68c20f8f5c734fa0f944ad20', userId: '68c20f8f5c734fa0f944ad21', status: 'requested', paymentStatus: 'unpaid',
-    serviceIds: ['walking'], dogCount: 1,
-    visits: [{ date: '2026-09-22', time: '10:00', service: 'walking' }],
+    serviceIds: ['aggression'], dogCount: 1,
+    visits: [{ date: '2026-09-22', time: '10:00', service: 'aggression' }],
   };
-  booking.quote = quote(booking.serviceIds, booking.visits, { dogCount: 1 }, ALL_SERVICES);
+  booking.quote = quote(booking.serviceIds, booking.visits, { dogCount: 1 });
   const user = { _id: booking.userId, email: 'client@example.test', name: 'Bravo Client', stripeCustomerId: 'cus_live_bravo' };
   let lockAttempts = 0, lockDeleted = false, persistedParams;
   t.mock.method(Subscription, 'find', () => query([]));
