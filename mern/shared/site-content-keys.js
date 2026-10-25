@@ -5,6 +5,7 @@ export const CONTENT_KEYS = {
   ...BASE_CONTENT_KEYS,
   ...Object.fromEntries(['status', 'title', 'tagline', 'intro', 'signup-title', 'signup-copy'].map(key => [`transport-${key}`, { text: true }])),
   'nav-k9-transport': { text: true, link: true },
+  'transport-contact': { text: true, link: true },
   'footer-k9-transport': { text: true, link: true },
   'training-request-reassurance': { text: true },
   'training-booking-guide': { text: true, link: true },
