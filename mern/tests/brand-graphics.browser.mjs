@@ -39,8 +39,8 @@ try {
     await page.locator('#find-training').scrollIntoViewIfNeeded();
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width}: no page overflow`);
     const icons=await page.locator('.goal-choice-link').evaluateAll(links=>links.map(link=>{const s=getComputedStyle(link,'::before');return{mask:s.maskImage,events:s.pointerEvents,content:s.content,width:parseFloat(s.width)};}));
-    assert.equal(icons.length,4);for(const icon of icons){assert.match(icon.mask,/graphics/);assert.equal(icon.events,'none');assert.equal(icon.content,'""');assert.ok(icon.width>=40);}
-    assert.equal(await page.locator('button.goal-choice-link').count(),4);
+    assert.equal(icons.length,3);for(const icon of icons){assert.match(icon.mask,/graphics/);assert.equal(icon.events,'none');assert.equal(icon.content,'""');assert.ok(icon.width>=40);}
+    assert.equal(await page.locator('button.goal-choice-link').count(),3);
     assert.equal(await page.locator('.goal-choice a').count(),0,'cards select a plan rather than mixing two actions');
     await page.getByRole('button',{name:'Preview Aggression concerns',exact:true}).click();
     assert.equal(await page.locator('.goal-result .goal-actions .button').getAttribute('href'),'/portal?program=aggression');
