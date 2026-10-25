@@ -156,7 +156,7 @@ try {for(const [name,engine] of engines) {
   sessions=[];await refresh();await page.getByRole('heading',{name:'OUT IN THE FIELD.'}).waitFor();await page.getByRole('region',{name:'Recorded Bravo training'}).waitFor();
   await page.setViewportSize({width:390,height:900});
   await waitForApiIdle();
-  await visit(`${origin}/portal?program=walking`);await page.locator('.mobile-booking-bar').waitFor();
+  await visit(`${origin}/portal?program=aggression`);await page.locator('.mobile-booking-bar').waitFor();
   assert.ok(await page.evaluate(()=>{const access=document.querySelector('.accessibility-tools').getBoundingClientRect(),nav=document.querySelector('.mobile-home-nav').getBoundingClientRect();return nav.bottom<=innerHeight+1 && access.bottom<nav.top && getComputedStyle(document.querySelector('.mobile-booking-bar')).position==='static';}),'booking action and accessibility clear persistent navigation');
   await page.locator('.mobile-booking-bar a').click();
   assert.equal(new URL(page.url()).hash,'#choose-dates','mobile booking action remains usable');
