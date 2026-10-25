@@ -35,6 +35,10 @@ app.use('/api', (req, res) => {
     fixture.user = { id: 'fixture-client', role: 'member', name: req.body.name, phone: '6055550199', address: 'Old profile address' };
     data = { user: fixture.user };
   }
+  if (path === '/auth/login') {
+    fixture.user = { id: 'fixture-client', role: 'member', name: 'Fixture Client', phone: '6055550199', address: 'Saved profile address' };
+    data = { user: fixture.user };
+  }
   if (path === '/bookings' && req.method === 'POST') {
     data = { booking: { ...req.body, _id: 'fixture-booking', status: 'requested', paymentStatus: 'unpaid', quote: { dueNowCents: 20000 } } };
   }
@@ -106,8 +110,28 @@ try {
         assert.deepEqual(bookings[0].body.visits, [{ date: dayAfter(fixture.start, 1), time: '14:00', service: 'training' }]);
         assert.equal(bookings[0].body.address, '123 Current Visit Street');
         assert.deepEqual(fixture.writes.map(item => item.path), ['/auth/register', '/quote', '/bookings']);
+        // Returning customers can sign in with empty contact fields and use their profile.
+        fixture = { user: null, writes: [], stale: false, start: null };
+        await context.clearCookies();
+        await page.evaluate(() => sessionStorage.clear());
+        await page.goto(`${origin}/portal?program=training`);
+        await page.getByLabel('Dog’s name', { exact: true }).fill('Returning Dog');
+        await page.getByRole('button', { name: 'Choose a trainer →', exact: true }).click();
+        await page.locator('.guided-trainer-cards button').filter({ hasText: 'Fixture Trainer A' }).click();
+        await opening.getByRole('button', { name: 'Use this time & review →', exact: true }).click();
+        assert.equal(await page.getByLabel('Contact phone', { exact: true }).inputValue(), '');
+        await page.getByRole('button', { name: 'I have an account — sign in →', exact: true }).click();
+        await page.getByLabel('Name or email', { exact: true }).fill('Fixture Client');
+        assert.equal(new URL(page.url()).searchParams.get('mode'), 'login');
+        await page.getByLabel('Password', { exact: true }).fill('fixture-only-password');
+        await page.locator('form').getByRole('button', { name: 'Sign in', exact: true }).click();
+        await page.getByRole('button', { name: 'Send my request • no charge', exact: true }).waitFor();
+        assert.equal(await page.getByLabel('Contact phone', { exact: true }).inputValue(), '6055550199');
+        assert.equal(await page.getByLabel('Visit address', { exact: true }).inputValue(), 'Saved profile address');
+        assert.equal(await page.getByLabel('Dog’s name', { exact: true }).inputValue(), 'Returning Dog');
+        assert.deepEqual(fixture.writes.map(item => item.path), ['/auth/login'], 'sign-in uses saved details without submitting a request');
         assert.deepEqual(errors, []);
-        console.log(`PASS ${engineName}/${width}: two explicit selection actions, guest contact details, direct registration, preserved draft, stale-time rejection, changed-trainer opening, one request and no charge`);
+        console.log(`PASS ${engineName}/${width}: two explicit selection actions, guest contact details, direct registration, preserved draft, stale-time rejection, changed-trainer opening, one request, returning-customer saved details and no charge`);
       } catch (error) {
         await page.screenshot({ path: `test-results/simple-failure-${engineName}-${width}.png`, fullPage: true });
         throw error;
