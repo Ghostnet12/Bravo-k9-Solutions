@@ -149,6 +149,7 @@ test('client reports readable errors for an HTML outage page', async t => {
 });
 test('subscription refunds resolve the modern Invoice Payments mapping', async t => {
   const { booking, user } = fixture(); booking.paymentStatus = 'paid'; booking.stripeSessionId = 'cs_fixture';
+  t.mock.method(Subscription, 'updateOne', async () => ({ matchedCount: 1, modifiedCount: 1 }));
   const write = t.mock.method(Booking, 'updateOne', async () => ({ matchedCount: 1, modifiedCount: 1 }));
   let listed, refundInput;
   const stripe = { checkout: { sessions: { retrieve: async () => ({ invoice: 'in_fixture', amount_total: booking.quote.dueNowCents }) } }, invoicePayments: { list: async params => { listed = params; return { data: [{ payment: { type: 'payment_intent', payment_intent: 'pi_fixture' } }], has_more: false }; } }, refunds: { create: async params => { refundInput = params; return { id: 're_fixture', status: 'succeeded', currency: 'usd', amount: booking.quote.dueNowCents }; } } };
