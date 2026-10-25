@@ -13,7 +13,9 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # The complete database and two-browser suite can take just over 20 minutes
+    # on a slower runner. Leave time for the dependency audit and artifacts too.
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: mern
