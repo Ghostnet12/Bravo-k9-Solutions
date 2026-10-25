@@ -46,6 +46,8 @@ export const CONTENT_KEYS = {
   'accessible-media-help': { text: true },
   'contact-main-call': { text: true, link: true },
   'contact-training-call': { text: true },
+  'training-leash-faq-question': { text: true },
+  'training-leash-faq-answer': { text: true },
   'contact-message-signin': { text: true },
   'home-results-section': { text: false },
   'home-results-eyebrow': { text: true },
