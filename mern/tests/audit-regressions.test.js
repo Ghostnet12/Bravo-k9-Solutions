@@ -5,7 +5,7 @@ import mongoose from 'mongoose';
 import { checkout, refundBooking, processStripeEvent } from '../server/payments.js';
 import { Booking, User, Subscription, StripeEvent, BillingLock, Settings, Slot } from '../server/models.js';
 import { cancelBooking, getAvailability, trainerCapacity, TRAINER_DOG_LIMIT } from '../server/bookings.js';
-import { quote, rescheduledQuote, SERVICES } from '../shared/catalog.js';
+import { quote, rescheduledQuote, SERVICES, ALL_SERVICES } from '../shared/catalog.js';
 import { publicUser } from '../server/auth.js';
 import { clientError } from '../server/errors.js';
 import { api } from '../client/src/api.js';
@@ -18,7 +18,7 @@ const query = value => {
 };
 function fixture() {
   const booking = { _id: '68c20f8f5c734fa0f944ad10', userId: '68c20f8f5c734fa0f944ad11', status: 'requested', paymentStatus: 'unpaid', serviceIds: ['walking'], dogCount: 2, visits: [{ date: '2026-09-21', time: '10:00', service: 'walking' }] };
-  booking.quote = quote(booking.serviceIds, booking.visits, { dogCount: 2 });
+  booking.quote = quote(booking.serviceIds, booking.visits, { dogCount: 2 }, ALL_SERVICES);
   return { booking, user: { _id: booking.userId, email: 'fixture@example.test', name: 'Test Customer', stripeCustomerId: 'cus_fixture' } };
 }
 function checkoutMocks(t, booking) {
@@ -33,7 +33,7 @@ function checkoutMocks(t, booking) {
 }
 test('rescheduling preserves recorded unit prices and recomputes walk quantities', () => {
   const { booking } = fixture();
-  booking.quote = quote(['walking'], booking.visits, { dogCount: 2 }, SERVICES.map(service => ({ ...service, cents: 3300 })));
+  booking.quote = quote(['walking'], booking.visits, { dogCount: 2 }, ALL_SERVICES.map(service => ({ ...service, cents: 3300 })));
   const result = rescheduledQuote(booking, [...booking.visits, { date: '2026-09-22', time: '11:00', service: 'walking' }]);
   assert.equal(result.lines[0].unitCents, 3300); assert.equal(result.lines[0].quantity, 4); assert.equal(result.dueNowCents, 13200);
   assert.equal(booking.quote.dueNowCents, 6600);

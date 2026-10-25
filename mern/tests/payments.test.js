@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { checkout } from '../server/payments.js';
 import { Booking, Subscription, BillingLock } from '../server/models.js';
-import { quote } from '../shared/catalog.js';
+import { quote, ALL_SERVICES } from '../shared/catalog.js';
 
 const query = value => {
   const chain = { then: (resolve, reject) => Promise.resolve(value).then(resolve, reject) };
@@ -20,7 +20,7 @@ test('checkout uses the verified server quote and safe Stripe return flow', asyn
     serviceIds: ['training', 'walking'], dogCount: 2,
     visits: [{ date: '2026-09-21', time: '10:00', service: 'walking' }],
   };
-  booking.quote = quote(booking.serviceIds, booking.visits, { dogCount: booking.dogCount });
+  booking.quote = quote(booking.serviceIds, booking.visits, { dogCount: booking.dogCount }, ALL_SERVICES);
   const user = { _id: booking.userId, email: 'client@example.test', name: 'Bravo Client', stripeCustomerId: 'cus_test_bravo' };
   let persistedParams;
   t.mock.method(Subscription, 'find', () => query([]));
@@ -59,7 +59,7 @@ test('checkout recovers an abandoned lock that has no Stripe session', async t =
     serviceIds: ['walking'], dogCount: 1,
     visits: [{ date: '2026-09-22', time: '10:00', service: 'walking' }],
   };
-  booking.quote = quote(booking.serviceIds, booking.visits, { dogCount: 1 });
+  booking.quote = quote(booking.serviceIds, booking.visits, { dogCount: 1 }, ALL_SERVICES);
   const user = { _id: booking.userId, email: 'client@example.test', name: 'Bravo Client', stripeCustomerId: 'cus_live_bravo' };
   let lockAttempts = 0, lockDeleted = false, persistedParams;
   t.mock.method(Subscription, 'find', () => query([]));

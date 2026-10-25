@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { SERVICES, quote, rescheduledQuote, publicCatalogSnapshot } from '../shared/catalog.js';
+import { SERVICES, ALL_SERVICES, quote, rescheduledQuote, publicCatalogSnapshot } from '../shared/catalog.js';
 import { validatedCheckoutPricing } from '../server/payments.js';
 import { renderSiteContent } from '../server/content-html.js';
 import { publicTrainerProfile } from '../shared/trainer-profile.js';
@@ -10,7 +10,7 @@ import { contentInput } from '../server/site-content.js';
 import { normalizeLegacySiteContentValue } from '../server/site-content-store.js';
 
 test('published rates flow through multi-dog quotes, bundles, checkout and historical rescheduling',()=>{
- const catalog=SERVICES.map(row=>({...row,...({training:{cents:22500,additionalDogCents:12500},walking:{cents:3500},online:{cents:9000,bundleCents:30000}}[row.id]||{})}));
+ const catalog=ALL_SERVICES.map(row=>({...row,...({training:{cents:22500,additionalDogCents:12500},walking:{cents:3500},online:{cents:9000,bundleCents:30000}}[row.id]||{})}));
  for(const [ids,dogCount,total]of [[['training'],3,47500],[['training','online'],2,42500],[['online'],1,9000]]){
   const booking={serviceIds:ids,dogCount,visits:[],quote:quote(ids,[],{dogCount},catalog)};
   assert.equal(booking.quote.dueNowCents,total);assert.equal(validatedCheckoutPricing(booking).dueNowCents,total);
