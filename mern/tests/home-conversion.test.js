@@ -25,7 +25,8 @@ test('proof cards link directly to the original videos without blank third-party
 
 test('homepage keeps specialist choices subordinate and does not invent credentials', async () => {
   const source = await readFile(new URL('../client/src/Home.tsx', import.meta.url), 'utf8');
-  assert.match(source, /const secondary = \['walking', 'aggression'\]/);
+  assert.match(source, /const secondary = \['aggression'\]/);
+  assert.doesNotMatch(source, /dog-walking|Dog Walking/);
   assert.match(source, /team\.map\(person/);
   assert.doesNotMatch(source, /certified|award-winning|years of experience/i);
 });

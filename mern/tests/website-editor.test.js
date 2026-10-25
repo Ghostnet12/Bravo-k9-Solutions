@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { SERVICES, quote, rescheduledQuote, publicCatalogSnapshot } from '../shared/catalog.js';
+import { SERVICES, ALL_SERVICES, quote, rescheduledQuote, publicCatalogSnapshot } from '../shared/catalog.js';
 import { validatedCheckoutPricing } from '../server/payments.js';
 import { renderSiteContent } from '../server/content-html.js';
 import { publicTrainerProfile } from '../shared/trainer-profile.js';
@@ -20,11 +20,13 @@ test('published rates flow through multi-dog quotes, bundles, checkout and histo
   }
  }
  const visits=[{date:'2026-10-05',time:'09:00',service:'walking'}];
- const booking={serviceIds:['walking'],dogCount:2,visits,quote:quote(['walking'],visits,{dogCount:2},catalog)};
- assert.equal(validatedCheckoutPricing(booking).dueNowCents,7000);
+ const legacyCatalog = [...catalog, { ...ALL_SERVICES.find(row => row.id === 'walking'), cents: 3500 }];
+ const booking={serviceIds:['walking'],dogCount:2,visits,quote:quote(['walking'],visits,{dogCount:2},legacyCatalog)};
+ assert.equal(booking.quote.dueNowCents,7000);
+ assert.throws(() => validatedCheckoutPricing(booking), /saved price is incomplete/,'retired walking cannot start checkout');
  const next=[...visits,{date:'2026-10-06',time:'09:00',service:'walking'}];
  const rescheduled={...booking,visits:next,quote:rescheduledQuote(booking,next)};
- assert.equal(validatedCheckoutPricing(rescheduled).dueNowCents,14000);
+ assert.equal(rescheduled.quote.dueNowCents,14000);
  const free=catalog.map(row=>row.id==='training'?{...row,cents:0,additionalDogCents:0}:row);
  assert.equal(validatedCheckoutPricing({serviceIds:['training'],dogCount:2,quote:quote(['training'],[],{dogCount:2},free)}).dueNowCents,0);
 });

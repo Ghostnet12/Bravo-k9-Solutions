@@ -7,7 +7,7 @@
   max-height: none;
   padding: calc(74px + env(safe-area-inset-top)) 0 28px;
   box-sizing: border-box;
-  background: #101010;
+  background: radial-gradient(ellipse 560px 400px at 50% 22%, #ba9a6414, transparent 78%), #101010;
   isolation: isolate;
 }
 .cinema-home.conversion-home .home-hero--confidence .cinema-hero-media {
@@ -37,7 +37,7 @@
 .cinema-home.conversion-home .home-hero--confidence .cinema-hero-copy > * { max-width: none; }
 .cinema-home.conversion-home .home-hero--confidence .cinema-eyebrow {
   margin: 0 0 7px; color: #d5b77f;
-  font: 600 clamp(10px, 2.55vw, 12px)/1.6 Montserrat, sans-serif; letter-spacing: .28em;
+  font: 600 clamp(12px, 2.8vw, 13px)/1.55 Montserrat, sans-serif; letter-spacing: .18em;
 }
 .cinema-home.conversion-home .home-hero--confidence h1 {
   margin: 0; color: #f5f3ee;
@@ -45,11 +45,11 @@
   letter-spacing: .005em; text-wrap: initial;
 }
 .cinema-home.conversion-home .home-hero--confidence .hero-service-location {
-  margin: 12px 0 0; color: #e1c99d; font: 500 13px/1.6 Montserrat, sans-serif;
+  margin: 12px 0 0; color: #e1c99d; font: 500 15px/1.6 Montserrat, sans-serif;
 }
 .cinema-home.conversion-home .home-hero--confidence .cinema-hero-intro {
   margin: 10px 0 16px; color: #f5f3ee;
-  font: 400 clamp(14px, 3.3vw, 15px)/1.55 Montserrat, sans-serif; letter-spacing: 0; text-shadow: none;
+  font: 400 clamp(16px, 3.8vw, 17px)/1.55 Montserrat, sans-serif; letter-spacing: 0; text-shadow: none;
 }
 .cinema-home.conversion-home .home-hero--confidence .polish-hero-actions {
   display: grid; gap: 10px; position: relative; inset: auto; width: 100%; margin: 0; padding: 0;
@@ -64,5 +64,5 @@
 .cinema-home.conversion-home .home-hero--confidence .polish-hero-actions .conversion-button { background: #BA9A64; color: #101010; }
 .cinema-home.conversion-home .home-hero--confidence .polish-hero-actions a:hover { border-color: #dec48f; }
 .cinema-home.conversion-home .home-hero--confidence .polish-hero-actions .conversion-button:hover { background: #c9ab77; }
-.cinema-home.conversion-home .home-hero--confidence .hero-plan-explainer { margin: 12px 0 0; color: #d2cec5; font: 400 12px/1.6 Montserrat, sans-serif; }
+.cinema-home.conversion-home .home-hero--confidence .hero-plan-explainer { margin: 12px 0 0; color: #d2cec5; font: 400 14px/1.6 Montserrat, sans-serif; }
 .cinema-home.conversion-home .home-hero--confidence .cinema-hero-baseline { display: none; }

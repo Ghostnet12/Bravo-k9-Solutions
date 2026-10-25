@@ -39,8 +39,8 @@ try {for(const width of [320,390,768,1440]){
  if(width>700){
  await page.getByText('See training examples by goal',{exact:true}).click();
  await page.locator('.goal-select').first().waitFor();
- assert.equal(await page.locator('.goal-choice').count(),4);assert.equal(await page.locator('.goal-choice a').count(),0);assert.equal(await page.locator('.goal-choice button').count(),4);
- const ids=['manners','walks','handling','specialist'];const details=['/dog-training','/dog-walking','/behavior-assessment','/#specialist-training'];
+ assert.equal(await page.locator('.goal-choice').count(),3);assert.equal(await page.locator('.goal-choice a').count(),0);assert.equal(await page.locator('.goal-choice button').count(),3);
+ const ids=['manners','handling','specialist'];const details=['/dog-training','/behavior-assessment','/#specialist-training'];
  for(let i=0;i<ids.length;i++){
   const button=page.locator('.goal-select').nth(i);await button.click();assert.equal(new URL(page.url()).pathname,'/');assert.equal(await button.getAttribute('aria-pressed'),'true');assert.equal(await page.locator('.goal-program-link').getAttribute('href'),details[i]);
   assert.equal(await page.locator('.goal-select[aria-pressed=true]').count(),1);

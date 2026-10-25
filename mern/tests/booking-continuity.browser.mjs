@@ -370,7 +370,7 @@ try {
         await expiredPage.getByRole('heading', { name: 'Sign in to resume your request.', exact: true }).waitFor();
         assert.ok(!(await expiredPage.locator('body').innerText()).includes('Private expiry fixture'));
         assert.equal(await expiredPage.evaluate(() => JSON.parse(sessionStorage.getItem('bravo-booking-draft-v1')).owner), 'user:client-a');
-        await expiredPage.goto(`${origin}/portal?program=walking`); await expiredPage.reload();
+        await expiredPage.goto(`${origin}/portal?program=aggression`); await expiredPage.reload();
         await expiredPage.getByRole('heading', { name: 'Sign in to resume your request.', exact: true }).waitFor();
         if (outcome === 'restore') {
           for (const width of [360,390,768,1440]) {
