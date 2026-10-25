@@ -87,9 +87,9 @@ export default function Home() {
         <div className="cinema-hero-media"><div className="cinema-film"><img className="cinema-hero-still" data-site-image-key={CINEMATIC_HERO_KEY} src={CINEMATIC_HERO_SOURCE} srcSet={CINEMATIC_HERO_SRCSET} sizes={CINEMATIC_HERO_SIZES} width="1024" height="1536" alt={CINEMATIC_HERO_ALT} fetchPriority="high"/><div className="cinema-hero-shade" aria-hidden="true"/></div></div>
         <div className="cinema-hero-copy cinema-shell">
           <Editable as="p" contentKey="polish-hero-location" canEditText className="cinema-eyebrow">TRUST. TRAIN. DEPLOY.</Editable>
-          <h1 id="home-title"><Editable as="span" contentKey="conversion-hero-title" canEditText>REAL LIFE.<br/>REAL CONFIDENCE.</Editable></h1>
-          <Editable as="p" contentKey="hero-booking-location" canEditText className="hero-service-location">Mobile dog training in Aberdeen, SD · We come to you</Editable>
-          <p className="cinema-hero-intro"><Editable as="span" contentKey="conversion-hero-intro" canEditText>Real-world training. A calmer life together.</Editable></p>
+          <h1 id="home-title"><Editable as="span" contentKey="conversion-hero-title" canEditText>DOG TRAINING.<br/>AT YOUR HOME.</Editable></h1>
+          <Editable as="p" contentKey="hero-booking-location" canEditText className="hero-service-location">Aberdeen, SD · At home and in everyday places</Editable>
+          <p className="cinema-hero-intro"><Editable as="span" contentKey="conversion-hero-intro" canEditText>Real life. Real confidence. A calmer life together.</Editable></p>
           <div className="polish-hero-actions"><Editable as={Link} contentKey="mobile-hero-book" canEditText canEditLink href="/portal?program=training" className="cinema-button conversion-button" onClick={() => trackVisit('hero_booking_clicked')}>Start My Training Plan <span aria-hidden="true">→</span></Editable><Editable as="a" contentKey="polish-hero-explore" canEditText canEditLink href="#training" className="cinema-link">Explore Training</Editable></div>
           <Editable as="p" contentKey="hero-plan-explainer" canEditText className="hero-plan-explainer">Choose your trainer. Request a visit. Bravo confirms the details.</Editable>
         </div>
@@ -159,12 +159,12 @@ export default function Home() {
 
       <Editable as="section" key="method" contentKey="copy-home-9" id="method" className="cinema-intro cinema-shell" aria-labelledby="method-title" data-reveal="">
         <Editable as="p" contentKey="copy-home-10" canEditText className="cinema-eyebrow">THE BRAVO APPROACH</Editable>
-        <Editable as="h2" contentKey="cinema-method-title" canEditText id="method-title">Understand the dog.<br/><span>Build from there.</span></Editable>
-        <Editable as="p" contentKey="cinema-method-copy" canEditText>No treats. No toys. We build clear communication around your dog’s behavior, your household and the places you go together.</Editable>
+        <Editable as="h2" contentKey="cinema-method-title" canEditText id="method-title">Your first session.<br/><span>Step by step.</span></Editable>
+        <Editable as="p" contentKey="cinema-method-copy" canEditText>No treats. No toys. Your trainer observes your dog, explains the approach, and helps you practice it together.</Editable>
         <div className="cinema-method-signature home-method-steps">
-          <span className="home-method-step"><Editable as="strong" contentKey="copy-home-11" canEditText>Trust.</Editable><Editable as="span" contentKey="home-method-trust-copy" canEditText className="home-method-copy">Start with your dog’s personality, instincts, and everyday surroundings.</Editable></span>
-          <span className="home-method-step"><Editable as="strong" contentKey="copy-home-12" canEditText>Train.</Editable><Editable as="span" contentKey="home-method-train-copy" canEditText className="home-method-copy">Practice clear, consistent communication together.</Editable></span>
-          <span className="home-method-step"><Editable as="strong" contentKey="copy-home-13" canEditText>Deploy.</Editable><Editable as="span" contentKey="home-method-deploy-copy" canEditText className="home-method-copy">Bring that practice into real walks, public places, and daily routines.</Editable></span>
+          <span className="home-method-step"><Editable as="strong" contentKey="copy-home-11" canEditText>Trust.</Editable><Editable as="span" contentKey="home-method-trust-copy" canEditText className="home-method-copy">Talk through your goals while we observe your dog’s behavior and everyday surroundings.</Editable></span>
+          <span className="home-method-step"><Editable as="strong" contentKey="copy-home-12" canEditText>Train.</Editable><Editable as="span" contentKey="home-method-train-copy" canEditText className="home-method-copy">Watch your trainer demonstrate, then practice clear communication with their guidance.</Editable></span>
+          <span className="home-method-step"><Editable as="strong" contentKey="copy-home-13" canEditText>Deploy.</Editable><Editable as="span" contentKey="home-method-deploy-copy" canEditText className="home-method-copy">Know what to practice between visits and how to use it in your dog’s daily routine.</Editable></span>
         </div>
         <Editable as="a" contentKey="home-method-action" canEditText canEditLink href="#training" className="cinema-link home-method-action">Explore training <span aria-hidden="true">→</span></Editable>
       </Editable>
