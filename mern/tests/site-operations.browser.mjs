@@ -14,6 +14,7 @@ const origin = `http://127.0.0.1:${server.address().port}`;
 await mkdir('test-results', { recursive: true });
 try {
   for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
+    if (process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(engineName)) continue;
     const browser = await engine.launch();
     try {
       for (const access of ['visitor', 'member', 'staff', 'administrator', 'owner', 'privacy']) {
@@ -44,7 +45,7 @@ try {
           else if (path === '/api/admin/site-health') {
             reportReads++;
             if (reportReads === 1) return route.fulfill({ status: 503, json: { error: 'Temporary reporting issue.' } });
-            json = { checkedAt: new Date().toISOString(), totals: { visits: 20, started: 10, saved: 4, paid: 2 }, channels: [{ channel: 'search', visits: 20, started: 10, saved: 4, paid: 2 }], errors: [{ kind: 'request_timeout', area: 'schedule', source: 'browser', count: 2, lastSeen: new Date().toISOString() }] };
+            json = { checkedAt: new Date().toISOString(), totals: { visits: 20, started: 10, saved: 4, confirmed: 3, paid: 2 }, confirmedClients: 2, daily: [{ date: "2026-10-25", visits: 20, started: 10, saved: 4, confirmed: 3 }], channels: [{ channel: 'search', visits: 20, started: 10, saved: 4, confirmed: 3, paid: 2 }], errors: [{ kind: 'request_timeout', area: 'schedule', source: 'browser', count: 2, lastSeen: new Date().toISOString() }] };
           } else if (route.request().method() !== 'GET' && path !== '/api/quote') throw new Error(`Unexpected write ${path}`);
           await route.fulfill({ json });
         });
@@ -80,6 +81,12 @@ try {
           await page.getByRole('button', { name: 'Refresh report', exact: true }).click();
           await page.getByRole('heading', { name: 'Recent website errors', exact: true }).waitFor();
           await page.getByText('20.0%', { exact: true }).first().waitFor();
+          assert.equal(await page.getByRole('list', { name: 'Booking funnel' }).locator('li').count(), 4);
+          assert.match(await page.getByRole('list', { name: 'Booking funnel' }).innerText(), /Visit confirmed[\s\S]*3/);
+          await page.getByText('Daily booking outcomes', { exact: true }).click();
+          assert.match(await page.getByRole('table').filter({ hasText: 'Outcomes by visit start date, UTC' }).innerText(), /2026-10-25/);
+          await page.getByLabel('Reporting period', { exact: true }).selectOption('7');
+          await page.getByRole('list', { name: 'Booking funnel' }).waitFor();
           assert.ok(await page.getByRole('button', { name: 'Website health', exact: true }).getAttribute('aria-pressed') === 'true');
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
           await page.evaluate(() => window.scrollTo(0, 0));

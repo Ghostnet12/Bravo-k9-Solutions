@@ -7,6 +7,9 @@ import { fileURLToPath } from 'node:url';
 import { chromium, webkit } from 'playwright';
 import { SERVICES } from '../shared/catalog.js';
 import { SPECIALIST_LINKS, specialistInquiryPath } from '../shared/contact-interest.js';
+import { DEFAULT_REVIEWS } from '../shared/reviews.js';
+import { DEFAULT_WORKSHOP } from '../shared/workshops.js';
+import { resolveWorkshop } from '../shared/workshop-schedule.js';
 
 const dist = fileURLToPath(new URL('../client/dist/', import.meta.url));
 const html = await readFile(`${dist}/bravo-shell.html`, 'utf8');
@@ -33,6 +36,8 @@ try {
           let json = { images: {}, entries: {}, team: [], schedules: [], reviews: [], recommendations: [], count: 0, clips: [], items: [], alerts: [], revision: 0 };
           if (path === '/api/config') json = { connected: true, paymentsReady: false, services: SERVICES.map(service => ({ ...service, enabled: service.id !== 'online' })), lessonLibrary: { open: false }, schedule: { enabled: true, weekdays: [1,2,3,4,5], hours: ['09:00'] } };
           if (path === '/api/auth/me') json = { user: null, services: [], membership: { active: false } };
+          if (path === '/api/reviews') json = { recommendations: DEFAULT_REVIEWS, reviews: [], count: 0 };
+          if (path === '/api/workshops') json = { event: resolveWorkshop({ ...DEFAULT_WORKSHOP, scheduleMode: 'weekly' }) };
           if (path === '/api/team') {
             if (teamUnavailable) return route.fulfill({ status: 503, json: { error: 'Temporarily unavailable' } });
             json = { team: [{ id: '111111111111111111111111', name: 'Fixture Trainer', role: 'staff', title: 'Private dog trainer', bio: 'Fixture profile' }] };
@@ -47,6 +52,15 @@ try {
         const fits = async () => assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${engineName}/${width}: no horizontal overflow`);
         try {
           await visit('/');
+          assert.equal(await page.locator('.client-story-card').count(), 3, 'published client outcomes become three sourced case summaries');
+          assert.equal(await page.locator('.facebook-recommendations article').count(), DEFAULT_REVIEWS.length, 'every review appears once');
+          const story = page.locator('.client-story-card').first();
+          await story.getByText('Read full review', { exact: true }).click();
+          assert.match(await story.locator('.review-full blockquote').innerText(), /Benny and Huck/);
+          await story.getByText('Show less', { exact: true }).click();
+          const secondaryHeight = await page.locator('.home-secondary').evaluateAll(sections => sections.reduce((sum, section) => sum + section.getBoundingClientRect().height, 0));
+          assert.ok(secondaryHeight < 1250, `${width}: secondary topics remain compact (${secondaryHeight}px)`);
+          assert.equal(await page.locator('#online .cinema-learning-visual').count(), 0, 'coming-soon lessons do not add a full photo section');
           assert.equal(await page.locator('.conversion-price').count(), 1);
           assert.match(await page.locator('.training-request-reassurance').innerText(), /does not charge your card/);
           assert.equal(await page.locator('.training-help-links a[href="/how-to#first-visit-guide"]').count(), 1);
@@ -65,6 +79,9 @@ try {
           await fits();
           await page.locator('#training').scrollIntoViewIfNeeded();
           await page.screenshot({ path: `test-results/marketing-offer-${engineName}-${width}.png` });
+          await page.locator('#reviews').screenshot({ path: `test-results/client-stories-${engineName}-${width}.png` });
+          await page.locator('#workshops').scrollIntoViewIfNeeded();
+          await page.screenshot({ path: `test-results/secondary-topics-${engineName}-${width}.png` });
           const puppy = page.locator('.conversion-goal').filter({ hasText: 'Puppy obedience' });
           assert.equal(await puppy.getAttribute('href'), '/portal?program=training&focus=puppy-foundations');
           await puppy.click();

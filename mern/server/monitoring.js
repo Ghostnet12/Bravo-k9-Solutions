@@ -4,6 +4,7 @@ import { waitUntil } from '@vercel/functions';
 import { z } from 'zod';
 import { CHANNELS, CLIENT_ERRORS, AREAS, routeArea, FUNNEL_STAGES } from '../shared/telemetry.js';
 import { FunnelVisit, SiteError, Booking } from './models.js';
+import { bookingFunnelPipeline } from './booking-funnel.js';
 
 export const WebVital = mongoose.models.BravoWebVital || mongoose.model('BravoWebVital', new mongoose.Schema({ _id: String, name: String, value: Number, area: String, device: String, createdAt: { type: Date, index: true }, expiresAt: { type: Date, expires: 0 } }));
 const retention = 30 * 86400000;
@@ -95,17 +96,12 @@ export async function monitoringSummary(req, res) {
   const days = z.enum(['7', '30']).default('30').parse(req.query.days);
   const since = new Date(Date.now() - (Number(days) - 1) * 86400000);
   since.setUTCHours(0, 0, 0, 0);
-  const [funnel, errors, vitals, stages] = await Promise.all([
-    FunnelVisit.aggregate([
-      { $match: { firstSeen: { $gte: since }, expiresAt: { $gt: new Date() } } },
-      { $lookup: { from: Booking.collection.name, localField: '_id', foreignField: 'analyticsSession', pipeline: [{ $project: { _id: 0, status: 1, paymentStatus: 1, paidAt: 1 } }], as: 'bookings' } },
-      { $project: { channel: 1, abandoned: { $cond: [{ $and: ['$started', { $lt: ['$firstSeen', new Date(Date.now() - 30 * 60 * 1000)] }, { $eq: [{ $size: '$bookings' }, 0] }] }, 1, 0] }, started: { $cond: ['$started', 1, 0] }, saved: { $cond: [{ $gt: [{ $size: '$bookings' }, 0] }, 1, 0] }, paid: { $cond: [{ $gt: [{ $size: { $filter: { input: '$bookings', as: 'b', cond: { $and: [{ $ne: [{ $ifNull: ['$$b.paidAt', null] }, null] }, { $in: ['$$b.paymentStatus', ['paid', 'refunded']] }] } } } }, 0] }, 1, 0] } } },
-      { $group: { _id: '$channel', visits: { $sum: 1 }, started: { $sum: '$started' }, saved: { $sum: '$saved' }, paid: { $sum: '$paid' }, abandoned: { $sum: '$abandoned' } } },
-    ]).option({ maxTimeMS: 5000 }),
+  const [funnelResult, errors, vitals] = await Promise.all([
+    FunnelVisit.aggregate(bookingFunnelPipeline(since, new Date(), Booking.collection.name)).option({ maxTimeMS: 5000 }),
     SiteError.find({ lastSeen: { $gte: since }, expiresAt: { $gt: new Date() } }).select('-_id -__v -expiresAt').sort({ lastSeen: -1 }).limit(200).maxTimeMS(5000).lean(),
     WebVital.aggregate([{ $match: { createdAt: { $gte: since }, expiresAt: { $gt: new Date() } } }, { $group: { _id: { name: '$name', device: '$device' }, count: { $sum: 1 }, p75: { $percentile: { input: '$value', p: [0.75], method: 'approximate' } } } }]).option({ maxTimeMS: 5000 }),
-    FunnelVisit.aggregate([{ $match: { firstSeen: { $gte: since }, expiresAt: { $gt: new Date() } } }, { $unwind: '$stages' }, { $group: { _id: '$stages', count: { $sum: 1 } } }]).option({ maxTimeMS: 5000 }),
   ]);
-  const totals = funnel.reduce((a, row) => { for (const key of ['visits', 'started', 'saved', 'paid', 'abandoned']) a[key] += row[key]; return a; }, { visits: 0, started: 0, saved: 0, paid: 0, abandoned: 0 });
-  res.json({ days: Number(days), since, checkedAt: new Date(), databaseConnected: mongoose.connection.readyState === 1, vitals: vitals.map(row => ({ ...row._id, count: row.count, p75: row.p75[0] })), stages: stages.map(row => ({ stage: row._id, count: row.count })), totals, channels: funnel.map(({ _id, ...row }) => ({ channel: _id, ...row })), errors });
+  const { channels: funnel = [], daily = [], customers = [], stages = [] } = funnelResult[0] || {};
+  const totals = funnel.reduce((a, row) => { for (const key of ['visits', 'started', 'saved', 'confirmed', 'paid', 'abandoned']) a[key] += row[key]; return a; }, { visits: 0, started: 0, saved: 0, confirmed: 0, paid: 0, abandoned: 0 });
+  res.json({ days: Number(days), since, checkedAt: new Date(), databaseConnected: mongoose.connection.readyState === 1, vitals: vitals.map(row => ({ ...row._id, count: row.count, p75: row.p75[0] })), stages: stages.map(row => ({ stage: row._id, count: row.count })), totals, confirmedClients: customers[0]?.count || 0, daily: daily.map(({ _id, ...row }) => ({ date: _id, ...row })), channels: funnel.map(({ _id, ...row }) => ({ channel: _id, ...row })), errors });
 }
