@@ -135,7 +135,7 @@ app.post('/api/auth/password', requireUser, rateLimit('password', 5, 900000), as
 });
 app.get('/api/availability', async (req, res) => res.json(await getAvailability(String(req.query.from), String(req.query.to), req.query.staffId ? String(req.query.staffId) : null)));
 app.post('/api/availability/auto', async (req, res) => {
-  const input = z.object({ count: z.number().int().min(1).max(31), startDate: z.string(), startTime: z.string(), endDate: z.string(), endTime: z.string(), preference: z.enum(['any', 'morning', 'afternoon', 'evening']), service: z.enum(['training', 'walking', 'aggression']), staffId: trainerSelectionInput.optional() }).parse(req.body);
+  const input = z.object({ count: z.number().int().min(1).max(31), startDate: z.string(), startTime: z.string(), endDate: z.string(), endTime: z.string(), preference: z.enum(['any', 'morning', 'afternoon', 'evening']), service: z.enum(['training', 'aggression']), staffId: trainerSelectionInput.optional() }).parse(req.body);
   const { days } = await getAvailability(input.startDate, input.endDate, input.staffId);
   res.json(autoSchedule(days, input));
 });
@@ -172,6 +172,7 @@ app.post('/api/bookings/:id/cancel', requireUser, async (req, res) => {
 app.patch('/api/bookings/:id/visits', requireUser, async (req, res) => {
   const record = await ownedBooking(req);
   const booking = await Booking.findById(record._id).select('+checkoutParams');
+  if (booking.serviceIds.some(id => !SERVICES.some(service => service.id === id))) throw Object.assign(new Error('This service is retired. Contact Bravo about an existing request.'), { status: 409 });
   if (booking.status === 'waitlisted') throw new Error('Waiting-list dates are preferences only. Choose another trainer with room or contact Bravo before changing dates.');
   if (booking.status === 'cancelled' || booking.stripeSessionId || booking.checkoutStarting || booking.checkoutParams) throw new Error('Contact Bravo to change a cancelled or checkout-linked booking.');
   const visits = z.array(z.object({ date: z.string(), time: z.string(), service: z.string() })).max(62).parse(req.body.visits);
@@ -459,6 +460,7 @@ app.put('/api/admin/lessons/:id', requireUser, requireStaff, async (req, res) =>
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Endpoint not found.' }));
 const clientDir = fileURLToPath(new URL('../client/dist/', import.meta.url));
 app.get('/dog-sitting', (_req, res) => res.redirect(308, '/portal'));
+app.get(['/dog-walking', '/dog-walking.html'], (_req, res) => res.redirect(308, '/dog-training'));
 // Normalize duplicate public document URLs before static file delivery.
 app.get('/{*path}', (req, res, next) => {
   const route = req.path.replace(/\.html$/, '').replace(/\/+$/, '') || '/';
