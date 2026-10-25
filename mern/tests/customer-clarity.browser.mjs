@@ -55,10 +55,10 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){if(proce
   assert.ok((await page.locator('.first-visit-intro .price-total').innerText()).includes('$300/month'));
   await page.screenshot({path:`test-results/first-visit-${engineName}-${width}.png`});assert.ok((await page.locator('.specialist-scope').innerText()).includes('not a quote for a complete specialist program'));await page.getByRole('button',{name:'Choose a trainer for obedience →',exact:true}).focus();await page.keyboard.press('Enter');await page.getByRole('heading',{name:'Choose your trainer.',exact:true}).waitFor();
   assert.equal(await page.locator('.date-grid').count(),0,'choose a trainer before showing dates');
-  assert.equal(await page.getByRole('button',{name:'Choose a date & time →',exact:true}).isEnabled(),false);
+  assert.equal(await page.getByRole('button',{name:'Choose a date & time →',exact:true}).count(),0, 'trainer selection continues in one action');
   assert.deepEqual(writes,[], 'exploring a first visit requires no sign-in or writes');
   assert.ok((await page.locator('.guided-booking-price').innerText()).includes('$300/month'));
-  await page.locator('.guided-trainer-cards button').filter({hasText:'Fixture Trainer'}).first().click();await page.getByRole('button',{name:'Choose a date & time →',exact:true}).click();
+  await page.locator('.guided-trainer-cards button').filter({hasText:'Fixture Trainer'}).first().click();
   await page.getByRole('heading',{name:'Choose your first visit',exact:true}).waitFor();assert.equal(await page.locator('#choose-program').count(),0);assert.equal(await page.locator('#visit-details').count(),0);
   assert.equal(await page.getByRole('button',{name:'Find available days & times',exact:true}).isVisible(),false);assert.equal(await page.locator('.single-date-editor').isVisible(),false);assert.equal(await page.locator('.first-visit-date-range').getAttribute('open'),null);
   const dates=page.locator('.date-grid button');await dates.first().click();await dates.nth(1).click();assert.equal(await page.locator('.date-grid button[aria-pressed=true]').count(),1);await dates.nth(1).click();assert.equal(await page.locator('.date-grid button[aria-pressed=true]').count(),0);
@@ -69,7 +69,7 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){if(proce
   await page.getByRole('button',{name:'Review my request →',exact:true}).click();await page.getByRole('heading',{name:'Review your first visit.',exact:true}).waitFor();
   assert.equal(await page.getByRole('button',{name:'Send my request • no charge',exact:true}).count(),0,'guests cannot submit a booking');
   assert.deepEqual(writes,[], 'guest trainer and date choices remain a local draft');
-  await page.getByRole('link',{name:'Sign in or create your account',exact:true}).click();
+  await page.getByLabel('Contact phone',{exact:true}).fill('6055550100');await page.getByLabel('Visit address',{exact:true}).fill('123 Fixture Street');await page.getByRole('button',{name:'I have an account — sign in →',exact:true}).click();
   await page.getByLabel('Name or email',{exact:true}).fill('Fixture Client');await page.getByLabel('Password',{exact:true}).fill('isolated-fixture-password');await page.locator('form').getByRole('button',{name:'Sign in',exact:true}).click();
   await page.getByLabel('Dogs’ names',{exact:true}).waitFor();
   await page.getByRole('heading',{name:'Review your first visit.',exact:true}).waitFor();
@@ -87,8 +87,9 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){if(proce
   await page.getByLabel('Dog’s name',{exact:true}).fill('Biscuit');await page.getByRole('button',{name:'Choose a trainer →',exact:true}).click();
   await page.locator('.guided-trainer-cards button').filter({hasText:'Fixture Trainer'}).first().click();
   assert.ok(await page.getByText('Fixture Trainer is currently full.',{exact:false}).isVisible());
-  await page.getByRole('button',{name:'Choose a date & time →',exact:true}).click();
+
   await page.getByText('No visits are available in this date range.',{exact:false}).waitFor();
+  assert.equal(await page.locator('.guided-next-opening').count(),0,'full trainers with no availability never offer a shortcut');
   assert.equal(await page.getByRole('button',{name:'Review my request →',exact:true}).isEnabled(),false);
   trainerFull=false;noSlots=false;
   for(const role of ['staff','owner']){actor=role;await page.goto(origin+'/portal?program=training');await page.getByRole('heading',{name:'Build your schedule',exact:true}).waitFor();assert.equal(await page.locator('.first-visit-intro').count(),0,'staff and owners retain the full scheduler');}

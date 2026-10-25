@@ -50,9 +50,9 @@ try {
    await page.getByRole('button',{name:'Choose a trainer →',exact:true}).focus();await page.keyboard.press('Enter');
    await page.getByRole('heading',{name:'Choose your trainer.',exact:true}).waitFor();
    assert.equal(await page.locator('.date-grid').count(),0);
-   assert.equal(await page.getByRole('button',{name:'Choose a date & time →',exact:true}).isEnabled(),false);
+   assert.equal(await page.getByRole('button',{name:'Choose a date & time →',exact:true}).count(),0, 'trainer selection continues in one action');
    await page.locator('.guided-trainer-cards').getByRole('button').filter({hasText:'Fixture Trainer'}).click();
-   await page.getByRole('button',{name:'Choose a date & time →',exact:true}).click();
+
    const dates=page.locator('.date-grid button');await dates.first().click();
    assert.equal(await page.getByRole('button',{name:'Review my request →',exact:true}).isEnabled(),false,'a date alone does not confirm a time');
    await page.locator('.bulk-times').getByRole('button',{name:/10:00/}).click();
@@ -60,7 +60,7 @@ try {
    await page.getByRole('heading',{name:'Review your first visit.',exact:true}).waitFor();
    assert.deepEqual(writes,[],'guest planning is a local draft');
    assert.equal(await page.getByRole('button',{name:'Send my request • no charge',exact:true}).count(),0);
-   await page.getByRole('link',{name:'Sign in or create your account',exact:true}).click();
+   await page.getByLabel('Contact phone',{exact:true}).fill('6055550100');await page.getByLabel('Visit address',{exact:true}).fill('123 Fixture Street');await page.getByRole('button',{name:'I have an account — sign in →',exact:true}).click();
    await page.getByLabel('Name or email',{exact:true}).fill('Fixture Client');
    await page.getByLabel('Password',{exact:true}).fill('isolated-fixture-password');
    await page.locator('form').getByRole('button',{name:'Sign in',exact:true}).click();

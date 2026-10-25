@@ -31,6 +31,7 @@ jobs:
       - run: npm install --ignore-scripts --no-save --package-lock=false playwright@1.55.1
       - run: npx playwright install --with-deps chromium webkit
       - run: node tests/booking-continuity.browser.mjs
+      - run: node tests/booking-simplicity.browser.mjs
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         if: always()
         with:

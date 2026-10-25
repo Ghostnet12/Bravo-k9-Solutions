@@ -23,8 +23,10 @@ export default function AccountPage() {
   const loadSequence = useRef(0);
   const [resetVersion, setResetVersion] = useState(0);
   const [mfaRequired, setMfaRequired] = useState(false);
-  const [mode, setMode] = useState('login'), [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false);
+  const requestedMode = params.get('mode');
+  const [mode, setMode] = useState(() => requestedMode === 'register' ? 'register' : 'login'), [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false);
   useEffect(() => { setMfaRequired(false); }, [mode]);
+  useEffect(() => { if (requestedMode === 'register' || requestedMode === 'login') setMode(requestedMode); }, [requestedMode]);
   const [bookings, setBookings] = useState([]), [loading, setLoading] = useState(false), [verificationDelayed, setVerificationDelayed] = useState(false);
   const [membershipAccess, setMembershipAccess] = useState({ active: false, manual: false, onlineAccess: false });
 
