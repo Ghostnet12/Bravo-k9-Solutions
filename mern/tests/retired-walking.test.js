@@ -43,7 +43,7 @@ test('old walking URLs redirect and have no page or sitemap entry', async () => 
 });
 
 test('customer navigation and booking UI no longer advertise retired walking', async () => {
-  for (const path of ['Home.tsx', 'ui.jsx', 'ContactPage.jsx', 'BookingPage.jsx', 'GoalFinder.jsx']) {
+  for (const path of ['Home.tsx', 'ui.jsx', 'ContactPage.jsx', 'BookingPage.jsx', 'GoalFinder.jsx', 'DogTrainingPage.jsx']) {
     const source = await readFile(new URL('../client/src/' + path, import.meta.url), 'utf8');
     assert.doesNotMatch(source, /dog-walking|Dog Walking|program === 'walking'|ids\.includes\('walking'\)/, path);
   }
