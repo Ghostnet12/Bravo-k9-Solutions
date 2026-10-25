@@ -25,6 +25,7 @@ export function availability({ from, to, settings = DEFAULT_SCHEDULE, occupied =
 }
 export function autoSchedule(days, { count, startDate, startTime = '09:00', endDate, endTime = '21:00', preference = 'any', service = 'training' }) {
   if (!Number.isInteger(count) || count < 1 || count > 31) throw new Error('Choose 1–31 appointments.');
+  if (!['training', 'aggression'].includes(service)) throw new Error('This service is no longer available for scheduling.');
   const start = dateTime(startDate, startTime), end = dateTime(endDate, endTime);
   if (end < start) throw new Error('Return must be after the first arrival.');
   const candidates = days.map(day => ({ ...day, slots: day.slots.filter(time => dateTime(day.date, time) >= start && dateTime(day.date, time) <= end) })).filter(day => day.slots.length);
