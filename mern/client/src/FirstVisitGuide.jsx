@@ -4,9 +4,9 @@ import { Editable } from './SiteContent';
 
 const steps = [
   { title: 'Your dog', heading: 'Start with your dog.', copy: 'Enter your dog’s name, number of dogs and what you want help with. The price shown is for a monthly training membership.', detail: 'Choose “Choose a trainer” for one first visit, or “Plan my entire month” for multiple visits.' },
-  { title: 'Trainer', heading: 'Choose who you’ll train with.', copy: 'Select a trainer to see their dates. You can explore the options before creating an account.', detail: 'Availability is checked again before sending. A full trainer may offer a waiting list; joining it does not reserve a visit or charge you.' },
-  { title: 'Date and time', heading: 'Pick a day. Then a time.', copy: 'Tap an available date, then choose one of the times directly below it. Times are local to Aberdeen, South Dakota.', detail: 'Use “Look for a different date” to explore further ahead. You can go back to change your trainer without sending anything.' },
-  { title: 'Review', heading: 'Check it. Send it. Get confirmation.', copy: 'Review your dog, trainer, date, time and monthly total. Sign in or create an account when prompted, then return to your request.', detail: 'Send your request after checking the details. Creating an account takes no payment. Bravo confirms your visit separately; membership renewal is manual.' },
+  { title: 'Trainer', heading: 'Choose who you’ll train with.', copy: 'Tap a trainer’s “See dates” card to continue. You can explore their dates before creating an account.', detail: 'Availability is checked again before sending. A full trainer may offer a waiting list; joining it does not reserve a visit or charge you.' },
+  { title: 'Date and time', heading: 'Pick a day. Then a time.', copy: 'Use the next available time to go straight to review, or tap a date and choose a time below it. Times are local to Aberdeen, South Dakota.', detail: 'Use “Look for a different date” to explore further ahead. You can go back to change your trainer without sending anything.' },
+  { title: 'Review', heading: 'Check it. Send it. Get confirmation.', copy: 'Check your visit and monthly total, then add your phone and visit address. Choose Create account or Sign in; your details stay filled in when you return.', detail: 'Send your request after checking the details. Creating an account takes no payment. Bravo confirms your visit separately; membership renewal is manual.' },
 ];
 export default function FirstVisitGuide() {
   const [selected, setSelected] = useState(0);

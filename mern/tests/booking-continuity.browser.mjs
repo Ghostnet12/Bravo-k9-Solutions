@@ -114,9 +114,8 @@ try {
         // Let the intentional stage-heading focus finish before keyboard input.
         await page.locator('#choose-program h2:focus').waitFor();
         await page.locator('.guided-trainer-cards button:not([disabled])').first().press('Enter');
-        await page.locator('.guided-trainer-cards button[aria-pressed=true]').waitFor();
-        assert.equal(await page.locator('.guided-trainer-cards button[aria-pressed=true]').count(),1); await assertFit('Trainer');
-        await page.getByRole('button', {name:'Choose a date & time →',exact:true}).click();
+        await page.getByRole('heading', {name:'Choose your first visit',exact:true}).waitFor();
+        assert.match(await page.locator('.guided-selection-summary').innerText(), /Fixture Trainer/); await assertFit('Date and time');
         await assertSteps('Date and time'); assert.equal(await page.locator('#choose-dates .step-heading>span').innerText(),'03');
         await page.locator('#choose-dates h2:focus').waitFor();
         await page.locator('.date-grid button').first().press('Enter');
@@ -137,11 +136,12 @@ try {
           await page.getByRole('button', {name:'Choose a trainer →',exact:true}).click();
           await page.getByRole('heading', {name:'Choose your trainer.',exact:true}).waitFor(); await assertSteps('Trainer');
           assert.equal(await page.locator('.guided-trainer-cards button[aria-pressed=true]').count(),1);
-          await page.getByRole('button', {name:'Choose a date & time →',exact:true}).click(); await assertSteps('Date and time');
+          await page.locator('.guided-trainer-cards button[aria-pressed=true]').click(); await assertSteps('Date and time');
           await page.getByRole('button', {name:'Review my request →',exact:true}).click(); await assertSteps('Review');
           assert.match(await page.locator('.guided-visit-summary').innerText(),/Fixture Trainer[\s\S]*10:00 AM/);
         }
-        await page.getByRole('link', {name:'Sign in or create your account',exact:true}).click();
+        await page.getByLabel('Contact phone',{exact:true}).fill('6055550100');await page.getByLabel('Visit address',{exact:true}).fill('123 Fixture Street');
+        await page.getByRole('button', {name:'I have an account — sign in →',exact:true}).click();
         await page.getByLabel('Name or email', {exact:true}).waitFor();
         assert.match(await page.getByRole('region',{name:'Your unsent request'}).innerText(),/Biscuit[\s\S]*Fixture Trainer[\s\S]*10:00 AM/);
         assert.equal(await page.getByText('Use at least 12 characters to keep your account secure.',{exact:true}).count(),0);

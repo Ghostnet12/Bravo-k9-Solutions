@@ -30,3 +30,19 @@
 .first-visit-details>summary{cursor:pointer;min-height:44px;padding:12px 0;color:var(--gold-light);font-weight:600}
 .first-visit-details>summary:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 .first-visit-details p{font-size:.9rem;line-height:1.7}
+
+.guided-trainer-action{display:block;margin-top:auto;padding-top:10px;color:var(--gold-light);font-size:.875rem;font-weight:700}
+.guided-next-opening{margin:20px 0;padding:18px;border:1px solid var(--gold);border-radius:12px;background:#ba9a640d}
+.guided-next-opening p{margin:0 0 12px;line-height:1.65}
+.guided-next-opening .helper{margin:12px 0 0}
+.guided-next-opening .button{width:100%;white-space:normal}
+.booking-contact-explainer{line-height:1.7;max-width:680px}
+.booking-account-actions{display:grid;gap:12px;margin-top:20px}
+.booking-account-actions .button{white-space:normal;min-height:48px}
+.app-page.guided-booking-page{padding-top:24px}
+.guided-booking-page .app-page-title{margin-bottom:16px;padding-bottom:16px}
+.guided-booking-page .app-page-title h1{font-size:clamp(2rem,4vw,3.2rem)}
+.booking-draft-compact{margin:12px auto;padding:0 14px;border-left-width:1px}
+.booking-draft-compact>summary{min-height:44px;padding:10px 0;cursor:pointer;font-size:.875rem;line-height:1.6}
+.booking-draft-compact>summary:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.booking-draft-compact .quiet-button{margin-bottom:8px}
