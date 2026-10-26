@@ -1,8 +1,9 @@
+import { configureLiveConnection } from './live-connection';
 import { api } from './api';
 import { createLocalPublisherHealth } from './publisher-health';
 
 export const DIRECT_ICE = [{ urls: 'stun:stun.cloudflare.com:3478' }];
-export const DIRECT_FAILURE = 'This network could not make a direct connection. Try Wi-Fi or a different network. Bravo does not use a paid video relay.';
+export const DIRECT_FAILURE = 'The video connection could not be established. Retry the connection; if it still fails, contact Bravo so we can check the relay and broadcast.';
 export const cameraReady = stream => !!stream?.getVideoTracks().some(track => track.readyState === 'live' && track.enabled && !track.muted);
 export function stopStream(stream) { stream?.getTracks().forEach(track => track.stop()); }
 export async function gatherDescription(pc) {
@@ -20,14 +21,17 @@ export async function gatherDescription(pc) {
 
 export function createBroadcaster(sessionId, getStream, onCount) {
   const peers = new Map(); let closed = false;
-  function remove(id) { const peer = peers.get(id); if (peer) { clearTimeout(peer.timeout); peer.pc.close(); peers.delete(id); } }
+  function remove(id) { const peer = peers.get(id); if (peer) { clearTimeout(peer.timeout); peer.connection?.disconnect(); peer.pc.close(); peers.delete(id); } }
   const count = () => onCount([...peers.values()].filter(p => p.pc.connectionState === 'connected').length);
   async function answer(item) {
     const pc = new RTCPeerConnection({ iceServers: DIRECT_ICE });
-    const peer = { pc, timeout: setTimeout(() => { if (pc.connectionState !== 'connected') { pc.close(); count(); } }, 35000) };
+    const peer = { pc, timeout: setTimeout(() => { if (pc.connectionState !== 'connected') { peer.connection?.disconnect(); pc.close(); count(); } }, 45000) };
     peers.set(item.id, peer);
-    pc.onconnectionstatechange = () => { if (pc.connectionState === 'failed') pc.close(); count(); };
+    pc.onconnectionstatechange = () => { if (pc.connectionState === 'failed') { peer.connection?.disconnect(); pc.close(); } count(); };
     try {
+      peer.connection = configureLiveConnection(pc, sessionId, () => { pc.close(); count(); });
+      await peer.connection.ready;
+      if (closed || pc.signalingState === 'closed') throw new Error('Connection cancelled.');
       await pc.setRemoteDescription(item.offer);
       for (const transceiver of pc.getTransceivers()) {
         // Negotiate send-only audio even if the microphone is currently off;
@@ -57,7 +61,7 @@ export function createBroadcaster(sessionId, getStream, onCount) {
         }
       }
     } catch {
-      clearTimeout(peer.timeout); pc.close(); count();
+      clearTimeout(peer.timeout); peer.connection?.disconnect(); pc.close(); count();
       // Release a failed slot; retain the local tombstone until the next sync so
       // a stale heartbeat cannot recreate a connection with an obsolete answer.
       if (!closed) await api(`/live/${sessionId}/peers/${item.id}/reject`, { method: 'POST', body: {}, timeoutMs: 5000 }).catch(() => {});
@@ -82,14 +86,14 @@ export function createBroadcaster(sessionId, getStream, onCount) {
 
 export function createViewer(sessionId, onStream, onState, onError) {
   const pc = new RTCPeerConnection({ iceServers: DIRECT_ICE });
-  const stream = new MediaStream(); let closed = false, credentials, timer, connectionTimer, lastVerified = Date.now();
+  const stream = new MediaStream(); let closed = false, credentials, timer, connectionTimer, connection, lastVerified = Date.now();
   const leave = () => {
     if (credentials) fetch(`/api/live/${sessionId}/peers/${credentials.peerId}/leave`, {
       method: 'POST', credentials: 'same-origin', keepalive: true,
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: credentials.token }),
     }).catch(() => {});
   };
-  function disconnect() { if (closed) return; closed = true; clearTimeout(timer); clearTimeout(connectionTimer); pc.close(); stopStream(stream); leave(); }
+  function disconnect() { if (closed) return; closed = true; clearTimeout(timer); clearTimeout(connectionTimer); connection?.disconnect(); pc.close(); stopStream(stream); leave(); }
   function fail(message) { if (closed) return; disconnect(); onState('ended'); onError(message); }
   pc.ontrack = ({ track }) => { stream.addTrack(track); onStream(stream); };
   pc.onconnectionstatechange = () => {
@@ -119,6 +123,9 @@ export function createViewer(sessionId, onStream, onState, onError) {
     disconnect,
     async connect() {
       try {
+        connection = configureLiveConnection(pc, sessionId, message => fail(message));
+        await connection.ready;
+        if (closed) return;
         pc.addTransceiver('video', { direction: 'recvonly' }); pc.addTransceiver('audio', { direction: 'recvonly' });
         await pc.setLocalDescription(await pc.createOffer());
         const offer = await gatherDescription(pc);
@@ -178,3 +185,4 @@ async function createLoopbackHealth(getStream, { signal } = {}) {
     throw new Error('The compatible camera check could not complete. Keep this tab open and try Start live again. If it repeats, try Safari or Chrome on another network.');
   } catch (error) { disconnect(); throw error; }
 }
+

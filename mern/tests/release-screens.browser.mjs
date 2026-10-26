@@ -39,6 +39,7 @@ for(const role of ['guest','member','staff','owner']) {
    if(liveState==='unavailable')return route.fulfill({status:503,json:{error:'Fixture network interrupted'}});
    data={sessions:liveState==='ended'?[]:[{id:'fixture-session',trainerId:tid,trainerName:'David Northrop',dogName:'Public Fixture Dog',status:liveState,audience:'public',startedAt:new Date(Date.now()-90000).toISOString(),liveUntil:new Date(Date.now()+60000).toISOString()}],announcements:[],availability:'available',serverTime:new Date().toISOString()};
   }
+  if(ep==='/live/fixture-session/connection')return route.fulfill({json:{iceServers:[{urls:'stun:stun.cloudflare.com:3478'}],iceTransportPolicy:'all',relayConfigured:false,expiresAt:null}});
   if(ep==='/live/fixture-session/watch')return route.fulfill({status:503,json:{error:'Fixture stream interrupted'}});
   return route.fulfill({json:data});
  });
@@ -94,3 +95,4 @@ for(const role of ['guest','member','staff','owner']) {
 }
 console.log(JSON.stringify({passed,realCustomerWrites:0,realPayments:0},null,2));
 }finally{await browser.close();server.close();}
+
