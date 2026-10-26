@@ -1,5 +1,5 @@
 // Direct WebRTC uses the existing authenticated API only for signaling.
-// There is deliberately no TURN relay, media host, account key or paid service.
+// Optional TURN credentials come from the access-checked live-network module.
 export const LIVE_PEER_LEASE_MS = 45000;
 export const LIVE_ICE_SERVERS = [{ urls: 'stun:stun.cloudflare.com:3478' }];
 export function liveConfigured() { return process.env.BRAVO_LIVE_ENABLED !== 'false'; }
