@@ -4,6 +4,7 @@ import { randomBytes, scrypt as scryptCallback, timingSafeEqual, createHash } fr
 import { promisify } from 'node:util';
 import { Session, User, RateBucket } from './models.js';
 import { sessionLifetime, privilegedSessionExpired } from './session-policy.js';
+import { appOrigins } from './app-origin.js';
 const scrypt = promisify(scryptCallback);
 export const digest = value => createHash('sha256').update(value).digest('hex');
 export async function hashPassword(password) {
@@ -81,8 +82,7 @@ export function sameOrigin(req, _res, next) {
   // Browser-supplied Fetch Metadata is an additional CSRF boundary. Clients
   // without this header still must pass the exact Origin and JSON checks below.
   if (req.headers['sec-fetch-site'] === 'cross-site') throw Object.assign(new Error('This request must start from the Bravo website.'), { status: 403 });
-  const allowed = process.env.APP_ORIGIN || (process.env.NODE_ENV !== 'production' ? 'http://localhost:5173' : '');
-  if (!allowed || req.headers.origin !== allowed) throw Object.assign(new Error('This request must start from the Bravo website.'), { status: 403 });
+  if (!appOrigins().includes(req.headers.origin)) throw Object.assign(new Error('This request must start from the Bravo website.'), { status: 403 });
   if (!req.is('application/json')) throw Object.assign(new Error('JSON request required.'), { status: 415 });
   next();
 }

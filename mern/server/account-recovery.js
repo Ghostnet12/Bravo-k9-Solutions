@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
+import { appOrigin } from './app-origin.js';
 import { User, Session, PasswordReset, AuditEvent } from './models.js';
 import { transaction } from './db.js';
 import { digest, hashPassword } from './auth.js';
@@ -25,7 +26,7 @@ export async function issueRecovery(req, res) {
     await PasswordReset.create([{ _id: digest(token), userId: targetId, credentialVersion: target.credentialVersion || 0, expiresAt }], { session: dbSession });
     await AuditEvent.create([{ actorId: actor._id, action: 'password.recovery-issued', targetType: 'user', targetId }], { session: dbSession });
   });
-  res.json({ url: `${process.env.APP_ORIGIN}/reset-password#${token}`, expiresAt });
+  res.json({ url: `${appOrigin()}/reset-password#${token}`, expiresAt });
 }
 
 export async function completeRecovery(req, res) {

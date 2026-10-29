@@ -1,5 +1,6 @@
 import { readLessonLibrary } from './lesson-library.js';
 import Stripe from 'stripe';
+import { appOrigin } from './app-origin.js';
 import { Booking, User, Subscription, StripeEvent, BillingLock, Lesson, Settings } from './models.js';
 import { connectDb, transaction } from './db.js';
 import { ALL_SERVICES, SERVICES, TRAINING_ADDITIONAL_DOG_CENTS, serviceSelection, quote } from '../shared/catalog.js';
@@ -14,6 +15,8 @@ export function stripeClient() {
   const key = process.env.STRIPE_SECRET_KEY;
   const mode = stripeMode();
   if (!key || !mode || !process.env.STRIPE_WEBHOOK_SECRET) return null;
+  // A preview must never initiate live charges, even if live credentials are mis-scoped.
+  if (mode === 'live' && process.env.VERCEL_ENV === 'preview') return null;
   if (mode === 'live' && process.env.STRIPE_LIVE_ENABLED !== 'true') return null;
   if (mode === 'test' && process.env.VERCEL_ENV === 'production' && process.env.STRIPE_TEST_CHECKOUT_ENABLED !== 'true') return null;
   return new Stripe(key, { maxNetworkRetries: 1, timeout: 8000 });
@@ -58,7 +61,7 @@ export async function checkout(booking, user, stripe) {
   if (booking.status === 'waitlisted') throw Object.assign(new Error('This request is on the trainer waiting list. No payment is due until a spot opens.'), { status: 409 });
   if (!stripe) throw Object.assign(new Error('Card payments are not connected yet. Your request is saved; Bravo will contact you.'), { status: 503 });
   if (booking.status === 'cancelled' || booking.paymentStatus !== 'unpaid') throw new Error('This booking does not need another payment.');
-  const origin = process.env.APP_ORIGIN;
+  const origin = appOrigin();
   if (!origin) throw Object.assign(new Error('Checkout is not configured yet.'), { status: 503 });
   const selected = serviceSelection(booking.serviceIds);
   if (selected.some(s => s.includes.includes('online')) && !(await readLessonLibrary()).open) throw Object.assign(new Error('Online lesson enrollment is closed.'), { status: 409 });

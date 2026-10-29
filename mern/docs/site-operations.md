@@ -30,9 +30,9 @@ Tests cover owner-only access, rejected arbitrary telemetry fields, deduplicatio
 
 ## Database backup activation — pending
 
-On September 14, 2026, the connected Atlas Project 0 / Cluster0 contains `bravo_k9` and uses the Free tier. Atlas automatic backups are not available for Free clusters. The database being connected and health checks passing are **not** evidence of a backup.
+On September 14, 2026, the connected Atlas Project 0 / Cluster0 contained `bravo_k9` on the Free tier. **October 29 update:** MongoDB now documents an optional Free-tier backup subscription in private preview; availability and snapshot coverage for this account are unverified. See [preview and recovery follow-up](preview-and-recovery.md) for current findings and the no-new-recurring-cost constraint. Database connectivity and health checks are **not** evidence of a backup.
 
-The proposed change is to upgrade this existing cluster to Flex. MongoDB currently documents $8–$30 for 30 days, usage-based, with automatic daily snapshots and retention of the last eight snapshots. This affects every database on the shared cluster, not only Bravo. Billing approval is still required before changing the tier. No plan upgrade, backup snapshot or restore was performed as part of this code change.
+The historical Flex proposal below is a deferred paid option, not the current approved action. Its prior estimate was $8–$30 for 30 days, with daily snapshots and eight-snapshot retention; recheck pricing and compatibility before considering it. A cluster upgrade affects every database on the shared cluster. No plan upgrade, backup snapshot or restore was performed as part of this code change.
 
 After approval:
 

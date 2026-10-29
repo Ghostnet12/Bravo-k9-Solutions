@@ -1,4 +1,4 @@
-/* One approved portrait composition on phone, tablet and desktop. */
+/* Preserve the approved portrait composition on phone and tablet. */
 .cinema-home.conversion-home .home-hero--confidence {
   --confidence-width: min(100vw, 460px);
   display: block;
@@ -66,3 +66,43 @@
 .cinema-home.conversion-home .home-hero--confidence .polish-hero-actions .conversion-button:hover { background: #c9ab77; }
 .cinema-home.conversion-home .home-hero--confidence .hero-plan-explainer { margin: 12px 0 0; color: #d2cec5; font: 400 12px/1.6 Montserrat, sans-serif; }
 .cinema-home.conversion-home .home-hero--confidence .cinema-hero-baseline { display: none; }
+
+/* Desktop gives the unchanged portrait and the booking message their own space. */
+@media (min-width: 1000px) {
+  .cinema-home.conversion-home .home-hero--confidence {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 400px;
+    gap: clamp(40px, 6vw, 88px);
+    align-items: center;
+    width: min(calc(100% - 80px), 1120px);
+    margin-inline: auto;
+    padding: calc(106px + env(safe-area-inset-top)) 0 40px;
+  }
+  .cinema-home.conversion-home .home-hero--confidence .cinema-hero-media {
+    position: relative;
+    inset: auto;
+    grid-column: 2;
+    grid-row: 1;
+    width: 400px;
+    height: 600px;
+    transform: none !important;
+  }
+  .cinema-home.conversion-home .home-hero--confidence .cinema-hero-shade {
+    background: linear-gradient(180deg, #10101000 85%, #101010 100%);
+  }
+  .cinema-home.conversion-home .home-hero--confidence .cinema-hero-copy {
+    grid-column: 1;
+    grid-row: 1;
+    width: 100%;
+    margin: 0;
+    padding: 24px 0;
+  }
+  .cinema-home.conversion-home .home-hero--confidence h1 {
+    font-size: clamp(64px, 6.5vw, 92px);
+  }
+  .cinema-home.conversion-home .home-hero--confidence .cinema-eyebrow { margin-bottom: 20px; }
+  .cinema-home.conversion-home .home-hero--confidence .hero-service-location { margin-top: 24px; font-size: 14px; }
+  .cinema-home.conversion-home .home-hero--confidence .cinema-hero-intro { margin: 16px 0 28px; font-size: 18px; max-width: 36ch; }
+  .cinema-home.conversion-home .home-hero--confidence .polish-hero-actions { max-width: 400px; }
+  .cinema-home.conversion-home .home-hero--confidence .hero-plan-explainer { max-width: 48ch; }
+}
