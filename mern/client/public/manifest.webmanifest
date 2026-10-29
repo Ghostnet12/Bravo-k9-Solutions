@@ -14,10 +14,16 @@
       "type": "image/png"
     },
     {
-      "src": "/bravo-app-icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/bravo-shield-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "/bravo-shield-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "shortcuts": [

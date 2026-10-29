@@ -95,6 +95,34 @@ test('media editor persistence and server authorization (isolated MongoDB)', { t
         assert.match((await request(app).get(photo.src).expect(200)).headers['cache-control'], /private.*no-store/);
       }
     });
+    await t.test('optimized public photos preserve replacement, undo, framing, expiry and byte-range behavior', async () => {
+      const key = 'home-training-hero', uploadId = 'a5e35ce4-8348-48ed-ada0-e2f0111a53a3';
+      const data = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aU1cAAAAASUVORK5CYII=';
+      const bytes = Buffer.from(data, 'base64'), copy = '/assets/bravo-photo-3d08b616d6f2.webp';
+      await MediaUpload.create({ _id: uploadId, lessonId: `site:${key}`, kind: 'image', filename: 'original.png', contentType: 'image/png', size: bytes.length, chunks: 1, completed: true });
+      await MediaChunk.create({ uploadId, index: 0, size: bytes.length, data: bytes });
+      await SiteImage.create({ _id: key, revision: 1, current: { uploadId, ...edit, framed: true } });
+      const path = `/api/site-images/${key}/image`;
+      const first = await request(app).get(`${path}?v=1`).expect(307);
+      assert.equal(first.headers.location, copy);
+      assert.match(first.headers['cache-control'], /private.*no-store/);
+      assert.equal((await request(app).head(path).expect(307)).headers.location, copy);
+      assert.equal((await request(app).get(`${path}?v=0`).expect(307)).headers.location, `${path}?v=1`);
+      const range = await request(app).get(`${path}?v=1`).set('Range', 'bytes=0-7').expect(206);
+      assert.deepEqual(range.body, bytes.subarray(0, 8));
+      await call('owner', 'patch', `/api/site-images/${key}`, { ...edit, expectedRevision: 1, x: 27, zoom: 1.2 }).expect(200);
+      assert.equal((await request(app).get(`${path}?v=2`).expect(307)).headers.location, copy);
+      const saved = (await call('owner', 'put', `/api/site-images/${key}`, { ...edit, expectedRevision: 2, filename: 'replacement.png', contentType: 'image/png', data }).expect(200)).body.image;
+      assert.deepEqual((await request(app).get(saved.src).expect(200)).body, bytes, 'replacement uses its own bytes');
+      await call('owner', 'post', `/api/site-images/${key}/undo`, { expectedRevision: 3 }).expect(200);
+      assert.equal((await request(app).get(`${path}?v=4`).expect(307)).headers.location, copy);
+      assert.equal((await SiteImage.findById(key)).current.x, 27, 'undo preserves original framing');
+      await SiteImage.updateOne({ _id: key }, { $set: { expiresAt: new Date(0) } });
+      await request(app).get(path).expect(404);
+      await SiteImage.updateOne({ _id: key }, { $unset: { expiresAt: 1 } });
+      await MediaUpload.deleteOne({ _id: uploadId });
+      await request(app).get(path).expect(404);
+    });
     await Lesson.create({ _id: 'sample', title: 'Sample', category: 'Test', instructor: 'Owner', image: '/images/training-education.webp', published: true });
     await t.test('video framing does not unpublish or expose a lesson', async () => {
       await call('owner', 'patch', '/api/site-images/video-lesson-sample', { ...edit, zoom: 1.5 }).expect(200);

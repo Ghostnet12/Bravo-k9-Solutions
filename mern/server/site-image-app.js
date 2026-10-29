@@ -26,6 +26,7 @@ import { DEFAULT_HERO_FILM } from '../shared/hero-film.js';
 import { heroRendition, heroPosterRendition } from './hero-rendition.js';
 import { effectiveServices } from './services.js';
 import { SiteImage } from './site-image-store.js';
+import { siteImageRendition } from './site-image-rendition.js';
 import { backgroundDraftExpiry } from './background-images.js';
 export { SiteImage } from './site-image-store.js';
 
@@ -85,6 +86,13 @@ router.get('/:key/image', connect, async (req, res) => {
   if (!image?.current?.uploadId || image.expiresAt <= new Date()) return res.status(404).end();
   const publicPhoto = !req.params.key.startsWith('background-') && !req.params.key.startsWith('lesson-');
   if (publicPhoto && req.query.v && req.query.v !== String(image.revision)) return res.redirect(307, `/api/site-images/${req.params.key}/image?v=${image.revision}`);
+  const rendition = publicPhoto && !req.headers.range ? siteImageRendition(image) : null;
+  if (rendition) {
+    if (!await MediaUpload.exists({ _id: image.current.uploadId, completed: true, kind: 'image' })) return res.status(404).end();
+    // Keep this redirect uncached so every edit is resolved from current state.
+    // The content-hashed static copy can be cached without caching private media.
+    return res.redirect(307, rendition);
+  }
   return sendUploadedMedia(image.current.uploadId, req, res, 'image', publicPhoto && req.query.v === String(image.revision) ? { cacheControl: 'public, max-age=86400, s-maxage=86400' } : {});
 });
 // Administrator accounts carry role=owner; ordinary staff are explicitly denied.
