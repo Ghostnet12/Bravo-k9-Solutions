@@ -61,7 +61,9 @@ try {
             assert.ok(primary.y > 74 && primary.y + primary.height < navigation.y, 'desktop booking is above the fixed navigation');
           } else {
             assert.equal(Math.round(photoBox.width), Math.min(width, 460), 'approved phone and tablet photo width is preserved');
-            assert.ok(copyBox.y > photoBox.y, 'phone and tablet keep their portrait composition');
+            const headlineBox = await page.locator('.cinema-hero-copy h1').boundingBox();
+            assert.ok(headlineBox.y > photoBox.y + photoBox.height / 2, 'phone and tablet place the visible headline below the portrait midpoint');
+            assert.ok(Math.abs(photoBox.x + photoBox.width / 2 - width / 2) < 2, 'phone and tablet keep the portrait centered');
           }
           const sectionOrder = await page.locator('#main-content').evaluate(main => {
             const sections = [...main.querySelectorAll('#team, #results, [aria-labelledby="booking-title"], #k9-transport, #online')];
