@@ -32,3 +32,29 @@
 @media(max-width:600px){.transport-page main{padding:12px 14px 36px}.transport-home{width:calc(100% - 28px);margin:28px auto}.transport-hero{border-radius:14px;margin-bottom:32px}.transport-hero .transport-title{font-size:clamp(2rem,7.9vw,2.9rem);padding:24px 22px}.transport-copy{padding:22px}.transport-badge{top:16px;left:18px;font-size:.65rem;padding:8px 12px}.transport-actions{gap:10px}.transport-actions .transport-primary{width:100%}.transport-signup{grid-template-columns:1fr;gap:16px}.transport-signup .button{width:100%}}
 
 @media(min-width:601px) and (max-width:1199px){.transport-photo{aspect-ratio:16/9}}
+
+/* A compact preview follows the training journey; the transport page retains its full hero. */
+.transport-hero.transport-home{max-width:1000px;min-height:0;aspect-ratio:auto;padding:0;margin-block:32px;display:grid;grid-template-rows:auto auto auto}
+.transport-home .transport-photo{position:relative;inset:auto;z-index:0;aspect-ratio:16/9}
+.transport-home .transport-photo:after{display:none}
+.transport-home .transport-title{max-width:none;font-family:'Bebas Neue',sans-serif;font-weight:400;font-size:2.5rem;letter-spacing:0;padding:24px 24px 16px;margin:0}
+.transport-home .transport-title br{display:none}
+.transport-home .transport-copy{max-width:none;padding:20px 24px 24px}
+.transport-home .transport-tagline{font-size:1.15rem;margin-bottom:10px}
+.transport-home .transport-intro{font-size:.95rem;margin-bottom:16px;max-width:none}
+.transport-home .transport-badge{top:16px;left:16px;right:auto}
+.transport-home .transport-actions .transport-primary{background:transparent;color:#e1c99d;border-color:#BA9A64;font-weight:650}
+.transport-home .transport-actions .transport-primary:hover{background:#BA9A64;color:#101010}
+.transport-home .transport-contact{font-size:.85rem;line-height:1.5}
+@media(min-width:701px){
+  .transport-hero.transport-home{grid-template-columns:44% minmax(0,1fr);grid-template-rows:auto 1fr}
+  .transport-home .transport-photo{grid-column:1;grid-row:1 / span 2;aspect-ratio:auto;min-height:320px}
+  .transport-home .transport-photo img{object-fit:contain}
+  .transport-home .transport-title{grid-column:2;grid-row:1;padding:28px 28px 0}
+  .transport-home .transport-copy{grid-column:2;grid-row:2;padding:16px 28px 28px}
+}
+.cinema-home .cinema-online.cinema-online--upcoming{padding-block:28px;background:#101010}
+.cinema-home .cinema-online--upcoming .cinema-online-inner{display:block}
+.cinema-home .cinema-online--upcoming h2{font-size:32px;margin:8px 0 12px}
+.cinema-home .cinema-online--upcoming .cinema-eyebrow{margin-bottom:8px}
+.cinema-home .cinema-online--upcoming .cinema-button{background:transparent;color:#e1c99d;border:1px solid #BA9A64;margin-top:12px}

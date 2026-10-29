@@ -1,4 +1,5 @@
 import { liveRoutes, liveApiRateLimit } from './live-sessions.js';
+import { appOrigin } from './app-origin.js';
 import { updateUserAccess } from './user-access.js';
 import { assertTrainingAllowance } from './training-allowance.js';
 import { termActive } from '../shared/membership-terms.js';
@@ -210,7 +211,7 @@ app.post('/api/bookings/:id/checkout', requireUser, rateLimit('checkout', 20, 36
 app.post('/api/billing/portal', requireUser, rateLimit('billing-portal', 10, 3600000), async (req, res) => {
   const stripe = stripeClient();
   if (!stripe || !req.user.stripeCustomerId) return paymentsUnavailable(res);
-  const portal = await stripe.billingPortal.sessions.create({ customer: req.user.stripeCustomerId, return_url: `${process.env.APP_ORIGIN}/account` });
+  const portal = await stripe.billingPortal.sessions.create({ customer: req.user.stripeCustomerId, return_url: `${appOrigin()}/account` });
   res.json({ url: portal.url });
 });
 app.get('/api/reviews', async (_req, res) => {

@@ -42,7 +42,7 @@ try {
           const image = page.locator('.cinema-hero-still');
           await image.evaluate(img => img.decode());
           const source = await image.evaluate(img => img.currentSrc);
-          const pixels = Math.min(width, 460) * deviceScaleFactor;
+          const pixels = (width >= 1000 ? 400 : Math.min(width, 460)) * deviceScaleFactor;
           const expectedImage = pixels <= 600 ? 'hero-real-confidence-600.webp' : pixels <= 900 ? 'hero-real-confidence-900.webp' : 'hero-real-confidence.webp';
           assert.ok(source.endsWith(expectedImage), source);
           const heroRequests = requests.filter(path => /\/hero-real-confidence(?:-\d+)?\.webp$/.test(path));
@@ -52,6 +52,24 @@ try {
           assert.equal(await page.locator('.mobile-home-nav svg').count(),6,'all quick-navigation icons are stable SVG outlines');
           assert.equal(await page.locator('.cinema-story').count(),0,'duplicate training-photo story is removed');
           assert.equal(await page.locator('.cinema-dog-gallery').count(),1,'editable original photo gallery remains');
+          const photoBox = await image.boundingBox();
+          const copyBox = await page.locator('.cinema-hero-copy').boundingBox();
+          if (width >= 1000) {
+            assert.ok(copyBox.x + copyBox.width < photoBox.x, 'desktop message and complete portrait have separate columns');
+            const primary = await page.locator('.polish-hero-actions a').first().boundingBox();
+            const navigation = await page.locator('.mobile-home-nav').boundingBox();
+            assert.ok(primary.y > 74 && primary.y + primary.height < navigation.y, 'desktop booking is above the fixed navigation');
+          } else {
+            assert.equal(Math.round(photoBox.width), Math.min(width, 460), 'approved phone and tablet photo width is preserved');
+            const headlineBox = await page.locator('.cinema-hero-copy h1').boundingBox();
+            assert.ok(headlineBox.y > photoBox.y + photoBox.height / 2, 'phone and tablet place the visible headline below the portrait midpoint');
+            assert.ok(Math.abs(photoBox.x + photoBox.width / 2 - width / 2) < 2, 'phone and tablet keep the portrait centered');
+          }
+          const sectionOrder = await page.locator('#main-content').evaluate(main => {
+            const sections = [...main.querySelectorAll('#team, #results, [aria-labelledby="booking-title"], #k9-transport, #online')];
+            return sections.map(section => section.id || 'booking');
+          });
+          assert.deepEqual(sectionOrder, ['team', 'results', 'booking', 'k9-transport', 'online'], 'training, proof and booking precede upcoming services in reading order');
           if (height === 390) {
             for (const link of await page.locator('.polish-hero-actions a').all()) {
               await link.scrollIntoViewIfNeeded();

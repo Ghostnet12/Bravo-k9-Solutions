@@ -83,6 +83,8 @@ test('live Stripe keys require an explicit launch switch', () => {
   assert.equal(stripeClient(),null);
   process.env.STRIPE_TEST_CHECKOUT_ENABLED='true';
   assert.ok(stripeClient());
+  process.env.STRIPE_SECRET_KEY='sk_live_not_real'; process.env.STRIPE_LIVE_ENABLED='true'; process.env.VERCEL_ENV='preview';
+  assert.equal(stripeClient(),null, 'preview deployments cannot use live payment credentials');
   for(const [key,value] of Object.entries({STRIPE_SECRET_KEY:old.key,STRIPE_WEBHOOK_SECRET:old.secret,STRIPE_LIVE_ENABLED:old.enabled,VERCEL_ENV:old.vercel,STRIPE_TEST_CHECKOUT_ENABLED:old.testEnabled})) value === undefined ? delete process.env[key] : process.env[key]=value;
 });
 

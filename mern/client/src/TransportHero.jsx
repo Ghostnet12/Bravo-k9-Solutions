@@ -5,7 +5,7 @@ import './transport.css';
 export default function TransportHero({ home = false }) {
   return <section id={home ? 'k9-transport' : undefined} className={`transport-hero${home ? ' transport-home' : ''}`} aria-labelledby="transport-title">
     <div className="transport-photo">
-      <img src="/images/bravo-k9-transport.webp" srcSet="/images/bravo-k9-transport-small.webp 900w, /images/bravo-k9-transport.webp 1672w" sizes="(max-width: 1000px) 100vw, 1400px" data-site-image-key="asset-bravo-k9-transport.webp" width="1672" height="941" loading={home ? 'lazy' : 'eager'} fetchPriority={home ? undefined : 'high'} decoding="async" alt="Bravo’s black Dodge Durango with silver wheels, front push bar and spotlight on a road at sunset"/>
+      <img src="/images/bravo-k9-transport.webp" srcSet="/images/bravo-k9-transport-small.webp 900w, /images/bravo-k9-transport.webp 1672w" sizes={home ? '(min-width: 701px) 440px, 100vw' : '(max-width: 1000px) 100vw, 1400px'} data-site-image-key="asset-bravo-k9-transport.webp" width="1672" height="941" loading={home ? 'lazy' : 'eager'} fetchPriority={home ? undefined : 'high'} decoding="async" alt="Bravo’s black Dodge Durango with silver wheels, front push bar and spotlight on a road at sunset"/>
       <Editable as="span" contentKey="transport-status" canEditText className="transport-badge">Coming Soon</Editable>
     </div>
     <Editable as={home ? 'h2' : 'h1'} contentKey="transport-title" canEditText id="transport-title" className="transport-title">K9<br/>{' '}Transport</Editable>

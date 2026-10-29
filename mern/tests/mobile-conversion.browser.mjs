@@ -123,7 +123,15 @@ try {
     const box = await hero.boundingBox(), nav = await page.locator('.mobile-home-nav').boundingBox();
     assert.ok(box.y >= 74 && box.y + box.height <= nav.y, 'hero action is reachable without overlap from sticky controls');
     const media = await page.locator('.cinema-hero-media').boundingBox();
-    assert.ok(Math.abs(media.x + media.width / 2 - width / 2) < 2, 'same centered portrait composition on every screen');
+    if (width < 1000) {
+      assert.ok(Math.abs(media.x + media.width / 2 - width / 2) < 2, 'phone and tablet preserve the centered portrait composition');
+    } else {
+      const copy = await page.locator('.cinema-hero-copy').boundingBox();
+      assert.ok(copy.x + copy.width < media.x, 'desktop message has its own column beside the portrait');
+      assert.equal(Math.round(media.width), 400, 'desktop retains the complete 400px portrait');
+      assert.equal(Math.round(media.height), 600, 'desktop preserves the portrait aspect ratio');
+      assert.ok(media.x + media.width <= width, 'desktop portrait stays within the viewport');
+    }
     assert.equal(await page.locator('.home-ad-dock').count(),0); assert.ok(Math.abs(nav.y+nav.height-page.viewportSize().height)<2, 'navigation sits at the phone bottom without ad space');
     const access = await page.locator('.accessibility-tools').boundingBox(); assert.ok(access.y + access.height <= nav.y, 'accessibility stays above navigation');
     assert.equal(await hero.getAttribute('href'), '/portal?program=training');
