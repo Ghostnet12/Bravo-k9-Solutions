@@ -39,6 +39,14 @@ Chromium and WebKit.
 - All 22 existing read-only production penetration checks passed: private API
   authentication, unauthenticated cron rejection, sensitive-file denial, response
   headers, and private response cache controls.
+- Ten additional bounded production probes passed: invalid/missing origins,
+  cross-site fetch metadata, non-JSON writes, malformed JSON redaction, forged
+  sessions, protected HEAD requests, FCI cron authorization, and public-page
+  traversal/duplicate parameters. No valid sign-in attempt or real-data write
+  was performed.
+- Lint, production build, and all 260 unit tests passed locally. The deployed
+  protected preview passed the account-switch regression at both widths using
+  intercepted synthetic APIs; no preview account data was read or changed.
 - Locked application dependency audit: zero reported vulnerabilities at any
   severity. This does not assess unsupported code paths or guarantee absence of
   unknown vulnerabilities.
@@ -51,6 +59,15 @@ Chromium and WebKit.
   penetration and isolated authentication/authorization/media integration steps.
   Its secret scan and CodeQL analysis also passed. The patch must independently
   pass its own required checks before release.
+- Patch workflow `40814699553` passed its application, database, browser,
+  dependency, secret-scan, CodeQL, and release-gate checks, including the new
+  account-isolation regression in Chromium and WebKit at both widths.
+- A separate booking browser test supplied an incomplete membership fixture.
+  Keeping its signed-in account view open reproduced a rendering error because
+  the mock omitted `terms`. The fixture now matches the real API's empty-array
+  contract, and the test explicitly checks the account after the handoff.
+  Browser error assertions remain enabled. The resulting commit must pass the
+  release checks again.
 - The live mobile homepage, booking entry, and account entry rendered without
   horizontal overflow, JavaScript page errors, or HTTP 4xx/5xx responses during
   the recorded navigation. Browser traffic used the environment's HTTPS proxy;
@@ -61,8 +78,11 @@ Chromium and WebKit.
 This is a targeted application assessment, not an exhaustive independent
 penetration-test certification. No load/DoS testing, credential guessing against
 real users, real payment exercise, or database backup restoration was performed.
-Atlas network rules, database-user privileges, and backup configuration were not
-independently audited. Vercel returned no custom firewall configuration; that
+Atlas review was limited to read-only project access-list and database-user
+metadata. The production database secret was redacted, so active credential
+usage and backup configuration were not independently verified. Infrastructure
+hardening requiring a network migration is tracked separately with the owner.
+Vercel returned no custom firewall configuration; that
 does not establish whether platform-level protections are absent.
 
 Local MongoDB integration tests could not start because this execution environment
