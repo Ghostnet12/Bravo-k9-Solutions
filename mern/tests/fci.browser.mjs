@@ -35,6 +35,11 @@ try {
         await page.evaluate(() => document.fonts.ready);
         assert.equal(await page.locator('h1').count(), 1);
         assert.equal(await page.locator('.fci-cards>a').count(), 4);
+        assert.equal(await page.locator('.fci-cards svg[viewBox="0 0 24 24"][aria-hidden="true"]').count(), 4, 'resource icons remain sharp at any density');
+        assert.match(await page.locator('.fci-hero').evaluate(el => getComputedStyle(el, '::before').backgroundImage), /fci-world-hero\.webp/);
+        await page.locator('.fci-intro img').scrollIntoViewIfNeeded();
+        await page.waitForFunction(() => { const img = document.querySelector('.fci-intro img'); return img?.complete && img.naturalWidth === 512; });
+        await page.evaluate(() => window.scrollTo(0, 0));
         assert.equal(await page.locator('.fci-news-card').count(), 5);
         assert.equal(await page.getByText('Unsafe link').count(), 0);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, `${name} ${width}: no overflow`);
