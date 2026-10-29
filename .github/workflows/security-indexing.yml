@@ -64,6 +64,7 @@ jobs:
           node tests/carousel-swipe.browser.mjs
           node tests/customer-clarity.browser.mjs
           node tests/client-login.browser.mjs
+          node tests/account-isolation.browser.mjs
           node tests/client-removal.browser.mjs
           node tests/mfa.browser.mjs
       - name: Known locked dependency vulnerabilities (retry registry maintenance)
