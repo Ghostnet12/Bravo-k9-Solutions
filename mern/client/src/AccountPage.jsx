@@ -17,6 +17,13 @@ import { accessLabel, deskLabel } from '../../shared/access';
 const serviceName = id => ALL_SERVICES.find(service => service.id === id)?.name || 'Legacy Bravo program';
 const isBookable = booking => booking.serviceIds.every(id => SERVICES.some(service => service.id === id));
 export default function AccountPage() {
+  const { user } = useBravo();
+  // Discard private records, drafts and pending callbacks at the identity
+  // boundary, before another account can render even if its data load fails.
+  const identity = user ? `${user.id}:${user.role}:${Boolean(user.mustChangePassword)}` : 'guest';
+  return <AccountWorkspace key={identity}/>;
+}
+function AccountWorkspace() {
   const { user, config, refreshUser, authReady, draftOwner, discardBookingDraft, bookingDraft, beginBookingHandoff, hasLockedBookingDraft } = useBravo(), [params] = useSearchParams(), navigate = useNavigate();
   const returningBooking = params.get('booking');
   const pendingBooking = bookingDraft;

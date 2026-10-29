@@ -23,6 +23,9 @@ app.use('/api', (req, res) => {
   let data = { images: {}, entries: {}, reviews: [], recommendations: [], count: 0, clips: [], items: [], alerts: [], revision: 0, bookings: [] };
   if (path === '/config') data = { connected: true, paymentsReady: false, services: SERVICES, lessonLibrary: { open: false }, schedule: { enabled: true, weekdays: [1,2,3,4,5], hours: ['09:00','10:00','14:00'] } };
   if (path === '/auth/me') data = { user: fixture.user, services: [], membership: { active: false } };
+  // Account rendering can run between authentication and the booking handoff.
+  // Match the real endpoint contract even when this fixture has no memberships.
+  if (path === '/membership-terms') data = { terms: [] };
   if (path === '/team') data = { team };
   if (path === '/trainers') data = { trainers: team.map(person => ({ ...person, full: false, limit: 5, spotsRemaining: 5 })) };
   if (path === '/availability') {
@@ -130,6 +133,12 @@ try {
         assert.equal(await page.getByLabel('Visit address', { exact: true }).inputValue(), 'Saved profile address');
         assert.equal(await page.getByLabel('Dog’s name', { exact: true }).inputValue(), 'Returning Dog');
         assert.deepEqual(fixture.writes.map(item => item.path), ['/auth/login'], 'sign-in uses saved details without submitting a request');
+        // Keep the account mounted long enough to exercise its asynchronous
+        // reads; a malformed fixture must not be hidden by a quick handoff.
+        await page.goto(`${origin}/account`);
+        await page.waitForLoadState('networkidle');
+        await page.getByRole('heading', { name: 'Welcome, Fixture.', exact: true }).waitFor();
+        await page.getByText('No paid monthly membership yet.', { exact: true }).waitFor();
         assert.deepEqual(errors, []);
         console.log(`PASS ${engineName}/${width}: two explicit selection actions, guest contact details, direct registration, preserved draft, stale-time rejection, changed-trainer opening, one request, returning-customer saved details and no charge`);
       } catch (error) {
