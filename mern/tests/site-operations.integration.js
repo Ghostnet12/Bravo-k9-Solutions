@@ -27,14 +27,22 @@ test('owner monitoring and server-authoritative booking funnel', { timeout: 1800
     const visit = { token: randomUUID(), channel: 'search', stage: 'visit' };
     const bookingBody = () => ({ requestKey: randomUUID(), serviceIds: ['online'], visits: [], dogName: 'Fixture dog', phone: '5551234567', address: '' });
     await t.test('preview deployments cannot contaminate production reports', async () => {
+      const previousHost = process.env.VERCEL_URL;
       process.env.VERCEL_ENV = 'preview';
+      process.env.VERCEL_URL = 'bravo-operations-fixture.vercel.app';
+      const previewOrigin = `https://${process.env.VERCEL_URL}`;
       try {
-        await call(null, 'post', '/api/telemetry/visit', visit).expect(204);
-        await call(null, 'post', '/api/telemetry/error', { kind: 'page_crash', area: 'home' }).expect(204);
+        await call(null, 'post', '/api/telemetry/visit', visit).expect(403);
+        await call(null, 'post', '/api/telemetry/visit', visit).set('Origin', 'https://unrelated-preview.vercel.app').expect(403);
+        await call(null, 'post', '/api/telemetry/visit', visit).set('Origin', previewOrigin).expect(204);
+        await call(null, 'post', '/api/telemetry/error', { kind: 'page_crash', area: 'home' }).set('Origin', previewOrigin).expect(204);
         assert.equal(await FunnelVisit.countDocuments(), 0); assert.equal(await SiteError.countDocuments(), 0);
         assert.equal((await call(null, 'get', '/api/config')).body.monitoringEnabled, false);
         await report().expect(409);
-      } finally { delete process.env.VERCEL_ENV; }
+      } finally {
+        delete process.env.VERCEL_ENV;
+        if (previousHost === undefined) delete process.env.VERCEL_URL; else process.env.VERCEL_URL = previousHost;
+      }
     });
     await t.test('only actual owner can read reports and database readiness is real', async () => {
       await call(null, 'get', '/api/admin/site-health').expect(401);
