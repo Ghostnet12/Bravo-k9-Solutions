@@ -36,7 +36,7 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
   });
   try {
    await page.goto(origin+'/portal?program=training');
-   const notes=page.getByLabel('Anything you’d like your trainer to know? (optional)',{exact:true});await notes.waitFor();
+   const notes=page.getByLabel('Anything you’d like your trainer to know? (optional)',{exact:true});await notes.waitFor({state:'attached'});
    await page.waitForFunction(()=>window.routeFocusTimersSeen>0);
    if(mode==='normal-navigation') {
     assert.equal(await page.evaluate(()=>window.flushRouteFocus()),1);
@@ -54,7 +54,7 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
     assert.equal(await page.evaluate(()=>location.pathname),'/reviews','one tap reaches the review page');
     assert.equal(await page.evaluate(()=>document.activeElement.id),'main-content','the new review page receives route focus');
    } else {
-    await notes.focus();
+    await page.locator('.booking-dog-notes > summary').click();await notes.focus();
     await page.evaluate(()=>window.flushRouteFocus());
     assert.ok(await notes.evaluate(el=>el===document.activeElement),'deferred route focus cannot steal an active notes field');
     await page.keyboard.insertText('Jumps when visitors arrive.');

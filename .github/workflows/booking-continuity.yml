@@ -13,7 +13,7 @@ concurrency:
 jobs:
   booking-continuity:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: mern
@@ -28,10 +28,11 @@ jobs:
           cache-dependency-path: mern/package-lock.json
       - run: npm ci --ignore-scripts
       - run: npm run build
-      - run: npm install --ignore-scripts --no-save --package-lock=false playwright@1.55.1
+      - run: npm install --ignore-scripts --no-save --package-lock=false playwright@1.55.1 axe-core@4.10.3
       - run: npx playwright install --with-deps chromium webkit
       - run: node tests/booking-continuity.browser.mjs
       - run: node tests/booking-simplicity.browser.mjs
+      - run: node tests/booking-ease.browser.mjs
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         if: always()
         with:

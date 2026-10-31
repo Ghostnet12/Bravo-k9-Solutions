@@ -107,6 +107,7 @@ try {
         await page.locator('h1').scrollIntoViewIfNeeded();
         await page.screenshot({path:`test-results/booking-entry-${name}-${width}.png`,fullPage:true});
         await page.getByLabel('Dog’s name', {exact:true}).fill('Biscuit');
+        if (!(await page.getByLabel('Anything you’d like your trainer to know? (optional)',{exact:true}).isVisible())) await page.locator('.booking-dog-notes > summary').click();
         await page.getByLabel('Anything you’d like your trainer to know? (optional)', {exact:true}).fill('Keep this draft through navigation.');
         await assertSteps('Your dog'); await assertFit('Your dog');
         await page.getByRole('button', {name:'Choose a trainer →',exact:true}).focus(); await page.keyboard.press('Enter');
@@ -131,7 +132,8 @@ try {
           if (previous === 'visit') await page.getByRole('navigation', {name:'First visit steps',exact:true}).getByRole('button', {name:'3. Date and time',exact:true}).click();
           await page.getByRole('button', {name:'Change your dog’s details',exact:true}).click();
           await assertSteps('Your dog');
-          await page.getByLabel('Number of dogs',{exact:true}).fill(previous === 'visit' ? '2' : '1');
+          if (!(await page.getByLabel('Number of dogs',{exact:true}).isVisible())) await page.locator('.booking-dog-count > summary').click();
+        await page.getByLabel('Number of dogs',{exact:true}).fill(previous === 'visit' ? '2' : '1');
           await page.getByLabel('What would you like help with?',{exact:true}).selectOption(previous === 'visit' ? 'advanced-obedience' : 'basic-obedience');
           await page.getByRole('button', {name:'Choose a trainer →',exact:true}).click();
           await page.getByRole('heading', {name:'Choose your trainer.',exact:true}).waitFor(); await assertSteps('Trainer');
@@ -143,11 +145,15 @@ try {
         await page.getByLabel('Contact phone',{exact:true}).fill('6055550100');await page.getByLabel('Visit address',{exact:true}).fill('123 Fixture Street');
         await page.getByRole('button', {name:'I have an account — sign in →',exact:true}).click();
         await page.getByLabel('Name or email', {exact:true}).waitFor();
-        assert.match(await page.getByRole('region',{name:'Your unsent request'}).innerText(),/Biscuit[\s\S]*Fixture Trainer[\s\S]*10:00 AM/);
+        assert.equal(new URL(page.url()).pathname,'/portal','authentication stays inside booking');
+        assert.match(await page.locator('.guided-visit-summary').innerText(),/Fixture Trainer[\s\S]*10:00 AM/);
         assert.equal(await page.getByText('Use at least 12 characters to keep your account secure.',{exact:true}).count(),0);
         await page.getByRole('button',{name:'Create account',exact:true}).click(); await page.getByText('Use at least 12 characters to keep your account secure.',{exact:true}).waitFor();
         await page.getByRole('button',{name:'Sign in',exact:true}).first().click();await assertFit('Account');
         await page.screenshot({path:`test-results/booking-account-${name}-${width}.png`,fullPage:true});
+        // Keep exercising the supported legacy account handoff as well as inline auth.
+        await navigate(() => page.locator('footer a[href="/account"]').click());
+        await page.getByLabel('Name or email',{exact:true}).waitFor();
         await page.getByRole('button', {name:'Back',exact:true}).click();
         await review();
         assert.equal(await page.getByRole('heading', {name:'Review your first visit.',exact:true}).count(), 1, 'Back from account must retain the request review, not reset to an empty dog form');

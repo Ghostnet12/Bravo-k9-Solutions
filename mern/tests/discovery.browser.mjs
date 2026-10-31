@@ -113,7 +113,8 @@ try {
             await field.waitFor();assert.equal(await field.inputValue(),focus);
             assert.match(await page.locator('.price-total').innerText(),/\$200/);
             if(focus==='basic-obedience'){
-              await page.getByLabel('Number of dogs',{exact:true}).fill('2');assert.match(await page.locator('.price-total').innerText(),/\$300/);
+              if (!(await page.getByLabel('Number of dogs',{exact:true}).isVisible())) await page.locator('.booking-dog-count > summary').click();
+        await page.getByLabel('Number of dogs',{exact:true}).fill('2');assert.match(await page.locator('.price-total').innerText(),/\$300/);
             }
           }else{
             const selected=page.locator('.program-choice[aria-pressed="true"]');await selected.waitFor();
@@ -135,7 +136,7 @@ try {
         await visit(origin+'/contact');
         await visit(origin+'/training');await page.locator('.conversion-goal').first().waitFor();await settleApi();
         await visit(origin+'/results');await page.locator('.home-work-proof').waitFor();await settleApi();
-        const proof=page.locator('.home-work-proof');await proof.getByRole('button',{name:'Working dogs',exact:true}).click();assert.equal(await proof.locator('article[data-proof-video]').count(),1);await proof.getByRole('button',{name:'All training',exact:true}).click();assert.equal(await proof.locator('article[data-proof-video]').count(),3);
+        const proof=page.locator('.home-work-proof');await proof.getByRole('button',{name:'Working dogs',exact:true}).click();await proof.locator('article[data-proof-video]').first().waitFor();assert.equal(await proof.locator('article[data-proof-video]').count(),1);await proof.getByRole('button',{name:'All training',exact:true}).click();await proof.locator('article[data-proof-video]').nth(2).waitFor();assert.equal(await proof.locator('article[data-proof-video]').count(),3);
         await visit(origin+'/learn');await page.getByLabel('Email address',{exact:true}).fill('visitor@example.test');await page.getByLabel('Email me once when Bravo online courses launch.').check();await page.getByRole('button',{name:'Request a launch update'}).click();await page.getByText('Your launch-update request is saved.',{exact:false}).waitFor();assert.equal(signup.consent,true);assert.equal(signup.email,'visitor@example.test');
         owner=true;await visit(origin+'/workshops');await page.getByRole('button',{name:'Edit workshop details'}).click();await page.getByLabel('Time (Central)',{exact:true}).fill('10:00 a.m.');await page.getByLabel('Location',{exact:true}).fill('Fixture venue');await page.getByRole('button',{name:'Save workshop'}).click();await page.getByText('Workshop details saved.',{exact:true}).waitFor();await reload();await page.getByText('10:00 a.m. · Central',{exact:true}).waitFor();
         await page.getByRole('button',{name:'Edit workshop date',exact:true}).click();

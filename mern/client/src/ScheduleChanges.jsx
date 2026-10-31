@@ -11,12 +11,14 @@ import CreditedCalendarDays from './CreditedCalendarDays';
 import { creditedCalendarDates, planCreditDays, lastCoveredDay, termForDayCredit } from '../../shared/day-credits';
 import ScheduleDayGrid from './ScheduleDayGrid';
 import CreditActions from './CreditActions';
+import RoutinePlanner from './RoutinePlanner';
+import { usualRoutine } from '../../shared/booking-routine';
 
 const trainingIds=ALL_SERVICES.filter(s=>s.includes.includes('training')).map(s=>s.id);
 const at=(date,time)=>DateTime.fromISO(`${date}T${time}`,{zone:'America/Chicago'});
 const same=(a,b)=>a.length===b.length && a.every(t=>b.includes(t));
 
-export default function ScheduleChanges({data,initialMonth,onSaved,onClose}) {
+export default function ScheduleChanges({data,initialMonth,onSaved,onClose,startRoutine=false}) {
   const {user}=useBravo(),isStaff=['staff','owner'].includes(user.role),bookings=data.trainingBookings||[];
   const [bookingId,setBookingId]=useState(bookings[0]?._id||''),[month,setMonth]=useState(initialMonth),[draft,setDraft]=useState({}),[day,setDay]=useState('');
   const [batchDates,setBatchDates]=useState([]),[giveCredit,setGiveCredit]=useState(false),[movingCredit,setMovingCredit]=useState(false);
@@ -46,6 +48,20 @@ export default function ScheduleChanges({data,initialMonth,onSaved,onClose}) {
   const creditMode=giveCredit&&canCredit;
   const hasChanges=dirty||creditMode;
   const showTimes=!creditMode&&!pastSelection;
+  const today = DateTime.now().setZone('America/Chicago').toISODate();
+  const routineFrom = `${month}-01` < today ? today : `${month}-01`;
+  const routineTo = DateTime.fromISO(`${month}-01`).endOf('month').toISODate();
+  const routineExisting = [...new Set([...Object.keys(original), ...Object.keys(draft)])].flatMap(date => selected(date).map(time => ({ date, time, service: 'training' })));
+  const sameDog = record => String(record.dogName || '').trim().toLowerCase() === String(booking?.dogName || '').trim().toLowerCase() && (record.dogCount || 1) === (booking?.dogCount || 1);
+  const matchingVisits = bookings.filter(record => sameDog(record) && trainerChoice(record) === trainer).flatMap(record => record.visits || []);
+  const previousVisits = matchingVisits.filter(visit => visit.date < `${month}-01`);
+  const savedPattern = usualRoutine(previousVisits.length ? previousVisits : matchingVisits);
+  function applyRoutine(visits) {
+    if (busy || loading || !trainer) return false;
+    if ((booking?.visits?.length || 0) + additions.length - removals.length + visits.length > 62) { setError('A request can contain up to 62 visits. Choose a shorter date range.'); return false; }
+    setDraft(current => ({ ...current, ...Object.fromEntries(visits.map(visit => [visit.date, [visit.time]])) }));
+    setBatchDates([]); setGiveCredit(false); setDay(''); setError(''); return true;
+  }
   useEffect(()=>{if(!isStaff)return;let current=true;api('/team').then(r=>{if(current)setTeam(trainerOptions(r.team))}).catch(e=>{if(current)setError(e.message)});return()=>{current=false}},[isStaff]);
   const months=[...new Set([month,...batchDates.map(date=>date.slice(0,7)),...(day?[day.slice(0,7)]:[])])].sort().join(',');
   useEffect(()=>{
@@ -104,6 +120,10 @@ export default function ScheduleChanges({data,initialMonth,onSaved,onClose}) {
       {canOpen&&!movingCredit&&<label className="check-label"><input type="checkbox" checked={openWeekends} disabled={busy} onChange={e=>setOpenWeekends(e.target.checked)}/>Open the selected weekend times when saving</label>}
       <details className="schedule-more-help"><summary>Calendar symbols &amp; trainer availability</summary><p className="helper">Times follow the assigned trainer’s working hours. Unavailable times stay visible and are labelled “Reserved” or “Outside trainer hours”. Gold days are selected for editing. Tapping again deselects a date without cancelling its visit. “+” marks a change; “×” marks a cancellation; numbers show saved or drafted visits. {isStaff?'Your note will go to the client and the team.':'Your note will go to all staff, administrators and owners.'}</p></details>
       {loading&&<p role="status">Checking available times…</p>}
+      {!movingCredit && !creditMode && <details className="schedule-routine-options" open={startRoutine || undefined}><summary>Plan a routine or repeat my usual schedule</summary>
+        <p className="helper">Uses this training request’s dog, trainer and saved visit details. Only dates covered by the existing membership can be added; this does not renew or charge your membership.</p>
+        <RoutinePlanner key={`${bookingId}:${month}`} from={routineFrom} to={routineTo} savedPattern={savedPattern} existing={routineExisting} contextKey={JSON.stringify([bookingId, trainer, hours, openWeekends])} disabled={busy || loading || !trainer || !booking || routineFrom > routineTo} canUse={(date,time) => !paid(date,time) ? 'Outside this request’s paid membership dates or in the past. Renew manually or choose a covered date.' : options(date).includes(time) && available(date,time) ? true : 'Your trainer is unavailable at this time.'} onApply={applyRoutine}/>
+      </details>}
       <CreditedCalendarDays editing dates={creditDates} month={month} onMonth={setMonth}/>
       <ScheduleDayGrid month={month} onMonth={setMonth} disabled={busy||loading} onDay={toggleDay} dayState={date=>{
         const times=selected(date),base=original[date]||[],changed=!same(times,base),free=options(date).filter(time=>available(date,time));

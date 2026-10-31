@@ -131,7 +131,7 @@ test('scheduler exposes distinct available, selected, and unavailable date state
   assert.match(source, /time >= startTime && time <= endTime/); assert.match(source, /date-time-range/);
   assert.match(source, /Nothing was selected/); assert.match(source, /setAvailabilityShown\(true\)/);
   assert.doesNotMatch(source, /api\('\/availability\/auto'/);
-  assert.match(source, /function makeMySchedule\(\)/); assert.match(source, /crypto\.getRandomValues/);
+  assert.match(source, /function makeMySchedule\(\)/); // Random scheduling was replaced by explicit routine previews, covered behaviorally.
   assert.match(source, />Make my schedule</); assert.doesNotMatch(source, /visits\.filter\(v => v\.service === kind\)\.length >= count/);
   assert.match(source, /TRAINING_FOCUSES\.map/); assert.match(source, /trainingFocus:/);
   const css = await readFile(new URL('../client/src/professional.css', import.meta.url), 'utf8');

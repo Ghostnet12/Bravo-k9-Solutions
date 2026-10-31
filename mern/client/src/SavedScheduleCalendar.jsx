@@ -13,6 +13,7 @@ import { trainingFocusName } from '../../shared/catalog';
 export default function SavedScheduleCalendar({ data, month, reload, onMonth, startEditing=false, focusDate, onCloseEditor }) {
   const [creditBusy,setCreditBusy]=useState(false);
   const [editData,setEditData]=useState(null), [openingData]=useState(data);
+  const [startRoutine,setStartRoutine]=useState(false);
   // Query navigation can settle after the saved-data refresh. Keep entry from
   // the staff shortcut controlled by the query so removing it closes the editor.
   const activeEditData=editData||(startEditing?openingData:null);
@@ -21,8 +22,8 @@ export default function SavedScheduleCalendar({ data, month, reload, onMonth, st
   const creditDates = creditedCalendarDates(data.terms, data.dayCredits);
   const credited = new Set(creditDates);
   const start = DateTime.fromISO(`${month}-01`), padding = start.weekday % 7;
-  if(activeEditData) return <ScheduleChanges data={activeEditData} initialMonth={month} onSaved={reload} onClose={()=>{setEditData(null);onCloseEditor?.()}}/>;
-  return <><button type="button" className="button schedule-edit-toggle" disabled={creditBusy} onClick={()=>setEditData(data)}>Add or Cancel Date</button><p className="calendar-legend"><span className="calendar-key"/> {trainingDays.size} training days saved this month. Filled gold highlights saved visits; the outline marks the day you are viewing.</p><CreditedCalendarDays dates={creditDates} month={month} onMonth={onMonth}/><div className="saved-calendar" aria-label="Saved monthly schedule">
+  if(activeEditData) return <ScheduleChanges data={activeEditData} initialMonth={month} startRoutine={startRoutine} onSaved={reload} onClose={()=>{setEditData(null);setStartRoutine(false);onCloseEditor?.()}}/>;
+  return <><div className="schedule-edit-actions"><button type="button" className="button schedule-edit-toggle" disabled={creditBusy} onClick={()=>setEditData(data)}>Add or Cancel Date</button>{data.trainingBookings?.length > 0 && <button type="button" className="button button-ghost" disabled={creditBusy} onClick={()=>{setStartRoutine(true);setEditData(data)}}>Plan my weekly routine</button>}</div><p className="calendar-legend"><span className="calendar-key"/> {trainingDays.size} training days saved this month. Filled gold highlights saved visits; the outline marks the day you are viewing.</p><CreditedCalendarDays dates={creditDates} month={month} onMonth={onMonth}/><div className="saved-calendar" aria-label="Saved monthly schedule">
     {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => <span className="calendar-weekday" key={d}>{d}</span>)}
     {Array.from({ length: padding }, (_,i) => <span key={`empty-${i}`}/>)}
     {Array.from({ length: start.daysInMonth }, (_,i) => {
