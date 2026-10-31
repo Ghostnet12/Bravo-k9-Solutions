@@ -29,9 +29,10 @@ jobs:
       - run: npm run build
       - run: npm test
       - run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.63.0
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium webkit
       - run: node tests/bravo-motion.browser.mjs
       - run: node tests/goal-scroll.browser.mjs
+      - run: node tests/public-experience.browser.mjs
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: always()
         with:
@@ -39,4 +40,5 @@ jobs:
           path: |
             mern/test-results/motion-*
             mern/test-results/goal-scroll-*
+            mern/test-results/experience-*
           retention-days: 7

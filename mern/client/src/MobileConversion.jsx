@@ -60,7 +60,7 @@ export function TrainingOffer() {
     observer.observe(target); return () => observer.disconnect();
   }, []);
   return <div className="conversion-opening cinema-shell">
-    <Editable as="section" contentKey="mobile-training-offer" ref={offer} className="conversion-offer" aria-labelledby="conversion-price-title" data-site-service="training">
+    <Editable as="section" contentKey="mobile-training-offer" ref={offer} className="conversion-offer" data-reveal="" aria-labelledby="conversion-price-title" data-site-service="training">
       <div className="conversion-offer-copy">
         <Editable as="p" contentKey="home-training-benefit" canEditText className="conversion-offer-intro">Calmer walks. Better manners. More confidence together.</Editable>
         <Editable as="h2" contentKey="mobile-training-heading" canEditText id="conversion-price-title">Private dog training</Editable>
@@ -89,7 +89,7 @@ export function MobileDiscovery() {
       <Editable as="p" contentKey="mobile-discovery-intro" canEditText className="conversion-subtitle">Pick the challenge. Let’s build your next step.</Editable>
       <div className="conversion-goals">{MOBILE_GOALS.map(goal => {
         const enabled = catalog.find(item => item.id === goal.service)?.enabled !== false;
-        return <Editable as={Link} key={goal.id} contentKey={`mobile-goal-${goal.id}`} className="conversion-goal" data-site-photo-surface="" to={enabled ? goal.href : '/contact'} onClick={() => trackVisit('goal_selected')}>
+        return <Editable as={Link} key={goal.id} contentKey={`mobile-goal-${goal.id}`} className="conversion-goal" data-reveal="" data-site-photo-surface="" to={enabled ? goal.href : '/contact'} onClick={() => trackVisit('goal_selected')}>
           <img src={goal.image} alt="" width="480" height="360" loading="lazy"/>
           <div><Editable as="h3" contentKey={`mobile-goal-${goal.id}-title`} canEditText>{goal.title}</Editable><Editable as="p" contentKey={`mobile-goal-${goal.id}-copy`} canEditText>{enabled ? goal.copy : 'Ask Bravo about availability.'}</Editable><span aria-hidden="true" className="conversion-arrow">→</span></div>
         </Editable>;

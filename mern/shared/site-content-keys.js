@@ -217,5 +217,14 @@ export const CONTENT_KEYS = {
   'home-method-train-copy': { text: true },
   'home-method-deploy-copy': { text: true },
   'home-method-action': { text: true, link: true },
+  'journey-trust-title': { text: true },
+  'journey-trust-detail': { text: true },
+  'journey-trust-caption': { text: true },
+  'journey-train-title': { text: true },
+  'journey-train-detail': { text: true },
+  'journey-train-caption': { text: true },
+  'journey-deploy-title': { text: true },
+  'journey-deploy-detail': { text: true },
+  'journey-deploy-caption': { text: true },
 };
 
