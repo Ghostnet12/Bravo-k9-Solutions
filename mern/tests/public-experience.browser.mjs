@@ -7,6 +7,7 @@ import { mkdir } from 'node:fs/promises';
 import { chromium, webkit } from 'playwright';
 import { SERVICES } from '../shared/catalog.js';
 import { CONTENT_KEYS } from '../shared/site-content-keys.js';
+import { HOME_HERO_SOURCE, HOME_HERO_ALT } from '../shared/home-hero.js';
 
 const dist = path.resolve('client/dist'), app = express();
 app.get('/api/live', (_req,res) => res.json({ sessions: [], announcements: [], availability: 'available', serverTime: new Date().toISOString() }));
@@ -22,7 +23,7 @@ try {
     const browser = await ({chromium,webkit}[name]).launch();
     try {
       for (const width of [320,390,768,1440]) {
-        let owner = false, entries = {};
+        let owner = false, entries = {}, images = {};
         const context = await browser.newContext({viewport:{width,height:950},reducedMotion:'no-preference',hasTouch:width<700});
         await context.route('**/*', async route => {
           const request=route.request(), url=new URL(request.url());
@@ -32,6 +33,13 @@ try {
           if(url.pathname==='/api/config')json={connected:true,paymentsReady:false,services:SERVICES};
           if(url.pathname==='/api/auth/me')json={user:owner?{id:'experience-owner',name:'Fixture owner',role:'owner'}:null,services:[],membership:{active:false}};
           if(url.pathname==='/api/site-content')json={entries};
+          if(url.pathname==='/api/site-images')json={images};
+          if(url.pathname==='/api/site-images/home-method/undo') {
+            assert.ok(owner);assert.equal(request.method(),'POST');
+            assert.equal(request.postDataJSON().expectedRevision,3);
+            images['home-method']={src:null,framed:false,revision:4,canUndo:true};
+            return route.fulfill({json:{image:images['home-method']}});
+          }
           if(url.pathname.startsWith('/api/site-content/')) {
             assert.ok(owner,'only the owner fixture publishes');
             const key=url.pathname.split('/').at(-1),body=request.postDataJSON();
@@ -87,9 +95,26 @@ try {
             await dialog.getByRole('button',{name:'Publish website changes',exact:true}).click();await dialog.waitFor({state:'hidden'});
             assert.equal(entries['journey-trust-title'].value.text,'Start with your dog’s story.');
             await page.reload();await page.getByRole('heading',{name:'Start with your dog’s story.',exact:true}).waitFor();
+            // Remount Home with a saved photo snapshot, then restore the default.
+            images['home-method']={src:'/images/ashley-northrop.webp',alt:'Replacement fixture',framed:true,fit:'contain',x:25,y:70,zoom:1.5,revision:3,canUndo:true};
+            await page.goto(origin+'/dog-training');await page.waitForLoadState('networkidle');
+            await page.locator('.app-header a[href="/"]').first().click();
+            const photo=page.locator('.journey-photo img');await photo.waitFor();
+            assert.equal(await photo.getAttribute('src'),'/images/ashley-northrop.webp');
+            assert.equal(await photo.evaluate(node=>node.style.transform),'scale(1.5)');
+            await photo.scrollIntoViewIfNeeded();await photo.press('F2');
+            const photoDialog=page.getByRole('dialog',{name:'Edit this photo',exact:true});await photoDialog.waitFor();
+            page.once('dialog',dialog=>dialog.accept());
+            await photoDialog.getByRole('button',{name:'Restore previous edit',exact:true}).click();
+            await photoDialog.waitFor({state:'hidden'});
+            assert.equal(await photo.getAttribute('src'),HOME_HERO_SOURCE,'restore uses the real default after navigation');
+            assert.equal(await photo.getAttribute('alt'),HOME_HERO_ALT);
+            assert.equal(await photo.evaluate(node=>node.style.transform),'','restore clears replacement zoom');
+            assert.equal(await photo.evaluate(node=>getComputedStyle(node).objectFit),'cover');
+            assert.equal(await photo.evaluate(node=>getComputedStyle(node).objectPosition),'50% 65%');
           }
           assert.deepEqual(errors,[]);
-          console.log(`PASS ${name}/${width}: journey taps, keyboard, focus, reduced motion, public reveals${width===390?', owner publishing persists':''}`);
+          console.log(`PASS ${name}/${width}: journey taps, keyboard, focus, reduced motion, public reveals${width===390?', owner publishing persists and photo restore survives navigation':''}`);
         } finally {await context.close();}
       }
       const staticContext=await browser.newContext({javaScriptEnabled:false,viewport:{width:390,height:950}});

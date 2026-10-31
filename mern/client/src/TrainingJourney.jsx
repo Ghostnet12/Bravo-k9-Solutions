@@ -35,7 +35,7 @@ export default function TrainingJourney() {
     </div>
     <div className="journey-stage">
       <div className="journey-photo">
-        <img src={photo?.src || HOME_HERO_SOURCE} data-site-image-key="home-method" width="828" height="1121" alt={photo?.framed ? photo.alt : HOME_HERO_ALT} style={photo?.framed ? framingStyle(photo) : undefined} loading="lazy"/>
+        <img src={photo?.src || HOME_HERO_SOURCE} data-site-image-key="home-method" data-site-image-original={HOME_HERO_SOURCE} data-site-image-original-alt={HOME_HERO_ALT} data-site-media-original-styles='{"objectFit":"","objectPosition":"","transform":"","transformOrigin":"","clipPath":""}' width="828" height="1121" alt={photo?.framed ? photo.alt : HOME_HERO_ALT} style={photo?.framed ? framingStyle(photo) : undefined} loading="lazy"/>
         <div className="journey-photo-caption" key={selected}><span>THE BRAVO APPROACH</span><Editable as="p" contentKey={`journey-${steps[selected].id}-caption`} canEditText>{steps[selected].caption}</Editable></div>
       </div>
       <div className="journey-panels">
