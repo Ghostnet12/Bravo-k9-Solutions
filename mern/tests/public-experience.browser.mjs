@@ -61,7 +61,23 @@ try {
           assert.ok(imageTop>hero.y+hero.height,'the new opening puts the booking message before the image');
           assert.ok(await page.locator('.training-journey').evaluate(node=>node.getBoundingClientRect().top<innerHeight*2.5),'the interactive story is near the opening');
           assert.ok(await page.evaluate(()=>Boolean(document.getElementById('method').compareDocumentPosition(document.getElementById('training'))&Node.DOCUMENT_POSITION_FOLLOWING)),'the approach precedes pricing in reading order');
-          if(width===1440)assert.equal(await page.locator('.home-desktop-nav').getByRole('link',{name:'Training',exact:true}).getAttribute('href'),'/dog-training');
+          if(width===1440) {
+            assert.equal(await page.locator('.home-desktop-nav').getByRole('link',{name:'Training',exact:true}).getAttribute('href'),'/dog-training');
+            for(const breakpointWidth of [1100,1120,1121,1200,1440]) {
+              await page.setViewportSize({width:breakpointWidth,height:950});
+              const header=await page.locator('.app-header').boundingBox();
+              assert.ok(header.height<100,`${breakpointWidth}: chapter navigation never expands the fixed header`);
+              const chapters=page.locator('.home-desktop-nav');
+              assert.equal(await chapters.isVisible(),breakpointWidth>1120,`${breakpointWidth}: chapters respect the shared navigation breakpoint`);
+              if(breakpointWidth>1120) {
+                const tops=await chapters.locator('a').evaluateAll(links=>links.map(link=>link.getBoundingClientRect().top));
+                assert.ok(Math.max(...tops)-Math.min(...tops)<1,'desktop chapter links stay in one row');
+                await chapters.getByRole('link',{name:'Our approach',exact:true}).click();
+                await page.waitForFunction(()=>{const top=document.getElementById('method').getBoundingClientRect().top;return top>=document.querySelector('.app-header').getBoundingClientRect().bottom-1 && top<180;});
+                await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));
+              }
+            }
+          }
           const method=page.locator('#method');await method.scrollIntoViewIfNeeded();
           await page.waitForFunction(()=>getComputedStyle(document.getElementById('method')).opacity==='1');
           for(const [index,id] of ['trust','train','deploy'].entries()) {

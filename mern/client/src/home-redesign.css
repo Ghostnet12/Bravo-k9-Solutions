@@ -50,7 +50,7 @@
 .cinema-home.bravo-redesign .app-header.bravo-nav::after { content: ''; position: absolute; left: 0; bottom: 0; width: 100%; height: 2px; background: linear-gradient(90deg,#a17c42,#efd6a7); transform: scaleX(var(--page-progress,0)); transform-origin: left; pointer-events: none; }
 .cinema-home.bravo-redesign .app-header.bravo-nav .header-inner { max-width: 1180px; }
 .home-desktop-nav { display: none; }
-@media(min-width:1100px) {
+@media(min-width:1121px) {
   .cinema-home.bravo-redesign .home-desktop-nav { display: flex; align-items: center; gap: 28px; margin-right: 42px; }
   .cinema-home.bravo-redesign .home-desktop-nav a { color: #ded9d0; text-decoration: none; font: 500 12px/1.5 Montserrat,sans-serif; padding-block: 16px; }
   .cinema-home.bravo-redesign .home-desktop-nav a:hover { color: #e8cfa2; }
