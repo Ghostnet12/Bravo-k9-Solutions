@@ -28,7 +28,7 @@ jobs:
       - run: npm run lint
       - run: npm run build
       - run: npm test
-      - run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.63.0
+      - run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.63.0 axe-core@4.10.3
       - run: npx playwright install --with-deps chromium webkit
       - run: node tests/bravo-motion.browser.mjs
       - run: node tests/goal-scroll.browser.mjs
