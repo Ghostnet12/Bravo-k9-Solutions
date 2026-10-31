@@ -41,7 +41,8 @@ try {
             assert.equal(await page.getByText('Bravo fixture announcement', { exact: true }).count(), 0);
             assert.ok(await page.locator('#workshops').evaluate(node => node.previousElementSibling.matches('.home-tools') && node.previousElementSibling.previousElementSibling.id === 'results'), 'results flow through Tools of the Trade into workshops with no empty banner slot');
             assert.equal(await page.locator('.conversion-trust a').count(), 4, 'hero navigation stays intact');
-            assert.equal(await page.locator('#method .home-method-step').count(), 3, 'training approach cards stay intact');
+            assert.equal(await page.locator('#method .journey-tab').count(), 3, 'all training approach choices stay intact');
+            assert.equal(await page.locator('#method .journey-panel').count(), 3, 'all three training steps remain available');
             assert.match(await page.locator('#training').innerText(), /\$200/, 'training pricing stays intact');
             assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'removing the banner preserves the responsive layout');
             if (visitorRole === null) {

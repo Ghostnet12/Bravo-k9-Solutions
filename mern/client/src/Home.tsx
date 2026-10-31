@@ -1,6 +1,7 @@
 import LiveBanner from './LiveBanner';
 import { SPECIALIST_LINKS, specialistInquiryPath } from '../../shared/contact-interest';
 import GoalFinder from './GoalFinder';
+import TrainingJourney from './TrainingJourney';
 import { CINEMATIC_HERO_SOURCE, CINEMATIC_HERO_KEY, CINEMATIC_HERO_ALT, CINEMATIC_HERO_SRCSET, CINEMATIC_HERO_SIZES } from '../../shared/cinematic-hero.js';
 import TransportHero from './TransportHero';
 import { ConversionTrust, MobileDiscovery, TrainingOffer, ConversionFAQ, HomeSectionOrder } from './MobileConversion';
@@ -163,11 +164,7 @@ export default function Home() {
         <Editable as="p" contentKey="copy-home-10" canEditText className="cinema-eyebrow">THE BRAVO APPROACH</Editable>
         <Editable as="h2" contentKey="cinema-method-title" canEditText id="method-title">Your first session.<br/><span>Step by step.</span></Editable>
         <Editable as="p" contentKey="cinema-method-copy" canEditText>No treats. No toys. Your trainer observes your dog, explains the approach, and helps you practice it together.</Editable>
-        <div className="cinema-method-signature home-method-steps">
-          <span className="home-method-step"><Editable as="strong" contentKey="copy-home-11" canEditText>Trust.</Editable><Editable as="span" contentKey="home-method-trust-copy" canEditText className="home-method-copy">Talk through your goals while we observe your dog’s behavior and everyday surroundings.</Editable></span>
-          <span className="home-method-step"><Editable as="strong" contentKey="copy-home-12" canEditText>Train.</Editable><Editable as="span" contentKey="home-method-train-copy" canEditText className="home-method-copy">Watch your trainer demonstrate, then practice clear communication with their guidance.</Editable></span>
-          <span className="home-method-step"><Editable as="strong" contentKey="copy-home-13" canEditText>Deploy.</Editable><Editable as="span" contentKey="home-method-deploy-copy" canEditText className="home-method-copy">Know what to practice between visits and how to use it in your dog’s daily routine.</Editable></span>
-        </div>
+        <TrainingJourney/>
         <Editable as="a" contentKey="home-method-action" canEditText canEditLink href="#training" className="cinema-link home-method-action">Explore training <span aria-hidden="true">→</span></Editable>
       </Editable>
 
