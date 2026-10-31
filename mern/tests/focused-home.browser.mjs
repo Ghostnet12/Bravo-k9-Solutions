@@ -37,7 +37,10 @@ try{
    for(const width of [390,768,1440]){
     const context=await browser.newContext({viewport:{width,height:900},reducedMotion:'no-preference'}),page=await context.newPage(),errors=[];
     page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(10000);
-    await page.goto(origin);await page.locator('.bravo-hub').waitFor();await page.evaluate(()=>document.fonts.ready);
+    // Finish each document's reads before replacing it. WebKit reports cancelled
+    // old-document fetches as access-control page errors during rapid hard loads.
+    const navigate=async url=>{await page.waitForLoadState('networkidle');return page.goto(url,{waitUntil:'networkidle'});};
+    await navigate(origin);await page.locator('.bravo-hub').waitFor();await page.evaluate(()=>document.fonts.ready);
     assert.equal(await page.locator('#method,#team,#reviews,#training-programs').count(),0,'detail sections are no longer mounted on home');
     const cta=await page.locator('.polish-hero-actions .conversion-button').boundingBox();assert.ok(cta.y>0&&cta.y+cta.height<900);
     for(const route of pages.slice(1))assert.ok(await page.locator(`main a[href="${route}"]`).count()>0,`${route} discoverable from home`);
@@ -46,13 +49,13 @@ try{
     await page.screenshot({path:`test-results/focused-home-${name}-${width}.png`,fullPage:true});
     await page.locator('main a[href="/our-approach"]').click();await page.getByRole('tab',{name:'Trust.',exact:true}).waitFor();
     for(const tabName of ['Train.','Deploy.','Trust.']){await page.getByRole('tab',{name:tabName,exact:true}).click();assert.equal(await page.getByRole('tabpanel').count(),1);}
-    await page.goto(origin+'/team');await page.getByRole('heading',{name:'David Northrop',exact:true}).waitFor();
-    await page.goto(origin+'/reviews');await page.locator('.facebook-recommendations article').first().waitFor();await page.locator('.facebook-recommendations article').first().getByText('Read full review',{exact:true}).click();assert.ok(await page.locator('.review-full blockquote').first().isVisible());
-    await page.goto(origin+'/training');await page.locator('.conversion-goal').first().waitFor();assert.match(await page.locator('.conversion-offer').innerText(),/\$200/);await page.getByText('See training examples by goal',{exact:true}).click();await page.locator('#find-training').waitFor();
-    for(const route of pages){await page.goto(origin+route);await page.locator('.bravo-redesign').waitFor();assert.equal(await page.locator('h1').count(),1);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${route} ${width}: no overflow`);}
+    await navigate(origin+'/team');await page.getByRole('heading',{name:'David Northrop',exact:true}).waitFor();
+    await navigate(origin+'/reviews');await page.locator('.facebook-recommendations article').first().waitFor();await page.locator('.facebook-recommendations article').first().getByText('Read full review',{exact:true}).click();assert.ok(await page.locator('.review-full blockquote').first().isVisible());
+    await navigate(origin+'/training');await page.locator('.conversion-goal').first().waitFor();assert.match(await page.locator('.conversion-offer').innerText(),/\$200/);await page.getByText('See training examples by goal',{exact:true}).click();await page.locator('#find-training').waitFor();
+    for(const route of pages){await navigate(origin+route);await page.locator('.bravo-redesign').waitFor();assert.equal(await page.locator('h1').count(),1);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${route} ${width}: no overflow`);}
     await page.locator('.mobile-home-nav').getByRole('link',{name:'Reviews',exact:true}).click();await page.waitForURL('**/reviews');
-    if(width===390)for(const hash of ['#training','#training-programs','#method','#team','#reviews','#results','#dogs']){await page.goto(origin+'/'+hash);await page.waitForURL(origin+HOME_SECTION_ROUTES[hash]);await page.locator('h1').waitFor();assert.ok(await page.locator('h1').isVisible());}
-    await page.goto(origin);await page.locator('.bravo-hub').waitFor();await page.emulateMedia({reducedMotion:'reduce'});await page.waitForFunction(()=>document.querySelector('.bravo-hub').dataset.motion==='off');assert.equal(await page.locator('#home-title em').evaluate(e=>getComputedStyle(e).animationName),'none');
+    if(width===390)for(const hash of ['#training','#training-programs','#method','#team','#reviews','#results','#dogs']){await navigate(origin+'/'+hash);await page.waitForURL(origin+HOME_SECTION_ROUTES[hash]);await page.locator('h1').waitFor();assert.ok(await page.locator('h1').isVisible());}
+    await navigate(origin);await page.locator('.bravo-hub').waitFor();await page.emulateMedia({reducedMotion:'reduce'});await page.waitForFunction(()=>document.querySelector('.bravo-hub').dataset.motion==='off');assert.equal(await page.locator('#home-title em').evaluate(e=>getComputedStyle(e).animationName),'none');
     await page.addScriptTag({path:path.resolve('node_modules/axe-core/axe.min.js')});const audit=await page.evaluate(async()=>await axe.run({runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa','wcag22aa']}}));assert.deepEqual(audit.violations.map(v=>({id:v.id,nodes:v.nodes.map(n=>n.target)})),[]);
     assert.deepEqual(errors,[]);console.log(`PASS ${name} ${width}: focused home ${height}px; five public pages, links, old bookmarks, tabs, reviews, reduced motion and accessibility`);await context.close();
    }
