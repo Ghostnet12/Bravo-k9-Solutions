@@ -12,6 +12,10 @@ const app = express(); app.use(express.static(dist)); app.get('/{*path}', (_req,
 const server = app.listen(0, '127.0.0.1'); await once(server, 'listening'); const origin = `http://127.0.0.1:${server.address().port}`;
 const david = { id: 'aaaaaaaaaaaaaaaaaaaaaaaa', _id: 'aaaaaaaaaaaaaaaaaaaaaaaa', name: 'David Northrop', role: 'owner' }, ashley = { id: 'bbbbbbbbbbbbbbbbbbbbbbbb', _id: 'bbbbbbbbbbbbbbbbbbbbbbbb', name: 'Ashley Northrop', role: 'staff' };
 const clientId = 'cccccccccccccccccccccccc', bookingId = 'dddddddddddddddddddddddd', now = DateTime.now().setZone('America/Chicago');
+// A newly granted month can start on its final weekend or after today's
+// available hours. Choose a future weekday explicitly, including its month.
+let trainingDay = now.plus({ days: 1 }).startOf('day');
+while (trainingDay.weekday > 5) trainingDay = trainingDay.plus({ days: 1 });
 await mkdir('test-results', { recursive: true });
 try {
   for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
@@ -76,13 +80,17 @@ try {
           await trainer.locator(`option[value="${david.id}"]`).waitFor({ state: 'attached' });
           await trainer.selectOption(david.id); await setup.getByRole('button', { name: 'Assign trainer', exact: true }).click();
           await setup.getByText('Trainer assigned. Each assigned trainer can now accept from their staff profile.', { exact: true }).waitFor();
+          await setup.getByLabel('Schedule month', { exact: true }).fill(trainingDay.toFormat('yyyy-MM'));
           await setup.getByRole('button', { name: 'Add or Cancel Date', exact: true }).click();
           await setup.getByText('Checking available times…', { exact: true }).waitFor({ state: 'hidden' });
           await setup.getByRole('checkbox', { name: 'Open the selected weekend times when saving', exact: true }).uncheck();
-          await setup.locator('.edit-calendar button:not([disabled])').first().click();
+          await setup.getByRole('heading', { name: trainingDay.toFormat('MMMM yyyy'), exact: true }).waitFor();
+          await setup.locator('.edit-calendar button').nth(trainingDay.day - 1).click();
           await setup.getByRole('button', { name: '10:00 AM', exact: true }).click();
           await setup.getByLabel('Note to the client', { exact: true }).fill('Agreed training time.'); await setup.getByRole('button', { name: 'Save changes', exact: true }).click();
-          await setup.getByText('Schedule saved.', { exact: true }).waitFor(); assert.equal(calendarBody.additions[0].time, '10:00');
+          await setup.getByText('Schedule saved.', { exact: true }).waitFor();
+          assert.deepEqual(calendarBody.additions, [{ date: trainingDay.toISODate(), time: '10:00' }]);
+          assert.equal(calendarBody.openWeekends, false);
           await setup.locator('.saved-calendar button.has-visits').first().waitFor();
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
           await page.screenshot({ path: `test-results/simple-client-${engineName}-${width}.png`, fullPage: true });
