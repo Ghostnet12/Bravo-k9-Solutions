@@ -51,7 +51,7 @@
 .cinema-home.conversion-home .training-examples > summary {
   display: flex; align-items: center; justify-content: center; gap: 14px;
   width: fit-content; max-width: 100%; min-height: 48px;
-  margin: 20px auto; padding: 12px 22px; box-sizing: border-box;
+  margin: 0 auto; padding: 12px 22px; box-sizing: border-box;
   border: 1px solid #ba9a6466; border-radius: 30px;
   background: linear-gradient(125deg,#252118,#141312);
   color: #ecd9b6; font-weight: 600; line-height: 1.5; cursor: pointer;
