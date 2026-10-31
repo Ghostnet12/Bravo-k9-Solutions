@@ -1,0 +1,153 @@
+/* A spacious, image-led homepage. Motion enhances native scrolling. */
+html:has(.cinema-home.bravo-redesign) { scroll-behavior: auto; }
+.cinema-home.bravo-redesign { background: #09090b; color: #f5f3ee; --experience-ease: cubic-bezier(.22,.7,.2,1); }
+.cinema-home.bravo-redesign .cinema-shell { width: min(1180px,calc(100% - 48px)); }
+.cinema-home.bravo-redesign .home-hero--confidence {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 0;
+  width: 100%; height: auto; min-height: 0; max-height: none; margin: 0;
+  padding: calc(122px + env(safe-area-inset-top)) 24px 30px;
+  background: radial-gradient(ellipse at 50% 25%,#ba9a6424,transparent 62%),#09090b;
+  overflow: clip; box-sizing: border-box;
+}
+.cinema-home.bravo-redesign .home-hero--confidence .cinema-hero-copy {
+  order: 0; grid-area: auto; width: min(100%,1080px); max-width: none; min-height: 0;
+  padding: 0; margin: 0 auto 36px; text-align: center; transform: none; opacity: 1;
+}
+.cinema-home.bravo-redesign .home-hero--confidence .cinema-hero-copy::before { display: none; }
+.cinema-home.bravo-redesign .home-hero--confidence .cinema-eyebrow {
+  display: inline-block; max-width: none; margin: 0 0 22px; padding: 8px 15px;
+  border: 1px solid #ba9a644a; border-radius: 24px; color: #e4c894;
+  font: 600 10px/1.4 Montserrat,sans-serif; letter-spacing: .22em; background: #ba9a6409;
+}
+.cinema-home.bravo-redesign .home-hero--confidence h1 {
+  max-width: none; margin: 0; color: #f5f3ee; text-wrap: balance;
+  font: 700 clamp(56px,8.1vw,112px)/1.03 Montserrat,sans-serif; letter-spacing: -.065em;
+}
+.cinema-home.bravo-redesign .home-hero--confidence h1 em {
+  display: inline; font-style: normal; color: #e7c68d;
+  background: linear-gradient(115deg,#f5e8c9 10%,#d6b379 45%,#9a7946 90%);
+  background-size: 160% 100%;
+  background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.cinema-home.bravo-redesign .home-hero--confidence .hero-service-location { margin: 22px auto 0; color: #ddc79f; font: 500 14px/1.6 Montserrat,sans-serif; }
+.cinema-home.bravo-redesign .home-hero--confidence .cinema-hero-intro { max-width: 52ch; margin: 12px auto 24px; color: #d1cdd0; font: 400 17px/1.65 Montserrat,sans-serif; text-shadow: none; }
+.cinema-home.bravo-redesign .home-hero--confidence .polish-hero-actions { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; width: 100%; max-width: none; margin: 0; padding: 0; gap: 12px; }
+.cinema-home.bravo-redesign .home-hero--confidence .polish-hero-actions a { width: auto; min-height: 50px; padding: 14px 25px; border-radius: 30px; border-color: #ba9a6477; background: #ffffff06; font-size: 14px; gap: 10px; transition: background .25s,border-color .25s,translate .25s; }
+.cinema-home.bravo-redesign .home-hero--confidence .polish-hero-actions .conversion-button { color: #17120b; background: #dec18b; border-color: #dec18b; box-shadow: 0 6px 28px #ba9a6429; }
+.cinema-home.bravo-redesign .home-hero--confidence .hero-plan-explainer { max-width: none; margin: 14px auto 0; color: #aaa6a0; font: 400 11px/1.6 Montserrat,sans-serif; }
+.cinema-home.bravo-redesign .home-hero--confidence .cinema-hero-media {
+  order: 1; grid-area: auto; position: relative; inset: auto; z-index: 0;
+  width: min(100%,1180px); height: clamp(310px,42vw,520px); margin: 0;
+  transform: none !important; opacity: 1; overflow: hidden;
+  border-radius: 32px; border: 1px solid #ba9a6440; box-shadow: 0 32px 100px #0005;
+}
+.cinema-home.bravo-redesign .home-hero--confidence .cinema-film { width: 100%; height: 100%; background: #171715; transform: scale(calc(1 + var(--hero-progress,0) * .12)); transform-origin: center; }
+.cinema-home.bravo-redesign .home-hero--confidence .cinema-hero-still { width: 100%; height: 100%; object-fit: cover; object-position: 50% 29%; filter: none; }
+@media(min-width:701px) { .cinema-home.bravo-redesign .home-hero--confidence .cinema-hero-still { object-position: 50% 18%; } }
+.cinema-home.bravo-redesign .home-hero--confidence .cinema-hero-shade { background: linear-gradient(0deg,#08090b40,transparent 45%); }
+.cinema-home.bravo-redesign .home-hero--confidence .cinema-hero-baseline { order: 2; position: static; display: flex; align-items: center; justify-content: space-between; gap: 20px; width: min(100%,1180px); padding: 18px 4px 0; color: #b9b1a2; font: 500 10px/1.5 Montserrat,sans-serif; letter-spacing: .15em; }
+.cinema-home.bravo-redesign .home-hero--confidence .cinema-hero-baseline a { color: #e4c894; min-height: 44px; display: inline-flex; align-items: center; gap: 12px; }
+.cinema-home.bravo-redesign .app-header.bravo-nav { background: #09090bea; border-bottom: 1px solid #ba9a6425; }
+.cinema-home.bravo-redesign .app-header.bravo-nav::after { content: ''; position: absolute; left: 0; bottom: 0; width: 100%; height: 2px; background: linear-gradient(90deg,#a17c42,#efd6a7); transform: scaleX(var(--page-progress,0)); transform-origin: left; pointer-events: none; }
+.cinema-home.bravo-redesign .app-header.bravo-nav .header-inner { max-width: 1180px; }
+.home-desktop-nav { display: none; }
+@media(min-width:1121px) {
+  .cinema-home.bravo-redesign .home-desktop-nav { display: flex; align-items: center; gap: 28px; margin-right: 42px; }
+  .cinema-home.bravo-redesign .home-desktop-nav a { color: #ded9d0; text-decoration: none; font: 500 12px/1.5 Montserrat,sans-serif; padding-block: 16px; }
+  .cinema-home.bravo-redesign .home-desktop-nav a:hover { color: #e8cfa2; }
+}
+.cinema-home.bravo-redesign .conversion-trust { width: min(1180px,calc(100% - 48px)); padding: 16px 0; background: transparent; border-block: 0; gap: 12px; }
+.cinema-home.bravo-redesign .conversion-trust > a { border: 1px solid #ba9a642e; border-radius: 20px; min-height: 118px; background: #ffffff03; }
+.cinema-home.bravo-redesign :is(.cinema-intro,.cinema-programs,.cinema-team,.cinema-proof,.cinema-close) { padding-block: clamp(56px,7vw,104px); }
+.cinema-home.bravo-redesign :is(.cinema-intro,.cinema-programs,.cinema-team,.cinema-proof,.cinema-close) h2 { font: 650 clamp(34px,4.5vw,62px)/1.12 Montserrat,sans-serif; letter-spacing: -.045em; }
+.cinema-home.bravo-redesign .cinema-section-heading { grid-template-columns: minmax(0,1.35fr) minmax(0,1fr); align-items: end; gap: 40px; margin-bottom: 36px; }
+.cinema-home.bravo-redesign .cinema-section-heading > p { color: #bcb7af; font-size: 15px; line-height: 1.75; }
+.cinema-home.bravo-redesign #method { padding-top: 64px; }
+.cinema-home.bravo-redesign #method > p:not(.cinema-eyebrow) { max-width: 48ch; margin-inline: auto; color: #bcb7af; }
+.cinema-home.bravo-redesign .journey-tabs { margin-top: 32px; }
+.cinema-home.bravo-redesign .journey-stage { border-radius: 32px; background: radial-gradient(ellipse at 100% 0%,#ba9a642f,transparent 65%),#151517; }
+.cinema-home.bravo-redesign .journey-panel h3 { font: 600 clamp(28px,3vw,42px)/1.18 Montserrat,sans-serif; letter-spacing: -.04em; }
+.cinema-home.bravo-redesign .conversion-opening { width: min(1180px,calc(100% - 48px)); padding-block: 28px; }
+.cinema-home.bravo-redesign .conversion-offer { padding: clamp(28px,5vw,64px); border-radius: 32px; background: radial-gradient(ellipse at 0 0,#d9b57830,transparent 65%),#161517; }
+.cinema-home.bravo-redesign .conversion-offer-copy { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 12px 56px; }
+.cinema-home.bravo-redesign .conversion-offer-copy > * { grid-column: 1; margin-block: 0; }
+.cinema-home.bravo-redesign .conversion-offer h2 { font: 600 clamp(28px,3vw,42px)/1.16 Montserrat,sans-serif; letter-spacing: -.04em; }
+.cinema-home.bravo-redesign .conversion-offer .conversion-price { font-size: clamp(66px,7vw,100px); margin-block: 12px; color: #e8cfa2; }
+.cinema-home.bravo-redesign .conversion-offer-copy > .conversion-benefits { grid-column: 2; grid-row: 1 / span 6; align-self: stretch; gap: 12px; }
+.cinema-home.bravo-redesign .conversion-benefits > li { border-radius: 18px; padding: 24px; background: #ffffff04; }
+.cinema-home.bravo-redesign .conversion-offer .conversion-button { border-radius: 30px; min-height: 52px; margin-top: 14px; }
+.cinema-home.bravo-redesign .conversion-offer-copy > :is(.conversion-catalog-terms,.training-help-links,.training-request-reassurance) { grid-column: 1 / -1; }
+.cinema-home.bravo-redesign .conversion-catalog-terms { margin-top: 18px; }
+.cinema-home.bravo-redesign .conversion-goals { gap: 24px; }
+.cinema-home.bravo-redesign .conversion-goal { min-height: 410px; border-radius: 28px; border-color: #ba9a6438; }
+.cinema-home.bravo-redesign .conversion-goal::before { background: linear-gradient(0deg,#000f 0%,#0008 45%,#0000 75%); }
+.cinema-home.bravo-redesign .conversion-goal > div { padding: 30px; }
+.cinema-home.bravo-redesign .conversion-goal h3 { font: 600 clamp(24px,2.4vw,32px)/1.17 Montserrat,sans-serif; letter-spacing: -.035em; }
+.cinema-home.bravo-redesign .conversion-goal p { color: #ded9ce; }
+.cinema-home.bravo-redesign .conversion-arrow { right: 22px; bottom: 25px; width: 32px; height: 32px; background: #e2c18b; color: #17120b; }
+.cinema-home.bravo-redesign .conversion-talk { border: 0; background: #ffffff06; border-radius: 28px; min-height: 56px; margin-top: 24px; font: 500 14px/1.5 Montserrat,sans-serif; }
+.cinema-home.bravo-redesign .cinema-secondary-programs article { border-radius: 24px; padding: 32px; }
+.cinema-home.bravo-redesign .cinema-team-grid { gap: 24px; }
+.cinema-home.bravo-redesign .cinema-team-grid > article { border-radius: 28px; background: #151517; }
+.cinema-home.bravo-redesign .cinema-person h3 { font: 600 27px/1.2 Montserrat,sans-serif; letter-spacing: -.04em; }
+.cinema-home.bravo-redesign .cinema-proof .client-review-list { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 20px; align-items: start; }
+.cinema-home.bravo-redesign .client-review-list .panel { border-radius: 24px; padding: 28px; background: #151517; }
+.cinema-home.bravo-redesign .home-tools-card { border-radius: 28px; background: radial-gradient(ellipse at 90% 0,#ba9a6424,transparent 65%),#171517; }
+.cinema-home.bravo-redesign .home-secondary :is(.workshop-details,.cinema-online-inner,.home-fci-card) { border-radius: 24px; padding: 28px; }
+.cinema-home.bravo-redesign .conversion-faq details { border-color: #ba9a6435; }
+.cinema-home.bravo-redesign .cinema-close h2 { font-size: clamp(48px,7vw,90px); }
+@keyframes bravo-opening { from { opacity: .65; translate: 0 18px; } to { opacity: 1; translate: 0 0; } }
+@keyframes bravo-gold-light { from { background-position: 100% 50%; } to { background-position: 0% 50%; } }
+@media(prefers-reduced-motion:no-preference) {
+  .cinema-home.bravo-redesign .home-hero--confidence h1 em { animation: bravo-gold-light 3s ease-out both; }
+  .cinema-home.bravo-redesign .home-hero--confidence .cinema-hero-copy > * { animation: bravo-opening .8s var(--experience-ease) both; }
+  .cinema-home.bravo-redesign .home-hero--confidence .cinema-hero-copy > :nth-child(n+3) { animation-delay: .12s; }
+  .cinema-home.bravo-redesign .home-hero--confidence .cinema-hero-media { animation: bravo-opening 1s .15s var(--experience-ease) both; }
+}
+@media(hover:hover) and (pointer:fine) {
+  .cinema-home.bravo-redesign .home-hero--confidence .polish-hero-actions a:hover { translate: 0 -2px; border-color: #e8cfa2; }
+}
+@media(max-width:700px) {
+  .cinema-home.bravo-redesign .home-secondary :is(.workshop-details,.cinema-online-inner,.home-fci-card) { padding: 20px; }
+  .cinema-home.bravo-redesign .home-hero--confidence { padding: calc(108px + env(safe-area-inset-top)) 20px 16px; }
+  .cinema-home.bravo-redesign .home-hero--confidence .cinema-hero-copy { margin-bottom: 28px; }
+  .cinema-home.bravo-redesign .home-hero--confidence .cinema-eyebrow { font-size: 8px; margin-bottom: 20px; letter-spacing: .17em; }
+  .cinema-home.bravo-redesign .home-hero--confidence h1 { font-size: clamp(42px,11.8vw,76px); letter-spacing: -.06em; }
+  .cinema-home.bravo-redesign .home-hero--confidence .hero-service-location { font-size: 12px; margin-top: 18px; }
+  .cinema-home.bravo-redesign .home-hero--confidence .cinema-hero-intro { font-size: 14px; margin: 10px auto 18px; }
+  .cinema-home.bravo-redesign .home-hero--confidence .polish-hero-actions { display: grid; grid-template-columns: 1fr; gap: 9px; }
+  .cinema-home.bravo-redesign .home-hero--confidence .polish-hero-actions a { width: 100%; padding: 12px 16px; min-height: 48px; }
+  .cinema-home.bravo-redesign .home-hero--confidence .hero-plan-explainer { font-size: 10px; max-width: 34ch; margin-top: 12px; }
+  .cinema-home.bravo-redesign .home-hero--confidence .cinema-hero-media { height: 310px; border-radius: 24px; }
+  .cinema-home.bravo-redesign .home-hero--confidence .cinema-hero-baseline { font-size: 8px; letter-spacing: .08em; padding-top: 10px; }
+  .cinema-home.bravo-redesign .home-hero--confidence .cinema-hero-baseline a { font-size: 8px; gap: 5px; }
+  .cinema-home.bravo-redesign .conversion-trust { width: calc(100% - 40px); gap: 8px; padding: 8px 0; }
+  .cinema-home.bravo-redesign .conversion-trust > a { border-radius: 16px; min-height: 100px; padding: 8px 3px; }
+  .cinema-home.bravo-redesign .conversion-trust strong { font-size: 8px; letter-spacing: 0; }
+  .cinema-home.bravo-redesign .conversion-trust .trust-action { font-size: 8px; }
+  .cinema-home.bravo-redesign .conversion-trust svg { width: 24px; height: 24px; }
+  .cinema-home.bravo-redesign .cinema-shell { width: calc(100% - 40px); }
+  .cinema-home.bravo-redesign .cinema-section-heading { grid-template-columns: 1fr; gap: 20px; margin-bottom: 26px; }
+  .cinema-home.bravo-redesign #method { padding-top: 44px; }
+  .cinema-home.bravo-redesign .journey-panel h3 { font-size: 28px; }
+  .cinema-home.bravo-redesign .journey-panel { min-height: 390px; }
+  .cinema-home.bravo-redesign .conversion-opening { width: calc(100% - 40px); }
+  .cinema-home.bravo-redesign .conversion-offer { padding: 26px 22px; border-radius: 26px; }
+  .cinema-home.bravo-redesign .conversion-offer-copy { display: flex; flex-direction: column; gap: 12px; }
+  .cinema-home.bravo-redesign .conversion-benefits > li { padding: 14px 12px; }
+  .cinema-home.bravo-redesign .conversion-offer .conversion-button { margin-top: 0; }
+  .cinema-home.bravo-redesign .conversion-goals { display: grid; grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 88%; gap: 14px; overflow-x: auto; scroll-snap-type: x proximity; scroll-padding-inline: 1px; padding: 4px 1px 16px; scrollbar-width: thin; scrollbar-color: #ba9a6470 #151517; }
+  .cinema-home.bravo-redesign .conversion-goal { min-height: 350px; border-radius: 24px; scroll-snap-align: start; }
+  .cinema-home.bravo-redesign .conversion-goal > div { padding: 24px; }
+  .cinema-home.bravo-redesign .conversion-goal h3 { font-size: 27px; }
+  .cinema-home.bravo-redesign .cinema-proof .client-review-list { grid-template-columns: 1fr; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .cinema-home.bravo-redesign .home-hero--confidence * { animation: none !important; transition: none !important; translate: none !important; }
+  .cinema-home.bravo-redesign .home-hero--confidence .cinema-film { transform: none; }
+}
+:is(.access-reduced-motion,.a11y-reduce-motion) .cinema-home.bravo-redesign .home-hero--confidence * { animation: none !important; transition: none !important; translate: none !important; }
+:is(.access-reduced-motion,.a11y-reduce-motion) .cinema-home.bravo-redesign .home-hero--confidence .cinema-film { transform: none; }
+@media(forced-colors:active) {
+  .cinema-home.bravo-redesign .home-hero--confidence h1 em { background: none; -webkit-text-fill-color: currentColor; color: CanvasText; }
+}

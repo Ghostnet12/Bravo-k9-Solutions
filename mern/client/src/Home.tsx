@@ -82,14 +82,14 @@ export default function Home() {
     }).catch(() => { if (active) setTeamError(true); });
     return () => { active = false; controller.abort(); };
   }, [teamAttempt]);
-  return <div ref={root} className="bravo-home cinema-home conversion-home">
-    <Header/>
+  return <div ref={root} className="bravo-home cinema-home conversion-home bravo-redesign">
+    <Header homeChapters/>
     <Editable as="main" contentKey="copy-home-1" id="main-content" tabIndex={-1}>
       <section className="home-hero cinema-hero home-hero--confidence" aria-labelledby="home-title">
         <div className="cinema-hero-media"><div className="cinema-film"><img className="cinema-hero-still" data-site-image-key={CINEMATIC_HERO_KEY} src={CINEMATIC_HERO_SOURCE} srcSet={CINEMATIC_HERO_SRCSET} sizes={CINEMATIC_HERO_SIZES} width="1024" height="1536" alt={CINEMATIC_HERO_ALT} fetchPriority="high"/><div className="cinema-hero-shade" aria-hidden="true"/></div></div>
         <div className="cinema-hero-copy cinema-shell">
           <Editable as="p" contentKey="polish-hero-location" canEditText className="cinema-eyebrow">TRUST. TRAIN. DEPLOY.</Editable>
-          <h1 id="home-title"><Editable as="span" contentKey="conversion-hero-title" canEditText>DOG TRAINING.<br/>AT YOUR HOME.</Editable></h1>
+          <h1 id="home-title"><Editable as="span" contentKey="conversion-hero-title" canEditText>Dog training.<br/><em>For real life.</em></Editable></h1>
           <Editable as="p" contentKey="hero-booking-location" canEditText className="hero-service-location">Aberdeen, SD · At home and in everyday places</Editable>
           <p className="cinema-hero-intro"><Editable as="span" contentKey="conversion-hero-intro" canEditText>Real life. Real confidence. A calmer life together.</Editable></p>
           <div className="polish-hero-actions"><Editable as={Link} contentKey="mobile-hero-book" canEditText canEditLink href="/portal?program=training" className="cinema-button conversion-button" onClick={() => trackVisit('hero_booking_clicked')}>Start My Training Plan <span aria-hidden="true">→</span></Editable><Editable as="a" contentKey="polish-hero-explore" canEditText canEditLink href="#training" className="cinema-link">Explore Training</Editable></div>
@@ -98,11 +98,11 @@ export default function Home() {
         <div className="cinema-hero-baseline cinema-shell"><Editable as="span" contentKey="copy-home-4" canEditText>REAL DOGS. REAL LIFE. BRAVO.</Editable><Editable as="a" contentKey="copy-home-5" canEditText canEditLink href="#method" aria-label="Discover the Bravo approach">SCROLL TO DISCOVER <span aria-hidden="true">↓</span></Editable></div>
       </section>
       <ConversionTrust/>
-      <div id="training" className="home-primary-training"><TrainingOffer/></div>
       <div className="home-live-status cinema-shell"><LiveBanner/></div>
-      <div className="cinema-shell site-media-tools-slot site-media-tools-slot--home" data-site-media-tools=""/>
 
       <HomeSectionOrder>
+      <div key="offer" id="training" className="home-primary-training"><TrainingOffer/></div>
+      <div key="media-tools" className="cinema-shell site-media-tools-slot site-media-tools-slot--home" data-site-media-tools=""/>
       <TransportHero key="transport" home/>
       <section key="tools" className="home-tools cinema-shell" aria-label="Tools of the Trade">
         <Editable as={Link} contentKey="home-tools-of-the-trade" canEditLink href="/tools-of-the-trade" className="home-tools-card" aria-labelledby="home-tools-title home-tools-action" aria-describedby="home-tools-copy">

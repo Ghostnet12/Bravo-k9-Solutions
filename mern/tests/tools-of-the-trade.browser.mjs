@@ -125,9 +125,9 @@ try {
           await homeTools.waitFor({ state: 'visible' });
           assert.equal(await homeTools.getAttribute('href'), '/tools-of-the-trade');
           assert.match(await homeTools.innerText(), /We assess your dog first/);
-          assert.ok(await page.locator('.cinema-hero').evaluate(hero => hero.nextElementSibling.classList.contains('conversion-trust') && hero.nextElementSibling.nextElementSibling.id === 'training'));
-          const order = await page.evaluate(() => ['#training','#reviews','#training-programs','#team','#method','#results','.home-tools','#first-visit-help','.cinema-close'].map(selector => document.querySelector(selector).getBoundingClientRect().top));
-          assert.deepEqual([...order].sort((a,b) => a-b), order, 'membership and reviews lead into shared training choices');
+          assert.ok(await page.locator('.cinema-hero').evaluate(hero => hero.nextElementSibling.classList.contains('conversion-trust') && document.getElementById('method').compareDocumentPosition(document.getElementById('training')) & Node.DOCUMENT_POSITION_FOLLOWING));
+          const order = await page.evaluate(() => ['#method','#training','#training-programs','#reviews','#team','#results','.home-tools','#first-visit-help','.cinema-close'].map(selector => document.querySelector(selector).getBoundingClientRect().top));
+          assert.deepEqual([...order].sort((a,b) => a-b), order, 'the approach leads into pricing, training choices and proof');
           assert.equal(await page.locator('#results #dogs').count(), 1, 'photos and video share one proof section');
           assert.ok(await page.locator('#workshops').evaluate(node => node.previousElementSibling.classList.contains('home-tools')), 'workshops follow the equipment section without a banner or empty slot');
           assert.ok(await page.locator('.conversion-dog-terms').evaluate(node => {

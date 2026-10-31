@@ -55,6 +55,30 @@ try {
           await page.evaluate(()=>document.fonts.ready);
           const hero=await page.locator('.polish-hero-actions').getByRole('link',{name:/Start My Training Plan/i}).boundingBox();
           assert.ok(hero && hero.y>0 && hero.y+hero.height<=950,'booking remains immediately visible');
+          assert.match(await page.locator('#home-title').innerText(),/Dog training.\s*For real life./);
+          assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).scrollBehavior),'auto','native anchor navigation keeps controls stationary');
+          assert.match(await page.locator('#home-title').evaluate(node=>getComputedStyle(node).fontFamily),/Montserrat/);
+          const imageTop=await page.locator('.cinema-hero-media').evaluate(node=>node.getBoundingClientRect().top);
+          assert.ok(imageTop>hero.y+hero.height,'the new opening puts the booking message before the image');
+          assert.ok(await page.locator('.training-journey').evaluate(node=>node.getBoundingClientRect().top<innerHeight*2.5),'the interactive story is near the opening');
+          assert.ok(await page.evaluate(()=>Boolean(document.getElementById('method').compareDocumentPosition(document.getElementById('training'))&Node.DOCUMENT_POSITION_FOLLOWING)),'the approach precedes pricing in reading order');
+          if(width===1440) {
+            assert.equal(await page.locator('.home-desktop-nav').getByRole('link',{name:'Training',exact:true}).getAttribute('href'),'/dog-training');
+            for(const breakpointWidth of [1100,1120,1121,1200,1440]) {
+              await page.setViewportSize({width:breakpointWidth,height:950});
+              const header=await page.locator('.app-header').boundingBox();
+              assert.ok(header.height<100,`${breakpointWidth}: chapter navigation never expands the fixed header`);
+              const chapters=page.locator('.home-desktop-nav');
+              assert.equal(await chapters.isVisible(),breakpointWidth>1120,`${breakpointWidth}: chapters respect the shared navigation breakpoint`);
+              if(breakpointWidth>1120) {
+                const tops=await chapters.locator('a').evaluateAll(links=>links.map(link=>link.getBoundingClientRect().top));
+                assert.ok(Math.max(...tops)-Math.min(...tops)<1,'desktop chapter links stay in one row');
+                await chapters.getByRole('link',{name:'Our approach',exact:true}).click();
+                await page.waitForFunction(()=>{const top=document.getElementById('method').getBoundingClientRect().top;return top>=document.querySelector('.app-header').getBoundingClientRect().bottom-1 && top<180;});
+                await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));
+              }
+            }
+          }
           const method=page.locator('#method');await method.scrollIntoViewIfNeeded();
           await page.waitForFunction(()=>getComputedStyle(document.getElementById('method')).opacity==='1');
           for(const [index,id] of ['trust','train','deploy'].entries()) {
@@ -74,6 +98,7 @@ try {
           await method.screenshot({path:`test-results/experience-${name}-${width}.png`,style:'.app-header,.skip-link,.mobile-home-nav,.accessibility-trigger{visibility:hidden!important}'});
           await page.emulateMedia({reducedMotion:'reduce'});
           await page.waitForFunction(()=>document.querySelector('.cinema-home').dataset.motion==='off');
+          assert.equal(await page.locator('#home-title').evaluate(node=>getComputedStyle(node).animationName),'none','reduced motion also stops the new opening animation');
           await page.locator('.journey-tab').nth(1).click();
           assert.equal(await page.getByRole('tabpanel').evaluate(node=>getComputedStyle(node).animationName),'none');
           await page.emulateMedia({reducedMotion:'no-preference'});

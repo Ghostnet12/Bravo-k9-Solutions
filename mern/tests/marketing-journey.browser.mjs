@@ -54,7 +54,7 @@ try {
           await visit('/');
           assert.equal(await page.locator('.client-story-card').count(), 3, 'published client outcomes become three sourced case summaries');
           assert.equal(await page.locator('.facebook-recommendations article').count(), DEFAULT_REVIEWS.length, 'every review appears once');
-          assert.match(await page.locator('#home-title').innerText(), /DOG TRAINING.\s*AT YOUR HOME/);
+          assert.match(await page.locator('#home-title').innerText(), /Dog training.\s*For real life./);
           assert.equal(await page.locator('.facebook-recommendations > .client-review-list article').count(), 1, 'one complete result is visible without swiping');
           assert.ok(await page.locator('.client-review-list').first().evaluate(element => element.scrollWidth <= element.clientWidth), 'featured story needs no horizontal scroll');
           const story = page.locator('.client-story-card').first();

@@ -12,6 +12,7 @@ export default function useCinematicMotion(root, { enabled = true, selector = '[
     const render = () => {
       frame = 0;
       node.dataset.motion = reduced() || !observer ? 'off' : 'on';
+      if (node.classList.contains('bravo-redesign')) node.style.setProperty('--page-progress', String(Math.max(0, Math.min(1, scrollY / Math.max(1, document.documentElement.scrollHeight - innerHeight)))));
       if (reduced()) node.querySelectorAll('[data-reveal]').forEach(reveal);
       const hero = node.querySelector('.cinema-hero');
       if (hero) {
