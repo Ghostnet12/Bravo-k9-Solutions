@@ -27,7 +27,7 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){if(proce
   await route.fulfill({json});
  });
  try{
-  await page.goto(origin);await page.waitForLoadState('networkidle');
+  await page.goto(origin+'/results');await page.waitForLoadState('networkidle');
   assert.equal(await page.locator('.home-hero-image').getAttribute('src'),'/images/bravo-client-training.jpeg');
   // The gallery now follows the goal selector; WebKit correctly defers this off-screen image.
   await page.locator('.home-hero-image').scrollIntoViewIfNeeded();
@@ -35,11 +35,13 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){if(proce
   assert.equal(await page.locator('.home-hero-image').evaluate(el=>el.complete && el.naturalWidth>0),true);
   await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
   assert.equal(await page.locator('.home-hero-image').evaluate(el=>getComputedStyle(el).objectFit),'contain');
+  await page.goto(origin);await page.waitForLoadState('networkidle');
   assert.match(await page.locator('h1').innerText(), /Dog training.\s*For real life./i);
+  assert.ok(await page.getByText('Real life. Real confidence. A calmer life together.',{exact:true}).isVisible());
+  await page.goto(origin+'/training');await page.waitForLoadState('networkidle');
   const visiblePrice=page.locator('.conversion-price');
   assert.ok(await visiblePrice.isVisible());
   assert.match(await visiblePrice.innerText(), /\$200/);
-  assert.ok(await page.getByText('Real life. Real confidence. A calmer life together.',{exact:true}).isVisible());
   assert.ok(await page.getByText('Up to one hour per scheduled training day',{exact:true}).isVisible());
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth + 1),'homepage fits viewport');
   await page.evaluate(()=>document.documentElement.style.fontSize='200%');
@@ -47,8 +49,10 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){if(proce
   if(!enlargedFits) console.log('Enlarged overflow',await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,elements:[...document.querySelectorAll('body *')].filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.right>innerWidth+1&&getComputedStyle(el).position!=='absolute'}).map(el=>({tag:el.tagName,classes:el.className,text:el.textContent.slice(0,70),width:el.getBoundingClientRect().width,right:el.getBoundingClientRect().right})).slice(-35)})));
   await page.evaluate(()=>document.documentElement.style.fontSize='');
   await page.screenshot({path:`test-results/authentic-home-${engineName}-${width}.png`});
+  await page.goto(origin+'/reviews');await page.waitForLoadState('networkidle');
   assert.equal(await page.locator('[data-site-content-key="home-53"] .review-stars').count(),0);
   assert.equal(await page.locator('.facebook-recommendations .review-stars[aria-label="5 out of 5 stars"]').count(),6);assert.equal(await page.locator('.banner-track, .banner-digest').count(),0);
+  await page.goto(origin);await page.waitForLoadState('networkidle');
   await page.locator('.polish-hero-actions').getByRole('link',{name:/^Start My Training Plan$/i}).click();await page.getByRole('heading',{name:'Let’s start with your dog.',exact:true}).waitFor();
   assert.equal(await page.getByText('IMPORTANT APPOINTMENT NOTICE',{exact:true}).count(),0);assert.equal(await page.getByRole('heading',{name:'Build your schedule',exact:true}).count(),0);
   await page.getByLabel('Dog’s name',{exact:true}).fill('Biscuit');await page.getByLabel('Number of dogs',{exact:true}).fill('2');await page.getByLabel('What would you like help with?',{exact:true}).selectOption('hunting-dog');await page.getByLabel('Anything you’d like your trainer to know? (optional)',{exact:true}).fill('Jumps when visitors arrive.');await page.waitForFunction(()=>document.querySelector('textarea[aria-label="Anything you’d like your trainer to know? (optional)"]')?.value==='Jumps when visitors arrive.');

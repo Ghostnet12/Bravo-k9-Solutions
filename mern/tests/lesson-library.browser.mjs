@@ -12,7 +12,7 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){if(proce
  let actor=null,paid=false,library={open:false,revision:0,lessonCents:7500,bundleCents:25000},sections=[],lessons=[];
  // Complete mocked requests before replacing the document. WebKit can report
  // interrupted route fulfillment as an access-control error during navigation.
- const contentReady = url => Promise.all((new URL(url).pathname === '/' ? ['/api/site-content','/api/team','/api/reviews'] : ['/api/site-content']).map(path => page.waitForResponse(response => new URL(response.url()).pathname === path).then(response => response.finished())));
+ const contentReady = url => Promise.all(['/api/site-content'].map(path => page.waitForResponse(response => new URL(response.url()).pathname === path).then(response => response.finished())));
  const navigate=async url=>{await page.waitForLoadState('networkidle');const ready=contentReady(url);await page.goto(url,{waitUntil:'domcontentloaded'});await ready;await page.waitForLoadState('networkidle');};
  const reload=async()=>{await page.waitForLoadState('networkidle');const ready=contentReady(page.url());await page.reload({waitUntil:'domcontentloaded'});await ready;await page.waitForLoadState('networkidle');};
  page.on('pageerror',e=>{console.log('Lesson page error',{url:page.url(),message:e.message});errors.push(e.message);});
@@ -34,16 +34,16 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){if(proce
  try{
   await navigate(origin);await page.waitForLoadState('networkidle');assert.ok(await page.locator('a[href="/learn"]').count() > 0);assert.equal(await page.locator('.lesson-offers').count(),0);
   await navigate(origin+'/learn');await page.getByRole('heading',{name:'Bravo. Anywhere.',exact:true}).waitFor();
-  assert.equal(await page.getByRole('link',{name:'See Bravo’s public training videos →',exact:true}).getAttribute('href'),'/#results');
+  assert.equal(await page.getByRole('link',{name:'See Bravo’s public training videos →',exact:true}).getAttribute('href'),'/results');
   await page.getByRole('button',{name:'Accessibility',exact:true}).click();await page.getByRole('link',{name:'Captions & transcripts',exact:true}).click();
   await page.waitForFunction(()=>{const el=document.getElementById('accessible-media');return el&&el.getBoundingClientRect().top>=70&&el.getBoundingClientRect().top<180;});
   assert.equal(await page.evaluate(() => document.activeElement?.id), 'accessible-media');
   assert.match(await page.locator('#accessible-media').innerText(),/may not include captions/);
   const proofLoaded = Promise.all([contentReady(origin),page.waitForResponse(response => new URL(response.url()).pathname === '/api/proof-videos').then(response => response.finished())]);
-  await page.getByRole('link',{name:'See Bravo’s public training videos →',exact:true}).click();await page.waitForURL('**/#results');
+  await page.getByRole('link',{name:'See Bravo’s public training videos →',exact:true}).click();await page.waitForURL('**/results');
   await proofLoaded;await page.waitForLoadState('networkidle');
-  await page.waitForFunction(()=>{const el=document.getElementById('results');return el&&el.getBoundingClientRect().top>=70&&el.getBoundingClientRect().top<180;}).catch(async error=>{console.log('Video anchor',await page.evaluate(()=>({hash:location.hash,top:document.getElementById('results')?.getBoundingClientRect().top,margin:getComputedStyle(document.getElementById('results')).scrollMarginTop,focus:document.activeElement?.outerHTML.slice(0,200)})));throw error;});
-  assert.equal(await page.evaluate(() => document.activeElement?.id), 'results');
+  await page.locator('h1').filter({hasText:'Real dogs. Real progress.'}).waitFor();
+  await page.waitForFunction(()=>scrollY<3 && document.activeElement?.id === 'main-content');
   await navigate(origin+'/portal?program=training&lessons=1');await page.getByRole('heading',{name:'This option is unavailable.',exact:true}).waitFor();
   actor='owner';await navigate(origin+'/admin?tab=lessons');await page.getByRole('heading',{name:'Lesson studio.',exact:true}).waitFor();
   assert.equal(await page.getByRole('switch',{name:'Library closed',exact:true}).isChecked(),false);

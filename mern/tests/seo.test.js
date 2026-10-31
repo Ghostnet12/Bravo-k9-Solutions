@@ -95,13 +95,13 @@ test('Vercel routes each real page explicitly and lets missing URLs use its 404 
   await access(new URL('404.html', dist));
 });
 
-test('pre-rendered home image uses the saved framing before the browser runs', async () => {
-  const html = await readFile(new URL('bravo-shell.html', dist), 'utf8');
-  const output = renderHomepage(html, { src: '/api/site-images/home-training-hero/image?v=13', revision: 13, framed: true, fit: 'contain', x: 13, y: 19.5, zoom: 1.36, alt: '"><script>private</script>' });
+test('pre-rendered results photo uses the saved framing before the browser runs', async () => {
+  const html = await readFile(new URL('results.html', dist), 'utf8');
+  const output = renderHomepage(html, { src: '/api/site-images/home-training-hero/image?v=13', revision: 13, framed: true, fit: 'contain', x: 13, y: 19.5, zoom: 1.36, alt: '"><script>private</script>' }, null, { preloadHero: false });
   const image = output.match(/<img\b[^>]*class="home-hero-image"[^>]*>/)[0];
   assert.match(image, / src="\/api\/site-images\/home-training-hero\/image\?v=13"/);
   assert.match(image, /object-fit:contain;object-position:13% 19.5%;/);
   assert.match(image, /data-site-image-original="\/images\/bravo-client-training.jpeg"/);
   assert.doesNotMatch(output, /<script>private<\/script>/);
-  assert.equal((output.match(/as="image"/g) || []).length, 1);
+  assert.equal((output.match(/as="image"/g) || []).length, 0);
 });

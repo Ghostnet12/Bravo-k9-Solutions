@@ -18,8 +18,8 @@ export const useCompactLayout = () => useSyncExternalStore(subscribeCompact, com
 const homeSectionOrder = ['method', 'offer', 'media-tools', 'training', 'reviews', 'team', 'results', 'tools', 'workshops', 'faq', 'booking', 'transport', 'online', 'fci'];
 // One reading order for every viewport, including the server-rendered page.
 // Stable keys preserve media and editor state when the viewport changes.
-export function HomeSectionOrder({ children }) {
-  return Children.toArray(children).sort((a, b) => homeSectionOrder.indexOf(a.key.split('$').at(-1)) - homeSectionOrder.indexOf(b.key.split('$').at(-1)));
+export function HomeSectionOrder({ children, only }) {
+  return Children.toArray(children).filter(child => !only || only.includes(child.key.split('$').at(-1))).sort((a, b) => homeSectionOrder.indexOf(a.key.split('$').at(-1)) - homeSectionOrder.indexOf(b.key.split('$').at(-1)));
 }
 export const MOBILE_GOALS = [
   { id: 'manners', title: 'Pulling & jumping', copy: 'Everyday obedience and better control.', image: '/images/obedience-real-world.webp', href: '/portal?program=training&focus=basic-obedience', service: 'training' },
@@ -105,6 +105,13 @@ export function MobileHomeNav({ staticFallback = false }) {
     const target = document.getElementById(id);
     if (target) { event.preventDefault(); target.scrollIntoView({ behavior: 'instant' }); target.focus({ preventScroll: true }); }
   }
+  function returnToPage(event, path) {
+    if (location.pathname !== path || location.hash) return;
+    event.preventDefault();
+    window.dispatchEvent(new Event('bravo-navigation-close'));
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    document.getElementById('main-content')?.focus({ preventScroll: true });
+  }
   const { user } = useBravo();
   const staff = ['owner', 'staff'].includes(user?.role);
   const bookingPath = staff ? '/admin?tab=schedule' : user ? '/schedule' : '/portal?program=training';
@@ -127,8 +134,8 @@ export function MobileHomeNav({ staticFallback = false }) {
   return <nav className="mobile-home-nav mobile-conversion" aria-label="Quick navigation">
     <Link to="/#home-title" aria-label="Home" onClick={event => returnToAnchor(event, 'home-title')}><span aria-hidden="true"><svg width="25" height="29" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" focusable="false"><path d="M3 10 12 3l9 7v11h-6v-7H9v7H3z"/></svg></span>Home</Link>
     <Link to={bookingPath} className="mobile-home-book" onClick={() => trackVisit('sticky_booking_clicked')}><span aria-hidden="true"><svg width="25" height="29" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" focusable="false"><path d="M4 5h16v16H4z M8 3v4 M16 3v4 M4 10h16 M8 14h2 M14 14h2 M8 18h2 M14 18h2"/></svg></span>{user ? 'Schedule' : 'Book now'}</Link>
-    <Link to="/#training-programs" onClick={event => returnToAnchor(event, 'training-programs')}><span aria-hidden="true"><svg width="25" height="29" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" focusable="false"><path d="M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z"/></svg></span>Services</Link>
-    <Link to="/#reviews" onClick={event => returnToAnchor(event, 'reviews')}><span aria-hidden="true"><svg width="25" height="29" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" focusable="false"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z"/></svg></span>Reviews</Link>
+    <Link to="/training" onClick={event => returnToPage(event, '/training')}><span aria-hidden="true"><svg width="25" height="29" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" focusable="false"><path d="M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z"/></svg></span>Services</Link>
+    <Link to="/reviews" onClick={event => returnToPage(event, '/reviews')}><span aria-hidden="true"><svg width="25" height="29" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" focusable="false"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z"/></svg></span>Reviews</Link>
     <Link to="/contact"><span aria-hidden="true"><svg width="25" height="29" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" focusable="false"><path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 11.19 18a19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.09 3.18 2 2 0 0 1 4.08 1h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.69 2.8a2 2 0 0 1-.45 2.11L8.05 8.9a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.33 1.84.56 2.8.69A2 2 0 0 1 22 16.92z"/></svg></span>Contact</Link>
     {!staticFallback && <button type="button" data-navigation-toggle="" onClick={toggleMenu} onKeyDown={closeOnEscape} aria-expanded={menuOpen} aria-controls="bravo-navigation"><span aria-hidden="true"><svg width="25" height="29" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" focusable="false"><path d="M4 6h16 M4 12h16 M4 18h16"/></svg></span>More</button>}
   </nav>;

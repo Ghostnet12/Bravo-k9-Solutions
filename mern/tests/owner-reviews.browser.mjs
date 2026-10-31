@@ -26,8 +26,9 @@ try {
   }
   server = app.listen(0, '127.0.0.1'); await once(server, 'listening');
   const origin = `http://127.0.0.1:${server.address().port}`; process.env.APP_ORIGIN = origin;
-  const publicHtml = async () => (await fetch(origin)).text();
+  const publicHtml = async () => (await fetch(origin+'/reviews')).text();
   for (const [name, engine] of Object.entries({ chromium, webkit })) {
+    if(process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(name))continue;
     const browser = await engine.launch();
     try { for (const width of [390, 1440]) {
       await WebsiteReview.deleteMany({});
@@ -97,7 +98,7 @@ try {
         const first = page.getByRole('article', { name: 'Review by Tamyra Borg', exact: true });
         page.once('dialog', dialog => dialog.accept()); await first.getByRole('button', { name: 'Remove review', exact: true }).click(); await first.waitFor({ state: 'hidden' });
         const html = await publicHtml(); assert.ok(!html.includes('Tamyra Borg'), 'removed imported reviews disappear from public HTML and the bootstrap snapshot');
-        await navigate(origin); await page.locator('.facebook-recommendations article').filter({ hasText: 'Sherrie Humphries' }).waitFor({ state: 'attached' });
+        await navigate(origin+'/reviews'); await page.locator('.facebook-recommendations article').filter({ hasText: 'Sherrie Humphries' }).waitFor({ state: 'attached' });
         assert.equal(await page.getByText('Tamyra Borg', { exact: true }).count(), 0);
         assert.equal(await page.locator('.goal-early-review').isVisible(), false, 'no duplicate review teaser');
         const retainedReview = page.locator('.facebook-recommendations article').filter({ hasText: 'Waneta Malsom' });

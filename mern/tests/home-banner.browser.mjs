@@ -39,10 +39,12 @@ try {
             assert.equal(await page.locator('.home-status-banner, .home-routine-updates, .banner-digest').count(), 0, 'banner and updates panel stay removed for every visitor role');
             assert.equal(await page.getByText('Read every Bravo update', { exact: true }).count(), 0);
             assert.equal(await page.getByText('Bravo fixture announcement', { exact: true }).count(), 0);
-            assert.ok(await page.locator('#workshops').evaluate(node => node.previousElementSibling.matches('.home-tools') && node.previousElementSibling.previousElementSibling.id === 'results'), 'results flow through Tools of the Trade into workshops with no empty banner slot');
-            assert.equal(await page.locator('.conversion-trust a').count(), 4, 'hero navigation stays intact');
+            assert.equal(await page.locator('main a[href="/workshops"]').count(),1,'workshops remain directly reachable');
+            assert.equal(await page.locator('.polish-hero-actions a').count(),2,'hero navigation stays intact');
+            await page.goto(origin+'/our-approach');await page.waitForLoadState('networkidle');
             assert.equal(await page.locator('#method .journey-tab').count(), 3, 'all training approach choices stay intact');
             assert.equal(await page.locator('#method .journey-panel').count(), 3, 'all three training steps remain available');
+            await page.goto(origin+'/training');await page.waitForLoadState('networkidle');
             assert.match(await page.locator('#training').innerText(), /\$200/, 'training pricing stays intact');
             assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'removing the banner preserves the responsive layout');
             if (visitorRole === null) {

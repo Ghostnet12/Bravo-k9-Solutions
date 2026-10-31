@@ -51,7 +51,7 @@ try {
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
           assert.equal(await page.locator('.mobile-home-nav svg').count(),6,'all quick-navigation icons are stable SVG outlines');
           assert.equal(await page.locator('.cinema-story').count(),0,'duplicate training-photo story is removed');
-          assert.equal(await page.locator('.cinema-dog-gallery').count(),1,'editable original photo gallery remains');
+          assert.equal(await page.locator('main a[href="/results"]').count(),1,'editable original gallery remains reachable on Results');
           const photoBox = await image.boundingBox();
           const copyBox = await page.locator('.cinema-hero-copy').boundingBox();
           assert.ok(copyBox.y + copyBox.height <= photoBox.y, 'headline and booking precede the cinematic image panel');
@@ -63,10 +63,10 @@ try {
             assert.ok(primary.y > 74 && primary.y + primary.height < navigation.y, 'booking stays immediately reachable');
           }
           const sectionOrder = await page.locator('#main-content').evaluate(main => {
-            const sections = [...main.querySelectorAll('#team, #results, [aria-labelledby="booking-title"], #k9-transport, #online')];
-            return sections.map(section => section.id || 'booking');
+            const sections = [...main.querySelectorAll('#explore-bravo, .hub-stories, .hub-transport, [aria-labelledby="booking-title"]')];
+            return sections.map(section => section.id || (section.classList.contains('hub-stories') ? 'stories' : section.classList.contains('hub-transport') ? 'transport' : 'booking'));
           });
-          assert.deepEqual(sectionOrder, ['team', 'results', 'booking', 'k9-transport', 'online'], 'training, proof and booking precede upcoming services in reading order');
+          assert.deepEqual(sectionOrder, ['explore-bravo', 'stories', 'transport', 'booking'], 'training, proof and booking precede upcoming services in reading order');
           if (height === 390) {
             for (const link of await page.locator('.polish-hero-actions a').all()) {
               await link.scrollIntoViewIfNeeded();

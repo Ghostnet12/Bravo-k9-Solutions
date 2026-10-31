@@ -58,23 +58,23 @@ try {
         await page.emulateMedia({ reducedMotion: 'reduce' });
         await page.waitForFunction(() => document.querySelector('.cinema-home').dataset.motion === 'off');
         await page.emulateMedia({ reducedMotion: 'no-preference' });
-        await page.locator('#training').scrollIntoViewIfNeeded();
+        await page.goto(origin+'/reviews',{waitUntil:'networkidle'});
         await page.getByRole('heading', { name: /Don’t take\s*our word for it\./ }).waitFor();
-        const proofTop = await page.locator('#reviews').evaluate(element => element.getBoundingClientRect().top);
-        const trainingTop = await page.locator(width === 390 ? '.conversion-opening' : '#training').evaluate(element => element.getBoundingClientRect().top);
-        assert.ok(proofTop > trainingTop, `${engineName}-${width}: proof follows training and pricing`);
         const accountReviews = page.locator('.home-proof-reviews article').filter({ hasText: 'Verified Bravo account' });
         assert.equal(await accountReviews.count(), reviews.length);
         for (const review of reviews) await accountReviews.getByText(review.authorName, { exact: true }).waitFor();
         assert.equal(await page.locator('.facebook-recommendations article').count(), 7);
         assert.equal(await page.locator('.facebook-recommendations-more[open]').count(), 0, 'additional reviews start collapsed');
+        await page.goto(origin+'/training',{waitUntil:'networkidle'});
         assert.equal((await page.locator('.conversion-goal').filter({ hasText: 'Advanced' }).innerText()).includes('$200'), false, 'specialist goals do not inherit the standard monthly price');
+        await page.goto(origin+'/reviews',{waitUntil:'networkidle'});
         await page.locator('.facebook-recommendations-more > summary').click();
         for (const author of ['Tamyra Borg', 'Waneta Malsom']) {
           const card = page.locator('.facebook-recommendations article').filter({ hasText: author });
           await card.getByText('Google review', { exact: true }).waitFor();
           await card.getByText(author, { exact: true }).waitFor();
         }
+        await page.goto(origin+'/results',{waitUntil:'networkidle'});
         assert.equal(await page.locator('.home-work-proof-grid article').count(), 3);
         // Exercise outbound actions without relying on Facebook availability.
         const reelIds = ['1850999522754029', '1068433732560103', '1079472767813329'];
@@ -93,14 +93,15 @@ try {
           // A cached Back navigation can restore the page without a new load
           // event. Verify the committed URL and the visible carousel instead.
           await page.goBack({ waitUntil: 'commit' });
-          await page.waitForURL(`${origin}/`, { waitUntil: 'commit' });
+          await page.waitForURL(`${origin}/results`, { waitUntil: 'commit' });
           await watch.waitFor();
           assert.equal(await card.locator('iframe').count(), 0);
           assert.equal(await watch.isVisible(), true, `${engineName}-${width}: Back must return to the Bravo carousel`);
         }
-        // Back restores the static carousel before the asynchronous roster.
+        await page.goto(origin+'/team',{waitUntil:'networkidle'});
         await page.locator('#team').getByText('David Northrop', { exact: true }).waitFor();
         assert.equal(await page.locator('#team').getByText('David Northrop', { exact: true }).count(), 1);
+        await page.goto(origin+'/training',{waitUntil:'networkidle'});
         assert.ok((await page.locator('.conversion-offer .conversion-button').getAttribute('href')).startsWith('/portal?program=training'));
         assert.equal(await page.locator('.home-training-offer').count(), 0, 'no repeated standard offer');
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${engineName}-${width}: homepage overflow`);
@@ -122,7 +123,7 @@ try {
         // Empty and unavailable rosters must never retain named fallbacks.
         for (const roster of [[], null]) {
           publicTeam = roster;
-          await page.goto(origin, { waitUntil: 'networkidle' });
+          await page.goto(origin+'/team', { waitUntil: 'networkidle' });
           assert.equal(await page.locator('.cinema-team-grid article').count(), 0);
         }
         publicTeam = team;

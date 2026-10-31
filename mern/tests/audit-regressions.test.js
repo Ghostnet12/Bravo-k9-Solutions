@@ -205,7 +205,7 @@ test('ratings have one accessible name and decorative stars stay silent', async 
   const source = await readFile(new URL('../client/src/ReviewStars.jsx', import.meta.url), 'utf8');
   assert.match(source, /className="review-stars review-stars--gold" role="img" aria-label=/);
   assert.match(source, /<span aria-hidden="true">/);
-  for (const filename of ['Home.tsx', 'FacebookRecommendations.jsx']) {
+  for (const filename of ['BravoPages.tsx', 'FacebookRecommendations.jsx']) {
     const page = await readFile(new URL(`../client/src/${filename}`, import.meta.url), 'utf8');
     assert.match(page, /<ReviewStars rating=\{review.rating\}/);
   }

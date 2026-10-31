@@ -12,11 +12,11 @@ function readTemplate() {
   return template;
 }
 
-export function renderHomepage(html, value, filmValue) {
+export function renderHomepage(html, value, filmValue, { preloadHero = true } = {}) {
   const hero = homeHeroSnapshot(value);
   const films = heroFilmPlaylistSnapshot(filmValue);
   // The public hero is a still image; saved film records remain untouched.
-  const preload = `<link rel="preload" as="image" href="${CINEMATIC_HERO_SOURCE}" imagesrcset="${CINEMATIC_HERO_SRCSET}" imagesizes="${CINEMATIC_HERO_SIZES}" fetchpriority="high"/>`;
+  const preload = preloadHero ? `<link rel="preload" as="image" href="${CINEMATIC_HERO_SOURCE}" imagesrcset="${CINEMATIC_HERO_SRCSET}" imagesizes="${CINEMATIC_HERO_SIZES}" fetchpriority="high"/>` : '';
   // The pre-rendered photo must match the published snapshot on the very first
   // frame, including before JavaScript starts. Preserve the editor's original
   // source attributes so existing image edits and undo keep working.

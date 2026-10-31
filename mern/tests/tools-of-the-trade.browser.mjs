@@ -26,7 +26,7 @@ app.use('/api', (req, res) => {
 });
 app.get('/tools-of-the-trade', (_req,res) => res.type('html').send(html));
 app.get('/', (_req,res) => res.type('html').send(home));
-app.use(express.static(dist));
+app.use(express.static(dist,{extensions:['html']}));
 const server = app.listen(0, '127.0.0.1'); await once(server, 'listening');
 const origin = `http://127.0.0.1:${server.address().port}`;
 const links = ['https://a.co/d/0cWLPuAY','https://a.co/d/07p2Zd9F','https://a.co/d/08SLvEQC','https://a.co/d/08BVVJuV','https://a.co/d/0bMLFa5W'];
@@ -42,7 +42,7 @@ try {
       assert.match(await raw.locator('.tools-assessment').innerText(), /We only use the tools your dog needs/);
       assert.equal(await raw.locator('.tool-purchase').first().getAttribute('href'), links[0]);
       await raw.goto(origin + '/');
-      assert.equal(await raw.locator('.home-tools-card').getAttribute('href'), '/tools-of-the-trade');
+      assert.equal(await raw.locator('.hub-more a[href="/tools-of-the-trade"]').getAttribute('href'), '/tools-of-the-trade');
       await raw.close();
       for (const width of [1280,1281]) {
         const boundary = await browser.newPage({ viewport: { width, height: 900 } });
@@ -90,9 +90,9 @@ try {
           const collapsed = await page.locator('.menu-toggle').isVisible();
           assert.equal(await page.locator('#bravo-navigation a[href="/tools-of-the-trade"]').count(), 1);
           assert.equal(await page.locator('footer a[href="/tools-of-the-trade"]').count(), 1);
-          const navReviews = page.locator('#bravo-navigation .nav-explore > a[href="/#reviews"]');
+          const navReviews = page.locator('#bravo-navigation .nav-explore > a[href="/reviews"]');
           assert.equal(await navReviews.count(), 1);
-          assert.equal(await page.locator('.nav-about a[href="/#reviews"]').count(), 0);
+          assert.equal(await page.locator('.nav-about a[href="/reviews"]').count(), 0);
           if (collapsed) {
             await page.locator('.menu-toggle').click();
             await navReviews.waitFor({ state: 'visible' });
@@ -114,22 +114,22 @@ try {
           // Direct Reviews navigation works from another page with a keyboard.
           if (collapsed) await page.locator('.menu-toggle').click();
           await navReviews.focus(); await navReviews.press('Enter');
-          await page.waitForURL('**/#reviews');
+          await page.waitForURL('**/reviews');
           await page.locator('#reviews').waitFor();
           if (collapsed) assert.equal(await page.locator('.menu-toggle').getAttribute('aria-expanded'), 'false');
           // Stay in the customer navigation flow. A hard reload here tears down
           // the just-mounted homepage's requests and WebKit reports them as errors.
           await page.locator('header a[href="/"]').click();
           await page.waitForURL(origin + '/');
+          await page.locator('.hub-more a[href="/tools-of-the-trade"]').waitFor();
+          await page.goto(origin+'/our-approach');await page.waitForLoadState('networkidle');
           const homeTools = page.locator('.home-tools-card');
-          await homeTools.waitFor({ state: 'visible' });
-          assert.equal(await homeTools.getAttribute('href'), '/tools-of-the-trade');
-          assert.match(await homeTools.innerText(), /We assess your dog first/);
-          assert.ok(await page.locator('.cinema-hero').evaluate(hero => hero.nextElementSibling.classList.contains('conversion-trust') && document.getElementById('method').compareDocumentPosition(document.getElementById('training')) & Node.DOCUMENT_POSITION_FOLLOWING));
-          const order = await page.evaluate(() => ['#method','#training','#training-programs','#reviews','#team','#results','.home-tools','#first-visit-help','.cinema-close'].map(selector => document.querySelector(selector).getBoundingClientRect().top));
-          assert.deepEqual([...order].sort((a,b) => a-b), order, 'the approach leads into pricing, training choices and proof');
-          assert.equal(await page.locator('#results #dogs').count(), 1, 'photos and video share one proof section');
-          assert.ok(await page.locator('#workshops').evaluate(node => node.previousElementSibling.classList.contains('home-tools')), 'workshops follow the equipment section without a banner or empty slot');
+          await homeTools.waitFor({state:'visible'});
+          assert.equal(await homeTools.getAttribute('href'),'/tools-of-the-trade');
+          assert.match(await homeTools.innerText(),/We assess your dog first/);
+          await page.goto(origin+'/results');await page.waitForLoadState('networkidle');
+          assert.equal(await page.locator('#results #dogs').count(),1,'photos and videos share one results page');
+          await page.goto(origin+'/training');await page.waitForLoadState('networkidle');
           assert.ok(await page.locator('.conversion-dog-terms').evaluate(node => {
             const button = node.parentElement.querySelector('.conversion-button');
             return node.getBoundingClientRect().bottom <= button.getBoundingClientRect().top;
@@ -138,24 +138,15 @@ try {
             await page.locator(`#${id}`).evaluate(node => node.scrollIntoView({ block: 'start', behavior: 'instant' }));
             await page.screenshot({ path: `test-results/tools-of-the-trade-service-navigation-${id}-${name}-${width}.png` });
           }
-          if (width < 768) {
-            // A customer can jump to Services from another route, then return to
-            // the same section again after scrolling, without a hidden heading.
-            await page.locator('footer a[href="/tools-of-the-trade"]').click();
-            await page.waitForURL('**/tools-of-the-trade');
-            await page.locator('.mobile-home-nav a[href="/#training-programs"]').click();
-            await page.waitForURL('**/#training-programs');
-            await page.waitForFunction(() => {
-              const top = document.getElementById('training-programs')?.getBoundingClientRect().top;
-              return top >= 74 && top <= 150;
-            });
-            await page.locator('#method').evaluate(node => node.scrollIntoView({ behavior: 'instant' }));
-            await page.locator('.mobile-home-nav a[href="/#training-programs"]').click();
-            const target = page.locator('#training-programs');
-            assert.ok(await target.evaluate(node => node === document.activeElement));
-            const top = await target.evaluate(node => node.getBoundingClientRect().top);
-            assert.ok(top >= 74 && top <= 150, `Services anchor clears header: ${top}`);
+          if(width<768) {
+            await page.locator('footer a[href="/tools-of-the-trade"]').click();await page.waitForURL('**/tools-of-the-trade');
+            const services=page.locator('.mobile-home-nav a[href="/training"]');
+            await services.click();await page.waitForURL('**/training');await page.locator('.bravo-detail-heading h1').waitFor();
+            await page.locator('#training-programs').scrollIntoViewIfNeeded();await services.click();
+            assert.ok(await page.evaluate(()=>scrollY<3),'repeated Services tap returns to the page opening');
+            assert.equal(await page.evaluate(()=>document.activeElement.id),'main-content');
           }
+          await page.goto(origin+'/our-approach');await page.waitForLoadState('networkidle');
           await homeTools.scrollIntoViewIfNeeded();
           await homeTools.focus(); await page.keyboard.press('Tab'); await page.keyboard.press('Shift+Tab');
           assert.ok(await homeTools.evaluate(node => node === document.activeElement));

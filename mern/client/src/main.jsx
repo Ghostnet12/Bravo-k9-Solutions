@@ -17,6 +17,15 @@ import AdvertisementManagement from './AdvertisementManagement';
 import AccessibilityPage from './AccessibilityPage';
 import NotFoundPage from './NotFoundPage';
 import { Page } from './ui';
+// Public detail HTML needs its layout before lazy page modules load.
+import './transport.css';
+import './hero-carousel.css';
+import './proof-videos.css';
+import './trainer-schedules.css';
+import './home-polish.css';
+import './home-fci.css';
+import './home-tools.css';
+import './field-experience.css';
 import './legacy.css';
 import './styles.css';
 import './professional.css';
@@ -33,9 +42,16 @@ import './hero-confidence.css';
 import './unified-responsive.css';
 import './public-experience.css';
 import './home-redesign.css';
+import './bravo-hub.css';
 // Keep the server-rendered public page readable until its interactive module
 // is ready. A failed chunk must not replace useful HTML with a loading/error shell.
 const publicPageLoaders = {
+  '/training': () => import('./TrainingPage'),
+  '/our-approach': () => import('./OurApproachPage'),
+  '/team': () => import('./TeamPage'),
+  '/results': () => import('./ResultsPage'),
+  '/reviews': () => import('./ReviewsPage'),
+
   '/k9-transport': () => import('./TransportPage'),
   '/tools-of-the-trade': () => import('./ToolsOfTheTradePage'),
   '/how-to': () => import('./HowToPage'),
@@ -57,6 +73,11 @@ function publicPage(path) {
     return <Component {...props}/>;
   };
 }
+const TrainingPage = publicPage('/training');
+const OurApproachPage = publicPage('/our-approach');
+const TeamPage = publicPage('/team');
+const ResultsPage = publicPage('/results');
+const ReviewsPage = publicPage('/reviews');
 const TransportPage = publicPage('/k9-transport');
 const ToolsOfTheTradePage = publicPage('/tools-of-the-trade');
 const HowToPage = publicPage('/how-to');
@@ -127,7 +148,7 @@ function RouteBehavior() {
     // to abandon its destination. New gestures and form/editor focus take over.
     const cancelRouteFocus = event => {
       if (movingAnchorFocus) return;
-      if (hash && event?.type === 'focusin' && event.target.closest?.('a[href]')) return;
+      if (event?.type === 'focusin' && event.target.closest?.('a[href]')) return;
       stopAlignment();
     };
     const events = ['pointerdown', 'keydown', 'focusin', 'input', 'wheel', 'touchmove'];
@@ -169,7 +190,7 @@ class ErrorBoundary extends React.Component {
   render() { return this.state.error ? <Page title="Let’s get you back on track."><p>The page couldn’t load. Your saved bookings are not affected.</p><a className="button" href="/">Reload Bravo</a></Page> : this.props.children; }
 }
 function BookingRoute() { const location = useLocation(); return <BookingPage key={location.search}/>; }
-function App() { return <BrowserRouter><AppProvider><LiveStatusProvider><SiteContentProvider><a className="skip-link" href="#main-content">Skip to main content</a><RouteBehavior/><SiteTelemetry/><SiteSoundtrack/><ErrorBoundary><Suspense fallback={<Page title="Opening Bravo…"><p role="status">Loading your page.</p></Page>}><PasswordSetupGate><Routes><Route path="/k9-transport" element={<TransportPage/>}/><Route path="/tools-of-the-trade" element={<ToolsOfTheTradePage/>}/><Route path="/how-to" element={<HowToPage/>}/><Route path="/live" element={<LivePage/>}/><Route path="/live/studio" element={<LiveStudio/>}/><Route path="/schedule" element={<SchedulePage/>}/><Route path="/reset-password" element={<ResetPasswordPage/>}/><Route path="/" element={<Home/>}/><Route path="/workshops" element={<WorkshopPage/>}/><Route path="/dog-training" element={<DogTrainingPage/>}/><Route path="/hunting-dog-training" element={<HuntingPage/>}/><Route path="/behavior-assessment" element={<BehaviorAssessmentPage/>}/><Route path="/dog-walking" element={<Navigate to="/dog-training" replace/>}/><Route path="/portal" element={<BookingRoute/>}/><Route path="/account" element={<AccountPage/>}/><Route path="/learn" element={<LearnPage/>}/><Route path="/community" element={<CommunityPage/>}/><Route path="/contact" element={<ContactPage/>}/><Route path="/fci-support" element={<FCISupportPage/>}/><Route path="/admin" element={<AdminPage/>}/><Route path="/accessibility" element={<AccessibilityPage/>}/><Route path="/media-rights" element={<MediaRightsPage/>}/><Route path="*" element={<NotFoundPage/>}/></Routes></PasswordSetupGate></Suspense></ErrorBoundary><AdvertisementManagement/><MobileHomeNav/><SiteImageTools/></SiteContentProvider></LiveStatusProvider></AppProvider></BrowserRouter>; }
+function App() { return <BrowserRouter><AppProvider><LiveStatusProvider><SiteContentProvider><a className="skip-link" href="#main-content">Skip to main content</a><RouteBehavior/><SiteTelemetry/><SiteSoundtrack/><ErrorBoundary><Suspense fallback={<Page title="Opening Bravo…"><p role="status">Loading your page.</p></Page>}><PasswordSetupGate><Routes><Route path="/training" element={<TrainingPage/>}/><Route path="/our-approach" element={<OurApproachPage/>}/><Route path="/team" element={<TeamPage/>}/><Route path="/results" element={<ResultsPage/>}/><Route path="/reviews" element={<ReviewsPage/>}/><Route path="/k9-transport" element={<TransportPage/>}/><Route path="/tools-of-the-trade" element={<ToolsOfTheTradePage/>}/><Route path="/how-to" element={<HowToPage/>}/><Route path="/live" element={<LivePage/>}/><Route path="/live/studio" element={<LiveStudio/>}/><Route path="/schedule" element={<SchedulePage/>}/><Route path="/reset-password" element={<ResetPasswordPage/>}/><Route path="/" element={<Home/>}/><Route path="/workshops" element={<WorkshopPage/>}/><Route path="/dog-training" element={<DogTrainingPage/>}/><Route path="/hunting-dog-training" element={<HuntingPage/>}/><Route path="/behavior-assessment" element={<BehaviorAssessmentPage/>}/><Route path="/dog-walking" element={<Navigate to="/dog-training" replace/>}/><Route path="/portal" element={<BookingRoute/>}/><Route path="/account" element={<AccountPage/>}/><Route path="/learn" element={<LearnPage/>}/><Route path="/community" element={<CommunityPage/>}/><Route path="/contact" element={<ContactPage/>}/><Route path="/fci-support" element={<FCISupportPage/>}/><Route path="/admin" element={<AdminPage/>}/><Route path="/accessibility" element={<AccessibilityPage/>}/><Route path="/media-rights" element={<MediaRightsPage/>}/><Route path="*" element={<NotFoundPage/>}/></Routes></PasswordSetupGate></Suspense></ErrorBoundary><AdvertisementManagement/><MobileHomeNav/><SiteImageTools/></SiteContentProvider></LiveStatusProvider></AppProvider></BrowserRouter>; }
 const start = () => createRoot(document.getElementById('root')).render(<React.StrictMode><App/></React.StrictMode>);
 const initialPath = window.location.pathname;
 if (publicPageLoaders[initialPath]) {

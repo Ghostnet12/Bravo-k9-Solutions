@@ -26,7 +26,7 @@ try{for(const [name,engine] of Object.entries({chromium,webkit})){
  if(path==='/api/program-videos/manners'){const body=route.request().postDataJSON();clips=[{...clips[0],title:body.title,description:body.description,revision:2}];json={clip:clips[0]};}
  await route.fulfill({json});});
  try{for(const administrator of [false,true]){
- primary=!administrator;await page.goto(origin);await page.getByText('See training examples by goal',{exact:true}).click();await page.getByRole('button',{name:'Edit program video',exact:true}).waitFor();
+ primary=!administrator;await page.goto(origin+'/training');await page.getByText('See training examples by goal',{exact:true}).click();await page.getByRole('button',{name:'Edit program video',exact:true}).waitFor();
  // Wait for the background request to reach the fixture before holding it;
  // otherwise a faster CI runner can make the interactive read arrive first.
  const snapshotDeadline=Date.now()+5000;while(contentReads===0 && Date.now()<snapshotDeadline)await new Promise(resolve=>setTimeout(resolve,10));assert.ok(contentReads>0,'initial content request reached the fixture before editing');

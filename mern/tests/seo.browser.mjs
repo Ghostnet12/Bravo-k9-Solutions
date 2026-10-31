@@ -10,7 +10,7 @@ import app from '../server/app.js';
 import { PAGE_METADATA, publicRoutes, canonicalUrl } from '../shared/page-metadata.js';
 import { SERVICES } from '../shared/catalog.js';
 const home = renderSiteContent(await readFile(new URL('../client/dist/bravo-shell.html',import.meta.url),'utf8'), {}, undefined, undefined, DEFAULT_REVIEWS);
-const server = express().get('/',(_req,res)=>res.type('html').send(home))
+const server = express().get('/',(_req,res)=>res.type('html').send(home)).get('/reviews',async(_req,res)=>res.type('html').send(renderSiteContent(await readFile(new URL('../client/dist/reviews.html',import.meta.url),'utf8'),{},undefined,undefined,DEFAULT_REVIEWS)))
   .get('/api/live', (_req, res) => res.json({ sessions: [], announcements: [], availability: 'available', serverTime: new Date().toISOString() }))
   .use(app).listen(0, '127.0.0.1');
 await once(server, 'listening');
@@ -28,7 +28,7 @@ try {
         assert.equal(await raw.locator('h1').count(), 1, route);
         assert.ok((await raw.locator('main').innerText()).length > 300, `${route} has useful text without JavaScript`);
         assert.equal(await raw.locator('link[rel="canonical"]').getAttribute('href'), canonicalUrl(route));
-        if (route === '/') {
+        if (route === '/reviews') {
           const review = raw.locator('.facebook-recommendations article').first();
           await review.getByText('Read full review', { exact: true }).click();
           assert.ok(await review.locator('.review-full blockquote').isVisible(), 'full review expands without JavaScript');
@@ -79,7 +79,7 @@ try {
           };
           return route.fulfill({ json: fixtures[path] || {} });
         });
-        await navigate(origin);
+        await navigate(origin+'/reviews');
         const cards = page.locator('.facebook-recommendations article');
         assert.equal(await cards.count(), 7);
         await page.locator('.facebook-recommendations-more > summary').click();
@@ -122,7 +122,7 @@ try {
         }
         if (width === 390) {
           await navigate(origin);
-          const price = page.locator('.conversion-price');
+          const price = page.locator('.hub-price');
           await price.waitFor();
           assert.match(await price.innerText(), /\$200/);
           assert.equal(await page.locator('.cinema-hero .cinema-eyebrow').innerText(), 'TRUST. TRAIN. DEPLOY.');

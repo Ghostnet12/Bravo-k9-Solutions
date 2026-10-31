@@ -185,7 +185,7 @@ try {
         await navigate(() => page.reload());assert.equal(await page.getByLabel('Dog’s name',{exact:true}).inputValue(),'');
         // A different authenticated account never sees the first account's input.
         await page.getByLabel('Dog’s name',{exact:true}).fill('Only client A');await page.getByRole('button',{name:'Choose a trainer →',exact:true}).click();await page.getByRole('heading',{name:'Choose your trainer.',exact:true}).waitFor();actor={...fixtureUser,id:'client-b'};await navigate(() => page.reload());assert.equal(await page.getByLabel('Dog’s name',{exact:true}).inputValue(),'');
-        await navigate(() => page.goto(origin));await page.locator('.conversion-offer').waitFor();assert.equal(await page.locator('.hero-booking-facts').count(),0);assert.match(await page.locator('.conversion-offer').innerText(),/\$200[\s\S]*Manual renewal/);await assertFit('Homepage');
+        await navigate(() => page.goto(origin+'/training'));await page.locator('.conversion-offer').waitFor();assert.equal(await page.locator('.hero-booking-facts').count(),0);assert.match(await page.locator('.conversion-offer').innerText(),/\$200[\s\S]*Manual renewal/);await assertFit('Homepage');
         await page.screenshot({path:`test-results/booking-home-${name}-${width}.png`,fullPage:true});
         await navigate(() => page.goto(`${origin}/how-to#chapter-time`));await page.locator('#chapter-time button').waitFor();assert.equal(await page.locator('.how-to-chapters button').count(),22);await assertFit('How-to guide');
         if (width === 390) {
