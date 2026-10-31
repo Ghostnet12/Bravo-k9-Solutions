@@ -49,7 +49,7 @@ async function showCards(page) {
   await page.locator('#find-training').evaluate(node => window.scrollTo({ top: scrollY + node.getBoundingClientRect().top - 125, behavior: 'instant' }));
   await page.waitForTimeout(100);
 }
-async function revealed(page, goal, behavior = 'smooth') {
+async function revealed(page, goal, behavior = 'instant') {
   await page.waitForFunction(() => {
     const panel = document.getElementById('goal-result').getBoundingClientRect();
     const header = document.querySelector('.app-header').getBoundingClientRect();

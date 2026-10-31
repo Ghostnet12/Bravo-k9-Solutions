@@ -56,6 +56,7 @@ try {
           const hero=await page.locator('.polish-hero-actions').getByRole('link',{name:/Start My Training Plan/i}).boundingBox();
           assert.ok(hero && hero.y>0 && hero.y+hero.height<=950,'booking remains immediately visible');
           assert.match(await page.locator('#home-title').innerText(),/Dog training.\s*For real life./);
+          assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).scrollBehavior),'auto','native anchor navigation keeps controls stationary');
           assert.match(await page.locator('#home-title').evaluate(node=>getComputedStyle(node).fontFamily),/Montserrat/);
           const imageTop=await page.locator('.cinema-hero-media').evaluate(node=>node.getBoundingClientRect().top);
           assert.ok(imageTop>hero.y+hero.height,'the new opening puts the booking message before the image');
