@@ -79,7 +79,7 @@ try {
      const intro=await page.locator('.cinema-hero-intro').boundingBox();
      const secondary=await page.locator('.polish-hero-actions .cinema-link').boundingBox();
      assert.ok(box.y>=intro.y+intro.height && box.y<intro.y+intro.height+24,'booking directly below hero copy');
-     assert.ok(intro.y >= art.y + art.width * .94, 'copy stays below the dog’s paws');
+     assert.ok(art.y >= secondary.y + secondary.height, 'the image panel follows the message and booking actions');
      assert.ok(box.width > width * .85 && Math.abs(box.width-secondary.width) < 2, 'approved full-width buttons have matching widths');
      assert.ok(Math.abs(box.x-intro.x)<2 && Math.abs(secondary.x-box.x)<2,'both hero buttons align with intro');
      assert.ok(secondary.y>=box.y+box.height && secondary.height>=44,'secondary button stacked with touch target');
@@ -96,7 +96,7 @@ try {
     await page.waitForFunction(()=>{const target=document.querySelector('#training');const top=target?.getBoundingClientRect().top;return top>=74 && top<150;}).catch(async error=>{console.error('Anchor geometry',width,await page.evaluate(()=>({url:location.href,top:document.querySelector('#training')?.getBoundingClientRect().top,padding:getComputedStyle(document.documentElement).scrollPaddingTop,margin:getComputedStyle(document.querySelector('#training')).scrollMarginTop})));throw error;});
     assert.equal(await page.locator('#training').count(),1,'one training anchor across screen sizes');
     assert.ok(await page.locator('.conversion-price').isVisible(),'primary training price is the destination');
-    assert.match(await page.locator('#training h2:visible').first().evaluate(el=>getComputedStyle(el).fontFamily),/Bebas Neue/);
+    assert.match(await page.locator('#training h2:visible').first().evaluate(el=>getComputedStyle(el).fontFamily),/Montserrat/);
     // A real scroll gesture ends the route's brief layout stabilization.
     await page.mouse.wheel(0,-10000);
     await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));

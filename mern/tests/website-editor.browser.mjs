@@ -58,7 +58,9 @@ try{for(const [engineName,engine] of Object.entries({chromium,webkit})){
    }
    res.status(status).json(json);
   };
-  const hold=async locator=>{await locator.scrollIntoViewIfNeeded();const box=await locator.boundingBox();await page.mouse.move(box.x+Math.min(24,box.width/2),box.y+Math.min(12,box.height/2));await page.mouse.down();await page.waitForTimeout(780);await page.mouse.up();};
+  // Native 'if needed' scrolling counts content behind a fixed toolbar as visible.
+  // Position the intended target in clear view and verify the actual hit before holding.
+  const hold=async locator=>{await locator.evaluate(node=>node.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'}));const box=await locator.boundingBox();assert.ok(await locator.evaluate(node=>{const b=node.getBoundingClientRect();return node.contains(document.elementFromPoint(b.x+Math.min(24,b.width/2),b.y+Math.min(12,b.height/2)));}),'the hold reaches the intended editable target');await page.mouse.move(box.x+Math.min(24,box.width/2),box.y+Math.min(12,box.height/2));await page.mouse.down();await page.waitForTimeout(780);await page.mouse.up();};
   const content=page.getByRole('dialog',{name:'Edit website section',exact:true});
   try{
    await page.goto(origin);await page.waitForLoadState('networkidle');if(new URL(page.url()).pathname==='/' && (await page.locator('.training-examples').getAttribute('open'))===null) { await page.getByText('See training examples by goal',{exact:true}).click();await page.locator('.goal-result').waitFor(); }
@@ -90,7 +92,7 @@ try{for(const [engineName,engine] of Object.entries({chromium,webkit})){
    await hold(page.locator('.workshop-details h3'));await page.getByRole('dialog',{name:'Edit workshop',exact:true}).waitFor();await page.getByRole('dialog',{name:'Edit workshop',exact:true}).getByRole('button',{name:'Cancel',exact:true}).click();
    await page.screenshot({path:`test-results/website-editor-${engineName}-${width}.png`});
    // Ordinary scrolling cancels a hold; the next tap must still navigate.
-   await page.locator('#goal-tab-manners').scrollIntoViewIfNeeded();const box=await page.locator('#goal-tab-manners').boundingBox();await page.mouse.move(box.x+10,box.y+10);await page.mouse.down();await page.mouse.move(box.x+45,box.y+40);await page.waitForTimeout(750);await page.mouse.up();assert.equal(await page.locator('dialog[open]').count(),0);
+   await page.locator('#goal-tab-manners').evaluate(node=>node.scrollIntoView({block:'center',behavior:'instant'}));const box=await page.locator('#goal-tab-manners').boundingBox();await page.mouse.move(box.x+10,box.y+10);await page.mouse.down();await page.mouse.move(box.x+45,box.y+40);await page.waitForTimeout(750);await page.mouse.up();assert.equal(await page.locator('dialog[open]').count(),0);
    assert.equal(new URL(page.url()).pathname,'/','dragging an editable link must not navigate');
    // Program examples remain available alongside shared cards at every width.
    await page.setViewportSize({width:Math.max(width,768),height:900});

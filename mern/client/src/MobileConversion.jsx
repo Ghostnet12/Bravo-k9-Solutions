@@ -15,7 +15,7 @@ const subscribeCompact = notify => {
 const compactSnapshot = () => matchMedia(compactQuery).matches;
 const serverSnapshot = () => false;
 export const useCompactLayout = () => useSyncExternalStore(subscribeCompact, compactSnapshot, serverSnapshot);
-const homeSectionOrder = ['reviews', 'training', 'team', 'method', 'results', 'tools', 'workshops', 'faq', 'booking', 'transport', 'online', 'fci'];
+const homeSectionOrder = ['method', 'offer', 'media-tools', 'training', 'reviews', 'team', 'results', 'tools', 'workshops', 'faq', 'booking', 'transport', 'online', 'fci'];
 // One reading order for every viewport, including the server-rendered page.
 // Stable keys preserve media and editor state when the viewport changes.
 export function HomeSectionOrder({ children }) {
@@ -74,7 +74,7 @@ export function TrainingOffer() {
         ].map(([title,term],index)=><li key={title}><Editable as="strong" contentKey={`home-training-benefit-${index}`} canEditText>{title}</Editable><Editable as="span" contentKey={`mobile-training-term-${index + 1}`} canEditText>{term}</Editable></li>)}</ul>
         <Editable as={Link} contentKey="mobile-training-start" canEditText canEditLink className="conversion-button" to={training?.enabled === false ? '/contact' : '/portal?program=training'} onClick={() => trackVisit('pricing_booking_clicked')}>{training?.enabled === false ? 'Ask about training' : 'Start my training plan'} <span aria-hidden="true">→</span></Editable>
         <Editable as="p" contentKey="training-request-reassurance" canEditText className="training-request-reassurance">Explore trainers and available dates before creating an account. Sending a request does not charge your card; Bravo confirms your visits.</Editable>
-        <div className="training-help-links"><Editable as={Link} contentKey="training-booking-guide" canEditText canEditLink to="/how-to#first-visit-guide">How booking works →</Editable><Editable as={Link} contentKey="training-tools-guide" canEditText canEditLink to="/tools-of-the-trade">Tools we use →</Editable></div>
+        <div className="training-help-links"><Editable as={Link} contentKey="home-training-program" canEditText canEditLink to="/dog-training">Explore the full program →</Editable><Editable as={Link} contentKey="training-booking-guide" canEditText canEditLink to="/how-to#first-visit-guide">How booking works →</Editable><Editable as={Link} contentKey="training-tools-guide" canEditText canEditLink to="/tools-of-the-trade">Tools we use →</Editable></div>
         <details className="conversion-catalog-terms"><summary><Editable as="span" contentKey="home-training-details" canEditText>What’s included & how it works</Editable><span aria-hidden="true">+</span></summary><p>{training?.description}</p><ul>{[[0,'Personalized training'],[5,'Training in real-world environments'],[6,'Bravo comes to you'],[7,'Manual monthly renewal']].map(([index,term]) => <Editable as="li" key={index} contentKey={`mobile-training-term-${index}`} canEditText>{term}</Editable>)}</ul><p>Aggression assessments and specialist programs are separate.</p></details>
       </div>
     </Editable>

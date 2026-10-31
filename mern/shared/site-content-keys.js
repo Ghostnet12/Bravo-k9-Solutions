@@ -10,6 +10,7 @@ export const CONTENT_KEYS = {
   'training-request-reassurance': { text: true },
   'training-booking-guide': { text: true, link: true },
   'training-tools-guide': { text: true, link: true },
+  'home-training-program': { text: true, link: true },
   'training-next-title': { text: true },
   'training-next-copy': { text: true },
   'training-next-book': { text: true, link: true },

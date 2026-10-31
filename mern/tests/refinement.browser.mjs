@@ -42,7 +42,7 @@ try {
           const image = page.locator('.cinema-hero-still');
           await image.evaluate(img => img.decode());
           const source = await image.evaluate(img => img.currentSrc);
-          const pixels = (width >= 1000 ? 400 : Math.min(width, 460)) * deviceScaleFactor;
+          const pixels = Math.min(1180,width-(width<=700?40:48)) * deviceScaleFactor;
           const expectedImage = pixels <= 600 ? 'hero-real-confidence-600.webp' : pixels <= 900 ? 'hero-real-confidence-900.webp' : 'hero-real-confidence.webp';
           assert.ok(source.endsWith(expectedImage), source);
           const heroRequests = requests.filter(path => /\/hero-real-confidence(?:-\d+)?\.webp$/.test(path));
@@ -54,16 +54,13 @@ try {
           assert.equal(await page.locator('.cinema-dog-gallery').count(),1,'editable original photo gallery remains');
           const photoBox = await image.boundingBox();
           const copyBox = await page.locator('.cinema-hero-copy').boundingBox();
-          if (width >= 1000) {
-            assert.ok(copyBox.x + copyBox.width < photoBox.x, 'desktop message and complete portrait have separate columns');
+          assert.ok(copyBox.y + copyBox.height <= photoBox.y, 'headline and booking precede the cinematic image panel');
+          assert.ok(Math.abs(photoBox.x + photoBox.width / 2 - width / 2) < 2, 'the image panel stays centered');
+          assert.ok(photoBox.width >= width * .8, 'the visual fills the page rather than a narrow portrait column');
+          if (height > 700) {
             const primary = await page.locator('.polish-hero-actions a').first().boundingBox();
             const navigation = await page.locator('.mobile-home-nav').boundingBox();
-            assert.ok(primary.y > 74 && primary.y + primary.height < navigation.y, 'desktop booking is above the fixed navigation');
-          } else {
-            assert.equal(Math.round(photoBox.width), Math.min(width, 460), 'approved phone and tablet photo width is preserved');
-            const headlineBox = await page.locator('.cinema-hero-copy h1').boundingBox();
-            assert.ok(headlineBox.y > photoBox.y + photoBox.height / 2, 'phone and tablet place the visible headline below the portrait midpoint');
-            assert.ok(Math.abs(photoBox.x + photoBox.width / 2 - width / 2) < 2, 'phone and tablet keep the portrait centered');
+            assert.ok(primary.y > 74 && primary.y + primary.height < navigation.y, 'booking stays immediately reachable');
           }
           const sectionOrder = await page.locator('#main-content').evaluate(main => {
             const sections = [...main.querySelectorAll('#team, #results, [aria-labelledby="booking-title"], #k9-transport, #online')];
@@ -77,7 +74,7 @@ try {
               const bottomNav = await page.locator('.mobile-home-nav').boundingBox();
               assert.ok(box.y > 74 && box.y + box.height <= bottomNav.y, 'landscape hero actions scroll into view between the fixed controls');
             }
-            assert.equal(await image.evaluate(img => getComputedStyle(img).objectFit), 'contain', 'short landscape preserves the complete photo');
+            assert.equal(await image.evaluate(img => getComputedStyle(img).objectFit), 'cover', 'short landscape keeps the image inside its reserved panel');
           }
           await page.screenshot({ path: `test-results/refinement-${name}-${width}x${height}-${deviceScaleFactor}x.png` });
           if (width === 390) {

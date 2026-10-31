@@ -71,7 +71,7 @@ try {
           await page.goto(origin + route, { waitUntil: 'networkidle' });
           await page.locator('h1').waitFor();
           await darkSurface(page.locator('body'), route);
-          assert.match(await page.locator('h1').evaluate(el => getComputedStyle(el).fontFamily), route === '/' ? /Bebas Neue/ : /Montserrat/);
+          assert.match(await page.locator('h1').evaluate(el => getComputedStyle(el).fontFamily), /Montserrat/);
           await fits(page, `${route}/${width}`);
           if (route === '/') {
             await page.waitForFunction(() => document.querySelector('.cinema-hero-still')?.naturalWidth > 0);

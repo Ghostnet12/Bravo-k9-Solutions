@@ -87,7 +87,7 @@ try {
      finally { navigating = false; }
    }
    await navigate(origin);
-   const readingOrder = await page.evaluate(() => ['training','reviews','training-programs','team','method','results','home-tools-title','workshops','first-visit-help','booking-title'].map(id=>({id,top:document.getElementById(id).getBoundingClientRect().top})));
+   const readingOrder = await page.evaluate(() => ['method','training','training-programs','reviews','team','results','home-tools-title','workshops','first-visit-help','booking-title'].map(id=>({id,top:document.getElementById(id).getBoundingClientRect().top})));
    assert.deepEqual([...readingOrder].sort((a,b)=>a.top-b.top),readingOrder,'same visual and reading order on every screen');
    assert.equal(await page.locator('.conversion-offer').count(),1,'one primary membership offer');
    const portraitsFillCards=await page.locator('.cinema-team-grid>article').evaluateAll(cards=>cards.every(card=>Math.abs(card.querySelector('.cinema-portrait').getBoundingClientRect().width-card.clientWidth)<2));
@@ -123,15 +123,11 @@ try {
     const box = await hero.boundingBox(), nav = await page.locator('.mobile-home-nav').boundingBox();
     assert.ok(box.y >= 74 && box.y + box.height <= nav.y, 'hero action is reachable without overlap from sticky controls');
     const media = await page.locator('.cinema-hero-media').boundingBox();
-    if (width < 1000) {
-      assert.ok(Math.abs(media.x + media.width / 2 - width / 2) < 2, 'phone and tablet preserve the centered portrait composition');
-    } else {
-      const copy = await page.locator('.cinema-hero-copy').boundingBox();
-      assert.ok(copy.x + copy.width < media.x, 'desktop message has its own column beside the portrait');
-      assert.equal(Math.round(media.width), 400, 'desktop retains the complete 400px portrait');
-      assert.equal(Math.round(media.height), 600, 'desktop preserves the portrait aspect ratio');
-      assert.ok(media.x + media.width <= width, 'desktop portrait stays within the viewport');
-    }
+    assert.ok(Math.abs(media.x + media.width / 2 - width / 2) < 2, 'the cinematic panel is centered at every width');
+    const copy = await page.locator('.cinema-hero-copy').boundingBox();
+    assert.ok(copy.y + copy.height <= media.y, 'the message and booking precede the image panel');
+    assert.ok(media.width >= width*.8 && media.x + media.width <= width, 'the image fills the page without horizontal overflow');
+    if(width>=1000)assert.ok(media.width>media.height,'desktop uses the new wide image composition');
     assert.equal(await page.locator('.home-ad-dock').count(),0); assert.ok(Math.abs(nav.y+nav.height-page.viewportSize().height)<2, 'navigation sits at the phone bottom without ad space');
     const access = await page.locator('.accessibility-tools').boundingBox(); assert.ok(access.y + access.height <= nav.y, 'accessibility stays above navigation');
     assert.equal(await hero.getAttribute('href'), '/portal?program=training');
