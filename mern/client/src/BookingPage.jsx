@@ -55,9 +55,9 @@ function BookingForm({ entry }) {
   const [introDone, setIntroDone] = useState(resume?.introDone || false);
   const [bookingStep, setBookingStep] = useState(resume?.bookingStep || 'trainer');
   const [timeConfirmed, setTimeConfirmed] = useState(resume?.timeConfirmed === true);
-  const [firstVisit, setFirstVisit] = useState(resume?.firstVisit !== false);
+  const [firstVisit, setFirstVisit] = useState(resume ? resume.firstVisit !== false : !membership?.active);
   const [ids, setIds] = useState(resume?.ids || (program === 'training' && selection.get('lessons') === '1' ? ['training','online'] : [program]));
-  const simpleBooking = catalog.find(service=>service.id==='training')?.enabled !== false && firstVisit && !editId && ids.includes('training') && ids.every(id=>['training','online'].includes(id)) && !['staff','owner'].includes(user?.role) && (!membership?.active || resume?.firstVisit === true);
+  const simpleBooking = catalog.find(service=>service.id==='training')?.enabled !== false && firstVisit && !editId && ids.includes('training') && ids.every(id=>['training','online'].includes(id)) && !['staff','owner'].includes(user?.role);
   const [visits, setVisits] = useState(resume?.visits || []), [kind, setKind] = useState(resume?.kind || (program === 'aggression' ? 'aggression' : program));
   const [trainingFocus, setTrainingFocus] = useState(resume?.trainingFocus || (TRAINING_FOCUSES.some(item => item.id === selection.get('focus')) ? selection.get('focus') : 'basic-obedience'));
   const [trainerId, setTrainerId] = useState(resume?.trainerId || (selection.get('trainer') === JOINT_TRAINER_ID || /^[a-f\d]{24}$/i.test(selection.get('trainer') || '') ? selection.get('trainer') : '')), [trainers, setTrainers] = useState([]), [trainersLoading, setTrainersLoading] = useState(false);
