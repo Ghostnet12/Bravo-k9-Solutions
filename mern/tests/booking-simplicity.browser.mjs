@@ -127,6 +127,7 @@ try {
         await page.getByLabel('Name or email', { exact: true }).fill('Fixture Client');
         assert.equal(new URL(page.url()).pathname, '/portal', 'sign-in stays inside booking');
         await page.getByLabel('Password', { exact: true }).fill('fixture-only-password');
+        assert.equal(await page.getByLabel('Name or email', { exact: true }).inputValue(), 'Fixture Client', 'opening focus must not interrupt the first typed field');
         await page.locator('form').getByRole('button', { name: 'Sign in', exact: true }).click();
         await page.getByRole('button', { name: 'Send my request • no charge', exact: true }).waitFor();
         assert.equal(await page.getByLabel('Contact phone', { exact: true }).inputValue(), '6055550199');

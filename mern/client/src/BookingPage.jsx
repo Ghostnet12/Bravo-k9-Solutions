@@ -101,7 +101,6 @@ function BookingForm({ entry }) {
     if ((simpleBooking ? !visitReady : ids.includes('training') && (!trainerReady || !visits.length)) || trainersLoading || loadingDays || busy || unavailable || !config?.connected) return;
     const mode = event.nativeEvent.submitter?.value === 'login' ? 'login' : 'register';
     setAuthMode(mode);
-    requestAnimationFrame(() => { const panel = document.querySelector('.booking-inline-auth'), heading = panel?.querySelector('h3'); if (heading) { heading.setAttribute('tabindex', '-1'); heading.focus({ preventScroll: true }); } panel?.scrollIntoView({ block: 'start', behavior: 'instant' }); });
   }
   useEffect(() => {
     if (!simpleBooking || !introDone) return;

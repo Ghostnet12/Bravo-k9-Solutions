@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { useBravo } from './context';
 import { api } from './api';
 import { Editable } from './SiteContent';
@@ -10,6 +10,12 @@ export default function BookingAuth({ mode, onMode }) {
   const { refreshUser, beginBookingHandoff, config } = useBravo();
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [mfaRequired, setMfaRequired] = useState(false), [authenticated, setAuthenticated] = useState(false);
   const inFlight = useRef(false);
+  const panel = useRef(null);
+  useLayoutEffect(() => {
+    const heading = panel.current?.querySelector('h3');
+    if (heading) { heading.setAttribute('tabindex', '-1'); heading.focus({ preventScroll: true }); }
+    panel.current?.scrollIntoView({ block: 'start', behavior: 'instant' });
+  }, []);
   async function authenticate(event) {
     event.preventDefault();
     if (inFlight.current) return;
@@ -25,7 +31,7 @@ export default function BookingAuth({ mode, onMode }) {
     } catch (e) { if (e.code === 'MFA_REQUIRED') setMfaRequired(true); setError(e.message); }
     finally { inFlight.current = false; setBusy(false); }
   }
-  return <section className="booking-inline-auth" aria-label="Sign in without leaving booking">
+  return <section ref={panel} className="booking-inline-auth" aria-label="Sign in without leaving booking">
     <Editable as="h3" contentKey="booking-inline-auth-title" canEditText>Keep your visit right here.</Editable>
     <p>Your dog, trainer and time stay saved. Signing in or creating an account does not send a request or take payment.</p>
     {!authenticated && <div className="tab-row">{['register', 'login'].map(value => <button key={value} type="button" disabled={busy} aria-pressed={mode === value} onClick={() => { onMode(value); setError(''); setMfaRequired(false); }}>{value === 'register' ? 'Create account' : 'Sign in'}</button>)}</div>}
