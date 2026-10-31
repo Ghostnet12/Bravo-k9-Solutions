@@ -30,7 +30,7 @@ try {
           await route.fulfill({ json });
         });
         try {
-          await navigate(origin); const rail = page.getByRole('region', { name: 'Training video carousel' });
+          await navigate(origin+'/results'); const rail = page.getByRole('region', { name: 'Training video carousel' });
           await page.locator('[data-proof-video]').first().waitFor(); await rail.scrollIntoViewIfNeeded(); await page.mouse.move(0, 0);
           await page.waitForTimeout(1000); const initial = await rail.evaluate(el => el.scrollLeft);
           await page.waitForTimeout(4700); const moved = await rail.evaluate(el => el.scrollLeft);
