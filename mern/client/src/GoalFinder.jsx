@@ -21,14 +21,14 @@ export default function GoalFinder() {
     const frame = requestAnimationFrame(() => {
       const panel = details.current;
       if (!panel?.isConnected || document.querySelector('dialog[open]')) return;
-      const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.matches('.access-reduced-motion,.a11y-reduce-motion');
       const header = document.querySelector('.app-header');
       const clearance = Math.max(0, header?.getBoundingClientRect().bottom || 0) + 24;
       const top = Math.max(0, window.scrollY + panel.getBoundingClientRect().top - clearance);
       if (keyboardActivation.current) panel.focus({ preventScroll: true });
       // Use one window scroll rather than stacking the document's scroll-padding
       // with the panel's anchor margin. Keep the title below the actual header.
-      window.scrollTo({ top, behavior: reduced ? 'instant' : 'smooth' });
+      // Land before another control can be pressed; the panel supplies its own fade.
+      window.scrollTo({ top, behavior: 'instant' });
     });
     return () => cancelAnimationFrame(frame);
   }, [revealRequest]);

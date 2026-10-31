@@ -1,4 +1,5 @@
 /* A spacious, image-led homepage. Motion enhances native scrolling. */
+html:has(.cinema-home.bravo-redesign) { scroll-behavior: auto; }
 .cinema-home.bravo-redesign { background: #09090b; color: #f5f3ee; --experience-ease: cubic-bezier(.22,.7,.2,1); }
 .cinema-home.bravo-redesign .cinema-shell { width: min(1180px,calc(100% - 48px)); }
 .cinema-home.bravo-redesign .home-hero--confidence {
