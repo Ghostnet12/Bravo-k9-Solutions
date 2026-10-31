@@ -20,15 +20,17 @@ test('everyday goals retain the correct training focus', () => {
   assert.match(goal.label, /Pulling, jumping & puppy manners/);
   assert.equal(goalBookingPath(goal), '/portal?program=training&focus=basic-obedience');
 });
-test('homepage introduces the interactive approach before pricing, training choices and proof', () => {
-  const home = readFileSync(new URL('../client/dist/bravo-shell.html', import.meta.url), 'utf8');
-  const order = ['id="method"', 'id="training"', 'id="training-programs"', 'id="reviews"', 'id="team"', 'id="results"', 'id="dogs"', 'id="home-tools-title"', 'id="first-visit-help"', 'id="booking-title"'];
-  const indices = order.map(value => home.indexOf(value));
-  assert.ok(indices.every(index => index >= 0));
-  assert.deepEqual([...indices].sort((a, b) => a - b), indices);
-  assert.match(home, /id="specialist-training"[^>]*open/);
-  assert.match(home, /Hunting Dog Training/);
-  assert.match(home, /data-site-price="training"/);
+test('focused homepage links to independent training, team and proof pages', () => {
+  const read = page => readFileSync(new URL(`../client/dist/${page}.html`, import.meta.url), 'utf8');
+  const home = read('bravo-shell');
+  for (const route of ['training','our-approach','team','results','reviews']) assert.ok(home.includes(`href="/${route}"`));
+  for (const section of ['training-programs','reviews','team','method','dogs']) assert.ok(!home.includes(`id="${section}"`), `${section} belongs on its own page`);
+  const training = read('training');
+  assert.match(training, /id="specialist-training"[^>]*open/);
+  assert.match(training, /Hunting Dog Training/);
+  assert.match(training, /data-site-price="training"/);
+  assert.match(read('our-approach'), /id="method"/);
+  assert.match(read('results'), /id="dogs"/);
 });
 test('full-month and returning-client entry points are outside disclosures', () => {
   const intro = source('FirstVisitIntro.jsx');

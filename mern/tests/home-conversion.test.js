@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-test('homepage tells the requested story while preserving proof and booking', async () => {
-  const source = await readFile(new URL('../client/src/Home.tsx', import.meta.url), 'utf8');
+test('detail pages preserve proof, training and booking content', async () => {
+  const source = await readFile(new URL('../client/src/BravoPages.tsx', import.meta.url), 'utf8');
   const proof = source.indexOf('id="reviews"');
   const training = source.indexOf('id="training"');
   assert.ok(training > 0 && proof > training);
@@ -23,8 +23,8 @@ test('proof cards link directly to the original videos without blank third-party
   assert.doesNotMatch(source, /<iframe|activeProofReel|plugins\/video\.php/);
 });
 
-test('homepage keeps specialist choices subordinate and does not invent credentials', async () => {
-  const source = await readFile(new URL('../client/src/Home.tsx', import.meta.url), 'utf8');
+test('detail pages keep specialist choices subordinate and do not invent credentials', async () => {
+  const source = await readFile(new URL('../client/src/BravoPages.tsx', import.meta.url), 'utf8');
   assert.match(source, /const secondary = \['aggression'\]/);
   assert.match(source, /team\.map\(person/);
   assert.doesNotMatch(source, /certified|award-winning|years of experience/i);

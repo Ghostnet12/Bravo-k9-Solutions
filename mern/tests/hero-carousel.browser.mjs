@@ -12,6 +12,7 @@ const app = express(); app.get('/api/hero-videos/:id/video',(_req,res)=>res.send
 const server = app.listen(0, '127.0.0.1'); await once(server, 'listening'); const origin = `http://127.0.0.1:${server.address().port}`;
 await mkdir('test-results', { recursive: true });
 try { for (const [name, engine] of Object.entries({ chromium, webkit })) {
+  if(process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(name))continue;
  const browser = await engine.launch(name==='chromium'?{channel:'chrome'}:{});
  try { for (const width of [390,1440]) {
   const page = await browser.newPage({ viewport: { width, height: 900 }, hasTouch: true });
@@ -32,7 +33,7 @@ try { for (const [name, engine] of Object.entries({ chromium, webkit })) {
   });
   try {
   const gallery=page.getByRole('region',{name:'Trainer photos'}),track=page.locator('.hero-photo-window');
-  await page.goto(origin); await page.waitForLoadState('networkidle'); await gallery.scrollIntoViewIfNeeded(); await page.waitForTimeout(800);
+  await page.goto(origin+'/results'); await page.waitForLoadState('networkidle'); await gallery.scrollIntoViewIfNeeded(); await page.waitForTimeout(800);
   assert.equal(await page.getByRole('button',{name:'Add photos',exact:true}).count(),0);
   const start=await track.evaluate(el=>el.scrollLeft);await page.waitForTimeout(2200);
   assert.notEqual(await track.evaluate(el=>el.scrollLeft),start,'automatically moves left');

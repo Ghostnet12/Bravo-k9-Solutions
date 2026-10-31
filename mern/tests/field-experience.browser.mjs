@@ -33,19 +33,18 @@ try {for(const width of [320,390,768,1440]){
  });
  const page=await context.newPage();page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));
  try {
- await page.goto(origin,{waitUntil:'domcontentloaded'});await page.locator('h1').waitFor();await page.evaluate(()=>document.fonts.ready);
- await page.locator('.field-story-image img').first().waitFor({state:'attached'});
- if(width===390)assert.equal(await page.locator('.field-story-image img').first().getAttribute('src'),null,'below-fold story posters wait until nearby');
+ await page.goto(origin+'/training',{waitUntil:'domcontentloaded'});await page.locator('h1').waitFor();await page.evaluate(()=>document.fonts.ready);
+ assert.equal(await page.locator('.field-story-image').count(),0,'training selection does not load the separate results story');
  if(width>700){
  await page.getByText('See training examples by goal',{exact:true}).click();
  await page.locator('.goal-select').first().waitFor();
  assert.equal(await page.locator('.goal-choice').count(),3);assert.equal(await page.locator('.goal-choice a').count(),0);assert.equal(await page.locator('.goal-choice button').count(),3);
  const ids=['manners','handling','specialist'];const details=['/dog-training','/behavior-assessment','/#specialist-training'];
  for(let i=0;i<ids.length;i++){
-  const button=page.locator('.goal-select').nth(i);await button.click();assert.equal(new URL(page.url()).pathname,'/');assert.equal(await button.getAttribute('aria-pressed'),'true');assert.equal(await page.locator('.goal-program-link').getAttribute('href'),details[i]);
+  const button=page.locator('.goal-select').nth(i);await button.click();assert.equal(new URL(page.url()).pathname,'/training');assert.equal(await button.getAttribute('aria-pressed'),'true');assert.equal(await page.locator('.goal-program-link').getAttribute('href'),details[i]);
   assert.equal(await page.locator('.goal-select[aria-pressed=true]').count(),1);
  }
- await page.locator('.goal-select').first().focus();await page.keyboard.press('Space');assert.equal(await page.locator('.goal-select').first().getAttribute('aria-pressed'),'true');assert.equal(new URL(page.url()).pathname,'/');
+ await page.locator('.goal-select').first().focus();await page.keyboard.press('Space');assert.equal(await page.locator('.goal-select').first().getAttribute('aria-pressed'),'true');assert.equal(new URL(page.url()).pathname,'/training');
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'homepage fit');
  await page.locator('#find-training').screenshot({path:`test-results/field-goals-${width}.png`});
  }else{
@@ -53,6 +52,7 @@ try {for(const width of [320,390,768,1440]){
  assert.equal(await page.locator('.goal-finder').isVisible(),false);
  assert.equal(await page.locator('.conversion-goal').filter({hasText:'Aggression'}).getAttribute('href'),'/portal?program=aggression');
  }
+ await page.goto(origin+'/results');
  await page.getByText('Explore the stories behind these sessions', { exact: true }).click();
  assert.equal(await page.locator('.field-story-card').count(),3);
  await page.locator('.field-story-card').first().locator('summary').click();assert.ok(await page.locator('.field-story-card').first().locator('details').getAttribute('open')!==null);
@@ -70,7 +70,7 @@ try {for(const width of [320,390,768,1440]){
  await page.getByRole('heading',{name:'You’re asking about hunting training.',exact:true}).waitFor();assert.match(await page.locator('.contact-interest').innerText(),/Recall & steadiness/);
  await page.getByRole('link',{name:'Clear selected interest',exact:true}).click();await page.waitForURL(origin+'/contact');await page.locator('.contact-interest').waitFor({state:'detached'});assert.equal(await page.locator('.contact-interest').count(),0);
  await page.goto(origin+'/hunting-dog-training');await page.locator('.hunting-goals').waitFor();await page.screenshot({path:`test-results/hunting-page-${width}.png`,fullPage:true});
- removed=true;await page.goto(origin);await page.locator('.home-work-proof').waitFor();await page.waitForFunction(()=>document.querySelector('.home-work-proof')?.textContent.includes('No training videos published yet.'));assert.equal(await page.locator('.field-story-card').count(),0);
+ removed=true;await page.goto(origin+'/results');await page.locator('.home-work-proof').waitFor();await page.waitForFunction(()=>document.querySelector('.home-work-proof')?.textContent.includes('No training videos published yet.'));assert.equal(await page.locator('.field-story-card').count(),0);
  if(width===390){await page.evaluate(()=>document.documentElement.style.fontSize='200%');assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'200 percent text fit');}
  checks.push(`${width}px: one-action goals, preserved program paths, story details/focus/reselection, no autoplay, hunting inquiry/clear, removed-story safety and responsive fit`);
  }catch(error){await page.screenshot({path:`test-results/field-failure-${width}.png`,fullPage:true});await writeFile(`test-results/field-failure-${width}.txt`,await page.locator('body').innerText());throw error;}finally{await context.close();}

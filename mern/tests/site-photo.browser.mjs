@@ -50,7 +50,7 @@ try { for (const [name, engine] of Object.entries({ chromium, webkit })) {
       await route.fulfill({ json });
     });
     try {
-      await page.goto(origin); await page.waitForLoadState('networkidle');
+      await page.goto(origin+'/team'); await page.waitForLoadState('networkidle');
       const photo = page.locator(`.home-team-grid [data-site-image-key="${key}"]`), dialog = page.getByRole('dialog', { name: 'Edit this photo', exact: true });
       await photo.scrollIntoViewIfNeeded(); await photo.press('F2'); await dialog.waitFor();
       const png = await page.evaluate(async () => {

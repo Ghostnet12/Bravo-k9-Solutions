@@ -90,7 +90,7 @@ test('Vercel homepage uses the dynamic snapshot and includes its production HTML
   assert.equal(config.functions['api/homepage.js'].includeFiles, 'client/dist/bravo-shell.html');
   await access(new URL('../client/dist/bravo-shell.html', import.meta.url));
   await assert.rejects(access(new URL('../client/dist/index.html', import.meta.url)), { code: 'ENOENT' });
-  const source = await readFile(new URL('../client/src/Home.tsx', import.meta.url), 'utf8');
+  const source = await readFile(new URL('../client/src/BravoPages.tsx', import.meta.url), 'utf8');
   assert.equal((source.match(/className="home-hero-image"/g) || []).length, 1);
   assert.ok(source.indexOf('data-site-media-tools') > source.indexOf('<TrainingOffer/>'));
   assert.match(source, /className="home-hero-image"[^>]*loading="lazy" fetchPriority="low"/);

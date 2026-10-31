@@ -10,6 +10,11 @@
     }
   ],
   "redirects": [
+    { "source": "/training.html", "destination": "/training", "permanent": true },
+    { "source": "/our-approach.html", "destination": "/our-approach", "permanent": true },
+    { "source": "/team.html", "destination": "/team", "permanent": true },
+    { "source": "/results.html", "destination": "/results", "permanent": true },
+    { "source": "/reviews.html", "destination": "/reviews", "permanent": true },
     { "source": "/k9-transport.html", "destination": "/k9-transport", "permanent": true },
     { "source": "/tools-of-the-trade.html", "destination": "/tools-of-the-trade", "permanent": true },
     { "source": "/how-to.html", "destination": "/how-to", "permanent": true },
@@ -52,6 +57,11 @@
   },
   "rewrites": [
     { "source": "/", "destination": "/api/homepage" },
+    { "source": "/training", "destination": "/api/public-page?path=/training" },
+    { "source": "/our-approach", "destination": "/api/public-page?path=/our-approach" },
+    { "source": "/team", "destination": "/api/public-page?path=/team" },
+    { "source": "/results", "destination": "/api/public-page?path=/results" },
+    { "source": "/reviews", "destination": "/api/public-page?path=/reviews" },
     { "source": "/k9-transport", "destination": "/api/public-page?path=/k9-transport" },
     { "source": "/tools-of-the-trade", "destination": "/api/public-page?path=/tools-of-the-trade" },
     { "source": "/how-to", "destination": "/api/public-page?path=/how-to" },

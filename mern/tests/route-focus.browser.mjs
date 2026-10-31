@@ -45,12 +45,14 @@ try {for(const [name,engine] of Object.entries({chromium,webkit})) {
     await page.evaluate(()=>window.flushRouteFocus());
     const reviews=page.locator('.mobile-home-nav').getByRole('link',{name:'Reviews',exact:true});
     await reviews.click();
-    await page.waitForFunction(()=>location.hash==='#reviews' && window.routeFocusTimersSeen>1);
+    await page.waitForFunction(()=>location.pathname==='/reviews' && window.routeFocusTimersSeen>1);
+    await page.locator('#reviews').waitFor();
     // Mobile link focus may arrive after React has committed the destination.
     await reviews.evaluate(el=>el.dispatchEvent(new FocusEvent('focusin',{bubbles:true})));
     await page.evaluate(()=>window.flushRouteFocus());
-    await page.waitForFunction(()=>{const top=document.getElementById('reviews')?.getBoundingClientRect().top;return top>=74 && top<150;}).catch(async error=>{console.log(await page.evaluate(()=>({top:document.getElementById('reviews')?.getBoundingClientRect().top,height:document.getElementById('reviews')?.getBoundingClientRect().height,scroll:scrollY,focus:document.activeElement.outerHTML.slice(0,200)})));throw error;});
-    assert.equal(await page.evaluate(()=>location.hash),'#reviews','one tap reaches reviews');
+    await page.locator('#reviews').waitFor();
+    assert.equal(await page.evaluate(()=>location.pathname),'/reviews','one tap reaches the review page');
+    assert.equal(await page.evaluate(()=>document.activeElement.id),'main-content','the new review page receives route focus');
    } else {
     await notes.focus();
     await page.evaluate(()=>window.flushRouteFocus());

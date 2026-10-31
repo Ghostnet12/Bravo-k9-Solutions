@@ -79,7 +79,7 @@ try {
           const configured=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/config' && response.ok());
           await visit(origin+path,{waitUntil:'domcontentloaded'});await configured;
           await page.locator('.accessibility-trigger').waitFor();
-          if(path==='/')await page.locator('.conversion-goal').first().waitFor();
+          if(path==='/')await page.locator('.bravo-hub').waitFor();
           if(path==='/workshops')await page.getByRole('heading',{name:'Saturday dog-training workshop',exact:true}).waitFor();
           if(path==='/contact')await page.getByText('Ashley Leverock',{exact:true}).waitFor();
           await settleApi();await page.evaluate(()=>document.fonts.ready);
@@ -87,7 +87,7 @@ try {
           const layout=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,overflow:[...document.querySelectorAll('main *')].filter(el=>el.getBoundingClientRect().right>innerWidth+1 && getComputedStyle(el).position!=='absolute').map(el=>({tag:el.tagName,class:el.className,width:el.getBoundingClientRect().width,right:el.getBoundingClientRect().right})).slice(0,15)}));
           assert.ok(layout.scroll<=layout.width+1,`${path} ${width} no overflow: ${JSON.stringify(layout)}`);
         }
-        await visit(origin);
+        await visit(origin+'/training');
         await page.locator('.conversion-goal').first().waitFor();await settleApi();
         await page.locator('.conversion-goals').screenshot({path:`test-results/program-cards-${engineName}-${width}.png`});
         for(const [label,price,program,focus,details] of [
@@ -99,7 +99,7 @@ try {
           assert.equal(await card.getAttribute('href'),expected,'shared goal cards keep the correct booking focus');
           assert.doesNotMatch(await card.innerText(),/\$\d+/,'goals do not repeat the membership offer');
           await visit(origin+details);
-          await visit(origin);await page.locator('.conversion-goal').first().waitFor();await settleApi();
+          await visit(origin+'/training');await page.locator('.conversion-goal').first().waitFor();await settleApi();
           await follow(page.locator('.conversion-goal').filter({hasText:label}),expected);
           if(program==='aggression'){
             // The previous training comparison entered two dogs. A different
@@ -121,7 +121,7 @@ try {
             assert.match(await selected.innerText(),/Aggressive-dog intake/);
             assert.equal(await page.getByRole('combobox',{name:'Schedule visits for',exact:true}).inputValue(),program);
           }
-          await visit(origin);await page.locator('.conversion-goal').first().waitFor();await settleApi();
+          await visit(origin+'/training');await page.locator('.conversion-goal').first().waitFor();await settleApi();
         }
         const specialistCard=page.locator('.conversion-goal').filter({hasText:'Advanced'});
         assert.doesNotMatch(await specialistCard.innerText(),/\$200/,'specialist inquiry does not promise the standard monthly rate');
@@ -133,7 +133,8 @@ try {
         const returnLink=await page.getByRole('link',{name:'Sign in to Bravo',exact:true}).getAttribute('href');
         assert.equal(new URL(returnLink,origin).searchParams.get('next'),'/community?tab=direct&to=cccccccccccccccccccccccc');
         await visit(origin+'/contact');
-        await visit(origin);await page.locator('.conversion-goal').first().waitFor();await settleApi();
+        await visit(origin+'/training');await page.locator('.conversion-goal').first().waitFor();await settleApi();
+        await visit(origin+'/results');await page.locator('.home-work-proof').waitFor();await settleApi();
         const proof=page.locator('.home-work-proof');await proof.getByRole('button',{name:'Working dogs',exact:true}).click();assert.equal(await proof.locator('article[data-proof-video]').count(),1);await proof.getByRole('button',{name:'All training',exact:true}).click();assert.equal(await proof.locator('article[data-proof-video]').count(),3);
         await visit(origin+'/learn');await page.getByLabel('Email address',{exact:true}).fill('visitor@example.test');await page.getByLabel('Email me once when Bravo online courses launch.').check();await page.getByRole('button',{name:'Request a launch update'}).click();await page.getByText('Your launch-update request is saved.',{exact:false}).waitFor();assert.equal(signup.consent,true);assert.equal(signup.email,'visitor@example.test');
         owner=true;await visit(origin+'/workshops');await page.getByRole('button',{name:'Edit workshop details'}).click();await page.getByLabel('Time (Central)',{exact:true}).fill('10:00 a.m.');await page.getByLabel('Location',{exact:true}).fill('Fixture venue');await page.getByRole('button',{name:'Save workshop'}).click();await page.getByText('Workshop details saved.',{exact:true}).waitFor();await reload();await page.getByText('10:00 a.m. · Central',{exact:true}).waitFor();
@@ -162,7 +163,7 @@ try {
         await page.getByText(/Showing the last verified workshop schedule/).waitFor();
         assert.match(await page.locator('.workshop-details').innerText(),/12:00 PM–2:00 PM/);
         failWorkshop=false;await page.evaluate(()=>window.dispatchEvent(new Event('bravo-workshop-changed')));await settleApi();
-        await visit(origin);await page.getByRole('button',{name:'Edit page text & design'}).click();const dialog=page.getByRole('dialog',{name:'Edit website section'});await dialog.getByLabel('Edit this part',{exact:true}).selectOption('mobile-discovery-title');await dialog.getByLabel('Text',{exact:true}).fill('Find your next step.');failSave=true;await dialog.getByRole('button',{name:'Publish website changes'}).click();await dialog.getByText('Fixture connection interrupted').waitFor();assert.equal(await dialog.getByLabel('Text',{exact:true}).inputValue(),'Find your next step.');failSave=false;await dialog.getByRole('button',{name:'Publish website changes'}).click();await dialog.waitFor({state:'hidden'});await page.getByText('Saved. Your website changes are published.',{exact:true}).waitFor();await reload();await page.getByRole('heading',{name:'Find your next step.',exact:true}).waitFor();
+        await visit(origin+'/training');await page.getByRole('button',{name:'Edit page text & design'}).click();const dialog=page.getByRole('dialog',{name:'Edit website section'});await dialog.getByLabel('Edit this part',{exact:true}).selectOption('mobile-discovery-title');await dialog.getByLabel('Text',{exact:true}).fill('Find your next step.');failSave=true;await dialog.getByRole('button',{name:'Publish website changes'}).click();await dialog.getByText('Fixture connection interrupted').waitFor();assert.equal(await dialog.getByLabel('Text',{exact:true}).inputValue(),'Find your next step.');failSave=false;await dialog.getByRole('button',{name:'Publish website changes'}).click();await dialog.waitFor({state:'hidden'});await page.getByText('Saved. Your website changes are published.',{exact:true}).waitFor();await reload();await page.getByRole('heading',{name:'Find your next step.',exact:true}).waitFor();
         // Cancelling preserves drafts; publishing saves changed sections atomically.
         await page.getByRole('button',{name:'Edit page text & design'}).click();
         await dialog.getByLabel('Edit this part',{exact:true}).selectOption('mobile-discovery-title');

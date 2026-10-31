@@ -52,7 +52,7 @@ try {
           window.addEventListener('unhandledrejection', event => { void window.recordProofRuntimeError(event.reason?.stack || event.reason?.message || String(event.reason)).catch(() => {}); });
         });
         await page.addInitScript(() => { window.proofClicks = []; document.addEventListener('click', event => { window.proofClicks.push({ tag: event.target.tagName, label: event.target.getAttribute('aria-label'), text: event.target.textContent?.slice(0, 80) }); window.proofClicks = window.proofClicks.slice(-6); }, true); });
-        const response = await page.goto(origin);
+        const response = await page.goto(origin+'/results');
         await page.waitForFunction(() => document.querySelectorAll('[data-proof-video]').length === 3);
         let toolPointer = 20;
         const openAddVideo = async () => {
@@ -180,7 +180,7 @@ try {
         await page.getByText('Reel destination', { exact: true }).waitFor();
         assert.equal(context.pages().length, 1);
         await page.goBack();
-        await page.waitForURL(`${origin}/`);
+        await page.waitForURL(`${origin}/results`);
         await linkedWatch.waitFor();
         await openVideoEditor(linked);
         assert.equal(await edit.getByRole('textbox', { name: 'Facebook Reel URL', exact: true }).inputValue(), reelUrl);
@@ -196,7 +196,7 @@ try {
         await context.close();
 
         const publicContext = await browser.newContext({ viewport: { width, height: 900 } });
-        const publicPage = await publicContext.newPage(); await publicPage.goto(origin);
+        const publicPage = await publicContext.newPage(); await publicPage.goto(origin+'/results');
         await publicPage.getByRole('heading', { name: title, exact: true }).waitFor();
         assert.equal(await publicPage.getByRole('button', { name: /Add video|Edit video:/ }).count(), 0);
         await publicPage.getByRole('button', { name: `Play ${title} video`, exact: true }).click();

@@ -44,7 +44,7 @@ try {
       assert.equal(await raw.locator('.transport-badge').innerText(), 'COMING SOON');
       assert.equal(await raw.locator('meta[property="og:image"]').getAttribute('content'), 'https://bravounleashed.com/images/bravo-k9-transport.webp');
       await raw.goto(origin + '/');
-      assert.equal(await raw.locator('#k9-transport .transport-primary').getAttribute('href'), '/k9-transport#transport-updates');
+      assert.equal(await raw.locator('.hub-transport a').getAttribute('href'), '/k9-transport');
       await raw.close();
       for (const width of [360, 390, 768, 1050, 1440]) {
         const context = await browser.newContext({ viewport: { width, height: 1000 }, reducedMotion: 'reduce' });
@@ -82,14 +82,15 @@ try {
           // pending content read, which WebKit reports as an access-control error.
           await page.locator('header a[href="/"]').click();
           await page.waitForURL(origin + '/');
-          await page.locator('#k9-transport').scrollIntoViewIfNeeded();
-          await page.waitForFunction(() => { const img = document.querySelector('#k9-transport img'); return img?.complete && img.naturalWidth > 0; });
+          await page.locator('.hub-transport').scrollIntoViewIfNeeded();
+          await page.waitForFunction(() => { const img = document.querySelector('.hub-transport img'); return img?.complete && img.naturalWidth > 0; });
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
-          assert.equal(await page.locator('#k9-transport h2').count(), 1);
-          assert.equal(await page.locator('#workshops').evaluate(el => el.previousElementSibling.classList.contains('home-tools')), true);
-          await page.locator('#k9-transport').screenshot({ path: `test-results/transport-home-${name}-${width}.png` });
-          await page.locator('#k9-transport .transport-primary').click();
-          await page.waitForURL('**/k9-transport#transport-updates');
+          assert.equal(await page.locator('.hub-transport h2').count(), 1);
+          assert.equal(await page.locator('main a[href="/workshops"]').count(),1);
+          await page.locator('.hub-transport').screenshot({ path: `test-results/transport-home-${name}-${width}.png` });
+          await page.locator('.hub-transport a').click();
+          await page.waitForURL('**/k9-transport');
+          await page.locator('.transport-primary').click();await page.waitForURL('**/k9-transport#transport-updates');
           await page.getByLabel('Email address', { exact: true }).waitFor();
           assert.deepEqual(errors, []);
           console.log(`PASS ${name}/${width}: transport layout, navigation, consent, retry and signup`);

@@ -9,11 +9,17 @@ await once(server, 'listening');
 const origin = `http://127.0.0.1:${server.address().port}`;
 try {
   for (const [name, engine] of Object.entries({ chromium, webkit })) {
+    if(process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(name))continue;
     const browser = await engine.launch();
     try {
       for (const routeCase of [
         { path: '/dog-training', chunk: 'DogTrainingPage', heading: /Dog training in Aberdeen, SD\./i, minimumText: 500 },
         { path: '/live', chunk: 'LivePage', heading: /BRAVO LIVE/i, minimumText: 100 },
+        { path: '/training', chunk: 'TrainingPage', heading: /Find your training/i, minimumText: 500 },
+        { path: '/our-approach', chunk: 'OurApproachPage', heading: /The Bravo approach/i, minimumText: 500 },
+        { path: '/results', chunk: 'ResultsPage', heading: /Real dogs. Real progress/i, minimumText: 300 },
+        { path: '/team', chunk: 'TeamPage', heading: /Meet Bravo/i, minimumText: 300 },
+        { path: '/reviews', chunk: 'ReviewsPage', heading: /From our clients/i, minimumText: 150 },
       ]) for (const mode of ['slow', 'failed']) {
         const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
         const page = await context.newPage();
@@ -41,12 +47,15 @@ try {
               await page.getByRole('heading', { name: 'OUT IN THE FIELD.', exact: true }).waitFor();
               await page.getByRole('link', { name: 'Explore our training', exact: true }).click();
               await page.getByRole('heading', { name: 'Dog training in Aberdeen, SD.', exact: true }).waitFor();
-            } else {
+            } else if(routeCase.path === '/dog-training') {
               await page.getByRole('alert').filter({hasText:'Training videos could not load. Please try again.'}).waitFor();
               await page.getByRole('link', { name: 'two-trainer behavior assessment' }).click();
               await page.getByRole('heading', { name: 'Dog behavior assessments in Aberdeen.', exact: true }).waitFor();
               await page.waitForFunction(expected => document.title === expected, 'Dog Behavior Assessment in Aberdeen, SD | Bravo K9 Solutions');
               assert.equal(await page.title(), 'Dog Behavior Assessment in Aberdeen, SD | Bravo K9 Solutions');
+            } else {
+              await page.locator('.bravo-detail').waitFor();
+              await page.locator('header a[href="/"]').click();await page.locator('.bravo-hub').waitFor();
             }
           }
           console.log(`PASS ${name} ${routeCase.path}: public HTML survives ${mode} JavaScript; ${mode === 'slow' ? 'interactive navigation resumes' : 'useful content remains'}`);

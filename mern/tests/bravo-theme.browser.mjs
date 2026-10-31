@@ -67,7 +67,7 @@ try {
         let role = null;
         page.on('pageerror', error => errors.push(error.message));
         await fixtures(page, () => role);
-        for (const route of ['/', '/dog-training', '/behavior-assessment', '/contact', '/learn', '/account', '/portal?program=training']) {
+        for (const route of ['/', '/training', '/our-approach', '/team', '/results', '/reviews', '/dog-training', '/behavior-assessment', '/contact', '/learn', '/account', '/portal?program=training']) {
           await page.goto(origin + route, { waitUntil: 'networkidle' });
           await page.locator('h1').waitFor();
           await darkSurface(page.locator('body'), route);
@@ -77,8 +77,8 @@ try {
             await page.waitForFunction(() => document.querySelector('.cinema-hero-still')?.naturalWidth > 0);
             assert.equal(await page.locator('.cinema-film video').count(), 0);
             assert.equal(await page.locator('.cinema-film-controls').count(), 0, 'hero has no public playback buttons');
-            for (const selector of ['.conversion-offer', '.cinema-team', '.cinema-events', '.cinema-online-inner', '.bravo-footer']) await darkSurface(page.locator(selector), selector);
-            const headingColor = await page.locator('.conversion-offer h2').evaluate(el => getComputedStyle(el).color.match(/\d+/g).map(Number));
+            for (const selector of ['.hub-training', '.hub-team', '.hub-results', '.hub-transport', '.bravo-footer']) await darkSurface(page.locator(selector), selector);
+            const headingColor = await page.locator('.hub-training h2').evaluate(el => getComputedStyle(el).color.match(/\d+/g).map(Number));
             assert.ok(Math.min(...headingColor) > 150, 'training headline remains readable on the dark card');
             if (width === 390) {
               await page.getByRole('button', { name: 'Menu', exact: true }).click();
@@ -97,7 +97,7 @@ try {
               if (await panel.isVisible()) await darkSurface(panel, `${route} panel`);
             }
           }
-          if (['/', '/dog-training', '/account', '/portal?program=training'].includes(route)) await page.screenshot({ path: `test-results/theme-${engineName}-${width}-${route.split('?')[0].replaceAll('/', '') || 'home'}.png` });
+          if (['/', '/training', '/our-approach', '/team', '/results', '/reviews', '/dog-training', '/account', '/portal?program=training'].includes(route)) await page.screenshot({ path: `test-results/theme-${engineName}-${width}-${route.split('?')[0].replaceAll('/', '') || 'home'}.png` });
         }
         for (role of ['member', 'staff', 'owner']) {
           await page.goto(`${origin}/portal?program=training`, { waitUntil: 'networkidle' });

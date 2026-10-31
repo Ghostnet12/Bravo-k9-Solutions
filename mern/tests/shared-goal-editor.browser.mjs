@@ -37,7 +37,7 @@ try { for (const [name,engine] of Object.entries({chromium,webkit})) {
   const hold=async locator=>{await locator.scrollIntoViewIfNeeded();const box=await locator.boundingBox();await page.mouse.move(box.x+12,box.y+12);await page.mouse.down();await page.waitForTimeout(800);await page.mouse.up();};
   try {
    for(const administrator of [false,true]) {
-    primary=!administrator;await page.goto(origin,{waitUntil:'networkidle'});
+    primary=!administrator;await page.goto(origin+'/training',{waitUntil:'networkidle'});
     const title=administrator?'Admin training title':'Owner training title';
     await hold(page.locator('.conversion-goal h3').first());
     const dialog=page.getByRole('dialog',{name:'Edit website section',exact:true});await dialog.waitFor();
@@ -53,7 +53,7 @@ try { for (const [name,engine] of Object.entries({chromium,webkit})) {
    }
    assert.equal(writes,2,'failed publications never count as saved changes');
    for(const outsider of [null,'member','staff']) {
-    role=outsider;await page.goto(origin,{waitUntil:'networkidle'});
+    role=outsider;await page.goto(origin+'/training',{waitUntil:'networkidle'});
     assert.equal(await page.getByRole('button',{name:'Edit page text & design',exact:true}).count(),0);
     assert.equal(await page.locator('.conversion-goal img[data-site-image-editable]').count(),0);
    }

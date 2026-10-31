@@ -46,7 +46,7 @@ try{
  for(const width of [320,390,768,1440]){
   const {context,page}=await setup(width);
   try{
-   await page.goto(origin,{waitUntil:'domcontentloaded'});await page.locator('h1').waitFor();await page.evaluate(()=>document.fonts.ready);
+   await page.goto(origin+'/training',{waitUntil:'domcontentloaded'});await page.locator('h1').waitFor();await page.evaluate(()=>document.fonts.ready);
    {
    await page.getByText('See training examples by goal',{exact:true}).click();
    await position(page,'#find-training');
@@ -63,6 +63,7 @@ try{
    }
    assert.equal(await page.locator('.conversion-goal').filter({hasText:'Aggression'}).getAttribute('href'),'/portal?program=aggression');
 
+ await page.goto(origin+'/results');
  await page.getByText('Explore the stories behind these sessions', { exact: true }).click();
    await position(page,'#field-stories');await page.locator('.field-story-card').first().waitFor();
    const rail=page.locator('#field-story-rail');
@@ -77,7 +78,7 @@ try{
     const box=await rail.boundingBox();await swipe(page,box.x+box.width*.72,box.y+70,-box.width*.58,0);
     await page.waitForFunction(()=>document.querySelector('#field-story-rail')?.scrollLeft>50);
     assert.equal(await page.locator('[data-story-selected=true]').count(),0,'swiping never activates a session');
-    assert.equal(new URL(page.url()).pathname,'/');
+    assert.equal(new URL(page.url()).pathname,'/results');
     await rail.evaluate(el=>el.scrollTo({left:0,behavior:'instant'}));
     await page.waitForFunction(()=>document.querySelector('.field-story-controls')?.textContent.includes('1 of 3'));
    }else assert.equal(await page.locator('.field-story-controls').isVisible(),false);
@@ -87,6 +88,7 @@ try{
    await page.getByRole('button',{name:'View session: Cleo and Patrick',exact:true}).focus();await page.keyboard.press('Enter');
    assert.ok(await page.locator(`[data-proof-video="${clips[0].id}"]`).evaluate(el=>el===document.activeElement));
    assert.ok(await page.locator('.proof-video-carousel video').evaluateAll(videos=>videos.every(v=>v.paused)));
+   await page.goto(origin+'/training');await page.getByText('See training examples by goal',{exact:true}).click();
    await page.evaluate(()=>document.documentElement.classList.add('access-reduced-motion'));
    await page.locator('.goal-select').first().click();
    assert.equal(await page.locator('.goal-result').evaluate(el=>getComputedStyle(el).animationName),'none');

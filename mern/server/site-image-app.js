@@ -25,7 +25,7 @@ import siteAdsRouter from './site-ads.js';
 import { DEFAULT_HERO_FILM } from '../shared/hero-film.js';
 import { heroRendition, heroPosterRendition } from './hero-rendition.js';
 import { effectiveServices } from './services.js';
-import { SiteImage } from './site-image-store.js';
+import { SiteImage, publicImage } from './site-image-store.js';
 import { siteImageRendition } from './site-image-rendition.js';
 import { backgroundDraftExpiry } from './background-images.js';
 export { SiteImage } from './site-image-store.js';
@@ -38,9 +38,6 @@ const fail = (message, status = 400) => Object.assign(new Error(message), { stat
 const revisionInput = z.object({ expectedRevision: z.number().int().min(0) });
 const framingInput = revisionInput.extend({ mutationId: z.string().uuid().optional(), alt: z.string().trim().max(240), x: z.number().min(0).max(100), y: z.number().min(0).max(100), zoom: z.number().min(1).max(3).default(1), fit: z.enum(['cover', 'contain']) });
 const imageInput = framingInput.extend({ filename: z.string().trim().min(1).max(160), contentType: z.enum(['image/jpeg', 'image/png', 'image/webp']), data: z.string().min(4).max(Math.ceil(SITE_IMAGE_MAX_BYTES / 3) * 4).regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/) });
-function publicImage(image) {
-  return { revision: image.revision, src: image.current?.uploadId ? `/api/site-images/${image._id}/image?v=${image.revision}` : null, alt: image.current?.alt || '', x: image.current?.x ?? 50, y: image.current?.y ?? 50, zoom: image.current?.zoom ?? 1, fit: image.current?.fit || 'cover', framed: image.current?.framed ?? !!image.current?.uploadId, canUndo: !!image.previous };
-}
 export const homepageHandler = createHomepageHandler({ loadReviews: loadPublicRecommendations, loadCatalog: async () => { await connectDb(); return effectiveServices({includeDisabled:true,readOnly:true}); }, loadWorkshop: loadPublicWorkshop, loadContent: loadSiteContent, loadFilm: async () => {
   await connectDb();
   const rows = await HeroFilm.find({ $or: [{ deleted: false }, { _id: DEFAULT_HERO_FILM.id }] }).select('title description fit sound order revision uploadId hasPoster deleted').sort({ order: 1, _id: 1 }).maxTimeMS(2000).lean();

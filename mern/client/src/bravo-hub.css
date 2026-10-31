@@ -1,0 +1,87 @@
+/* A focused front door, with deeper stories on dedicated pages. */
+.cinema-home.bravo-redesign.bravo-hub { --hub-gold:#dec18b; }
+.cinema-home.bravo-redesign.bravo-hub { background:#101010; }
+.cinema-home.bravo-redesign.bravo-hub .home-live-status:empty { display:none; }
+.cinema-home.bravo-redesign.bravo-hub :is(.hub-training,.hub-stories,.hub-transport) { margin-block:24px; }
+.cinema-home.bravo-redesign.bravo-hub :is(.hub-training,.hub-tile,.hub-transport) { border:1px solid #ba9a6425;border-radius:30px;overflow:hidden;background:#191919; }
+.cinema-home.bravo-redesign.bravo-hub .hub-training { display:grid;grid-template-columns:1.05fr 1fr;min-height:590px; }
+.cinema-home.bravo-redesign.bravo-hub .hub-feature-image { overflow:hidden;min-width:0; }
+.cinema-home.bravo-redesign.bravo-hub .hub-feature-image img { width:100%;height:100%;object-fit:cover;object-position:45% 50%; }
+.cinema-home.bravo-redesign.bravo-hub .hub-feature-copy { display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:clamp(28px,4vw,58px);background:radial-gradient(ellipse at 0 0,#ba9a6415,transparent 80%); }
+.cinema-home.bravo-redesign.bravo-hub .cinema-eyebrow { font:600 10px/1.6 Montserrat,sans-serif;letter-spacing:.15em;color:#d6b77f;margin:0 0 18px; }
+.cinema-home.bravo-redesign.bravo-hub :is(.hub-training,.hub-tile,.hub-transport,.hub-close) h2 { color:#f5f3ee;font:650 clamp(32px,3.5vw,49px)/1.12 Montserrat,sans-serif;letter-spacing:-.05em;margin:0;text-wrap:balance;text-transform:none; }
+.cinema-home.bravo-redesign.bravo-hub :is(.hub-training,.hub-tile,.hub-transport,.hub-close) h2 span { color:var(--hub-gold); }
+.cinema-home.bravo-redesign.bravo-hub :is(.hub-feature-copy,.hub-tile-copy)>p:not(.cinema-eyebrow,.hub-price,.hub-note) { color:#c7c3ba;font-size:15px;line-height:1.7;max-width:38ch;margin:20px 0; }
+.cinema-home.bravo-redesign.bravo-hub .hub-price { margin:4px 0 0;color:#ead5ac;font:600 34px/1.4 Montserrat,sans-serif;letter-spacing:-.04em; }
+.cinema-home.bravo-redesign.bravo-hub .hub-price>span:last-child { color:#b9b3a9;font-size:13px;font-weight:400;letter-spacing:0; }
+.cinema-home.bravo-redesign.bravo-hub .hub-note { font:400 11px/1.6 Montserrat,sans-serif;color:#b9b3a9;margin:5px 0 21px; }
+.cinema-home.bravo-redesign.bravo-hub .hub-actions { display:flex;align-items:center;flex-wrap:wrap;gap:12px 22px; }
+.cinema-home.bravo-redesign.bravo-hub .hub-actions a { min-height:46px;font-size:12px; }
+.cinema-home.bravo-redesign.bravo-hub .cinema-button { border-radius:30px;background:#ba9a64;color:#101010; }
+.cinema-home.bravo-redesign.bravo-hub .cinema-link { color:#ead5ac;display:inline-flex;align-items:center;gap:7px; }
+.cinema-home.bravo-redesign.bravo-hub .hub-stories { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px; }
+.cinema-home.bravo-redesign.bravo-hub .hub-tile { display:flex;flex-direction:column;text-align:center;min-height:640px; }
+.cinema-home.bravo-redesign.bravo-hub .hub-tile-copy { padding:42px 24px 26px; }
+.cinema-home.bravo-redesign.bravo-hub .hub-tile-copy>p { margin-inline:auto!important; }
+.cinema-home.bravo-redesign.bravo-hub .hub-tile .hub-actions { justify-content:center; }
+.cinema-home.bravo-redesign.bravo-hub .hub-results>img { width:100%;height:310px;object-fit:cover;object-position:center 47%;margin-top:auto; }
+.cinema-home.bravo-redesign.bravo-hub .hub-team { background:radial-gradient(ellipse at 50% 100%,#ba9a6430,transparent 66%),#151515; }
+.cinema-home.bravo-redesign.bravo-hub .hub-shield { display:grid;place-items:center;flex:1;padding:15px 20px 40px; }
+.cinema-home.bravo-redesign.bravo-hub .hub-shield img { width:190px;height:218px;object-fit:contain;filter:drop-shadow(0 18px 38px #ba9a6422); }
+.cinema-home.bravo-redesign.bravo-hub .hub-transport { display:grid;grid-template-columns:1.15fr 1fr;align-items:center;background:#151515; }
+.cinema-home.bravo-redesign.bravo-hub .hub-transport>img { width:100%;height:330px;object-fit:cover; }
+.cinema-home.bravo-redesign.bravo-hub .hub-transport>div { padding:32px 44px; }
+.cinema-home.bravo-redesign.bravo-hub .hub-transport h2 { font-size:clamp(28px,3vw,42px); }
+.cinema-home.bravo-redesign.bravo-hub .hub-transport .cinema-link { min-height:46px;margin-top:18px;font-size:13px; }
+.cinema-home.bravo-redesign.bravo-hub .hub-close { text-align:center;padding-block:76px 50px; }
+.cinema-home.bravo-redesign.bravo-hub .hub-close h2 { font-size:clamp(36px,5vw,68px); }
+.cinema-home.bravo-redesign.bravo-hub .hub-close .hub-actions { justify-content:center;margin-top:28px; }
+.cinema-home.bravo-redesign.bravo-hub .hub-more { display:flex;justify-content:center;flex-wrap:wrap;gap:0 28px;padding:36px 0 0; }
+.cinema-home.bravo-redesign.bravo-hub .hub-more a { display:inline-flex;align-items:center;min-height:44px;color:#c5c0b7;font:400 12px/1.5 Montserrat,sans-serif;text-decoration:none; }
+.cinema-home.bravo-redesign.bravo-hub .hub-more a:hover { color:#ead5ac;text-decoration:underline; }
+.bravo-detail { padding-top:calc(120px + env(safe-area-inset-top));min-height:65vh;padding-bottom:64px; }
+.bravo-detail-heading { padding-top:12px;padding-bottom:12px; }
+.bravo-detail-heading .page-breadcrumbs { display:flex;gap:10px;align-items:center;color:#bcb7af;font-size:12px; }
+.bravo-detail-heading .page-breadcrumbs a { display:inline-flex;align-items:center;min-height:44px;color:#e4c894; }
+.cinema-home.bravo-redesign .bravo-detail-heading h1 { font:650 clamp(42px,5vw,72px)/1.1 Montserrat,sans-serif;letter-spacing:-.055em;color:#f5f3ee;max-width:900px;margin:24px 0 4px;text-wrap:balance; }
+.bravo-detail .cinema-programs { padding-top:40px; }
+@media(hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference) {
+  .cinema-home.bravo-redesign.bravo-hub .hub-feature-image img,.cinema-home.bravo-redesign.bravo-hub .hub-results>img { transition:transform .7s cubic-bezier(.22,.7,.2,1); }
+  .cinema-home.bravo-redesign.bravo-hub .hub-training:hover .hub-feature-image img,.cinema-home.bravo-redesign.bravo-hub .hub-results:hover>img { transform:scale(1.025); }
+}
+@media(max-width:900px) {
+  .cinema-home.bravo-redesign.bravo-hub .hub-training { grid-template-columns:1fr 1fr;min-height:520px; }
+  .cinema-home.bravo-redesign.bravo-hub .hub-feature-copy { padding:28px; }
+  .cinema-home.bravo-redesign.bravo-hub .hub-tile { min-height:600px; }
+  .cinema-home.bravo-redesign.bravo-hub .hub-transport>div { padding:28px; }
+}
+@media(max-width:700px) {
+  .cinema-home.bravo-redesign.bravo-hub :is(.hub-training,.hub-tile,.hub-transport) { border-radius:24px; }
+  .cinema-home.bravo-redesign.bravo-hub .hub-training { display:flex;flex-direction:column-reverse; }
+  .cinema-home.bravo-redesign.bravo-hub .hub-feature-copy { padding:30px 24px; }
+  .cinema-home.bravo-redesign.bravo-hub .hub-feature-image { height:220px; }
+  .cinema-home.bravo-redesign.bravo-hub .hub-feature-copy>p:not(.cinema-eyebrow,.hub-price,.hub-note) { margin-block:14px;font-size:13px; }
+  .cinema-home.bravo-redesign.bravo-hub .hub-note { font-size:10px; }
+  .cinema-home.bravo-redesign.bravo-hub .hub-actions { gap:8px 16px; }
+  .cinema-home.bravo-redesign.bravo-hub .hub-actions a { font-size:11px; }
+  .cinema-home.bravo-redesign.bravo-hub .hub-stories { grid-template-columns:1fr;gap:20px; }
+  .cinema-home.bravo-redesign.bravo-hub .hub-tile { min-height:0; }
+  .cinema-home.bravo-redesign.bravo-hub .hub-tile-copy { padding:30px 20px 20px; }
+  .cinema-home.bravo-redesign.bravo-hub .hub-tile-copy>p:not(.cinema-eyebrow) { font-size:13px;margin-block:14px!important; }
+  .cinema-home.bravo-redesign.bravo-hub .hub-results>img { height:230px; }
+  .cinema-home.bravo-redesign.bravo-hub .hub-shield { padding:0 20px 28px; }
+  .cinema-home.bravo-redesign.bravo-hub .hub-shield img { width:130px;height:150px; }
+  .cinema-home.bravo-redesign.bravo-hub .hub-transport { grid-template-columns:1fr; }
+  .cinema-home.bravo-redesign.bravo-hub .hub-transport>img { height:190px; }
+  .cinema-home.bravo-redesign.bravo-hub .hub-transport>div { padding:26px 24px; }
+  .cinema-home.bravo-redesign.bravo-hub .hub-transport .cinema-eyebrow { margin-bottom:12px; }
+  .cinema-home.bravo-redesign.bravo-hub .hub-close { padding-block:44px 32px; }
+  .cinema-home.bravo-redesign.bravo-hub .hub-more { gap:0 20px;padding-top:24px; }
+  .bravo-detail { padding-top:calc(100px + env(safe-area-inset-top)); }
+  .cinema-home.bravo-redesign .bravo-detail-heading h1 { font-size:42px;margin-top:16px; }
+}
+@media(prefers-reduced-motion:reduce) { .cinema-home.bravo-redesign.bravo-hub img { transition:none!important; } }
+:is(.access-reduced-motion,.a11y-reduce-motion) .cinema-home.bravo-redesign.bravo-hub img { transition:none!important; }
+@media(forced-colors:active) { .cinema-home.bravo-redesign.bravo-hub :is(.hub-training,.hub-tile,.hub-transport) { border-color:CanvasText; } }
+
+.bravo-detail-intro { max-width:65ch;color:#bcb7af;font-size:15px;line-height:1.8;margin:22px 0 0; }

@@ -1,88 +1,24 @@
-import LiveBanner from './LiveBanner';
-import { SPECIALIST_LINKS, specialistInquiryPath } from '../../shared/contact-interest';
-import GoalFinder from './GoalFinder';
-import TrainingJourney from './TrainingJourney';
-import { CINEMATIC_HERO_SOURCE, CINEMATIC_HERO_KEY, CINEMATIC_HERO_ALT, CINEMATIC_HERO_SRCSET, CINEMATIC_HERO_SIZES } from '../../shared/cinematic-hero.js';
-import TransportHero from './TransportHero';
-import { ConversionTrust, MobileDiscovery, TrainingOffer, ConversionFAQ, HomeSectionOrder } from './MobileConversion';
-import { trackVisit } from './telemetry';
-import './mobile-conversion.css';
-import { initialRecommendations } from './review-state';
-import CatalogPrice from './CatalogPrice';
-import { publicTrainerName } from '../../shared/discovery';
-import { WorkshopDetails } from './WorkshopDetails';
-import { useEffect, useRef, useState } from 'react';
+import { useRef } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 import { Header, Footer } from './ui';
 import { Editable } from './SiteContent';
 import Link from './Link';
-import { api } from './api';
-import { useBravo } from './context';
-import { SERVICES } from '../../shared/catalog';
-import { lessonLibraryVisible } from '../../shared/lesson-library';
-import { HOME_HERO_SOURCE, HOME_HERO_ALT, HOME_HERO_KEY } from '../../shared/home-hero.js';
-import { framingStyle } from '../../shared/site-images.js';
-import { getSiteImages } from './site-image-state.js';
-import HeroPhotoCarousel from './HeroPhotoCarousel';
-
+import CatalogPrice from './CatalogPrice';
+import LiveBanner from './LiveBanner';
+import { trackVisit } from './telemetry';
+import { HOME_SECTION_ROUTES } from '../../shared/home-routes';
+import { CINEMATIC_HERO_SOURCE, CINEMATIC_HERO_KEY, CINEMATIC_HERO_ALT, CINEMATIC_HERO_SRCSET, CINEMATIC_HERO_SIZES } from '../../shared/cinematic-hero.js';
 import useCinematicMotion from './useCinematicMotion';
-import ProofVideoCarousel from './ProofVideoCarousel';
-import FacebookRecommendations from './FacebookRecommendations';
-import ReviewPreview from './ReviewPreview';
-import ReviewStars from './ReviewStars';
-import TrainerIntroduction from './TrainerIntroduction';
-import { trainerIntroductions } from '../../shared/trainer-profile';
-import TrainerScheduleCard, { useLiveTrainerSchedules } from './TrainerScheduleCard';
-import LessonOffers from './LessonOffers';
-import './trainer-schedules.css';
-import './home-polish.css';
-import './home-fci.css';
-import './home-tools.css';
-import './field-experience.css';
-
-const secondary = ['aggression'];
-type Trainer = { id: string; name: string; role: string; title: string; bio: string; image?: string; imageKey?: string; profileKey?: string };
-
-const portraits: Record<string, string> = { 'David Northrop': 'david-northrop', 'Ashley Northrop': 'ashley-northrop', 'Ashley Leverock': 'ashley-leverock', 'Janet Hughes': 'janet-hughes' };
+import './mobile-conversion.css';
 
 export default function Home() {
+  const { hash } = useLocation();
   const root = useRef(null);
-  const [examplesOpened, setExamplesOpened] = useState(false);
   useCinematicMotion(root);
-  const [hero] = useState(() => getSiteImages()[HOME_HERO_KEY]);
-  const { config, user } = useBravo();
-  const catalog = config?.services?.length ? config.services : SERVICES;
-  const [recommendations, setRecommendations] = useState(initialRecommendations);
-  const [team, setTeam] = useState<Trainer[]>([]);
-  const [teamVisible, setTeamVisible] = useState(false);
-  const [teamError, setTeamError] = useState(false), [teamAttempt, setTeamAttempt] = useState(0);
-  const liveSchedules = useLiveTrainerSchedules(teamVisible);
-  const [reviews, setReviews] = useState<{reviews: Array<{_id: string; authorName: string; rating: number; body: string; editedByOwner?: boolean}>; average: number; count: number}>({ reviews: [], average: 0, count: 0 });
-  const lessonsOpen = lessonLibraryVisible(config, user);
-  useEffect(() => {
-    let live = true;
-    // The server snapshot seeds only this visit; later navigation reads fresh reviews.
-    document.querySelector('meta[name="bravo-reviews"]')?.remove();
-    api('/reviews').then(data => { if (live) { setReviews(data); if (Array.isArray(data.recommendations)) setRecommendations(data.recommendations); } }).catch(() => {});
-    const published = event => setTeam(people => people.map(person => person.id === event.detail.id ? event.detail : person));
-    window.addEventListener('bravo-team-published', published);
-    const observer = new IntersectionObserver(([entry]) => setTeamVisible(entry.isIntersecting), { rootMargin: '300px' });
-    const section = document.getElementById('team');
-    if (section) observer.observe(section);
-    return () => { live = false; observer.disconnect(); window.removeEventListener('bravo-team-published', published); };
-  }, []);
-  useEffect(() => {
-    let active = true;
-    const controller = new AbortController();
-    setTeamError(false);
-    api('/team', { signal: controller.signal }).then(data => {
-      if (!active) return;
-      const people = Array.isArray(data.team) ? [...data.team] : [];
-      setTeam(people.sort((a, b) => Number(b.role === 'owner') - Number(a.role === 'owner')));
-      setTeamError(people.length === 0);
-    }).catch(() => { if (active) setTeamError(true); });
-    return () => { active = false; controller.abort(); };
-  }, [teamAttempt]);
-  return <div ref={root} className="bravo-home cinema-home conversion-home bravo-redesign">
+  // Previously shared section URLs continue to reach the content that moved.
+  const destination = HOME_SECTION_ROUTES[hash];
+  if (destination) return <Navigate to={destination} replace/>;
+  return <div ref={root} className="bravo-home cinema-home conversion-home bravo-redesign bravo-hub">
     <Header homeChapters/>
     <Editable as="main" contentKey="copy-home-1" id="main-content" tabIndex={-1}>
       <section className="home-hero cinema-hero home-hero--confidence" aria-labelledby="home-title">
@@ -92,90 +28,42 @@ export default function Home() {
           <h1 id="home-title"><Editable as="span" contentKey="conversion-hero-title" canEditText>Dog training.<br/><em>For real life.</em></Editable></h1>
           <Editable as="p" contentKey="hero-booking-location" canEditText className="hero-service-location">Aberdeen, SD · At home and in everyday places</Editable>
           <p className="cinema-hero-intro"><Editable as="span" contentKey="conversion-hero-intro" canEditText>Real life. Real confidence. A calmer life together.</Editable></p>
-          <div className="polish-hero-actions"><Editable as={Link} contentKey="mobile-hero-book" canEditText canEditLink href="/portal?program=training" className="cinema-button conversion-button" onClick={() => trackVisit('hero_booking_clicked')}>Start My Training Plan <span aria-hidden="true">→</span></Editable><Editable as="a" contentKey="polish-hero-explore" canEditText canEditLink href="#training" className="cinema-link">Explore Training</Editable></div>
+          <div className="polish-hero-actions"><Editable as={Link} contentKey="mobile-hero-book" canEditText canEditLink href="/portal?program=training" className="cinema-button conversion-button" onClick={() => trackVisit('hero_booking_clicked')}>Start My Training Plan <span aria-hidden="true">→</span></Editable><Editable as={Link} contentKey="polish-hero-explore" canEditText canEditLink href="/training" className="cinema-link">Explore Training</Editable></div>
           <Editable as="p" contentKey="hero-plan-explainer" canEditText className="hero-plan-explainer">Choose your trainer. Request a visit. Bravo confirms the details.</Editable>
         </div>
-        <div className="cinema-hero-baseline cinema-shell"><Editable as="span" contentKey="copy-home-4" canEditText>REAL DOGS. REAL LIFE. BRAVO.</Editable><Editable as="a" contentKey="copy-home-5" canEditText canEditLink href="#method" aria-label="Discover the Bravo approach">SCROLL TO DISCOVER <span aria-hidden="true">↓</span></Editable></div>
+        <div className="cinema-hero-baseline cinema-shell"><Editable as="span" contentKey="copy-home-4" canEditText>REAL DOGS. REAL LIFE. BRAVO.</Editable><Editable as="a" contentKey="copy-home-5" canEditText canEditLink href="#explore-bravo" aria-label="Explore Bravo">SCROLL TO DISCOVER <span aria-hidden="true">↓</span></Editable></div>
       </section>
-      <ConversionTrust/>
       <div className="home-live-status cinema-shell"><LiveBanner/></div>
-
-      <HomeSectionOrder>
-      <div key="offer" id="training" className="home-primary-training"><TrainingOffer/></div>
-      <div key="media-tools" className="cinema-shell site-media-tools-slot site-media-tools-slot--home" data-site-media-tools=""/>
-      <TransportHero key="transport" home/>
-      <section key="tools" className="home-tools cinema-shell" aria-label="Tools of the Trade">
-        <Editable as={Link} contentKey="home-tools-of-the-trade" canEditLink href="/tools-of-the-trade" className="home-tools-card" aria-labelledby="home-tools-title home-tools-action" aria-describedby="home-tools-copy">
-          <div>
-            <Editable as="p" contentKey="home-tools-eyebrow" canEditText className="home-tools-eyebrow">THE BRAVO TOOLKIT</Editable>
-            <Editable as="h2" contentKey="home-tools-title" canEditText id="home-tools-title">Know the tools. <span>See the purpose.</span></Editable>
-            <Editable as="p" contentKey="home-tools-copy" canEditText id="home-tools-copy">Explore the equipment we use for basic through advanced obedience. We assess your dog first and use only what they need.</Editable>
-          </div>
-          <Editable as="span" contentKey="home-tools-action" canEditText id="home-tools-action" className="home-tools-action">Explore Tools of the Trade <span aria-hidden="true">→</span></Editable>
-        </Editable>
-      </section>
-      <section key="fci" className="home-fci home-secondary cinema-shell" aria-labelledby="home-fci-title">
-        <Link href="/fci-support" className="home-fci-card" aria-labelledby="home-fci-title home-fci-action">
-          <div className="home-fci-identity"><img src="/images/fci-official-identity.jpeg" width="796" height="240" loading="lazy" alt="Fédération Cynologique Internationale — for pedigree dogs worldwide"/></div>
-          <div className="home-fci-copy">
-            <Editable as="p" contentKey="home-fci-eyebrow" canEditText className="cinema-eyebrow">BRAVO’S FCI SUPPORT INITIATIVE</Editable>
-            <Editable as="h2" contentKey="home-fci-title" canEditText id="home-fci-title">FCI support</Editable>
-            <Editable as="p" contentKey="home-fci-description" canEditText>Explore breed standards, responsible breeding and official FCI news.</Editable>
-            <Editable as="span" contentKey="home-fci-action" canEditText className="home-fci-action" id="home-fci-action">Explore FCI Support <span aria-hidden="true">↗</span></Editable>
-            <small>An independent Bravo initiative. No official FCI affiliation or endorsement.</small>
-          </div>
-        </Link>
-      </section>
-      <Editable as="section" key="training" contentKey="copy-home-24" id="training-programs" tabIndex={-1} className="cinema-programs cinema-shell" aria-labelledby="conversion-goal-title">
-        <MobileDiscovery/>
-        <details className="training-examples" onToggle={event => { if (event.currentTarget.open) setExamplesOpened(true); }}><summary>See training examples by goal</summary>{examplesOpened && <GoalFinder/>}</details>
-        <div className="cinema-secondary-programs">{secondary.map(id => { const service = catalog.find(s => s.id === id); return service && service.enabled !== false ? <article data-site-service={id} key={id} data-reveal=""><Editable as="p" contentKey={`home-service-${id}-eyebrow`} canEditText className="cinema-eyebrow">EXPERIENCE. CONTROL. STRUCTURE.</Editable><Editable as="h3" contentKey={`home-service-${id}-title`} canEditText>Start with an assessment.</Editable><Editable as="p" contentKey={`home-service-${id}-copy`} canEditText>Aggressive-dog intake with two trainers. Review the behavior first; decide what comes next second.</Editable><div><span><CatalogPrice service={id}/> <small>initial intake</small></span><Editable as={Link} contentKey={`home-service-${id}-link`} canEditText canEditLink href="/behavior-assessment" aria-label="Explore aggressive dog intake">Explore <span aria-hidden="true">↗</span></Editable></div></article> : null; })}</div>
-        <details id="specialist-training" open className="cinema-details cinema-specialists"><Editable as="summary" contentKey="copy-home-37" canEditText>Specialist and working-dog programs <span aria-hidden="true">+</span></Editable><Editable as="p" contentKey="copy-home-38" canEditText>Specialist and working-dog goals are scoped individually. Contact Bravo to discuss suitability, preparation, and pricing.</Editable><div>{SPECIALIST_LINKS.map(({ name, interest }, index) => <Editable as={Link} contentKey={`home-specialist-${index}`} canEditText canEditLink key={name} href={interest === 'hunting-dog' ? '/hunting-dog-training' : specialistInquiryPath(interest)}>{name}<span aria-hidden="true">↗</span></Editable>)}</div></details>
-      </Editable>
-
-      <Editable as="section" key="results" contentKey="home-results-section" id="results" className="cinema-proof home-results" aria-labelledby="results-title"><div className="cinema-shell">
-        <div className="cinema-section-heading" data-reveal=""><div><Editable as="p" contentKey="home-results-eyebrow" canEditText className="cinema-eyebrow">REAL DOGS. REAL SESSIONS.</Editable><Editable as="h2" contentKey="home-results-title" canEditText id="results-title">See the work.<br/><span>See the progress.</span></Editable></div><Editable as="p" contentKey="home-results-copy" canEditText>Watch authentic Bravo sessions, with the context behind each dog's training.</Editable></div>
-        <ProofVideoCarousel/>
-      <Editable as="div" contentKey="copy-home-18" id="dogs" className="cinema-dogs proof-photos" aria-labelledby="dogs-title">
-        <div className="cinema-section-heading" data-reveal=""><div><Editable as="p" contentKey="copy-home-19" canEditText className="cinema-eyebrow">ONE STANDARD. DIFFERENT DOGS.</Editable><Editable as="h3" contentKey="cinema-dogs-title" canEditText id="dogs-title">Training in<br/><span>everyday places.</span></Editable></div><Editable as="p" contentKey="copy-home-17" canEditText>We train where life happens—repeating the work across breeds, temperaments, and real distractions.</Editable></div>
-        <div className="cinema-dog-gallery home-hero-authentic">
-          <HeroPhotoCarousel><img className="home-hero-image" src={hero?.src || HOME_HERO_SOURCE} width="828" height="1121" loading="lazy" fetchPriority="low" alt={hero?.framed ? hero.alt : HOME_HERO_ALT} style={hero?.framed ? framingStyle(hero) : undefined} data-site-image-original={HOME_HERO_SOURCE} data-site-image-original-alt={HOME_HERO_ALT} data-site-media-original-styles='{"objectFit":"","objectPosition":"","transform":"","transformOrigin":"","clipPath":""}'/></HeroPhotoCarousel>
-          <div className="cinema-gallery-note"><Editable as="span" contentKey="copy-home-21" canEditText>THE BRAVO FIELD NOTES</Editable><Editable as="p" contentKey="copy-home-22" canEditText>Bravo in<br/>the field.</Editable><Editable as="small" contentKey="copy-home-23" canEditText>Swipe through Bravo in the field.</Editable></div>
+      <section className="hub-training cinema-shell" id="explore-bravo" aria-labelledby="hub-training-title" data-reveal="">
+        <div className="hub-feature-image"><img src="/images/obedience-real-world.webp" width="1200" height="800" alt="A trainer and dog owner practicing outdoors" loading="lazy"/></div>
+        <div className="hub-feature-copy">
+          <Editable as="p" contentKey="hub-training-eyebrow" canEditText className="cinema-eyebrow">PRIVATE TRAINING. PERSONAL ATTENTION.</Editable>
+          <Editable as="h2" contentKey="hub-training-heading" canEditText id="hub-training-title">A better everyday.<br/><span>Starts here.</span></Editable>
+          <Editable as="p" contentKey="hub-training-copy" canEditText>From puppy foundations to everyday obedience. A plan for your dog, in the places you live.</Editable>
+          <p className="hub-price"><CatalogPrice service="training"/><span> / month</span></p>
+          <Editable as="p" contentKey="hub-training-note" canEditText className="hub-note">Private visits Monday–Friday. Manual renewal.</Editable>
+          <div className="hub-actions"><Editable as={Link} contentKey="hub-training-link" canEditText canEditLink href="/training" className="cinema-button">Explore training <span aria-hidden="true">→</span></Editable><Link href="/behavior-assessment" className="cinema-link">Behavior concerns?</Link></div>
         </div>
-      </Editable>
-        <div className="home-results-actions"><Editable as={Link} contentKey="home-results-book" canEditText canEditLink href="/portal?program=training" className="cinema-button">Start training with Bravo <span aria-hidden="true">→</span></Editable><a className="cinema-link" href="#reviews">Read client experiences <span aria-hidden="true">↓</span></a></div>
-      </div></Editable>
-
-      <Editable as="section" key="reviews" contentKey="copy-home-42" id="reviews" tabIndex={-1} className="cinema-proof" aria-labelledby="reviews-title"><div className="cinema-shell">
-        <div className="cinema-proof-intro" data-reveal=""><img src="/images/bravo-logo-small.webp" width="64" height="72" alt="" data-site-image-ignore=""/><Editable as="p" contentKey="copy-home-43" canEditText className="cinema-eyebrow">PROOF IN THE WORK</Editable><Editable as="h2" contentKey="cinema-proof-title" canEditText id="reviews-title">Don’t take<br/><span>our word for it.</span></Editable><Editable as="p" contentKey="copy-home-44" canEditText>Read what clients noticed at home.</Editable></div>
-
-        <FacebookRecommendations reviews={recommendations}/>
-        {reviews.reviews.length > 0 && <div className="cinema-account-reviews"><p>{reviews.average}<Editable as="span" contentKey="copy-home-45" canEditText> out of 5 · </Editable>{reviews.count}<Editable as="span" contentKey="copy-home-46" canEditText> verified Bravo account </Editable>{reviews.count === 1 ? 'review' : 'reviews'}</p><div className="review-grid home-proof-reviews" role="group" aria-label="Client reviews" tabIndex={0}>{reviews.reviews.slice(0, 3).map(review => <Editable as="article" contentKey="copy-home-47" className="panel" key={review._id}><ReviewStars rating={review.rating}/><ReviewPreview body={review.body} author={review.authorName}/><strong>{review.authorName}</strong><Editable as="small" contentKey="copy-home-48" >{review.editedByOwner ? 'Bravo account review · edited by owner' : 'Verified Bravo account'}</Editable></Editable>)}</div></div>}
-        <Editable as={Link} contentKey="copy-home-49" canEditText canEditLink className="cinema-link" href="/account#your-review">Share your experience <span aria-hidden="true">↗</span></Editable>
-      </div></Editable>
-
-      <Editable as="section" key="team" contentKey="copy-home-39" id="team" className="cinema-team" aria-labelledby="team-title"><div className="cinema-shell">
-        <div className="cinema-section-heading" data-reveal=""><div><Editable as="p" contentKey="copy-home-40" canEditText className="cinema-eyebrow">MEET THE BRAVO TEAM</Editable><Editable as="h2" contentKey="cinema-team-title" canEditText id="team-title">The people<br/><span>behind the work.</span></Editable></div><Editable as="p" contentKey="copy-home-41" canEditText>Meet the trainers your dog will actually work with.</Editable></div>
-        {teamError && <div className="home-team-recovery" role="status"><p>Trainer profiles are temporarily unavailable. You can retry or call Bravo to discuss the right trainer for your dog.</p><div className="training-help-links"><button className="cinema-button" type="button" onClick={() => setTeamAttempt(value => value + 1)}>Retry trainer profiles</button><a href="tel:+16058242767">Call (605) 824-2767</a></div></div>}
-        <div className="home-team-grid cinema-team-grid">{team.map(person => <Editable as="article" contentKey={`trainer-${['david','ashley','janet'].includes(person.profileKey) ? person.profileKey : 'other'}-card`} data-site-trainer={person.id} key={person.id || person.name} data-reveal=""><div className="cinema-portrait"><img src={person.image || `/images/${portraits[person.name] || 'bravo-logo-small'}.webp`} data-site-image-key={person.imageKey || `team-${(person.name === 'Ashley Leverock' ? 'Ashley Northrop' : person.name).toLowerCase().replaceAll(' ', '-')}`} width="1000" height="1400" loading="lazy" alt={`${publicTrainerName(person.name)}, ${person.title}`}/></div><div className="home-person cinema-person"><p className="cinema-eyebrow">{person.title}</p><h3>{publicTrainerName(person.name)}</h3><p className="home-trainer-focus">{trainerIntroductions[person.name] ? <Editable as="span" contentKey={trainerIntroductions[person.name].focusKey} canEditText>{trainerIntroductions[person.name].focus}</Editable> : person.bio}</p><details className="cinema-details"><summary>Meet {person.name.split(' ')[0]} <span aria-hidden="true">+</span></summary><TrainerIntroduction person={person}/>{person.id && <><details className="home-availability"><summary>View {person.name.split(' ')[0]}’s working hours</summary><TrainerScheduleCard person={person} live={liveSchedules}/></details><Link className="cinema-link" href={`/portal?program=training&trainer=${encodeURIComponent(person.id)}`}>Request a visit with {person.name.split(' ')[0]} →</Link></>}</details></div></Editable>)}</div>
-      </div></Editable>
-
-      <Editable as="section" key="method" contentKey="copy-home-9" id="method" className="cinema-intro cinema-shell" aria-labelledby="method-title" data-reveal="">
-        <Editable as="p" contentKey="copy-home-10" canEditText className="cinema-eyebrow">THE BRAVO APPROACH</Editable>
-        <Editable as="h2" contentKey="cinema-method-title" canEditText id="method-title">Your first session.<br/><span>Step by step.</span></Editable>
-        <Editable as="p" contentKey="cinema-method-copy" canEditText>No treats. No toys. Your trainer observes your dog, explains the approach, and helps you practice it together.</Editable>
-        <TrainingJourney/>
-        <Editable as="a" contentKey="home-method-action" canEditText canEditLink href="#training" className="cinema-link home-method-action">Explore training <span aria-hidden="true">→</span></Editable>
-      </Editable>
-
-      <Editable as="section" key="workshops" contentKey="copy-home-50" id="workshops" className="cinema-events home-secondary" aria-labelledby="workshops-title"><div className="cinema-shell"><Editable as="h2" contentKey="cinema-workshops-title" canEditText id="workshops-title">Workshops with Bravo</Editable></div><div className="cinema-shell"><WorkshopDetails compact/></div></Editable>
-
-      <Editable as="section" key="online" contentKey="copy-home-53" id="online" className={`cinema-online home-secondary${lessonsOpen ? '' : ' cinema-online--upcoming'}`} aria-labelledby="online-title"><div className="cinema-shell cinema-online-inner"><div data-reveal=""><Editable as="p" contentKey="copy-home-54" canEditText className="cinema-eyebrow">BRAVO. ANYWHERE.</Editable><Editable as="h2" contentKey="cinema-online-title" canEditText id="online-title">Online lessons</Editable><Editable as="p" contentKey="cinema-online-copy" canEditText>Learn from David and Ashley, then practice at home.</Editable>{lessonsOpen ? <Editable as={Link} contentKey="copy-home-55" canEditText canEditLink href="/learn" className="cinema-button cinema-button-light">Explore online lessons <span aria-hidden="true">↗</span></Editable> : <Editable as={Link} contentKey="copy-home-56" canEditText canEditLink href="/learn" className="cinema-button cinema-button-light">Online courses · Coming soon →</Editable>}</div></div>{lessonsOpen && <details className="cinema-shell cinema-details"><Editable as="summary" contentKey="copy-home-58" canEditText>Online lesson options</Editable><LessonOffers/></details>}</Editable>
-
-      <ConversionFAQ key="faq"/>
-      <Editable as="section" key="booking" contentKey="copy-home-59" className="cinema-close cinema-shell" aria-labelledby="booking-title" data-reveal=""><Editable as="p" contentKey="copy-home-60" canEditText className="cinema-eyebrow">READY WHEN YOU ARE.</Editable><Editable as="h2" contentKey="cinema-close-title" canEditText id="booking-title">Start with<br/><span>your dog.</span></Editable><Editable as="p" contentKey="copy-home-61" canEditText>Tell us what you’re seeing. We’ll help you choose the right first step.</Editable><div className="cinema-actions"><Editable as={Link} contentKey="copy-home-62" canEditText canEditLink href="/portal?program=training" className="cinema-button">Book training <span aria-hidden="true">↗</span></Editable><Editable as="a" contentKey="copy-home-63" canEditText canEditLink href="tel:+16058242767" className="cinema-link">Talk to Bravo</Editable></div><Editable as="span" contentKey="copy-home-64" canEditText className="cinema-close-location">ABERDEEN, SOUTH DAKOTA · WE COME TO YOU</Editable></Editable>
-      </HomeSectionOrder>
+      </section>
+      <section className="hub-stories cinema-shell" aria-label="Discover Bravo">
+        <article className="hub-tile hub-results" data-reveal="">
+          <div className="hub-tile-copy"><Editable as="p" contentKey="hub-results-eyebrow" canEditText className="cinema-eyebrow">THE WORK SPEAKS.</Editable><Editable as="h2" contentKey="hub-results-title" canEditText>Real dogs.<br/><span>Real progress.</span></Editable><Editable as="p" contentKey="hub-results-copy" canEditText>Step inside a Bravo training session.</Editable><div className="hub-actions"><Editable as={Link} contentKey="hub-results-link" canEditText canEditLink href="/results" className="cinema-link">See the work <span aria-hidden="true">→</span></Editable><Link href="/reviews" className="cinema-link">Client stories <span aria-hidden="true">→</span></Link></div></div>
+          <img src="/images/bravo-client-training.jpeg" width="828" height="1121" loading="lazy" alt="Bravo training a dog in an everyday setting"/>
+        </article>
+        <article className="hub-tile hub-team" data-reveal="">
+          <div className="hub-tile-copy"><Editable as="p" contentKey="hub-team-eyebrow" canEditText className="cinema-eyebrow">TRUST. TRAIN. DEPLOY.</Editable><Editable as="h2" contentKey="hub-team-title" canEditText>Your dog.<br/><span>Our commitment.</span></Editable><Editable as="p" contentKey="hub-team-copy" canEditText>Meet the people and the approach behind Bravo.</Editable><div className="hub-actions"><Editable as={Link} contentKey="hub-team-link" canEditText canEditLink href="/team" className="cinema-link">Meet your team <span aria-hidden="true">→</span></Editable><Link href="/our-approach" className="cinema-link">Our approach <span aria-hidden="true">→</span></Link></div></div>
+          <div className="hub-shield"><img src="/images/bravo-logo.webp" width="300" height="340" alt="Bravo K9 Solutions shield" loading="lazy" data-site-image-ignore=""/></div>
+        </article>
+      </section>
+      <section className="hub-transport cinema-shell" aria-labelledby="hub-transport-title" data-reveal="">
+        <img src="/images/bravo-k9-transport-small.webp" width="800" height="450" alt="Bravo’s black Dodge Durango K9 transport vehicle" loading="lazy" data-site-image-ignore=""/>
+        <div><Editable as="p" contentKey="hub-transport-eyebrow" canEditText className="cinema-eyebrow">COMING SOON</Editable><Editable as="h2" contentKey="hub-transport-title" canEditText id="hub-transport-title">The Bravo standard.<br/><span>On the road.</span></Editable><Editable as={Link} contentKey="hub-transport-link" canEditText canEditLink href="/k9-transport" className="cinema-link">Explore K9 Transport <span aria-hidden="true">→</span></Editable></div>
+      </section>
+      <section className="hub-close cinema-shell" aria-labelledby="booking-title" data-reveal="">
+        <Editable as="h2" contentKey="hub-close-title" canEditText id="booking-title">Your next chapter.<br/><span>Starts with your dog.</span></Editable><div className="hub-actions"><Editable as={Link} contentKey="copy-home-62" canEditText canEditLink href="/portal?program=training" className="cinema-button">Book training <span aria-hidden="true">↗</span></Editable><Editable as="a" contentKey="copy-home-63" canEditText canEditLink href="tel:+16058242767" className="cinema-link">Talk to Bravo</Editable></div>
+        <nav className="hub-more" aria-label="More from Bravo"><Link href="/workshops">Workshops</Link><Link href="/live">Bravo Live</Link><Link href="/tools-of-the-trade">Tools of the Trade</Link><Link href="/learn">Online lessons</Link><Link href="/fci-support">FCI support</Link><Link href="/how-to">Booking help</Link></nav>
+      </section>
+      <div className="cinema-shell site-media-tools-slot site-media-tools-slot--home" data-site-media-tools=""/>
     </Editable><Footer/>
   </div>;
 }
-

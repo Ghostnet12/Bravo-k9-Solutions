@@ -56,6 +56,8 @@ try {
         await page.locator('.fci-news-card').first().waitFor();
         await page.getByRole('link', { name: '← Back to Bravo' }).click();
         await page.waitForURL(origin + '/');
+        await page.locator('.hub-more a[href="/fci-support"]').waitFor();
+        await page.goto(origin+'/our-approach');
         const intro = page.locator('.home-fci-card');
         await intro.waitFor();
         assert.equal(await intro.getAttribute('href'), '/fci-support');
@@ -79,7 +81,7 @@ try {
         await page.getByRole('link', { name: '← Back to Bravo' }).click();
         await page.waitForURL(origin + '/');
         assert.equal(await page.locator('.home-ad-dock').count(),0);
-        const introLink = page.locator('.home-fci-card');
+        const introLink = page.locator('.hub-more a[href="/fci-support"]');
         await introLink.waitFor(); await introLink.focus(); await page.keyboard.press('Enter');
         await page.waitForURL('**/fci-support');
         await page.getByRole('heading', { name: 'GLOBAL STANDARDS. STRONGER DOGS.' }).waitFor();

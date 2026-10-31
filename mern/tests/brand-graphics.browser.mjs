@@ -31,7 +31,7 @@ try {
   const page=await context.newPage();page.setDefaultTimeout(15000);
   page.on('pageerror',e=>errors.push(e.message));
   page.on('response',r=>{if(new URL(r.url()).pathname.startsWith('/graphics/'))requests.push({path:new URL(r.url()).pathname,status:r.status()});});
-  await page.goto(origin,{waitUntil:'domcontentloaded'});await page.getByText('See training examples by goal',{exact:true}).click();await page.locator('.goal-result').waitFor();
+  await page.goto(origin+'/training',{waitUntil:'domcontentloaded'});await page.getByText('See training examples by goal',{exact:true}).click();await page.locator('.goal-result').waitFor();
   await page.evaluate(()=>document.fonts.ready);
   for(const width of [320,390,768,1440]) {
     await page.setViewportSize({width,height:1000});
@@ -50,15 +50,15 @@ try {
       assert.equal(await page.locator('.goal-finder').isVisible(),true);
       assert.equal(await page.locator('.conversion-goal').filter({hasText:'Aggression'}).getAttribute('href'),'/portal?program=aggression');
     }
-    await page.locator('#method').scrollIntoViewIfNeeded();
-    const signature=await page.locator('.cinema-method-signature').innerText();assert.match(signature,/Trust/);assert.match(signature,/Train/);assert.match(signature,/Deploy/);
-    assert.equal(await page.locator('.cinema-method-signature > span').count(),3);
-    for(const section of [width>700?'#find-training':'.conversion-discovery','#method','#specialist-training','#team']) {
+    for(const [route,section] of [['/training',width>700?'#find-training':'.conversion-discovery'],['/our-approach','#method'],['/training','#specialist-training'],['/team','#team']]) {
+      await page.goto(origin+route);await page.waitForLoadState('networkidle');
+      if(section==='#find-training') await page.getByText('See training examples by goal',{exact:true}).click();
       await page.locator(section).scrollIntoViewIfNeeded();
-      await page.waitForTimeout(200);
+      if(section==='#method') { assert.equal(await page.locator('.journey-tab').count(),3);assert.match(await page.locator('.journey-tabs').innerText(),/Trust[\s\S]*Train[\s\S]*Deploy/); }
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${section}/${width}: no overflow`);
       if([390,1440].includes(width))await page.locator(section).screenshot({path:`test-results/graphics-${section.slice(1)}-${width}.png`});
     }
+    await page.goto(origin+'/training');await page.getByText('See training examples by goal',{exact:true}).click();await page.locator('.goal-result').waitFor();
     checks.push(`${width}px: visible noninteractive icons, intact destinations, method text and no horizontal overflow`);
   }
   await page.setViewportSize({width:390,height:1000});
@@ -68,9 +68,9 @@ try {
   await page.setViewportSize({width:768,height:1000});
   await page.locator('.goal-choice-link').first().focus();
   assert.ok(await page.locator('.goal-choice-link').first().evaluate(el=>document.activeElement===el));
-  await page.keyboard.press('Enter');assert.equal(new URL(page.url()).pathname,'/');
+  await page.keyboard.press('Enter');assert.equal(new URL(page.url()).pathname,'/training');
   await page.locator('.goal-program-link').focus();await page.keyboard.press('Enter');await page.waitForURL(origin+'/dog-training',{waitUntil:'domcontentloaded'});
-  await page.goto(origin,{waitUntil:'domcontentloaded'});await page.getByText('See training examples by goal',{exact:true}).click();await page.locator('.goal-result').waitFor();
+  await page.goto(origin+'/training',{waitUntil:'domcontentloaded'});await page.getByText('See training examples by goal',{exact:true}).click();await page.locator('.goal-result').waitFor();
   await page.evaluate(()=>document.documentElement.classList.add('access-reduced-motion'));
   assert.ok(await page.locator('.goal-choice-link').first().evaluate(el=>parseFloat(getComputedStyle(el,'::before').transitionDuration)<=0.00001 && getComputedStyle(el,'::before').transform==='none'));
   await page.evaluate(()=>document.documentElement.classList.add('access-high-contrast'));
@@ -78,6 +78,7 @@ try {
   assert.ok(await page.getByRole('button',{name:'Preview Aggression concerns',exact:true}).count());
   await page.evaluate(()=>document.documentElement.classList.remove('access-high-contrast','access-reduced-motion'));
   await page.emulateMedia({forcedColors:'active'});
+  await page.goto(origin+'/our-approach');await page.locator('#method').waitFor();
   assert.equal(await page.locator('#method').evaluate(el=>getComputedStyle(el,'::before').display),'none');
   await page.emulateMedia({forcedColors:'none'});
   assert.equal(await page.locator('.home-ad-dock').count(),0);

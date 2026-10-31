@@ -66,8 +66,6 @@ try {
     await book.scrollIntoViewIfNeeded();
     const box=await book.boundingBox(); assert.ok(box.y>=0&&box.y+box.height<=height,`booking ${width}: ${JSON.stringify(box)}`);
     assert.equal(await page.locator('.home-ad-dock').count(),0,'public ads removed');
-    const methodArt=await page.locator('#method').evaluate(el=>{const s=getComputedStyle(el,'::before');return {background:s.backgroundImage,height:parseFloat(s.height)};});
-    assert.match(methodArt.background,/bravo-logo-small/);assert.doesNotMatch(methodArt.background,/connection-rings/);assert.ok(methodArt.height<=100);
     const contact=page.locator('.mobile-home-nav a[href="/contact"]');
     assert.equal(await contact.locator('svg').getAttribute('fill'),'none');
     assert.equal(await contact.locator('svg').getAttribute('stroke'),'currentColor');
@@ -93,10 +91,14 @@ try {
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`overflow ${width}`);
     await page.screenshot({path:`test-results/polish-${name}-${width}.png`});
     await page.locator('.polish-hero-actions').getByRole('link',{name:/^Explore Training$/i}).click();
-    await page.waitForFunction(()=>{const target=document.querySelector('#training');const top=target?.getBoundingClientRect().top;return top>=74 && top<150;}).catch(async error=>{console.error('Anchor geometry',width,await page.evaluate(()=>({url:location.href,top:document.querySelector('#training')?.getBoundingClientRect().top,padding:getComputedStyle(document.documentElement).scrollPaddingTop,margin:getComputedStyle(document.querySelector('#training')).scrollMarginTop})));throw error;});
+    await page.waitForURL('**/training');await page.locator('.conversion-price').waitFor();
     assert.equal(await page.locator('#training').count(),1,'one training anchor across screen sizes');
     assert.ok(await page.locator('.conversion-price').isVisible(),'primary training price is the destination');
     assert.match(await page.locator('#training h2:visible').first().evaluate(el=>getComputedStyle(el).fontFamily),/Montserrat/);
+    await page.goto(origin+'/our-approach');await page.waitForLoadState('networkidle');
+    const methodArt=await page.locator('#method').evaluate(el=>{const s=getComputedStyle(el,'::before');return {background:s.backgroundImage,height:parseFloat(s.height)};});
+    assert.match(methodArt.background,/bravo-logo-small/);assert.doesNotMatch(methodArt.background,/connection-rings/);assert.ok(methodArt.height<=100);
+    await page.goto(origin);await page.waitForLoadState('networkidle');
     // A real scroll gesture ends the route's brief layout stabilization.
     await page.mouse.wheel(0,-10000);
     await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));
@@ -176,6 +178,7 @@ try {
      await page.getByRole('button',{name:'Unmute music',exact:true}).click();assert.equal(await page.locator('[data-site-soundtrack]').evaluate(el=>el.muted),false);
      await page.screenshot({path:`test-results/music-device-volume-${name}.png`});
      await page.getByRole('button',{name:'Close accessibility options'}).click();
+     await page.goto(origin+'/our-approach');await page.waitForLoadState('networkidle');
      await page.locator('#method').scrollIntoViewIfNeeded();await page.screenshot({path:`test-results/plain-shield-${name}.png`});
     }
     await context.close();console.log(`${name} ${width}: passed`);

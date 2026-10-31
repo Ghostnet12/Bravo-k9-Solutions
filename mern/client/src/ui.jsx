@@ -67,7 +67,7 @@ export function Header({ homeChapters = false } = {}) {
   return <Editable as="header" contentKey="ui-1" ref={header} className="app-header bravo-nav" data-signed-in={Boolean(user)} onKeyDown={handleEscape}>
     <Editable as="div" contentKey="ui-2" className="header-inner">
       <Brand/>
-      {homeChapters && <nav className="home-desktop-nav" aria-label="Explore Bravo"><NavLink to="/dog-training">Training</NavLink><a href="/#method">Our approach</a><a href="/#results">The results</a><a href="/#team">The team</a></nav>}
+      {homeChapters && <nav className="home-desktop-nav" aria-label="Explore Bravo"><NavLink to="/training">Training</NavLink><NavLink to="/our-approach">Our approach</NavLink><NavLink to="/results">The results</NavLink><NavLink to="/team">The team</NavLink></nav>}
       <a className="conversion-header-phone" href="tel:+16058242767" aria-label="Call Bravo at (605) 824-2767"><svg viewBox="0 0 24 24" width="23" height="23" fill="#BA9A64" aria-hidden="true" focusable="false" style={{verticalAlign:"middle",marginRight:8}}><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.25 1.01l-2.2 2.2Z"/></svg><span>(605) 824-2767</span></a>
       <NavLink className="header-quick-action" to={primaryPath}>{primaryLabel}</NavLink>
       <Editable as="button" contentKey="ui-3" ref={menuButton} type="button" className="menu-toggle" aria-expanded={menuOpen} aria-controls="bravo-navigation" onClick={event => { menuOrigin.current = event.currentTarget; if (about.current) about.current.open = false; setMenuOpen(open => !open); }}>
@@ -77,8 +77,9 @@ export function Header({ homeChapters = false } = {}) {
       <Editable as="nav" contentKey="ui-6" id="bravo-navigation" className={menuOpen ? 'is-open' : ''} onClick={event => { if (event.target.closest('a')) closeMenu(); }} aria-label="Primary navigation">
         <Editable as="div" contentKey="ui-7" className="nav-group nav-explore">
           <Editable as="span" contentKey="ui-8" canEditText className="nav-group-label">Explore Bravo</Editable>
-          <Editable as={Link} contentKey="nav-training-pricing" canEditLink canEditText to="/#training">Training &amp; Pricing</Editable>
-          <Editable as={Link} contentKey="ui-12" canEditLink canEditText to="/#reviews">Reviews</Editable>
+          <Editable as={Link} contentKey="nav-training-pricing" canEditLink canEditText to="/training">Training &amp; Pricing</Editable>
+          <NavLink to="/results">Training in action</NavLink>
+          <Editable as={Link} contentKey="ui-12" canEditLink canEditText to="/reviews">Reviews</Editable>
           <Editable as={NavLink} contentKey="cinema-nav-workshops" canEditLink canEditText to="/workshops">Workshops</Editable>
           <Editable as={NavLink} contentKey="nav-k9-transport" canEditLink canEditText to="/k9-transport">K9 Transport</Editable>
           <NavLink to="/live">Live Cams</NavLink>
@@ -87,8 +88,8 @@ export function Header({ homeChapters = false } = {}) {
           <details className="nav-about" ref={about} onBlur={leaveAbout}>
             <summary>About Bravo</summary>
             <div className="nav-about-links">
-              <Editable as={Link} contentKey="cinema-nav-about" canEditLink canEditText to="/#team">Meet the team</Editable>
-              <Editable as={Link} contentKey="nav-bravo-approach" canEditLink canEditText to="/#method">Our approach</Editable>
+              <Editable as={Link} contentKey="cinema-nav-about" canEditLink canEditText to="/team">Meet the team</Editable>
+              <Editable as={Link} contentKey="nav-bravo-approach" canEditLink canEditText to="/our-approach">Our approach</Editable>
               <Editable as={NavLink} contentKey="ui-13" canEditLink canEditText to="/contact">Contact &amp; help</Editable>
               <Editable as="a" contentKey="nav-bravo-phone" canEditLink canEditText href="tel:+16058242767">Call (605) 824-2767</Editable>
             </div>

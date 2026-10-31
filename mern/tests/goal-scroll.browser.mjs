@@ -35,7 +35,7 @@ async function setup(width, owner = false) {
     const scroll = window.scrollTo.bind(window);
     window.scrollTo = (...args) => { window.goalScrollCalls.push(args[0]); return scroll(...args); };
   });
-  await page.goto(origin, { waitUntil: 'domcontentloaded' });
+  await page.goto(origin+'/training', { waitUntil: 'domcontentloaded' });
   await page.locator('.conversion-goal').first().waitFor();
   assert.equal(await page.evaluate(() => scrollY), 0, 'default entry never moves the page');
   await page.getByText('See training examples by goal',{exact:true}).click();
@@ -60,7 +60,7 @@ async function revealed(page, goal, behavior = 'instant') {
   assert.equal(await panel.locator('h3').innerText(), goal.title);
   assert.equal(await page.locator('.goal-select[aria-pressed=true]').count(), 1);
   assert.equal(await panel.locator('.goal-actions > .button').getAttribute('href'), goalBookingPath(goal));
-  assert.equal(new URL(page.url()).pathname, '/'); assert.equal(new URL(page.url()).hash, '');
+  assert.equal(new URL(page.url()).pathname, '/training'); assert.equal(new URL(page.url()).hash, '');
   assert.equal(await page.evaluate(() => window.goalScrollCalls.at(-1)?.behavior), behavior);
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
 }

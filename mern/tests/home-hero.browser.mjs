@@ -5,13 +5,13 @@ import express from 'express';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { once } from 'node:events';
-import { createHomepageHandler } from '../server/homepage.js';
+import { renderHomepage } from '../server/homepage.js';
 const engines = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const hero = { revision: 13, src: '/api/site-images/home-training-hero/image?v=13', alt: 'Bravo team fixture', fit: 'contain', x: 13, y: 19.5, zoom: 1.36, framed: true, canUndo: true };
 const dist = fileURLToPath(new URL('../client/dist/', import.meta.url));
-const html = await readFile(`${dist}/bravo-shell.html`, 'utf8');
+const html = await readFile(`${dist}/results.html`, 'utf8');
 const app = express();
-app.get('/', createHomepageHandler({ loadTemplate: async () => html, loadHero: async () => hero }));
+app.get('/results', (_req,res) => res.type('html').send(renderHomepage(html,hero,null,{preloadHero:false})));
 app.get('/api/site-images/home-training-hero/image', (_req, res) => res.sendFile(`${dist}/images/bravo-client-training.jpeg`));
 app.get('/api/config', (_req, res) => res.json({ connected: true }));
 app.get('/api/team', (_req, res) => res.json({ team: [] }));
@@ -45,7 +45,7 @@ try {
         await page.addInitScript(() => {
           window.heroFrames = [];
           const sample = () => {
-            const image = document.querySelector('.home-hero-image'), section = document.querySelector('.home-hero');
+            const image = document.querySelector('.home-hero-image'), section = document.querySelector('.hero-photo-window');
             if (image && section) {
               const style = getComputedStyle(image), box = section.getBoundingClientRect();
               window.heroFrames.push({ src: image.getAttribute('src'), fit: style.objectFit, position: style.objectPosition, transform: style.transform, height: box.height, top: box.top + scrollY, width: box.width, visible: style.visibility, opacity: style.opacity, loaded: image.complete && image.naturalWidth > 0 });
@@ -55,7 +55,7 @@ try {
           requestAnimationFrame(sample);
         });
         try {
-          await page.goto(origin, { waitUntil: 'domcontentloaded' });
+          await page.goto(origin+'/results', { waitUntil: 'domcontentloaded' });
           await page.locator('.home-hero-image').waitFor({ state: 'visible' });
           // Observe across font loading, media fetch, and delayed auth/remount.
           await page.waitForTimeout(3200);
@@ -67,10 +67,10 @@ try {
           assert.deepEqual([...new Set(frames.map(frame => frame.fit))], ['contain']);
           assert.deepEqual([...new Set(frames.map(frame => frame.position))], ['13% 19.5%']);
           assert.equal(new Set(frames.map(frame => frame.transform)).size, 1, `${label}: no late zoom`);
-          for (const key of ['height', 'top', 'width']) assert.ok(Math.max(...frames.map(frame => frame[key])) - Math.min(...frames.map(frame => frame[key])) < 1, `${label}: ${key} changed: ${JSON.stringify(frames.filter((frame, i) => !i || frames[i - 1][key] !== frame[key]))}`);
+          for (const key of ['height', 'width']) assert.ok(Math.max(...frames.map(frame => frame[key])) - Math.min(...frames.map(frame => frame[key])) < 1, `${label}: ${key} changed: ${JSON.stringify(frames.filter((frame, i) => !i || frames[i - 1][key] !== frame[key]))}`);
           assert.ok(frames.every(frame => frame.visible === 'visible' && frame.opacity === '1'), `${label}: no hide-until-loaded guard`);
           assert.equal(await page.locator('.home-hero-image').getAttribute('loading'), 'lazy');
-          assert.equal(await page.locator('link[rel="preload"][as="image"][href="/images/hero-real-confidence.webp"]').getAttribute('href'), '/images/hero-real-confidence.webp');
+          assert.equal(await page.locator('link[rel="preload"][as="image"][href="/images/hero-real-confidence.webp"]').count(),0,'results does not preload the homepage hero');
           await page.locator('.home-hero-image').scrollIntoViewIfNeeded();
           await page.waitForFunction(() => { const image = document.querySelector('.home-hero-image'); return image.complete && image.naturalWidth > 0; });
           assert.ok(photoRequests.length > 0 && photoRequests.every(url => url.includes(hero.src)), `${label}: only published gallery photo requested`);
@@ -89,7 +89,7 @@ try {
           // Browser Back / an SPA remount must retain the same published crop.
           await page.evaluate(() => { history.pushState({}, '', '/contact'); dispatchEvent(new PopStateEvent('popstate')); });
           await page.getByText('Contact & visit help', { exact: true }).first().waitFor();
-          await page.evaluate(() => { history.pushState({}, '', '/'); dispatchEvent(new PopStateEvent('popstate')); });
+          await page.evaluate(() => { history.pushState({}, '', '/results'); dispatchEvent(new PopStateEvent('popstate')); });
           await page.locator('.home-hero-image').waitFor({ state: 'visible' });
           assert.equal(await page.locator('.home-hero-image').getAttribute('src'), hero.src);
           assert.equal(await page.locator('.home-hero-image').evaluate(image => getComputedStyle(image).objectFit), 'contain');

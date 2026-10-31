@@ -12,7 +12,7 @@ import { HOME_HERO_SOURCE, HOME_HERO_ALT } from '../shared/home-hero.js';
 const dist = path.resolve('client/dist'), app = express();
 app.get('/api/live', (_req,res) => res.json({ sessions: [], announcements: [], availability: 'available', serverTime: new Date().toISOString() }));
 app.get('/', (_req,res) => res.sendFile(path.join(dist,'bravo-shell.html')));
-app.use(express.static(dist));
+app.use(express.static(dist,{extensions:['html']}));
 app.get('/{*rest}', (_req,res) => res.sendFile(path.join(dist,'bravo-shell.html')));
 const server = app.listen(0,'127.0.0.1'); await once(server,'listening');
 const origin = `http://127.0.0.1:${server.address().port}`;
@@ -51,7 +51,7 @@ try {
         });
         const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));page.setDefaultTimeout(15000);
         try {
-          await page.goto(origin);await page.getByRole('tab',{name:'Trust.',exact:true}).waitFor();
+          await page.goto(origin);await page.locator('.bravo-hub').waitFor();
           await page.evaluate(()=>document.fonts.ready);
           const hero=await page.locator('.polish-hero-actions').getByRole('link',{name:/Start My Training Plan/i}).boundingBox();
           assert.ok(hero && hero.y>0 && hero.y+hero.height<=950,'booking remains immediately visible');
@@ -60,10 +60,9 @@ try {
           assert.match(await page.locator('#home-title').evaluate(node=>getComputedStyle(node).fontFamily),/Montserrat/);
           const imageTop=await page.locator('.cinema-hero-media').evaluate(node=>node.getBoundingClientRect().top);
           assert.ok(imageTop>hero.y+hero.height,'the new opening puts the booking message before the image');
-          assert.ok(await page.locator('.training-journey').evaluate(node=>node.getBoundingClientRect().top<innerHeight*2.5),'the interactive story is near the opening');
-          assert.ok(await page.evaluate(()=>Boolean(document.getElementById('method').compareDocumentPosition(document.getElementById('training'))&Node.DOCUMENT_POSITION_FOLLOWING)),'the approach precedes pricing in reading order');
+          assert.equal(await page.locator('.training-journey').count(),0,'the complete approach has its own page');
           if(width===1440) {
-            assert.equal(await page.locator('.home-desktop-nav').getByRole('link',{name:'Training',exact:true}).getAttribute('href'),'/dog-training');
+            assert.equal(await page.locator('.home-desktop-nav').getByRole('link',{name:'Training',exact:true}).getAttribute('href'),'/training');
             for(const breakpointWidth of [1100,1120,1121,1200,1440]) {
               await page.setViewportSize({width:breakpointWidth,height:950});
               const header=await page.locator('.app-header').boundingBox();
@@ -74,11 +73,12 @@ try {
                 const tops=await chapters.locator('a').evaluateAll(links=>links.map(link=>link.getBoundingClientRect().top));
                 assert.ok(Math.max(...tops)-Math.min(...tops)<1,'desktop chapter links stay in one row');
                 await chapters.getByRole('link',{name:'Our approach',exact:true}).click();
-                await page.waitForFunction(()=>{const top=document.getElementById('method').getBoundingClientRect().top;return top>=document.querySelector('.app-header').getBoundingClientRect().bottom-1 && top<180;});
+                await page.waitForURL('**/our-approach');await page.getByRole('tab',{name:'Trust.',exact:true}).waitFor();
                 await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));
               }
             }
           }
+          await page.goto(origin+'/our-approach');await page.getByRole('tab',{name:'Trust.',exact:true}).waitFor();
           const method=page.locator('#method');await method.scrollIntoViewIfNeeded();
           await page.waitForFunction(()=>getComputedStyle(document.getElementById('method')).opacity==='1');
           for(const [index,id] of ['trust','train','deploy'].entries()) {
@@ -98,7 +98,7 @@ try {
           await method.screenshot({path:`test-results/experience-${name}-${width}.png`,style:'.app-header,.skip-link,.mobile-home-nav,.accessibility-trigger{visibility:hidden!important}'});
           await page.emulateMedia({reducedMotion:'reduce'});
           await page.waitForFunction(()=>document.querySelector('.cinema-home').dataset.motion==='off');
-          assert.equal(await page.locator('#home-title').evaluate(node=>getComputedStyle(node).animationName),'none','reduced motion also stops the new opening animation');
+          assert.equal(await page.locator('#method').evaluate(node=>getComputedStyle(node).animationName),'none','reduced motion stops the page animation');
           await page.locator('.journey-tab').nth(1).click();
           assert.equal(await page.getByRole('tabpanel').evaluate(node=>getComputedStyle(node).animationName),'none');
           await page.emulateMedia({reducedMotion:'no-preference'});
@@ -112,7 +112,7 @@ try {
           await page.locator('.service-questions summary').first().click();
           assert.ok(await page.locator('.service-questions details').first().evaluate(node=>node.open));
           if(width===390) {
-            owner=true;await page.goto(origin);await page.locator('.content-edit-launcher').waitFor();
+            owner=true;await page.goto(origin+'/our-approach');await page.locator('.content-edit-launcher').waitFor();
             const heading=page.locator('[data-site-content-key="journey-trust-title"]');await heading.scrollIntoViewIfNeeded();
             const box=await heading.boundingBox();await page.mouse.move(box.x+20,box.y+12);await page.mouse.down();await page.waitForTimeout(750);await page.mouse.up();
             const dialog=page.getByRole('dialog',{name:'Edit website section',exact:true});await dialog.waitFor();
@@ -123,7 +123,7 @@ try {
             // Remount Home with a saved photo snapshot, then restore the default.
             images['home-method']={src:'/images/ashley-northrop.webp',alt:'Replacement fixture',framed:true,fit:'contain',x:25,y:70,zoom:1.5,revision:3,canUndo:true};
             await page.goto(origin+'/dog-training');await page.waitForLoadState('networkidle');
-            await page.locator('.app-header a[href="/"]').first().click();
+            await page.locator('.menu-toggle').click();await page.locator('.nav-about > summary').click();await page.locator('.nav-about a[href="/our-approach"]').click();
             const photo=page.locator('.journey-photo img');await photo.waitFor();
             assert.equal(await photo.getAttribute('src'),'/images/ashley-northrop.webp');
             assert.equal(await photo.evaluate(node=>node.style.transform),'scale(1.5)');
@@ -143,7 +143,7 @@ try {
         } finally {await context.close();}
       }
       const staticContext=await browser.newContext({javaScriptEnabled:false,viewport:{width:390,height:950}});
-      const staticPage=await staticContext.newPage();await staticPage.goto(origin);
+      const staticPage=await staticContext.newPage();await staticPage.goto(origin+'/our-approach');
       assert.equal(await staticPage.locator('.journey-panel:visible').count(),3,'all three steps work as readable content without scripts');
       assert.equal(await staticPage.locator('.journey-tab[role=tab]').count(),0,'no inert interactive tabs in the no-JavaScript page');
       await staticContext.close();console.log(`PASS ${name}: no-JavaScript fallback`);

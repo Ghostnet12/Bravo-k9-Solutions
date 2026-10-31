@@ -87,33 +87,24 @@ try {
      finally { navigating = false; }
    }
    await navigate(origin);
-   const readingOrder = await page.evaluate(() => ['method','training','training-programs','reviews','team','results','home-tools-title','workshops','first-visit-help','booking-title'].map(id=>({id,top:document.getElementById(id).getBoundingClientRect().top})));
-   assert.deepEqual([...readingOrder].sort((a,b)=>a.top-b.top),readingOrder,'same visual and reading order on every screen');
-   assert.equal(await page.locator('.conversion-offer').count(),1,'one primary membership offer');
-   const portraitsFillCards=await page.locator('.cinema-team-grid>article').evaluateAll(cards=>cards.every(card=>Math.abs(card.querySelector('.cinema-portrait').getBoundingClientRect().width-card.clientWidth)<2));
-   assert.ok(portraitsFillCards,'trainer portraits fill their cards without empty side columns');
-   assert.ok(await page.locator('.conversion-price').isVisible());
-   assert.equal(await page.locator('#results .home-results-actions .cinema-button').getAttribute('href'),'/portal?program=training');
-   if (engineName === 'chromium' && [390,1440].includes(width)) {
-     await page.addScriptTag({content:axe.source});
-     const audit=await page.evaluate(async()=>await axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa','wcag22aa']}}));
-     await writeFile(`test-results/accessibility-${width}.json`,JSON.stringify(audit,null,2));
-     console.log('Accessibility',width,JSON.stringify(audit.violations.map(item=>({id:item.id,impact:item.impact,nodes:item.nodes.map(node=>node.target)}))));
-     const changedAudit=await page.evaluate(async()=>await axe.run({include:['#training','#results','#reviews','#team','.hero-photo-window']},{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa','wcag22aa']}}));
-     assert.deepEqual(changedAudit.violations.filter(item=>['critical','serious'].includes(item.impact)).map(item=>({id:item.id,targets:item.nodes.map(node=>node.target)})),[],'changed sections have no serious or critical automated accessibility violations');
-     await page.screenshot({path:`test-results/optimization-full-${width}.png`,fullPage:true});
-     for (const id of ['training','results','reviews','team']) {
-       await page.locator(`#${id}`).scrollIntoViewIfNeeded();
-       // Collapsed stories and off-screen carousel slides intentionally keep
-       // lazy images unloaded. Only await images painted in this screenshot.
-       await page.waitForFunction(selector => [...document.querySelectorAll(selector)].filter(img => {
-         const rect = img.getBoundingClientRect();
-         return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < innerHeight && rect.right > 0 && rect.left < innerWidth;
-       }).every(img => img.complete && img.naturalWidth > 0), `#${id} img`, { timeout: 10000 });
+   const readingOrder = await page.locator('main').evaluate(main => ['.home-hero','.hub-training','.hub-stories','.hub-transport','.hub-close'].map(selector=>main.querySelector(selector).getBoundingClientRect().top));
+   assert.deepEqual([...readingOrder].sort((a,b)=>a-b),readingOrder,'same visual and reading order on every screen');
+   assert.equal(await page.locator('.hub-price').count(),1,'one introductory membership price');
+   for(const id of ['training','results','reviews','team']) {
+     await navigate(origin+'/'+id);
+     await page.locator('#'+id).waitFor();
+     if(id==='training') { assert.equal(await page.locator('.conversion-offer').count(),1);assert.ok(await page.locator('.conversion-price').isVisible()); }
+     if(id==='results') assert.equal(await page.locator('#results .home-results-actions .cinema-button').getAttribute('href'),'/portal?program=training');
+     if(id==='team') assert.ok(await page.locator('.cinema-team-grid>article').evaluateAll(cards=>cards.every(card=>Math.abs(card.querySelector('.cinema-portrait').getBoundingClientRect().width-card.clientWidth)<2)));
+     if(engineName==='chromium' && [390,1440].includes(width)) {
+       await page.addScriptTag({content:axe.source});
+       const audit=await page.evaluate(async()=>await axe.run({runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa','wcag22aa']}}));
+       await writeFile(`test-results/accessibility-${id}-${width}.json`,JSON.stringify(audit,null,2));
+       assert.deepEqual(audit.violations.filter(v=>['critical','serious'].includes(v.impact)).map(v=>({id:v.id,targets:v.nodes.map(n=>n.target)})),[],`${id} has no serious or critical accessibility violations`);
        await page.screenshot({path:`test-results/optimization-${id}-${width}.png`});
      }
-     await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));
    }
+   await navigate(origin);
    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${engineName}-${width} overflow`);
    {
     assert.ok(await page.locator('.brand-lockup').first().isVisible());
@@ -131,6 +122,7 @@ try {
     assert.equal(await page.locator('.home-ad-dock').count(),0); assert.ok(Math.abs(nav.y+nav.height-page.viewportSize().height)<2, 'navigation sits at the phone bottom without ad space');
     const access = await page.locator('.accessibility-tools').boundingBox(); assert.ok(access.y + access.height <= nav.y, 'accessibility stays above navigation');
     assert.equal(await hero.getAttribute('href'), '/portal?program=training');
+    await navigate(origin+'/training');
     assert.equal(await page.locator('.conversion-goal').count(), 4);
     assert.equal(await page.locator('.goal-finder').count(), 0, 'one shared training selector');
     assert.equal(await page.locator('.home-training-offer').count(), 0, 'one visible standard offer');
@@ -148,18 +140,18 @@ try {
     assert.ok(await primary.getByRole('link', {name:/Tools of the trade/i}).isVisible());
     const paths = await primary.locator('a').evaluateAll(links=>links.map(link=>link.getAttribute('href')));
     assert.equal(paths.indexOf('/tools-of-the-trade'), paths.indexOf('/fci-support') + 1, 'Tools immediately follows FCI');
-    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('href')), '/#training', 'bottom menu moves keyboard focus to the revealed links');
+    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('href')), '/training', 'bottom menu moves keyboard focus to the revealed links');
     await page.keyboard.press('Escape');
     assert.equal(await page.evaluate(() => document.activeElement?.hasAttribute('data-navigation-toggle')), true, 'Escape returns focus to the opener');
     await follow(page.locator('.mobile-home-nav').getByRole('link', {name:/Book now/}));
     await page.getByRole('heading', {name:'Let’s start with your dog.'}).waitFor();
     assert.equal(await page.locator('.mobile-home-nav').count(), 1, 'navigation persists on booking');
     await follow(page.locator('.mobile-home-nav').getByRole('link', {name:'Reviews',exact:true}));
-    await page.waitForFunction(() => { const r=document.querySelector('#reviews')?.getBoundingClientRect(); return r && r.top >= 74 && r.top < 150; }).catch(async error=>{console.error('Review geometry',width,await page.evaluate(()=>({top:document.querySelector('#reviews')?.getBoundingClientRect().top,padding:getComputedStyle(document.documentElement).scrollPaddingTop,margin:getComputedStyle(document.querySelector('#reviews')).scrollMarginTop})));throw error;});
+    await page.waitForURL('**/reviews');await page.locator('#reviews').waitFor();
     await follow(page.locator('.mobile-home-nav').getByRole('link', {name:/Book now/}));
     await page.getByRole('button', {name:'Plan my entire month',exact:true}).waitFor();
     if (width === 390) {
-      trainingCents = 27500; await navigate(origin);
+      trainingCents = 27500; await navigate(origin+'/training');
       assert.match(await page.locator('.conversion-price').innerText(), /\$275/); trainingCents = 20000;
     }
    }
@@ -180,12 +172,12 @@ try {
       assert.ok(Math.abs(chrome.nav-chrome.screen)<2, 'shared navigation stays at the viewport bottom');
     }
     await follow(page.locator('.mobile-home-nav').getByRole('link',{name:'Reviews',exact:true}));
-    await page.waitForFunction(()=>{const r=document.querySelector('#reviews')?.getBoundingClientRect();return r && r.top>=74 && r.top<150;});
+    await page.waitForURL('**/reviews');await page.locator('#reviews').waitFor();assert.ok(await page.evaluate(()=>scrollY<3));
    }
    if (width === 390) {
     await page.evaluate(()=>scrollTo(0,0));
     await follow(page.locator('.mobile-home-nav').getByRole('link',{name:'Reviews',exact:true}));
-    await page.waitForFunction(()=>{const r=document.querySelector('#reviews')?.getBoundingClientRect();return r && r.top>=74 && r.top<150;});
+    await page.waitForURL('**/reviews');await page.locator('#reviews').waitFor();assert.ok(await page.evaluate(()=>scrollY<3));
    }
    assert.equal(await page.locator('.cinema-hero video').count(),0,'hero remains image-only');
    await navigate(origin+'/how-to#first-visit-guide');
