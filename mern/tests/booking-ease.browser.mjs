@@ -128,13 +128,15 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})) {
       assert.equal(state.visits.find(visit=>visit.date==='2026-11-06').time,'11:00');assert.deepEqual(errors,[]);
       // Resolving a paid membership must not change the route's chosen mode.
       await page.evaluate(()=>sessionStorage.clear());
+      await page.goto(`${origin}/portal`);await page.waitForURL(`${origin}/schedule`);
+      await page.evaluate(()=>sessionStorage.clear());
       await page.goto(`${origin}/portal?program=training`);await page.waitForLoadState('networkidle');
       await page.getByRole('heading',{name:'Build your schedule',exact:true}).waitFor();
       assert.equal(await page.getByRole('heading',{name:'Let’s start with your dog.',exact:true}).count(),0,'a signed-in member keeps the full scheduler after draft persistence');
       await page.getByLabel('Dog’s name',{exact:true}).fill('Member full-schedule draft');await page.reload();
       await page.getByRole('heading',{name:'Build your schedule',exact:true}).waitFor();
       state.user=null;state.mfa=false;await page.evaluate(()=>sessionStorage.clear());
-      await page.goto(`${origin}/portal?program=training`);
+      await page.goto(`${origin}/portal`);
       await page.getByLabel('Dog’s name',{exact:true}).fill('Existing Member Dog');
       await page.getByRole('button',{name:'Choose a trainer →',exact:true}).click();
       await page.locator('.guided-trainer-cards button').filter({hasText:'Fixture Lead'}).click();
@@ -143,7 +145,13 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})) {
       await page.getByLabel('Name or email',{exact:true}).fill('fixture@example.test');await page.getByLabel('Password',{exact:true}).fill('fixture-secure-password');
       await page.locator('.booking-inline-auth form').getByRole('button',{name:'Sign in',exact:true}).click();
       await page.getByRole('button',{name:'Send my request • no charge',exact:true}).waitFor();
+      assert.equal(new URL(page.url()).pathname,'/portal','inline sign-in must not redirect an active member away from their draft');
       assert.equal(await page.getByLabel('Dog’s name',{exact:true}).inputValue(),'Existing Member Dog','an inline login keeps the guided request even with an active membership');
+      await page.reload();await page.getByRole('button',{name:'Send my request • no charge',exact:true}).waitFor();
+      assert.equal(new URL(page.url()).pathname,'/portal','reloading the resumed member draft keeps the review open');
+      await page.getByRole('button',{name:'Send my request • no charge',exact:true}).click();
+      await page.getByRole('list',{name:'Request, payment and appointment status'}).waitFor();
+      assert.equal(new URL(page.url()).pathname,'/portal','clearing a submitted draft must not redirect away from its success screen');
       assert.deepEqual(errors,[]);
       console.log(`PASS ${engineName}/${width}: lighter entry, honest trainer guidance, inline MFA and retry, no credential storage, explicit request/payment state, weekly preview, conflicts, member routine and no silent renewal`);
     } catch(error) {await page.screenshot({path:`test-results/easier-failure-${engineName}-${width}.png`,fullPage:true});throw error;}

@@ -52,6 +52,7 @@ function BookingForm({ entry }) {
   const program = SERVICES.some(service => service.id === requestedProgram) ? requestedProgram : 'training';
   const resume = !editId && bookingDraft?.entry === entry && bookingDraft.ids?.every(id => SERVICES.some(service => service.id === id)) ? bookingDraft : null;
   const [restored] = useState(!!resume);
+  const [redirectToSchedule] = useState(() => user && !['staff','owner'].includes(user.role) && membership?.active && services.includes('training') && !params.toString() && !resume);
   const [introDone, setIntroDone] = useState(resume?.introDone || false);
   const [bookingStep, setBookingStep] = useState(resume?.bookingStep || 'trainer');
   const [timeConfirmed, setTimeConfirmed] = useState(resume?.timeConfirmed === true);
@@ -240,7 +241,7 @@ function BookingForm({ entry }) {
   const changeStage = step => { if (step === 'dog') { setIntroDone(false); setBookingStep('trainer'); } else { setIntroDone(true); setBookingStep(step); } };
   const DraftContainer = simpleBooking ? 'details' : 'div';
   const draftControls = !editId && !saved && bookingDraft && <DraftContainer className={`booking-draft-actions${simpleBooking ? ' booking-draft-compact' : ''}`}>{simpleBooking ? <summary>{restored ? 'Resumed your draft.' : 'Draft saved in this tab.'} Nothing is booked or charged.</summary> : <p>{restored ? 'Resumed your unsent request.' : 'Your unsent request.'} Nothing is booked or charged.</p>}<button type="button" className="quiet-button" disabled={busy} onClick={() => { if (window.confirm('Discard this unsent request and start again? Saved bookings will not change.')) discardBookingDraft(); }}>Discard draft and start again</button></DraftContainer>;
-  if(user && !['staff','owner'].includes(user.role) && membership?.active && services.includes('training') && !params.toString()) return <Navigate to="/schedule" replace/>;
+  if(redirectToSchedule) return <Navigate to="/schedule" replace/>;
   if (ids.includes('online') && config && config.lessonLibrary?.open !== true && user?.role !== 'owner') return <Page title="This option is unavailable."><Editable as={Link} contentKey="copy-bookingpage-1" canEditText canEditLink to="/portal?program=training" onClick={()=>{setIds(['training']);setKind('training');}}>Explore private training →</Editable></Page>;
   if (simpleBooking && !introDone) return <Page title="Start private training." className="booking-entry-page" eyebrow="YOUR FIRST VISIT">
     {draftControls}
