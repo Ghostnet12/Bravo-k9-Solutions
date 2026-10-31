@@ -131,7 +131,7 @@ export default function BravoPages({ page }: { page: keyof typeof pageSections }
           <div className="cinema-gallery-note"><Editable as="span" contentKey="copy-home-21" canEditText>THE BRAVO FIELD NOTES</Editable><Editable as="p" contentKey="copy-home-22" canEditText>Bravo in<br/>the field.</Editable><Editable as="small" contentKey="copy-home-23" canEditText>Swipe through Bravo in the field.</Editable></div>
         </div>
       </Editable>
-        <div className="home-results-actions"><Editable as={Link} contentKey="home-results-book" canEditText canEditLink href="/portal?program=training" className="cinema-button">Start training with Bravo <span aria-hidden="true">→</span></Editable><a className="cinema-link" href="/reviews">Read client experiences <span aria-hidden="true">↓</span></a></div>
+        <div className="home-results-actions"><Editable as={Link} contentKey="home-results-book" canEditText canEditLink href="/portal?program=training" className="cinema-button">Start training with Bravo <span aria-hidden="true">→</span></Editable><Link className="cinema-link" href="/reviews">Read client experiences <span aria-hidden="true">→</span></Link></div>
       </div></Editable>
 
       <Editable as="section" key="reviews" contentKey="copy-home-42" id="reviews" tabIndex={-1} className="cinema-proof" aria-labelledby="reviews-title"><div className="cinema-shell">

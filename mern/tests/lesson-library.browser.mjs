@@ -42,8 +42,8 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){if(proce
   const proofLoaded = Promise.all([contentReady(origin),page.waitForResponse(response => new URL(response.url()).pathname === '/api/proof-videos').then(response => response.finished())]);
   await page.getByRole('link',{name:'See Bravo’s public training videos →',exact:true}).click();await page.waitForURL('**/results');
   await proofLoaded;await page.waitForLoadState('networkidle');
-  await page.waitForFunction(()=>{const el=document.getElementById('results');return el&&el.getBoundingClientRect().top>=70&&el.getBoundingClientRect().top<180;}).catch(async error=>{console.log('Video anchor',await page.evaluate(()=>({hash:location.hash,top:document.getElementById('results')?.getBoundingClientRect().top,margin:getComputedStyle(document.getElementById('results')).scrollMarginTop,focus:document.activeElement?.outerHTML.slice(0,200)})));throw error;});
-  assert.equal(await page.evaluate(() => document.activeElement?.id), 'results');
+  await page.locator('h1').filter({hasText:'Real dogs. Real progress.'}).waitFor();
+  await page.waitForFunction(()=>scrollY<3 && document.activeElement?.id === 'main-content');
   await navigate(origin+'/portal?program=training&lessons=1');await page.getByRole('heading',{name:'This option is unavailable.',exact:true}).waitFor();
   actor='owner';await navigate(origin+'/admin?tab=lessons');await page.getByRole('heading',{name:'Lesson studio.',exact:true}).waitFor();
   assert.equal(await page.getByRole('switch',{name:'Library closed',exact:true}).isChecked(),false);
