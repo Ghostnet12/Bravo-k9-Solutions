@@ -56,7 +56,13 @@ try {
           role = 'owner'; await page.emulateMedia({ reducedMotion: 'no-preference' }); await navigate();
           assert.equal(await page.getByRole('button', {name:'Add video',exact:true}).count(),0);
           assert.equal(await page.getByLabel('Time between videos (seconds)').count(),0);
-          const heading=page.getByRole('heading',{name:'Video library',exact:true});await heading.scrollIntoViewIfNeeded();const hb=await heading.boundingBox();await page.mouse.move(hb.x+20,hb.y+10);await page.mouse.down();await page.waitForTimeout(750);await page.mouse.up();
+          const heading=page.getByRole('heading',{name:'Video library',exact:true});
+          await page.getByRole('button',{name:'Manage training videos',exact:true}).waitFor();
+          // Native hover waits for stable layout and a hit-tested target; a raw
+          // bounding box can still sit beneath the fixed header after scrolling.
+          await heading.hover({position:{x:20,y:10}});
+          assert.ok(await heading.evaluate(el=>{const b=el.getBoundingClientRect();return el.contains(document.elementFromPoint(b.x+20,b.y+10));}),'hold reaches the video heading, not a fixed control');
+          await page.mouse.down();await page.waitForTimeout(750);await page.mouse.up();
           await page.getByRole('dialog',{name:'Edit video section',exact:true}).waitFor();
           await page.getByLabel('Time between videos (seconds)').fill('2');
           await page.getByRole('button', { name: 'Publish carousel timing', exact: true }).click();
