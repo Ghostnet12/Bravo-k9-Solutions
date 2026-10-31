@@ -1,0 +1,172 @@
+/* Bravo's public presentation: finite motion, native scrolling, original brand. */
+.cinema-home.conversion-home {
+  --experience-ease: cubic-bezier(.22,.7,.2,1);
+  --experience-light: #e8d2aa;
+}
+.cinema-home.conversion-home :is(.cinema-team,.cinema-proof,.cinema-programs,.cinema-intro,.cinema-close) {
+  position: relative;
+}
+.cinema-home.conversion-home #reviews {
+  background: radial-gradient(ellipse at 50% 0%,#ba9a6415,transparent 65%),#101010;
+}
+.cinema-home.conversion-home #method {
+  padding-block: clamp(48px,7vw,100px);
+}
+.cinema-home.conversion-home :is(.cinema-section-heading,.cinema-proof-intro) h2 span:not([style]) {
+  color: #d8bd8d;
+}
+.cinema-home.conversion-home .conversion-offer {
+  background: radial-gradient(ellipse at 95% 0,#ba9a6426,transparent 55%),linear-gradient(140deg,#22201b,#141312 65%);
+  border-color: #ba9a6459;
+  box-shadow: 0 24px 70px #0003,inset 0 1px #f7e6c417;
+}
+.cinema-home.conversion-home .conversion-trust > a {
+  transition: background-color .25s ease,border-color .25s ease;
+}
+.cinema-home.conversion-home .conversion-goal {
+  overflow: clip;
+  background: linear-gradient(135deg,#24211b,#151413 75%);
+  border: 1px solid #ba9a6440;
+  box-shadow: inset 0 1px #ffffff08;
+  transition: transform .4s var(--experience-ease),border-color .3s ease,box-shadow .3s ease;
+}
+.cinema-home.conversion-home .conversion-goal img { transition: scale .6s var(--experience-ease); }
+.cinema-home.conversion-home .conversion-goal .conversion-arrow { transition: translate .3s var(--experience-ease); }
+.cinema-home.conversion-home .conversion-goal:focus-visible {
+  outline: 3px solid #e8d2aa; outline-offset: 4px;
+}
+.cinema-home.conversion-home .goal-choices {
+  padding: 6px;
+  border: 1px solid #ba9a6433;
+  border-radius: 24px;
+  background: #080808;
+}
+.cinema-home.conversion-home .goal-choice { transition: background-color .25s ease,outline-color .25s ease; }
+.cinema-home.conversion-home .goal-result {
+  border: 1px solid #ba9a6440;
+  border-radius: 24px;
+  padding: clamp(20px,3vw,36px);
+  background: radial-gradient(ellipse at 0 0,#ba9a641c,transparent 60%),#161513;
+}
+.cinema-home.conversion-home .training-examples > summary {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  width: fit-content; max-width: 100%; min-height: 48px;
+  margin: 0 auto; padding: 12px 22px; box-sizing: border-box;
+  border: 1px solid #ba9a6466; border-radius: 30px;
+  background: linear-gradient(125deg,#252118,#141312);
+  color: #ecd9b6; font-weight: 600; line-height: 1.5; cursor: pointer;
+}
+.cinema-home.conversion-home .training-examples > summary::after { content: '+'; font-size: 22px; font-weight: 400; }
+.cinema-home.conversion-home .training-examples[open] > summary::after { content: '−'; }
+.cinema-home.conversion-home .training-examples > summary::-webkit-details-marker { display: none; }
+.cinema-home.conversion-home .cinema-close {
+  background: radial-gradient(ellipse at 50% 100%,#ba9a6429,transparent 72%);
+  border-top: 1px solid #ba9a6433;
+}
+
+/* An explorable three-step story. All panels remain readable without JavaScript. */
+.training-journey { margin-top: 32px; text-align: left; }
+.journey-tabs {
+  display: flex; width: fit-content; max-width: 100%; gap: 6px;
+  margin: 0 auto 26px; padding: 6px; border: 1px solid #ba9a644d;
+  border-radius: 40px; background: #090909;
+}
+.journey-tab {
+  display: inline-flex; justify-content: center; align-items: center; gap: 10px;
+  min-height: 48px; padding: 12px 23px; border: 1px solid transparent;
+  border-radius: 30px; background: transparent; color: #d5cdbf;
+  font: 600 14px/1.4 Montserrat,sans-serif; cursor: pointer;
+  transition: background-color .3s ease,color .3s ease,box-shadow .3s ease;
+}
+.journey-index { font-size: 10px; font-weight: 400; opacity: .8; }
+.journey-tab[aria-selected=true] {
+  background: #ba9a64; color: #101010; border-color: #dec498;
+  box-shadow: 0 2px 16px #ba9a6426;
+}
+.journey-tab:focus-visible,.journey-panel:focus-visible {
+  outline: 3px solid #f0d7ad; outline-offset: 4px;
+}
+.journey-stage {
+  display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.2fr);
+  overflow: clip; min-width: 0; border: 1px solid #ba9a6440; border-radius: 28px;
+  background: radial-gradient(ellipse at 100% 0,#ba9a642b,transparent 60%),#181715;
+  box-shadow: 0 28px 75px #0004,inset 0 1px #f3e4c712;
+}
+.journey-photo { position: relative; min-width: 0; min-height: 470px; isolation: isolate; }
+.journey-photo > img { display: block; position: absolute; width: 100%; height: 100%; object-fit: cover; object-position: center 65%; }
+.journey-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg,#080808e8,transparent 55%); pointer-events: none; }
+.journey-photo-caption { position: absolute; z-index: 1; left: 30px; right: 30px; bottom: 28px; color: #fff; }
+.journey-photo-caption > span { font: 600 9px/1.5 Montserrat,sans-serif; letter-spacing: .2em; color: #f3ddb6; }
+.cinema-home.conversion-home .journey-photo-caption p { max-width: 280px; margin: 10px 0 0; font: 400 clamp(26px,3vw,38px)/1.05 'Bebas Neue',sans-serif; color: #fff; }
+.journey-panels { display: grid; min-width: 0; align-items: center; }
+.journey-panel { padding: clamp(28px,4vw,58px); min-width: 0; }
+.journey-panel[hidden] { display: none; }
+.journey-panel-number { display: block; margin-bottom: 24px; font: 400 64px/1 'Bebas Neue',sans-serif; color: #e5c795; }
+.journey-panel-number small { font: 500 11px/1 Montserrat,sans-serif; letter-spacing: .13em; color: #bfb5a4; }
+.cinema-home.conversion-home .journey-panel h3 { margin: 0 0 20px; font: 400 clamp(30px,3.6vw,50px)/1.06 'Bebas Neue',sans-serif; color: #f4efe5; }
+.cinema-home.conversion-home .journey-panel p { margin: 0; font: 400 15px/1.75 Montserrat,sans-serif; color: #e5ded1; }
+.cinema-home.conversion-home .journey-panel .journey-detail { padding-top: 20px; margin-top: 20px; border-top: 1px solid #ba9a6433; color: #c8c0b1; font-size: 13px; }
+.training-journey[data-interactive=false] .journey-tab { cursor: default; }
+.training-journey[data-interactive=false] .journey-photo { min-height: 100%; }
+
+/* Public service pages share the same lighting and reveal language. */
+.app-page[data-public-page] .app-page-title { position: relative; }
+.app-page[data-public-page] .app-page-title::after {
+  content: ''; display: block; height: 1px; width: min(320px,65%); margin-top: 28px;
+  background: linear-gradient(90deg,#d7b57b,#ba9a6410); pointer-events: none;
+}
+.app-page[data-public-page] :is(.service-questions,.training-next-step,.service-process,.training-facts) {
+  background: radial-gradient(ellipse at 100% 0,#ba9a641a,transparent 65%),#151413;
+  border-color: #ba9a6440;
+}
+.app-page[data-public-page][data-motion=on] [data-reveal],
+.cinema-home.conversion-home[data-motion=on] [data-reveal] {
+  opacity: 0; transform: translateY(20px);
+  transition: opacity .65s cubic-bezier(.22,.7,.2,1),transform .65s cubic-bezier(.22,.7,.2,1);
+}
+.app-page[data-public-page][data-motion=on] [data-reveal].is-revealed,
+.cinema-home.conversion-home[data-motion=on] [data-reveal].is-revealed,
+.app-page[data-public-page] [data-reveal]:focus-within,
+.cinema-home.conversion-home [data-reveal]:focus-within { opacity: 1; transform: none; }
+
+@keyframes bravo-detail-arrive { from { opacity: .4; translate: 0 8px; } to { opacity: 1; translate: 0 0; } }
+@media(prefers-reduced-motion:no-preference) {
+  .training-journey[data-interactive=true] .journey-panel:not([hidden]),
+  .journey-photo-caption { animation: bravo-detail-arrive .4s cubic-bezier(.22,.7,.2,1) both; }
+}
+@media(hover:hover) and (pointer:fine) {
+  .cinema-home.conversion-home .conversion-goal.is-revealed:hover { transform: translateY(-4px); border-color: #ba9a64a6; box-shadow: 0 16px 35px #0005; }
+  .cinema-home.conversion-home .conversion-goal:hover img { scale: 1.035; }
+  .cinema-home.conversion-home .conversion-goal:hover .conversion-arrow { translate: 4px 0; }
+  .cinema-home.conversion-home .conversion-trust > a:hover { background: #ba9a6414; border-color: #ba9a6480; }
+  .journey-tab:not([aria-selected=true]):hover { background: #ba9a641c; color: #f3e5cb; }
+}
+@media(min-width:901px) {
+  .cinema-home.conversion-home :is(.cinema-team,.cinema-proof,.cinema-programs) { padding-block: 76px; }
+  .cinema-home.conversion-home .cinema-section-heading h2 { font-size: clamp(44px,5vw,72px); }
+}
+@media(max-width:700px) {
+  .journey-tabs { width: 100%; box-sizing: border-box; gap: 3px; padding: 5px; margin-bottom: 18px; }
+  .journey-tab { flex: 1; min-width: 0; gap: 6px; padding: 12px 7px; font-size: 12px; }
+  .journey-index { font-size: 9px; }
+  .journey-stage { grid-template-columns: 1fr; border-radius: 22px; }
+  .journey-photo { min-height: 300px; }
+  .journey-photo-caption { left: 22px; right: 22px; bottom: 22px; }
+  .journey-panel { padding: 26px; min-height: 360px; box-sizing: border-box; }
+  .journey-panel-number { font-size: 46px; margin-bottom: 18px; }
+  .cinema-home.conversion-home .journey-panel h3 { font-size: 32px; }
+  .cinema-home.conversion-home .journey-panel p { font-size: 14px; }
+  .cinema-home.conversion-home .journey-panel .journey-detail { font-size: 12px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  :is(.cinema-home.conversion-home,.app-page[data-public-page]) [data-reveal] { opacity: 1 !important; transform: none !important; transition: none !important; }
+  :is(.training-journey,.conversion-goal,.conversion-trust,.goal-choices,.goal-result),:is(.training-journey,.conversion-goal,.conversion-trust,.goal-choices,.goal-result) * { animation: none !important; transition: none !important; scale: none !important; translate: none !important; }
+}
+:is(.access-reduced-motion,.a11y-reduce-motion) :is(.cinema-home.conversion-home,.app-page[data-public-page]) [data-reveal] { opacity: 1 !important; transform: none !important; transition: none !important; }
+:is(.access-reduced-motion,.a11y-reduce-motion) :is(.training-journey,.conversion-goal,.conversion-trust,.goal-choices,.goal-result),
+:is(.access-reduced-motion,.a11y-reduce-motion) :is(.training-journey,.conversion-goal,.conversion-trust,.goal-choices,.goal-result) * { animation: none !important; transition: none !important; scale: none !important; translate: none !important; }
+@media(forced-colors:active) {
+  .cinema-home.conversion-home :is(.cinema-section-heading,.cinema-proof-intro) h2 span:not([style]) { background: none; -webkit-text-fill-color: currentColor; color: CanvasText; }
+  .journey-tab[aria-selected=true] { border: 2px solid Highlight; color: HighlightText; background: Highlight; }
+  .journey-stage,.journey-tabs,.cinema-home.conversion-home .conversion-goal { border: 1px solid CanvasText; }
+}

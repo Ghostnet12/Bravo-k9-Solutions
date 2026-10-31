@@ -31,6 +31,7 @@ import './persistent-navigation.css';
 import './homepage-optimization.css';
 import './hero-confidence.css';
 import './unified-responsive.css';
+import './public-experience.css';
 // Keep the server-rendered public page readable until its interactive module
 // is ready. A failed chunk must not replace useful HTML with a loading/error shell.
 const publicPageLoaders = {

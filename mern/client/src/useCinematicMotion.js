@@ -2,10 +2,10 @@ import { useEffect } from 'react';
 
 // Native scrolling, progressive enhancement, and one animation frame per scroll.
 // Content is readable even when scripting, observers, or animation is unavailable.
-export default function useCinematicMotion(root) {
+export default function useCinematicMotion(root, { enabled = true, selector = '[data-reveal]' } = {}) {
   useEffect(() => {
     const node = root.current;
-    if (!node) return;
+    if (!node || !enabled) return;
     const preference = matchMedia('(prefers-reduced-motion: reduce)');
     let frame = 0;
     const reduced = () => preference.matches || document.documentElement.matches('.access-reduced-motion,.a11y-reduce-motion');
@@ -30,8 +30,14 @@ export default function useCinematicMotion(root) {
     const observer = typeof IntersectionObserver === 'function' ? new IntersectionObserver(entries => {
       for (const entry of entries) if (entry.isIntersecting) reveal(entry.target);
     }, { threshold: 0.08 }) : null;
-    const observe = element => { if (reduced() || !observer || element.classList.contains('is-revealed')) reveal(element); else observer.observe(element); };
-    node.querySelectorAll('[data-reveal]').forEach(observe);
+    const observe = element => {
+      element.dataset.reveal = '';
+      const bounds = element.getBoundingClientRect();
+      // Never hide already-readable content when the enhancement starts.
+      if (reduced() || !observer || element.classList.contains('is-revealed') || bounds.top < innerHeight) reveal(element);
+      else observer.observe(element);
+    };
+    node.querySelectorAll(selector).forEach(observe);
     const focus = event => {
       let element = event.target instanceof Element ? event.target.closest('[data-reveal]') : null;
       while (element && node.contains(element)) {
@@ -44,8 +50,8 @@ export default function useCinematicMotion(root) {
     const additions = new MutationObserver(records => {
       for (const record of records) for (const added of record.addedNodes) {
         if (!(added instanceof Element)) continue;
-        if (added.matches('[data-reveal]')) observe(added);
-        added.querySelectorAll('[data-reveal]').forEach(observe);
+        if (added.matches(selector)) observe(added);
+        added.querySelectorAll(selector).forEach(observe);
       }
     });
     additions.observe(node, { childList: true, subtree: true });
@@ -61,5 +67,5 @@ export default function useCinematicMotion(root) {
       preference.removeEventListener('change', schedule);
       window.removeEventListener('scroll', schedule); window.removeEventListener('resize', schedule);
     };
-  }, [root]);
+  }, [root, enabled, selector]);
 }
