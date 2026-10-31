@@ -45,6 +45,9 @@
   "overrides": {
     "@vercel/cli-config": {
       "zod": "$zod"
+    },
+    "eslint": {
+      "minimatch": "11.0.1"
     }
   }
 }
