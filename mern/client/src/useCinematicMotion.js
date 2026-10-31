@@ -27,6 +27,10 @@ export default function useCinematicMotion(root, { enabled = true, selector = '[
       }
     };
     const schedule = () => { if (!frame) frame = requestAnimationFrame(render); };
+    // A native smooth scroll must not move a pressed control before pointer-up.
+    // The click can start a new navigation or scroll after the current one stops.
+    const stopScrollAtPointer = () => window.scrollTo({ top: scrollY, left: scrollX, behavior: 'instant' });
+    node.addEventListener('pointerdown', stopScrollAtPointer, true);
     const reveal = element => { element.classList.add('is-revealed'); observer?.unobserve(element); };
     const observer = typeof IntersectionObserver === 'function' ? new IntersectionObserver(entries => {
       for (const entry of entries) if (entry.isIntersecting) reveal(entry.target);
@@ -65,6 +69,7 @@ export default function useCinematicMotion(root, { enabled = true, selector = '[
     return () => {
       cancelAnimationFrame(frame); observer?.disconnect(); additions.disconnect();
       node.removeEventListener('focusin', focus); node.dataset.motion = 'off'; accessibility.disconnect();
+      node.removeEventListener('pointerdown', stopScrollAtPointer, true);
       preference.removeEventListener('change', schedule);
       window.removeEventListener('scroll', schedule); window.removeEventListener('resize', schedule);
     };
