@@ -11,7 +11,7 @@ export default function TransportHero({ home = false }) {
     <Editable as={home ? 'h2' : 'h1'} contentKey="transport-title" canEditText id="transport-title" className="transport-title">K9<br/>{' '}Transport</Editable>
     <div className="transport-copy">
       <Editable as="p" contentKey="transport-tagline" canEditText className="transport-tagline">The Bravo standard.<br/>On the road.</Editable>
-      <Editable as="p" contentKey="transport-intro" canEditText className="transport-intro">Dedicated canine transport is on the way.</Editable>
+      <Editable as="p" contentKey="transport-intro" canEditText className="transport-intro">Dedicated canine transport is launching soon. Explore the shared vehicle tracker and private trip portal; transport dates are not confirmed until Bravo accepts your request.</Editable>
       <div className="transport-actions">
         {home ? <Link className="button transport-primary" to="/k9-transport#transport-updates">Get launch updates <span aria-hidden="true">→</span></Link> : <a className="button transport-primary" href="#transport-updates">Get launch updates <span aria-hidden="true">→</span></a>}
         <Editable as={Link} contentKey="transport-contact" canEditText canEditLink className="transport-contact" to="/contact?interest=k9-transport">Ask about our local and out-of-state rates <span aria-hidden="true">↗</span></Editable>
