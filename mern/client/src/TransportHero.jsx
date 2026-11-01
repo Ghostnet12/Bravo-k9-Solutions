@@ -15,7 +15,7 @@ export default function TransportHero({ home = false }) {
       <div className="transport-actions">
         {home ? <Link className="button transport-primary" to="/k9-transport#transport-updates">Get launch updates <span aria-hidden="true">→</span></Link> : <a className="button transport-primary" href="#transport-updates">Get launch updates <span aria-hidden="true">→</span></a>}
         <Editable as={Link} contentKey="transport-contact" canEditText canEditLink className="transport-contact" to="/contact?interest=k9-transport">Ask about our local and out-of-state rates <span aria-hidden="true">↗</span></Editable>
-        <Link className="transport-track" to="/k9-transport#track-bravo">Track the Bravo vehicle <span aria-hidden="true">↗</span></Link>
+        {home && <Link className="transport-track" to="/k9-transport#track-bravo">Track the Bravo vehicle <span aria-hidden="true">↗</span></Link>}
       </div>
     </div>
   </section>;

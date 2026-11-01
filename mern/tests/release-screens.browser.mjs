@@ -55,7 +55,7 @@ for(const role of ['guest','member','staff','owner']) {
   }
   await page.setViewportSize({width:390,height:844});await page.locator('.menu-toggle').click();
   const nav=page.locator('#bravo-navigation');
-  assert.ok(await nav.getByRole('link',{name:'Workshops',exact:true}).isVisible());assert.ok(await nav.getByRole('link',{name:'Live Cams',exact:true}).isVisible());
+  assert.ok(await nav.getByRole('link',{name:'Workshops',exact:true}).isVisible());assert.ok(await nav.getByRole('link',{name:'Bravo Live',exact:true}).isVisible());
   if(role==='member')assert.equal(await nav.locator('a[href="/learn"]').count(),1);
   if(['staff','owner'].includes(role))assert.ok(await nav.getByRole('link',{name:'People & access',exact:true}).isVisible());
   await nav.locator('.nav-about summary').click();assert.ok(await nav.getByRole('link',{name:'Contact & help',exact:true}).isVisible());
