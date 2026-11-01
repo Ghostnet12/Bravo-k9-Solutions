@@ -6,6 +6,7 @@ import ReviewsPage from './ReviewsPage';
 import TransportPage from './TransportPage';
 import ToolsOfTheTradePage from './ToolsOfTheTradePage';
 import HowToPage from './HowToPage';
+import TrackerGuidePage from './TrackerGuidePage';
 import FCISupportPage from './FCISupportPage';
 import LivePage from './LivePage';
 import WorkshopPage from './WorkshopPage';
@@ -25,7 +26,7 @@ import AccessibilityPage from './AccessibilityPage';
 import MediaRightsPage from './MediaRightsPage';
 import NotFoundPage from './NotFoundPage';
 
-const pages = { '/training': TrainingPage, '/our-approach': OurApproachPage, '/team': TeamPage, '/results': ResultsPage, '/reviews': ReviewsPage,  '/k9-transport': TransportPage, '/tools-of-the-trade': ToolsOfTheTradePage, '/how-to': HowToPage, '/fci-support': FCISupportPage, '/live': LivePage, '/workshops': WorkshopPage, '/': Home, '/dog-training': DogTrainingPage, '/hunting-dog-training': HuntingPage, '/behavior-assessment': BehaviorAssessmentPage, '/learn': LearnPage, '/contact': ContactPage, '/accessibility': AccessibilityPage, '/media-rights': MediaRightsPage, '/404': NotFoundPage };
+const pages = { '/training': TrainingPage, '/our-approach': OurApproachPage, '/team': TeamPage, '/results': ResultsPage, '/reviews': ReviewsPage,  '/k9-transport': TransportPage, '/tools-of-the-trade': ToolsOfTheTradePage, '/how-to': HowToPage, '/tracker-guide': TrackerGuidePage, '/fci-support': FCISupportPage, '/live': LivePage, '/workshops': WorkshopPage, '/': Home, '/dog-training': DogTrainingPage, '/hunting-dog-training': HuntingPage, '/behavior-assessment': BehaviorAssessmentPage, '/learn': LearnPage, '/contact': ContactPage, '/accessibility': AccessibilityPage, '/media-rights': MediaRightsPage, '/404': NotFoundPage };
 export function renderPublicPage(route) {
   const Component = pages[route];
   if (!Component) throw new Error(`No public component for ${route}`);

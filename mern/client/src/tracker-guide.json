@@ -1,0 +1,79 @@
+{
+  "video": "/assets/bravo-tracker-guide-57ee8ce3fab8.mp4",
+  "poster": "/assets/bravo-tracker-guide-57ee8ce3fab8.webp",
+  "captions": "/assets/bravo-tracker-guide-57ee8ce3fab8.vtt",
+  "chapters": [
+    {
+      "id": "0",
+      "title": "Follow the journey",
+      "start": 0.0,
+      "text": "Welcome to Bravo K9 transport tracking. This guide shows you how to open the vehicle map, check its last update, and find your private trip information. Then, we’ll cover the sharing checklist for the Bravo team. Watch, pause, and follow along."
+    },
+    {
+      "id": "1",
+      "title": "Open the tracker",
+      "start": 20.167,
+      "text": "Visit bravo unleashed dot com on your phone, tablet, or computer. Open the menu and choose Track Bravo, Glympse. You can also open K9 Transport and select Track the Bravo vehicle. Both routes take you to the same tracking section."
+    },
+    {
+      "id": "2",
+      "title": "View the vehicle map",
+      "start": 39.583,
+      "text": "Select View vehicle map to load the Glympse viewer inside the website. You do not need to install the Glympse app just to watch. For a larger view, select Open Glympse full screen. That opens the shared vehicle map in a separate tab."
+    },
+    {
+      "id": "3",
+      "title": "Read the last update",
+      "start": 58.25,
+      "text": "Look for the last-update time inside Glympse before relying on the marker. An old position can remain visible after sharing pauses or expires. A marker on the map does not always mean the vehicle is moving right now. Check your trip notes for arrival updates."
+    },
+    {
+      "id": "4",
+      "title": "Copy the tracking link",
+      "start": 78.333,
+      "text": "Choose Copy tracking link. Then paste it into a text message or save it somewhere easy to find. Copying does not send a message for you. If automatic copying is blocked, select and copy the link shown on screen. Remember, anyone with this link can view the public vehicle map."
+    },
+    {
+      "id": "5",
+      "title": "Open your private trip",
+      "start": 100.417,
+      "text": "For your dog’s transport details, open the Breeder and Client Portal and sign in with your own Bravo account. You’ll see trips Bravo has assigned to you. The public map and your private trip details are separate. If your trip is missing, contact Bravo so the team can check your access."
+    },
+    {
+      "id": "6",
+      "title": "If the map looks stuck",
+      "start": 121.75,
+      "text": "If the map is blank or looks out of date, try Open Glympse full screen and check the last-update time again. Sharing may have expired, or the vehicle’s phone may have lost signal. Check your private journey notes. If you still need an update, call Bravo using the website’s phone link."
+    },
+    {
+      "id": "7",
+      "title": "The bravo team checklist",
+      "start": 143.125,
+      "text": "The next steps are for the Bravo team. Location sharing starts in the Glympse app on the phone traveling with the vehicle. Opening the website does not turn tracking on. Set everything up while parked, before the journey begins. App screens can vary by version."
+    },
+    {
+      "id": "8",
+      "title": "Start sharing before departure",
+      "start": 163.625,
+      "text": "Open Glympse and select the Bravo K9 Transport tag, spelled exactly as shown on screen. If you are creating a new share, choose Share Location and add the tag as a recipient. Set the sharing duration, then send or start the share. Open the viewer and confirm the marker has a recent update."
+    },
+    {
+      "id": "9",
+      "title": "Check in at safe stops",
+      "start": 186.542,
+      "text": "At a safe stop, check the phone’s battery, connection, and remaining sharing time. Extend the active share, or restart sharing to the same tag if it has expired. In Bravo, use the trip editor for care notes and revised arrival estimates. Quick care buttons prepare a draft; review it and save the update."
+    },
+    {
+      "id": "10",
+      "title": "Finish the transport run",
+      "start": 210.375,
+      "text": "After a handoff, mark the appropriate trip delivered in Bravo. When the vehicle’s transport run is finished, open the active share in Glympse and stop sharing. Marking a trip delivered, hiding the website map, or closing the browser does not stop the phone’s public location share."
+    },
+    {
+      "id": "11",
+      "title": "Ready for the road",
+      "start": 230.875,
+      "text": "Clients: open the map, check the last-update time, and use your own account for private trip details. Bravo team: start, maintain, and stop sharing in the Glympse app. Keep dog names and customer addresses out of public tag messages. Bravo K9 Solutions. Trust. Train. Deploy."
+    }
+  ]
+}

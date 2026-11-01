@@ -1,4 +1,5 @@
 import { useId, useState } from 'react';
+import { Link } from 'react-router-dom';
 import './glympse-tracking.css';
 
 export const GLYMPSE_URL = 'https://glympse.com/!bravok9transport';
@@ -28,6 +29,7 @@ export default function GlympseTracking() {
     <div className="gt-heading"><div><span className="gt-eyebrow">BRAVO K9 × GLYMPSE</span><h2 id={headingId}>Every mile.<br/>A little more peace of mind.</h2></div><span className="gt-badge">Shared vehicle map</span></div>
     <p className="gt-intro">Follow Bravo on the road while we share from Glympse. No app needed to watch.</p>
     <p className="gt-caption">Public vehicle map · Anyone with the link can view. Your dog’s trip details stay in your Bravo account.</p>
+    <Link className="gt-guide-link" to="/tracker-guide"><span aria-hidden="true">▶</span><span><strong>Watch tracker guide</strong><small>4-minute video · Voice + captions</small></span><span aria-hidden="true">↗</span></Link>
     <div className="gt-viewer" id={mapId}>
       {showMap ? <iframe title="Bravo K9 shared vehicle map on Glympse" src={GLYMPSE_EMBED} referrerPolicy="no-referrer" allow="geolocation 'none'; camera 'none'; microphone 'none'"/> : <div className="gt-cover"><img src="/images/bravo-k9-transport-small.webp" alt="Bravo’s transport Durango at sunset" width="900" height="506" loading="lazy"/><div><span className="gt-eyebrow">FOLLOW THE JOURNEY</span><p>Your front-row seat.<br/>From wherever you are.</p><button type="button" className="button" aria-controls={mapId} aria-expanded={showMap} onClick={() => setShowMap(true)}>View vehicle map <span aria-hidden="true">↗</span></button></div></div>}
     </div>
