@@ -1,7 +1,7 @@
 name: Private transport portal
 on:
   push:
-    branches: ['feature/breeder-transport-*', 'bravo-mern']
+    branches: ['bravo-mern']
     paths: ['mern/**', '.github/workflows/transport-portal.yml']
   pull_request:
     branches: ['bravo-mern']

@@ -30,7 +30,7 @@ try {
           assert.equal(new URL(page.url()).pathname, '/transport');
           assert.equal(new URL(page.url()).searchParams.get('trip'), fixture.tripId);
           assert.equal(await page.getByText('Bravo controls · Breeders & trips', { exact: true }).count(), 0);
-          assert.ok((await page.locator('.tp-detail').innerText()).includes('Prairie Kennels'));
+          assert.ok(await page.locator('.tp-detail').getByText('Prairie Kennels', { exact: true }).isVisible());
           assert.equal(await page.locator('.tp-map').getAttribute('referrerpolicy'), 'no-referrer');
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, 'no horizontal overflow');
           await page.screenshot({ path: `test-results/transport-client-${engineName}-${width}.png`, fullPage: true });
@@ -43,7 +43,7 @@ try {
           assert.equal(await page.locator('.tp-map').count(), 0);
           assert.equal(await page.getByRole('heading', { name: 'Gunner’s journey', exact: true }).count(), 0);
           assert.deepEqual(errors, []);
-        } finally { await context.close(); }
+        } catch (error) { await page.screenshot({ path: `test-results/transport-client-failure-${engineName}-${width}.png`, fullPage: true }).catch(() => {}); throw error; } finally { await context.close(); }
 
         fixture.reset();
         const ownerContext = await browser.newContext({ viewport: { width, height: 900 } });
@@ -78,7 +78,7 @@ try {
           assert.equal(await ownerPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
           await ownerPage.screenshot({ path: `test-results/transport-owner-${engineName}-${width}.png`, fullPage: true });
           assert.deepEqual(ownerErrors, []);
-        } finally { await ownerContext.close(); }
+        } catch (error) { await ownerPage.screenshot({ path: `test-results/transport-owner-failure-${engineName}-${width}.png`, fullPage: true }).catch(() => {}); throw error; } finally { await ownerContext.close(); }
         console.log(`Transport guest, client, owner, stale and revoked views passed: ${engineName} ${width}px`);
       }
     } finally { await browser.close(); }
