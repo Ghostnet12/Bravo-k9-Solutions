@@ -30,7 +30,13 @@ try {
         };
         return route.fulfill({ json: fixtures[path] || {} });
       });
-      await page.goto(origin+'/results');
+      const openResults = async () => {
+        await page.goto(origin+'/results');
+        // The motion hook runs after the client mounts. Server HTML has the
+        // same carousel selector, but that element is replaced during startup.
+        await page.locator('.bravo-redesign[data-motion]').waitFor();
+      };
+      await openResults();
       const hero = page.locator('.hero-photo-window');
       await hero.scrollIntoViewIfNeeded();
       await page.waitForFunction(() => [...document.querySelectorAll('.hero-photo-slide img[loading="eager"]')].every(img => img.complete && img.naturalWidth));
@@ -109,7 +115,7 @@ try {
       assert.ok(settled.distance < 5, `${name}: native swipe snaps to a card (${settled.distance})`);
       await page.waitForFunction(left => Math.abs(document.querySelector('.proof-video-carousel').scrollLeft - left) > 30, settled.left, { timeout: 6000 });
       videoFixture = true;
-      await page.goto(origin+'/results');
+      await openResults();
       await hero.scrollIntoViewIfNeeded();
       await page.locator('.hero-video-swipe-surface').waitFor({ state: 'attached' });
       await swipe();

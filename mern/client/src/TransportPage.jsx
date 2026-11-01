@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Header, Footer } from './ui';
 import { api } from './api';
 import { useBravo } from './context';
@@ -16,6 +17,7 @@ export default function TransportPage() {
   }
   return <div className="transport-page"><Header/><main id="main-content" tabIndex={-1}>
     <TransportHero/>
+    <section className="transport-signup panel" aria-labelledby="transport-portal-title"><div><h2 id="transport-portal-title">Your dog’s journey. One private place.</h2><p>Breeders and clients can sign in to view assigned transports, trip updates and available vehicle tracking.</p></div><div><Link className="button" to="/transport">Breeder & Client Portal →</Link><p className="helper">Use your own Bravo account. Trip details appear after Bravo assigns your access.</p></div></section>
     <section id="transport-updates" className="transport-signup panel" tabIndex={-1} aria-labelledby="transport-signup-title">
       <div><Editable as="h2" contentKey="transport-signup-title" canEditText id="transport-signup-title">Be first to hear.</Editable><Editable as="p" contentKey="transport-signup-copy" canEditText>Leave your email and we’ll let you know when K9 transport launches.</Editable></div>
       {saved ? <p role="status">Your request is saved. Bravo can email you when K9 transport launches.</p> : <form onSubmit={join}>

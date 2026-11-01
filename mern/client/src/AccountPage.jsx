@@ -26,6 +26,7 @@ export default function AccountPage() {
 function AccountWorkspace() {
   const { user, config, refreshUser, authReady, draftOwner, discardBookingDraft, bookingDraft, beginBookingHandoff, hasLockedBookingDraft } = useBravo(), [params] = useSearchParams(), navigate = useNavigate();
   const returningBooking = params.get('booking');
+  const returningTransport = /^\/transport(?:\?|$)/.test(params.get('next') || '');
   const pendingBooking = bookingDraft;
   const loadSequence = useRef(0);
   const [resetVersion, setResetVersion] = useState(0);
@@ -68,15 +69,15 @@ function AccountWorkspace() {
     });
   }
   function openBilling() { action(async () => { const result = await api('/billing/portal', { method: 'POST', body: {} }); window.location.assign(result.url); }); }
-  function authenticate(event) { event.preventDefault(); const form = Object.fromEntries(new FormData(event.currentTarget)); if (pendingBooking) beginBookingHandoff(); action(async () => { let result; try { result = await api(`/auth/${mode}`, { method: 'POST', body: form }); } catch (e) { if (e.code === 'MFA_REQUIRED') setMfaRequired(true); throw e; } await refreshUser({ claimBookingDraft: !!pendingBooking }); const next = params.get('next') || (pendingBooking || hasLockedBookingDraft ? '/portal?resume=1' : null); if (!result.user.mustChangePassword && next && /^\/(?:portal|schedule|learn|community)(?:\?[^#]*)?$/.test(next)) navigate(next); }); }
+  function authenticate(event) { event.preventDefault(); const form = Object.fromEntries(new FormData(event.currentTarget)); if (pendingBooking) beginBookingHandoff(); action(async () => { let result; try { result = await api(`/auth/${mode}`, { method: 'POST', body: form }); } catch (e) { if (e.code === 'MFA_REQUIRED') setMfaRequired(true); throw e; } await refreshUser({ claimBookingDraft: !!pendingBooking }); const next = params.get('next') || (pendingBooking || hasLockedBookingDraft ? '/portal?resume=1' : null); if (!result.user.mustChangePassword && next && /^\/(?:portal|schedule|learn|community|transport)(?:\?[^#]*)?$/.test(next)) navigate(next); }); }
   function cancel(id) { if (!window.confirm('Cancel this booking? This does not refund payments. Your paid membership keeps its recorded end date.')) return; action(async () => { const result = await api(`/bookings/${id}/cancel`, { method: 'POST', body: {} }); setNotice(result.message); await load(); }); }
   if (!authReady || !draftOwner) return <Page title="Your Bravo account." className="account-page" eyebrow="YOUR BRAVO">
     <SetupNotice/><Notice error>{error}</Notice>
     <p role="status">{!authReady ? 'Checking your account…' : 'Your account could not be checked. Retry before signing in so your saved request can be restored safely.'}</p>
     {authReady && <button className="button" disabled={busy} onClick={() => action(() => refreshUser())}>{busy ? 'Checking your account…' : 'Retry account check'}</button>}
   </Page>;
-  return <Page title={user ? `Welcome, ${user.name.split(' ')[0]}.` : pendingBooking ? 'Finish your training request.' : 'Your Bravo account.'} className="account-page" eyebrow="YOUR BRAVO" intro={user ? 'Your bookings, care details, and memberships—all together.' : pendingBooking ? 'Your dog, trainer and visit choices are saved here while you sign in or create your account.' : 'Sign in to save appointments, manage your program, and join the Bravo Room.'}>
-    <SetupNotice/><ActionFeedback error={error} notice={notice} onDismiss={() => { setError(''); setNotice(''); }}/>
+  return <Page title={user ? `Welcome, ${user.name.split(' ')[0]}.` : returningTransport ? 'Your transport account.' : pendingBooking ? 'Finish your training request.' : 'Your Bravo account.'} className="account-page" eyebrow="YOUR BRAVO" intro={user ? 'Your bookings, care details, and memberships—all together.' : returningTransport ? 'Sign in or create your own account to return to the breeder and client transport portal.' : pendingBooking ? 'Your dog, trainer and visit choices are saved here while you sign in or create your account.' : 'Sign in to save appointments, manage your program, and join the Bravo Room.'}>
+    <SetupNotice/>{user && <p><Link to="/transport" className="button button-ghost">Open transport portal →</Link></p>}<ActionFeedback error={error} notice={notice} onDismiss={() => { setError(''); setNotice(''); }}/>
     {authReady && <BookingHandoffNotice/>}
     {authReady && pendingBooking && <BookingDraftSummary draft={pendingBooking} returnLink/>}
     {authReady && !user && pendingBooking && <p className="booking-account-choices">Already have an account? Sign in below. New to Bravo? Choose Create account. Your unsent request stays saved while you continue.</p>}

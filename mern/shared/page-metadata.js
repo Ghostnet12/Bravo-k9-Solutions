@@ -23,6 +23,7 @@ export const PAGE_METADATA = {
   '/accessibility': { title: 'Accessibility Statement | Bravo K9 Solutions', description: 'Read Bravo K9 Solutions’ website accessibility commitment, available features, review status, and ways to request assistance.', label: 'Accessibility' },
   '/media-rights': { title: 'Media Permissions | Bravo K9 Solutions', description: 'Contact Bravo K9 Solutions about reuse of its website media and brand assets.', label: 'Media permissions' },
   // Transactional and personal screens stay usable but are not search landing pages.
+  '/transport': { title: 'Breeder & Client Transport Portal | Bravo K9 Solutions', description: 'Sign in to view your assigned dog transports and private journey updates.', private: true },
   '/portal': { title: 'Book Dog Training | Bravo K9 Solutions', description: 'Choose your Bravo program and request available visits.', private: true },
   '/account': { title: 'Your Account | Bravo K9 Solutions', description: 'Manage your Bravo account, visit requests, and care details.', private: true },
   '/schedule': { title: 'Your Schedule | Bravo K9 Solutions', description: 'View and manage your saved Bravo visits.', private: true },

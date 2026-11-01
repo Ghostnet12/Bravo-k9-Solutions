@@ -11,7 +11,7 @@ export function securityHeaders() {
       defaultSrc: ["'self'"], scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"], imgSrc: ["'self'", 'data:'],
       fontSrc: ["'self'"], mediaSrc: ["'self'", 'blob:'], connectSrc: ["'self'"],
-      frameSrc: ['https://www.facebook.com'], frameAncestors: ["'none'"],
+      frameSrc: ['https://www.facebook.com', 'https://www.openstreetmap.org'], frameAncestors: ["'none'"],
       objectSrc: ["'none'"], baseUri: ["'self'"], formAction: ["'self'"],
       upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
     } },
