@@ -11,5 +11,5 @@ export default function BookingProgress({ current = 'dog', onChange, trainerRead
     <button key={id} type="button" aria-current={current === id ? 'step' : undefined}
       disabled={busy || !onChange || (id === 'visit' && !trainerReady) || (id === 'review' && !visitReady)}
       onClick={() => onChange?.(id)}>{index + 1}. {label}</button>
-  )}</nav><p className="guided-step-help" role="status">{STAGE_HELP[current]}</p></>;
+   )}</nav>{current !== 'dog' && <p className="guided-step-help" role="status">{STAGE_HELP[current]}</p>}</>;
 }
