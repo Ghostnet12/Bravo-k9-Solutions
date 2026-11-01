@@ -71,6 +71,8 @@ export const CONTENT_KEYS = {
   ])),
   'nav-how-to-video': { text: true, link: true },
   'footer-how-to-video': { text: true, link: true },
+  ...Object.fromEntries(['layout', 'heading', 'heading-inner'].map(key => [`page-tracker-guide-${key}`, {}])),
+  ...Object.fromEntries(['title', 'eyebrow', 'intro'].map(key => [`page-tracker-guide-${key}`, { text: true }])),
   'page-how-to-layout': {},
   'page-how-to-heading': {},
   'page-how-to-heading-inner': {},

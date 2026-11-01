@@ -37,8 +37,8 @@
   .how-to-transcript { padding: 16px; }
 }
 
-/* The same two clearly labeled paths on every screen. */
-.how-to-paths { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-bottom:32px; }
+/* Clearly labeled guide paths on every screen. */
+.how-to-paths { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr)); gap:12px; margin-bottom:32px; }
 .how-to-paths a { display:flex; align-items:center; min-height:52px; padding:16px; border:1px solid var(--gold); border-radius:8px; color:var(--gold-light); line-height:1.5; }
 .first-visit-guide { padding:clamp(20px,4vw,36px); margin-bottom:56px; border:1px solid var(--line); border-radius:12px; background:var(--panel); scroll-margin-top:100px; }
 .first-visit-guide > p { max-width:700px; line-height:1.7; }

@@ -26,7 +26,7 @@ export default function HowToPage() {
     player.play().catch(() => setPlaybackError('Press Play on the video to continue, or open the video using the link below.'));
   }
   return <Page className="how-to-page" eyebrow="YOUR BRAVO WEBSITE GUIDE" title="How to use the website." intro="Get comfortable with your account, your schedule and the little changes life brings. Watch, pause and follow along at your own pace.">
-    <nav className="how-to-paths" aria-label="Choose your website guide"><a href="#first-visit-guide">New here? Book your first visit</a><a href="#member-guide">Already a member? Manage your schedule</a></nav>
+    <nav className="how-to-paths" aria-label="Choose your website guide"><a href="#first-visit-guide">New here? Book your first visit</a><a href="#member-guide">Already a member? Manage your schedule</a><Link to="/tracker-guide">Transport? Watch the tracker guide →</Link></nav>
     <FirstVisitGuide/>
     <section id="member-guide" className="how-to-watch" aria-labelledby="how-to-watch-title">
       <div className="how-to-player">

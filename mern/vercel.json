@@ -10,6 +10,7 @@
     }
   ],
   "redirects": [
+    { "source": "/tracker-guide.html", "destination": "/tracker-guide", "permanent": true },
     { "source": "/transport.html", "destination": "/transport", "permanent": true },
     { "source": "/training.html", "destination": "/training", "permanent": true },
     { "source": "/our-approach.html", "destination": "/our-approach", "permanent": true },
@@ -58,6 +59,7 @@
   },
   "rewrites": [
     { "source": "/", "destination": "/api/homepage" },
+    { "source": "/tracker-guide", "destination": "/api/public-page?path=/tracker-guide" },
     { "source": "/transport", "destination": "/transport.html" },
     { "source": "/training", "destination": "/api/public-page?path=/training" },
     { "source": "/our-approach", "destination": "/api/public-page?path=/our-approach" },

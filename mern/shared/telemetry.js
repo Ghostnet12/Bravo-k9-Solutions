@@ -3,7 +3,7 @@ export const FUNNEL_STAGES = ['visit', 'homepage_viewed', 'goal_selected', 'book
 // messages, form fields, account identifiers, or arbitrary event properties.
 export const CHANNELS = ['direct', 'search', 'social', 'referral'];
 export const CLIENT_ERRORS = ['page_crash', 'script_error', 'unhandled_promise', 'network_error', 'request_timeout'];
-export const PUBLIC_PAGES = ['/', '/k9-transport', '/dog-training', '/dog-walking', '/behavior-assessment', '/contact', '/accessibility', '/media-rights', '/workshops', '/learn', '/hunting-dog-training', '/tools-of-the-trade', '/fci-support', '/how-to', '/live'];
+export const PUBLIC_PAGES = ['/', '/k9-transport', '/dog-training', '/dog-walking', '/behavior-assessment', '/contact', '/accessibility', '/media-rights', '/workshops', '/learn', '/hunting-dog-training', '/tools-of-the-trade', '/fci-support', '/how-to', '/tracker-guide', '/live'];
 export function routeArea(path = '') {
   const clean = String(path).split(/[?#]/)[0];
   if (clean === '/') return 'home';

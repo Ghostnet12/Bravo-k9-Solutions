@@ -135,6 +135,10 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})) {
       assert.equal(await page.getByRole('heading',{name:'Let’s start with your dog.',exact:true}).count(),0,'a signed-in member keeps the full scheduler after draft persistence');
       await page.getByLabel('Dog’s name',{exact:true}).fill('Member full-schedule draft');await page.reload();
       await page.getByRole('heading',{name:'Build your schedule',exact:true}).waitFor();
+      // Leave booking before clearing this synthetic session: its pagehide
+      // persistence can otherwise restore the member draft after clear(),
+      // correctly triggering the signed-out privacy guard in the next case.
+      await page.goto(`${origin}/contact`);await page.waitForLoadState('networkidle');
       state.user=null;state.mfa=false;await page.evaluate(()=>sessionStorage.clear());
       await page.goto(`${origin}/portal`);
       await page.getByLabel('Dog’s name',{exact:true}).fill('Existing Member Dog');
