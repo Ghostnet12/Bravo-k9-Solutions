@@ -1,0 +1,36 @@
+.routine-planner,.booking-inline-auth,.trainer-guidance{margin:20px 0;padding:20px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(135deg,#ba9a6410,#101010)}
+.routine-planner h3,.booking-inline-auth h3{margin-top:0;font-size:1.6rem}
+.routine-planner p,.booking-inline-auth p,.trainer-guidance p{line-height:1.65}
+.routine-weekdays,.booking-auth-fields{border:0;padding:0;margin:18px 0;min-width:0}
+.routine-weekdays legend{font-weight:600;margin-bottom:10px}
+.routine-weekdays>div{display:flex;flex-wrap:wrap;gap:8px}
+.routine-weekdays .check-label{display:flex;gap:8px;align-items:center;min-height:44px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;margin:0}
+.routine-weekdays input{width:18px;height:18px;flex:none;accent-color:var(--gold)}
+.routine-planner .button,.booking-inline-auth .button{white-space:normal}
+.routine-preview{margin-top:20px;border-top:1px solid var(--line);padding-top:12px}
+.routine-preview ul{padding-left:20px;line-height:1.8}
+.routine-pattern{display:flex;flex-wrap:wrap;gap:4px 24px}
+.routine-conflicts{border-left:3px solid var(--gold);padding-left:16px;margin:16px 0}
+.routine-conflicts ul{max-height:260px;overflow:auto}
+.routine-preview summary,.trainer-guidance>summary,.booking-optional>summary{cursor:pointer;padding:12px 0;min-height:44px;color:var(--gold-light);font-weight:600}
+.booking-optional{margin:12px 0}
+.booking-optional[open]{border-block:1px solid var(--line);padding-bottom:12px}
+.booking-auth-fields label{display:block;margin:14px 0}
+.booking-inline-auth{scroll-margin-top:120px}
+.booking-inline-auth .tab-row{display:flex;flex-wrap:wrap;gap:8px}
+.booking-finish-status{list-style:none;padding:0;display:grid;gap:12px;margin:18px 0}
+.booking-finish-status li{border-left:2px solid var(--gold);padding:4px 14px;line-height:1.6}
+.booking-finish-status strong{display:block}
+.booking-compact-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0}
+.booking-compact-summary div{min-width:0}
+.booking-compact-summary dt{font-size:.8rem;color:var(--muted)}
+.booking-compact-summary dd{margin:4px 0;overflow-wrap:anywhere;line-height:1.5}
+.schedule-edit-actions{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:14px}
+.routine-planner :focus-visible,.booking-inline-auth :focus-visible,.trainer-guidance :focus-visible,.booking-optional>summary:focus-visible{outline:2px solid var(--gold-light);outline-offset:3px}
+@media(max-width:480px){.routine-planner,.booking-inline-auth,.trainer-guidance{padding:16px}.routine-weekdays>div{display:grid;grid-template-columns:1fr 1fr}.routine-planner>.button,.routine-preview>.button{width:100%}.booking-compact-summary{grid-template-columns:1fr}.schedule-edit-actions{display:grid}}
+
+.app-page .booking-fields,.app-page .booking-auth-fields,.app-page .routine-weekdays{border:0;padding:0;margin:0}
+.guided-booking-page .trainer-choice{padding:0;border:0;background:transparent}
+.booking-entry-page .first-visit-intro .form-grid{grid-template-columns:1fr;gap:0}
+.booking-account-actions[hidden]{display:none}
+.schedule-routine-options>summary{cursor:pointer;min-height:44px;padding:12px 0;color:var(--gold-light)}

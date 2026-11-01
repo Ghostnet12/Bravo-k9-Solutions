@@ -18,6 +18,7 @@ export function publicCatalogSnapshot(catalog) {
   });
 }
 export const TRAINING_FOCUSES = [
+  { id: 'not-sure', name: 'I’m not sure — help me choose' },
   { id: 'basic-obedience', name: 'Basic obedience' },
   { id: 'advanced-obedience', name: 'Advanced obedience' },
   { id: 'puppy-foundations', name: 'Puppy foundations' },

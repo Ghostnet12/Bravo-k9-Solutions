@@ -85,7 +85,7 @@ try {
         await fits(); await page.screenshot({ path: `test-results/simple-review-${engineName}-${width}.png`, fullPage: true });
         await page.getByRole('button', { name: 'Create account & continue →', exact: true }).click();
         await page.getByLabel('Your name', { exact: true }).waitFor();
-        assert.equal(new URL(page.url()).searchParams.get('mode'), 'register');
+        assert.equal(new URL(page.url()).pathname, '/portal', 'registration stays inside booking');
         assert.equal(await page.getByRole('button', { name: 'Create account', exact: true }).getAttribute('aria-pressed'), 'true', 'the selected account path is already open');
         assert.deepEqual(fixture.writes, [], 'choosing a visit and entering details creates no account or booking');
         await page.getByLabel('Your name', { exact: true }).fill('Fixture Client');
@@ -125,8 +125,9 @@ try {
         assert.equal(await page.getByLabel('Contact phone', { exact: true }).inputValue(), '');
         await page.getByRole('button', { name: 'I have an account — sign in →', exact: true }).click();
         await page.getByLabel('Name or email', { exact: true }).fill('Fixture Client');
-        assert.equal(new URL(page.url()).searchParams.get('mode'), 'login');
+        assert.equal(new URL(page.url()).pathname, '/portal', 'sign-in stays inside booking');
         await page.getByLabel('Password', { exact: true }).fill('fixture-only-password');
+        assert.equal(await page.getByLabel('Name or email', { exact: true }).inputValue(), 'Fixture Client', 'opening focus must not interrupt the first typed field');
         await page.locator('form').getByRole('button', { name: 'Sign in', exact: true }).click();
         await page.getByRole('button', { name: 'Send my request • no charge', exact: true }).waitFor();
         assert.equal(await page.getByLabel('Contact phone', { exact: true }).inputValue(), '6055550199');
@@ -140,7 +141,7 @@ try {
         await page.getByRole('heading', { name: 'Welcome, Fixture.', exact: true }).waitFor();
         await page.getByText('No paid monthly membership yet.', { exact: true }).waitFor();
         assert.deepEqual(errors, []);
-        console.log(`PASS ${engineName}/${width}: two explicit selection actions, guest contact details, direct registration, preserved draft, stale-time rejection, changed-trainer opening, one request, returning-customer saved details and no charge`);
+        console.log(`PASS ${engineName}/${width}: two explicit selection actions, guest contact details, inline registration, preserved draft, stale-time rejection, changed-trainer opening, one request, returning-customer saved details and no charge`);
       } catch (error) {
         await page.screenshot({ path: `test-results/simple-failure-${engineName}-${width}.png`, fullPage: true });
         throw error;
