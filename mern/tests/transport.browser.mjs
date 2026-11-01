@@ -36,7 +36,10 @@ await mkdir('test-results', { recursive: true });
 try {
   for (const [name, engine] of Object.entries({ chromium, webkit })) {
     if (process.env.BRAVO_BROWSER_ENGINES && !process.env.BRAVO_BROWSER_ENGINES.split(',').includes(name)) continue;
-    const browser = await engine.launch();
+    // Branded Chrome includes the H.264/AAC codecs used by the approved video.
+    // GitHub's Ubuntu runner includes Chrome; bundled Chromium is insufficient
+    // for this real-media check (https://playwright.dev/docs/browsers).
+    const browser = await engine.launch(name === 'chromium' ? { channel: 'chrome' } : {});
     try {
       const raw = await browser.newPage({ javaScriptEnabled: false });
       await raw.goto(origin + '/k9-transport');
@@ -74,7 +77,10 @@ try {
           assert.equal(await page.locator('track[kind="captions"]').count(), 1);
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
           await page.getByRole('button', { name: 'Play Open your private trip at 1:40' }).click();
-          await page.waitForFunction(() => { const v=document.querySelector('.how-to-player video'); return v && !v.paused && v.readyState >= 2 && v.currentTime >= 100 && v.currentTime < 110; });
+          await page.waitForFunction(() => { const v=document.querySelector('.how-to-player video'); return v && !v.paused && v.readyState >= 2 && v.currentTime >= 100 && v.currentTime < 110; }).catch(async error => {
+            console.error('Tracker playback state', await player.evaluate(v => ({ currentTime:v.currentTime, duration:v.duration, paused:v.paused, readyState:v.readyState, error:v.error?.message, codec:v.canPlayType('video/mp4; codecs=\"avc1.640028, mp4a.40.2\"') })));
+            throw error;
+          });
           assert.equal(await player.evaluate(v => v.videoWidth), 1080);
           assert.ok(await player.evaluate(v => v.duration > 256 && v.duration < 258 && !v.muted && v.volume > 0));
           await player.evaluate(v => v.pause());
