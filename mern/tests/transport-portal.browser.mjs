@@ -16,10 +16,33 @@ try {
         // Install before application timers exist; replacing a running clock
         // leaves native intervals outside Playwright's control.
         await page.clock.install();
+        await context.addInitScript(() => Object.defineProperty(navigator, 'clipboard', { value: { writeText: async text => { if (window.location.search.includes('clipboard=deny')) throw new Error('Clipboard unavailable'); window.fixtureCopiedText = text; } }, configurable: true }));
         page.on('pageerror', error => errors.push(error.message));
+        let glympseRequests = 0;
+        await page.route('https://glympse.com/**', route => { glympseRequests++; return route.fulfill({ contentType: 'text/html', body: '<p>Glympse fixture · sharing expired · last update 2 hours ago</p>' }); });
         // Map rendering belongs to OSM. Keep deterministic tests off that service.
         await page.route('https://www.openstreetmap.org/**', route => route.fulfill({ contentType: 'text/html', body: '<p>Isolated map fixture</p>' }));
         try {
+          await page.goto(`${origin}/k9-transport#track-bravo`);
+          await page.getByRole('button', { name: 'View vehicle map', exact: false }).waitFor();
+          assert.equal(glympseRequests, 0, 'no external Glympse request before the viewer chooses to load it');
+          assert.equal(await page.locator('.gt-viewer iframe').count(), 0);
+          await page.getByRole('button', { name: 'View vehicle map', exact: false }).click();
+          await page.frameLocator('.gt-viewer iframe').getByText('Glympse fixture', { exact: false }).waitFor();
+          assert.equal(await page.locator('.gt-viewer iframe').getAttribute('src'), 'https://glympse.com/ext/!bravok9transport');
+          assert.equal(await page.locator('.gt-viewer iframe').getAttribute('referrerpolicy'), 'no-referrer');
+          assert.match(await page.locator('.gt-viewer iframe').getAttribute('allow'), /geolocation 'none'/);
+          assert.equal(await page.getByText('Live vehicle location', { exact: true }).count(), 0, 'an iframe load does not assert fresh GPS');
+          await page.getByRole('button', { name: 'Copy tracking link', exact: true }).click();
+          assert.equal(await page.evaluate(() => window.fixtureCopiedText), 'https://glympse.com/!bravok9transport');
+          assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
+          await page.screenshot({ path: `test-results/transport-glympse-${engineName}-${width}.png`, fullPage: true });
+          await page.getByRole('button', { name: 'Hide map', exact: true }).click();
+          assert.equal(await page.locator('.gt-viewer iframe').count(), 0);
+          await page.goto(`${origin}/transport?clipboard=deny`);
+          await page.getByRole('button', { name: 'Copy tracking link', exact: true }).click();
+          await page.getByLabel('Share text', { exact: true }).waitFor();
+          assert.equal(await page.getByLabel('Share text', { exact: true }).inputValue(), 'https://glympse.com/!bravok9transport');
           await page.goto(`${origin}/transport?trip=${fixture.tripId}`);
           await page.getByRole('heading', { name: 'Every mile. Together.' }).waitFor();
           await page.screenshot({ path: `test-results/transport-guest-${engineName}-${width}.png`, fullPage: true });
@@ -33,6 +56,9 @@ try {
           assert.equal(new URL(page.url()).pathname, '/transport');
           assert.equal(new URL(page.url()).searchParams.get('trip'), fixture.tripId);
           assert.equal(await page.getByText('Bravo controls · Breeders & trips', { exact: true }).count(), 0);
+          assert.equal(await page.getByRole('button', { name: 'Copy trip invitation', exact: true }).count(), 0);
+          await page.getByRole('button', { name: 'View vehicle map', exact: false }).click();
+          await page.frameLocator('.gt-viewer iframe').getByText('Glympse fixture', { exact: false }).waitFor();
           assert.ok(await page.locator('.tp-detail').getByText('Prairie Kennels', { exact: true }).isVisible());
           assert.equal(await page.locator('.tp-map').getAttribute('referrerpolicy'), 'no-referrer');
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, 'no horizontal overflow');
@@ -47,20 +73,25 @@ try {
           await page.clock.fastForward(31000); await revokedResponse;
           await page.getByRole('alert').filter({ hasText: 'Trip not found.' }).waitFor();
           assert.equal(await page.locator('.tp-map').count(), 0);
+          assert.equal(await page.locator('.gt-viewer iframe').count(), 0, 'revoking a trip removes its embedded map');
           assert.equal(await page.getByRole('heading', { name: 'Gunner’s journey', exact: true }).count(), 0);
           assert.deepEqual(errors, []);
         } catch (error) { await writeFile(`test-results/transport-client-failure-${engineName}-${width}.html`, await page.content()).catch(() => {}); await page.screenshot({ path: `test-results/transport-client-failure-${engineName}-${width}.png`, fullPage: true }).catch(() => {}); throw error; } finally { await context.close(); }
 
         fixture.reset();
         const ownerContext = await browser.newContext({ viewport: { width, height: 900 } });
+        await ownerContext.addInitScript(() => Object.defineProperty(navigator, 'clipboard', { value: { writeText: async text => { window.fixtureCopiedText = text; } }, configurable: true }));
         await ownerContext.addCookies([{ name: 'fixture-role', value: 'owner', url: origin }]);
         const ownerPage = await ownerContext.newPage(), ownerErrors = [];
         ownerPage.on('pageerror', error => ownerErrors.push(error.message));
+        await ownerPage.route('https://glympse.com/**', route => route.fulfill({ contentType: 'text/html', body: '<p>Isolated Glympse fixture</p>' }));
         await ownerPage.route('https://www.openstreetmap.org/**', route => route.fulfill({ contentType: 'text/html', body: '<p>Isolated map fixture</p>' }));
         try {
           await ownerPage.goto(`${origin}/transport`);
           await ownerPage.getByRole('heading', { name: 'Transport desk.' }).waitFor();
           await ownerPage.getByText('Bravo controls · Breeders & trips', { exact: true }).click();
+          await ownerPage.getByText('Glympse road checklist · Bravo team', { exact: true }).click();
+          await ownerPage.getByText('Closing a Bravo trip or hiding the map does not stop the public Glympse feed.', { exact: false }).waitFor();
           await ownerPage.getByLabel('Breeder / business name', { exact: true }).fill('North Star Kennels');
           await ownerPage.getByLabel('Breeder’s Bravo account email', { exact: true }).fill('breeder@example.test');
           await ownerPage.getByRole('button', { name: 'Add breeder', exact: true }).click();
@@ -73,13 +104,27 @@ try {
           await form.getByLabel('Destination city / state').fill('Denver, CO');
           await form.getByRole('button', { name: 'Create transport', exact: true }).click();
           await ownerPage.getByRole('heading', { name: 'Biscuit’s journey', exact: true }).waitFor();
+          await ownerPage.getByRole('button', { name: 'Copy trip invitation', exact: true }).click();
+          assert.match(await ownerPage.evaluate(() => window.fixtureCopiedText), new RegExp(`/transport\\?trip=${fixture.tripId}`));
           await ownerPage.getByRole('button', { name: 'Update this trip', exact: true }).click();
           const edit = ownerPage.locator('.tp-detail .tp-trip-form');
           await edit.getByRole('combobox', { name: 'Trip status', exact: true }).selectOption('picked_up');
           await edit.getByLabel('Journey update', { exact: true }).fill('Picked up safely.');
-          assert.equal(await edit.getByRole('checkbox').isEnabled(), false, 'unconfigured GPS cannot be enabled');
+          assert.equal(await edit.getByRole('checkbox').count(), 0, 'Glympse does not require the hardware GPS toggle');
+          const beforeDraft = fixture.writes().length;
+          await edit.getByRole('button', { name: 'Water & rest', exact: true }).click();
+          assert.equal(await edit.getByLabel('Journey update', { exact: true }).inputValue(), 'Picked up safely.\nWater and rest stop complete.');
+          assert.equal(fixture.writes().length, beforeDraft, 'care drafts must not publish before save');
           await edit.getByRole('button', { name: 'Save trip update', exact: true }).click();
           await ownerPage.locator('.tp-status').filter({ hasText: 'Picked up' }).waitFor();
+          assert.ok(fixture.writes().some(write => write.note === 'Picked up safely.\nWater and rest stop complete.'));
+          await ownerPage.getByRole('button', { name: 'View vehicle map', exact: false }).click();
+          await ownerPage.frameLocator('.gt-viewer iframe').getByText('Isolated Glympse fixture').waitFor();
+          await ownerPage.getByRole('button', { name: 'Update this trip', exact: true }).click();
+          await edit.getByRole('combobox', { name: 'Trip status', exact: true }).selectOption('delivered');
+          await edit.getByRole('button', { name: 'Save trip update', exact: true }).click();
+          await ownerPage.getByRole('heading', { name: 'This journey is closed.', exact: true }).waitFor();
+          assert.equal(await ownerPage.locator('.gt-viewer iframe').count(), 0, 'completed journeys no longer display the shared map');
           assert.ok(fixture.writes().some(write => write.dogName === 'Biscuit' && write.clientEmail === 'client@example.test'));
           assert.equal(await ownerPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
           await ownerPage.screenshot({ path: `test-results/transport-owner-${engineName}-${width}.png`, fullPage: true });

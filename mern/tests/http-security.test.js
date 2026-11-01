@@ -65,3 +65,17 @@ test('static and dynamic device policies agree and preserve Bravo Live capture',
   for (const feature of ['geolocation', 'accelerometer', 'gyroscope', 'magnetometer', 'usb', 'serial', 'hid', 'midi']) assert.equal(directives.get(feature), '()');
   for (const feature of ['autoplay', 'fullscreen', 'screen-wake-lock', 'payment']) assert.equal(directives.has(feature), false);
 });
+
+// The viewer needs one frame origin, not scripts, GPS permission or network
+// access in the Bravo page. Keep the deployed and server policies in sync.
+test('Glympse is allowed only as a frame in both security policies', async () => {
+  const config = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
+  const deployed = config.headers.find(rule => rule.source === '/(.*)').headers.find(header => header.key === 'Content-Security-Policy').value;
+  const dynamic = (await request(app).get('/api/health').expect(200)).headers['content-security-policy'];
+  for (const csp of [deployed, dynamic]) {
+    const directives = csp.split(';').map(value => value.trim());
+    assert.ok(directives.find(value => value.startsWith('frame-src ')).split(' ').includes('https://glympse.com'));
+    for (const directive of ['script-src', 'connect-src']) assert.ok(!directives.find(value => value.startsWith(`${directive} `)).includes('glympse'));
+    assert.ok(directives.includes("frame-ancestors 'none'"));
+  }
+});
