@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useBravo } from './context';
 import { api } from './api';
@@ -123,6 +123,7 @@ function TransportManagement({ data, refresh, choose }) {
 }
 
 function TripEditor({ trip, breeders, gpsConfigured, onSaved }) {
+  const noteId = useId();
   // Snapshot revision and inputs once. Polling must never overwrite an edit.
   const [initial] = useState(trip);
   const [status, setStatus] = useState(trip?.status || 'scheduled'), [sharing, setSharing] = useState(!!trip?.sharingEnabled);
@@ -148,7 +149,7 @@ function TripEditor({ trip, breeders, gpsConfigured, onSaved }) {
     <p className="helper">Enter times in your device’s time zone. Keep street addresses and other customers’ details out of shared updates.</p>
     {initial && <><label>Trip status<select value={status} disabled={terminal} onChange={event => setStatus(event.target.value)}>{Object.entries(TRANSPORT_STATUSES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
       <p className="helper">Glympse sharing is controlled in the Glympse app. Marking this trip delivered or cancelled hides its map here; it does not stop the public tag’s sharing.</p>
-      <label>Journey update<textarea name="note" value={note} onChange={event => setNote(event.target.value)} maxLength={1000} rows={3} placeholder="Write a care update for this dog’s breeder and client."/></label>
+      <label htmlFor={noteId}>Journey update</label><textarea id={noteId} name="note" value={note} onChange={event => setNote(event.target.value)} maxLength={1000} rows={3} placeholder="Write a care update for this dog’s breeder and client."/>
       <div className="tp-quick-notes" role="group" aria-label="Care update drafts">{[['Water & rest', 'Water and rest stop complete.'], ['Back on the road', 'Care stop complete. Back on the road.'], ['Arrival update', 'Arrival estimate updated. Please check the time above.']].map(([label, draft]) => <button type="button" key={label} disabled={busy || note.length + draft.length + (note ? 1 : 0) > 1000} onClick={() => setNote(value => value ? `${value}\n${draft}` : draft)}>{label}</button>)}</div>
       <p className="helper">Draft buttons add text only. Check the details and select Save trip update to publish.</p>
     </>}
