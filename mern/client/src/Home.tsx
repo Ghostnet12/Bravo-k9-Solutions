@@ -42,7 +42,7 @@ export default function Home() {
           <Editable as="p" contentKey="hub-training-copy" canEditText>From puppy foundations to everyday obedience. A plan for your dog, in the places you live.</Editable>
           <p className="hub-price"><CatalogPrice service="training"/><span> / month</span></p>
           <Editable as="p" contentKey="hub-training-note" canEditText className="hub-note">Private visits Monday–Friday. Manual renewal.</Editable>
-          <div className="hub-actions"><Editable as={Link} contentKey="hub-training-link" canEditText canEditLink href="/training" className="cinema-button">Explore training <span aria-hidden="true">→</span></Editable><Link href="/behavior-assessment" className="cinema-link">Behavior concerns?</Link></div><nav className="hub-trust-links" aria-label="Check Bravo before booking"><span>Get to know Bravo:</span><Link href="/results#dogs">Watch real training</Link><Link href="/reviews">Read client reviews</Link><Link href="/team">Meet the trainers</Link></nav>
+          <div className="hub-actions"><Editable as={Link} contentKey="hub-training-link" canEditText canEditLink href="/training" className="cinema-button">Explore training <span aria-hidden="true">→</span></Editable><Link href="/behavior-assessment" className="cinema-link">Behavior concerns?</Link></div><nav className="hub-trust-links" aria-label="Check Bravo before booking"><span>Get to know Bravo:</span><Link href="/results#dogs">Watch real training</Link><Link href="/reviews?from=training">Read client reviews</Link><Link href="/team?from=training">Meet the trainers</Link></nav>
         </div>
       </section>
       <section className="hub-stories cinema-shell" aria-label="Discover Bravo">
