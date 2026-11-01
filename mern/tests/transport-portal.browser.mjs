@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { chromium, webkit } from 'playwright';
 import { createTransportFixture } from './transport-fixture.mjs';
 const fixture = await createTransportFixture(), server = fixture.app.listen(0, '127.0.0.1');
@@ -13,6 +13,9 @@ try {
       for (const width of [390, 1440]) {
         fixture.reset();
         const context = await browser.newContext({ viewport: { width, height: 900 } }), page = await context.newPage(), errors = [];
+        // Install before application timers exist; replacing a running clock
+        // leaves native intervals outside Playwright's control.
+        await page.clock.install();
         page.on('pageerror', error => errors.push(error.message));
         // Map rendering belongs to OSM. Keep deterministic tests off that service.
         await page.route('https://www.openstreetmap.org/**', route => route.fulfill({ contentType: 'text/html', body: '<p>Isolated map fixture</p>' }));
@@ -35,15 +38,18 @@ try {
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, 'no horizontal overflow');
           await page.screenshot({ path: `test-results/transport-client-${engineName}-${width}.png`, fullPage: true });
           fixture.setMode('stale');
-          await page.clock.install(); await page.clock.fastForward(31000);
+          const staleResponse = page.waitForResponse(response => response.url().endsWith(`/api/transport/trips/${fixture.tripId}`));
+          await page.clock.fastForward(31000); await staleResponse;
           await page.getByText('Last reported location', { exact: true }).waitFor();
           assert.equal(await page.getByText('Live vehicle location', { exact: true }).count(), 0);
-          fixture.setMode('forbidden'); await page.clock.fastForward(31000);
+          fixture.setMode('forbidden');
+          const revokedResponse = page.waitForResponse(response => response.url().endsWith(`/api/transport/trips/${fixture.tripId}`) && response.status() === 404);
+          await page.clock.fastForward(31000); await revokedResponse;
           await page.getByRole('alert').filter({ hasText: 'Trip not found.' }).waitFor();
           assert.equal(await page.locator('.tp-map').count(), 0);
           assert.equal(await page.getByRole('heading', { name: 'Gunner’s journey', exact: true }).count(), 0);
           assert.deepEqual(errors, []);
-        } catch (error) { await page.screenshot({ path: `test-results/transport-client-failure-${engineName}-${width}.png`, fullPage: true }).catch(() => {}); throw error; } finally { await context.close(); }
+        } catch (error) { await writeFile(`test-results/transport-client-failure-${engineName}-${width}.html`, await page.content()).catch(() => {}); await page.screenshot({ path: `test-results/transport-client-failure-${engineName}-${width}.png`, fullPage: true }).catch(() => {}); throw error; } finally { await context.close(); }
 
         fixture.reset();
         const ownerContext = await browser.newContext({ viewport: { width, height: 900 } });

@@ -35,7 +35,7 @@ export async function createTransportFixture() {
   app.patch('/api/transport/trips/:id', (req, res) => { writes.push(req.body); trip = { ...trip, ...req.body, revision: trip.revision + 1 }; if (!trip.sharingEnabled) trip.location = null; trip.events.push({ status: trip.status, note: req.body.note, at: new Date().toISOString() }); res.json({ ok: true }); });
   app.use('/api', (_req, res) => res.json({ services: [], images: {}, entries: {}, team: [], schedules: [], reviews: [], recommendations: [], count: 0, clips: [], bookings: [], terms: [], messages: [], items: [], tracks: [], alerts: [], revision: 0 }));
   app.use(express.static(dist)); app.get('/{*path}', (_req, res) => res.type('html').send(html));
-  return { app, tripId, setMode: value => { mode = value; }, reset: () => { trip = fresh(); mode = 'live'; writes = []; }, writes: () => writes };
+  return { app, tripId, setMode: value => { mode = value; }, reset: () => { trip = fresh(); breeders = [{ _id: breederId, name: 'Prairie Kennels', enabled: true, revision: 0 }]; mode = 'live'; writes = []; }, writes: () => writes };
 }
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const fixture = await createTransportFixture();
