@@ -67,7 +67,7 @@ try {
           await ownerPage.getByRole('status').filter({ hasText: 'Breeder added.' }).waitFor();
           const form = ownerPage.locator('.tp-management .tp-trip-form');
           await form.getByLabel('Dog’s name', { exact: true }).fill('Biscuit');
-          await form.getByLabel('Breeder', { exact: true }).selectOption({ label: 'North Star Kennels' });
+          await form.getByRole('combobox', { name: 'Breeder', exact: true }).selectOption({ label: 'North Star Kennels' });
           await form.getByLabel('Client’s Bravo account email').fill('client@example.test');
           await form.getByLabel('Pickup city / state').fill('Aberdeen, SD');
           await form.getByLabel('Destination city / state').fill('Denver, CO');
@@ -75,7 +75,7 @@ try {
           await ownerPage.getByRole('heading', { name: 'Biscuit’s journey', exact: true }).waitFor();
           await ownerPage.getByRole('button', { name: 'Update this trip', exact: true }).click();
           const edit = ownerPage.locator('.tp-detail .tp-trip-form');
-          await edit.getByLabel('Trip status', { exact: true }).selectOption('picked_up');
+          await edit.getByRole('combobox', { name: 'Trip status', exact: true }).selectOption('picked_up');
           await edit.getByLabel('Journey update', { exact: true }).fill('Picked up safely.');
           assert.equal(await edit.getByRole('checkbox').isEnabled(), false, 'unconfigured GPS cannot be enabled');
           await edit.getByRole('button', { name: 'Save trip update', exact: true }).click();
