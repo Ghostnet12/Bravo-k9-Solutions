@@ -42,7 +42,7 @@ export default function Home() {
           <Editable as="p" contentKey="hub-training-copy" canEditText>From puppy foundations to everyday obedience. A plan for your dog, in the places you live.</Editable>
           <p className="hub-price"><CatalogPrice service="training"/><span> / month</span></p>
           <Editable as="p" contentKey="hub-training-note" canEditText className="hub-note">Private visits Monday–Friday. Manual renewal.</Editable>
-          <div className="hub-actions"><Editable as={Link} contentKey="hub-training-link" canEditText canEditLink href="/training" className="cinema-button">Explore training <span aria-hidden="true">→</span></Editable><Link href="/behavior-assessment" className="cinema-link">Behavior concerns?</Link></div>
+          <div className="hub-actions"><Editable as={Link} contentKey="hub-training-link" canEditText canEditLink href="/training" className="cinema-button">Explore training <span aria-hidden="true">→</span></Editable><Link href="/behavior-assessment" className="cinema-link">Behavior concerns?</Link></div><nav className="hub-trust-links" aria-label="Check Bravo before booking"><span>Get to know Bravo:</span><Link href="/results">Watch real training</Link><Link href="/reviews">Read client reviews</Link><Link href="/team">Meet the trainers</Link></nav>
         </div>
       </section>
       <section className="hub-stories cinema-shell" aria-label="Discover Bravo">
@@ -57,7 +57,7 @@ export default function Home() {
       </section>
       <section className="hub-transport cinema-shell" aria-labelledby="hub-transport-title" data-reveal="">
         <img src="/images/bravo-k9-transport-small.webp" width="800" height="450" alt="Bravo’s black Dodge Durango K9 transport vehicle" loading="lazy" data-site-image-ignore=""/>
-        <div><Editable as="p" contentKey="hub-transport-eyebrow" canEditText className="cinema-eyebrow">COMING SOON</Editable><Editable as="h2" contentKey="hub-transport-title" canEditText id="hub-transport-title">The Bravo standard.<br/><span>On the road.</span></Editable><Editable as={Link} contentKey="hub-transport-link" canEditText canEditLink href="/k9-transport" className="cinema-link">Explore K9 Transport <span aria-hidden="true">→</span></Editable></div>
+        <div><Editable as="p" contentKey="hub-transport-eyebrow" canEditText className="cinema-eyebrow">TRANSPORT SERVICE LAUNCHING</Editable><Editable as="h2" contentKey="hub-transport-title" canEditText id="hub-transport-title">The Bravo standard.<br/><span>On the road.</span></Editable><Editable as={Link} contentKey="hub-transport-link" canEditText canEditLink href="/k9-transport" className="cinema-link">Explore K9 Transport <span aria-hidden="true">→</span></Editable></div>
       </section>
       <section className="hub-close cinema-shell" aria-labelledby="booking-title" data-reveal="">
         <Editable as="h2" contentKey="hub-close-title" canEditText id="booking-title">Your next chapter.<br/><span>Starts with your dog.</span></Editable><div className="hub-actions"><Editable as={Link} contentKey="copy-home-62" canEditText canEditLink href="/portal?program=training" className="cinema-button">Book training <span aria-hidden="true">↗</span></Editable><Editable as="a" contentKey="copy-home-63" canEditText canEditLink href="tel:+16058242767" className="cinema-link">Talk to Bravo</Editable></div>
