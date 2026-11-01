@@ -26,9 +26,9 @@ jobs:
           cache-dependency-path: mern/package-lock.json
       - run: npm ci --ignore-scripts
       - run: npm run lint
+      - run: npm run build
       - run: npm test
       - run: node --test tests/transport.integration.js
-      - run: npm run build
       - run: npm install --ignore-scripts --no-save --package-lock=false playwright@1.55.1
       - run: npx playwright install --with-deps chromium webkit
       - run: node tests/transport-portal.browser.mjs

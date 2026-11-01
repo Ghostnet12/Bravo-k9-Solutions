@@ -39,5 +39,5 @@ export async function createTransportFixture() {
 }
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const fixture = await createTransportFixture();
-  fixture.app.listen(Number(process.env.PORT || 3000), '0.0.0.0', () => console.log('Transport UI fixture ready'));
+  fixture.app.listen(Number(process.env.PORT || process.argv[process.argv.indexOf('--port') + 1] || 3000), '0.0.0.0', () => console.log('Transport UI fixture ready'));
 }
