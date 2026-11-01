@@ -9,13 +9,31 @@ Bravo owner/delegated-owner accounts create breeder businesses, assign existing 
 1. Have each breeder and client create their own Bravo account. Confirm the account with the person using a known contact method before granting access; an entered email alone is not verified identity.
 2. Open **Bravo controls → Add a breeder** and enter the business name and the breeder's existing account email.
 3. Create one trip per dog/client delivery. Select the breeder, optionally assign the client, and add pickup/destination cities and planned times. Multiple dog records may use the same vehicle tracker.
-4. After pickup, update the status and enable location sharing once the GPS connection is configured. Post brief care/rest-stop updates. Times are stored as UTC and shown in each viewer's local device time zone. ETA is entered by Bravo; there is no automatic route-time estimate.
-5. Mark the trip delivered or cancelled. Both stop sharing, clear the saved location and permanently close the journey. For another journey, create a new trip.
+4. Start sharing to **!bravok9transport** in the Glympse app while parked. After pickup, update the trip status so its Glympse card appears. Post brief care/rest-stop updates; the draft buttons append editable text without publishing until Save. Times are stored as UTC and shown in each viewer's local device time zone. ETA is entered by Bravo; there is no automatic route-time estimate.
+5. Mark the trip delivered or cancelled. Both remove the Glympse card from this trip, stop any dedicated hardware sharing, clear any saved hardware location and permanently close the journey. **Neither stops Glympse**: stop sharing in the Glympse app when the vehicle’s run is complete. For another journey, create a new trip.
 6. Disable a breeder's access in Bravo controls to revoke their business-wide reads. Clear the client email in the trip editor to revoke that client's trip access. These assignments are independent. Global account blocking/removal also revokes access through existing authentication.
 
-## GPS connection: not active until a provider adapter is configured
+## Glympse — current tracking provider
 
-This release adds a signed receiver and private map display, **not a vendor integration**. The actual tracker brand/model, vendor API entitlement, reporting frequency and credentials are still required. Never claim a tracker is connected simply because the receiver secret is configured. Test a real device before starting a customer trip. Nothing polls a vendor yet; do not expose vendor tokens in client code, URLs or trip fields.
+Owner-provided public viewer: https://glympse.com/!bravok9transport
+Supported embed: https://glympse.com/ext/!bravok9transport (generated with https://developer.glympse.com/tools/host).
+
+The public K9 Transport page, guest portal and signed-in portal overview have a shared vehicle card. Active trip details show it after pickup; scheduled and completed trip details do not. The public tag remains accessible independently of private trip access. It is **not a per-dog or private GPS feed**, and may show multiple participants. A tag sharing password restricts contributors, not viewers. Do not post customer addresses, dog names or private trip details to the public tag.
+
+Viewers choose **View vehicle map** before any Glympse iframe request. A direct full-screen link is always available if embedding fails. Copies contain either the public tracking URL or an owner-generated trip invitation pointing to the existing authenticated route. The copy buttons never send messages. Clipboard failure exposes selectable text.
+
+Glympse owns its sharing timer, map markers and last-update timestamp. Bravo does not scrape the map, claim fresh GPS based on iframe loading, calculate a Glympse ETA, auto-renew sharing, or start/stop the phone. The owner road checklist explains app sharing and safe-stop renewal. The iframe sends no dog/client/trip identifiers, has no referrer and receives no camera, microphone or geolocation permission. CSP allows only the exact Glympse frame origin, without broadening script/connect policies.
+
+Confirm the last-update time in Glympse before travel, keep the phone powered and check duration/signal at safe stops. Delivery in Bravo is independent of Glympse sharing, including when several dogs share one vehicle.
+
+Vendor references verified November 1, 2026:
+- https://app.glympse.com/faq/how-can-i-add-a-live-glympse-viewer-to-my-website/
+- https://app.glympse.com/faq/how-do-i-share-my-glympse-premium-tag-location-with-others/
+- https://glympse.zendesk.com/hc/en-us/articles/211602763-What-are-Glympse-Tags
+
+## Optional dedicated GPS connection: not used by Glympse
+
+The earlier dedicated-tracker receiver and private coordinate map remain available for a separately configured hardware tracker. Glympse works through its supported viewer and does not need this receiver. The hardware path is **not a vendor integration**. The actual tracker brand/model, vendor API entitlement, reporting frequency and credentials are still required. Never claim a tracker is connected simply because the receiver secret is configured. Test a real device before starting a customer trip. Nothing polls a vendor yet; do not expose vendor tokens in client code, URLs or trip fields.
 
 A trusted server adapter must authenticate to the chosen GPS vendor, verify its device ownership/feed, normalize its report and POST to `/api/transport/gps`. The adapter may use vendor webhooks or polling according to the vendor's supported API. Do not weaken the receiver signature to accommodate an unauthenticated device callback. No browser phone location is collected.
 
