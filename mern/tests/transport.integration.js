@@ -119,6 +119,34 @@ test('private breeder and client transport lifecycle', { timeout: 180000 }, asyn
     assert.equal((await TransportTrip.findById(tripId)).location, undefined);
     await call('owner', 'patch', `/api/transport/trips/${tripId}`, { revision: detail.revision, status: 'in_transit', sharingEnabled: true }).expect(400);
   });
+  await t.test('blocking an assigned client does not prevent updates, pausing or delivery', async () => {
+    const body = { ...base, clientEmail: 'stranger@example.test', deviceId: 'blocked-client-vehicle' };
+    const created = await call('owner', 'post', '/api/transport/trips', body).expect(201);
+    const path = `/api/transport/trips/${created.body.id}`;
+    const update = async changes => {
+      const record = await TransportTrip.findById(created.body.id);
+      return call('owner', 'patch', path, { ...body, revision: record.revision, ...changes });
+    };
+    assert.equal((await update({ status: 'picked_up', sharingEnabled: true })).status, 200);
+    await gps({ deviceId: body.deviceId, latitude: 45, longitude: -98, observedAt: new Date().toISOString() }).expect(202);
+    assert.ok((await TransportTrip.findById(created.body.id)).location);
+    await User.updateMany({ _id: { $in: [identities.stranger.user._id, identities.otherBreeder.user._id] } }, { $set: { blocked: true } });
+    await call('stranger', 'get', path).expect(401);
+    assert.equal((await update({ status: 'rest_stop', note: 'Care stop complete.' })).status, 200);
+    assert.equal(String((await TransportTrip.findById(created.body.id)).clientId), String(identities.stranger.user._id));
+    assert.equal((await update({ clientEmail: 'otherbreeder@example.test' })).status, 400, 'new blocked assignees remain forbidden');
+    await call('owner', 'post', '/api/transport/trips', body).expect(400);
+    assert.equal((await update({ sharingEnabled: false })).status, 200);
+    assert.equal((await TransportTrip.findById(created.body.id)).location, undefined);
+    assert.equal((await update({ sharingEnabled: true })).status, 200);
+    await gps({ deviceId: body.deviceId, latitude: 45, longitude: -98, observedAt: new Date().toISOString() }).expect(202);
+    assert.ok((await TransportTrip.findById(created.body.id)).location);
+    assert.equal((await update({ status: 'delivered' })).status, 200);
+    const completed = await TransportTrip.findById(created.body.id);
+    assert.equal(completed.status, 'delivered'); assert.equal(completed.sharingEnabled, false); assert.equal(completed.location, undefined);
+    assert.equal(String(completed.clientId), String(identities.stranger.user._id));
+    await call('stranger', 'get', path).expect(401);
+  });
   await t.test('client reassignment and account blocking revoke reads immediately', async () => {
     const record = await TransportTrip.findById(tripId);
     await call('owner', 'patch', `/api/transport/trips/${tripId}`, { revision: record.revision, clientEmail: '' }).expect(200);

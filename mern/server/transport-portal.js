@@ -37,10 +37,16 @@ async function accountFor(address, session) {
   if (!account) throw fail('That person needs an active Bravo account first. Confirm their sign-in email with them.');
   return account._id;
 }
-async function assignedFields(input, session, previousBreederId = null) {
+async function assignedFields(input, session, previous = null) {
   const result = { ...input };
-  if ('clientEmail' in input) { result.clientId = await accountFor(input.clientEmail, session); delete result.clientEmail; }
-  if (input.breederId && String(input.breederId) !== String(previousBreederId) && !await TransportBreeder.exists({ _id: input.breederId, enabled: true }).session(session || null)) throw fail('Choose an enabled breeder.');
+  if ('clientEmail' in input) {
+    // Blocking an assignee revokes their reads, but must not prevent Bravo from
+    // updating or closing the trip. Only new assignments require an active user.
+    const assigned = previous?.clientId && input.clientEmail ? await User.findById(previous.clientId).select('email').session(session || null).lean() : null;
+    result.clientId = assigned?.email === input.clientEmail ? previous.clientId : await accountFor(input.clientEmail, session);
+    delete result.clientEmail;
+  }
+  if (input.breederId && String(input.breederId) !== String(previous?.breederId) && !await TransportBreeder.exists({ _id: input.breederId, enabled: true }).session(session || null)) throw fail('Choose an enabled breeder.');
   for (const field of ['pickupAt', 'etaAt']) if (field in input) result[field] = input[field] ? new Date(input[field]) : null;
   return result;
 }
@@ -157,7 +163,7 @@ export function transportPortalRoutes(app) {
       const previousStatus = trip.status, previousDevice = trip.deviceId, previousSharing = trip.sharingEnabled;
       const { revision, note, ...changes } = input;
       if (FINAL_TRANSPORT_STATUSES.includes(previousStatus) && changes.status && changes.status !== previousStatus) throw fail('Completed trips stay closed. Create a new trip for another journey.');
-      Object.assign(trip, await assignedFields(changes, session, trip.breederId));
+      Object.assign(trip, await assignedFields(changes, session, trip));
       if (!TRACKABLE_STATUSES.includes(trip.status)) trip.sharingEnabled = false;
       if (trip.sharingEnabled && !trip.deviceId) throw fail('Assign the vehicle tracker before sharing location.');
       if (trip.sharingEnabled && (process.env.TRANSPORT_GPS_WEBHOOK_SECRET?.length || 0) < 32) throw fail('Connect the vehicle tracker before sharing location.');
