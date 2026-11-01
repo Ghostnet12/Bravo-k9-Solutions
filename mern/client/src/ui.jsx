@@ -12,23 +12,27 @@ import { useBravo } from './context';
 import './member-access.css';
 import './simple-scheduling.css';
 import './customer-journey.css';
+function closeNavigationDetails(root) {
+  root?.querySelectorAll('#bravo-navigation details[open]').forEach(details => { details.open = false; });
+}
+
 export function Header({ homeChapters = false } = {}) {
   const { user, config, signOut, notifications = [] } = useBravo();
   const { pathname, search, hash } = useLocation(), navigate = useNavigate();
   const [signingOut, setSigningOut] = useState(false), [signOutError, setSignOutError] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuButton = useRef(null), header = useRef(null), about = useRef(null), menuOrigin = useRef(null);
+  const menuButton = useRef(null), header = useRef(null), menuOrigin = useRef(null);
   const staff = ['staff', 'owner'].includes(user?.role);
   const primaryPath = staff ? '/admin?tab=schedule' : user ? '/schedule' : '/portal';
   const primaryLabel = staff ? 'Team schedule' : user ? 'My Schedule' : 'Book Training';
-  const closeMenu = () => { setMenuOpen(false); if (about.current) about.current.open = false; };
+  const closeMenu = () => { setMenuOpen(false); closeNavigationDetails(header.current); };
   async function leave() {
     setSigningOut(true); setSignOutError('');
     try { await signOut(); closeMenu(); navigate('/account', { replace: true }); }
     catch (error) { setSignOutError(error.message || 'Could not sign out. Please try again.'); }
     finally { setSigningOut(false); }
   }
-  useEffect(() => { setMenuOpen(false); if (about.current) about.current.open = false; }, [pathname, search, hash]);
+  useEffect(() => { setMenuOpen(false); closeNavigationDetails(header.current); }, [pathname, search, hash]);
   useLayoutEffect(() => {
     window.dispatchEvent(new CustomEvent('bravo-navigation-state', { detail: { open: menuOpen } }));
     // The bottom control is after page content in the reading order. Opening
@@ -37,8 +41,8 @@ export function Header({ homeChapters = false } = {}) {
   }, [menuOpen]);
   useEffect(() => {
     // Both header and bottom bar operate the same React navigation state.
-    const toggle = () => { menuOrigin.current = document.querySelector('[data-navigation-toggle]'); if (about.current) about.current.open = false; setMenuOpen(open => !open); };
-    const close = () => { if (about.current) about.current.open = false; setMenuOpen(false); };
+    const toggle = () => { menuOrigin.current = document.querySelector('[data-navigation-toggle]'); closeNavigationDetails(header.current); setMenuOpen(open => !open); };
+    const close = () => { closeNavigationDetails(header.current); setMenuOpen(false); };
     window.addEventListener('bravo-navigation-toggle', toggle);
     window.addEventListener('bravo-navigation-close', close);
     return () => {
@@ -47,14 +51,15 @@ export function Header({ homeChapters = false } = {}) {
     };
   }, []);
   useEffect(() => {
-    const outside = event => { if (header.current && !header.current.contains(event.target) && !event.target.closest('[data-navigation-toggle]')) { setMenuOpen(false); if (about.current) about.current.open = false; } };
+    const outside = event => { if (header.current && !header.current.contains(event.target) && !event.target.closest('[data-navigation-toggle]')) { setMenuOpen(false); closeNavigationDetails(header.current); } };
     document.addEventListener('pointerdown', outside);
     document.addEventListener('focusin', outside);
     return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('focusin', outside); };
   }, []);
   function handleEscape(event) {
     if (event.key !== 'Escape') return;
-    if (about.current?.open) { about.current.open = false; about.current.querySelector('summary')?.focus(); event.stopPropagation(); }
+    const disclosure = event.target.closest('details[open]') || header.current?.querySelector('#bravo-navigation details[open]');
+    if (disclosure) { disclosure.open = false; disclosure.querySelector('summary')?.focus(); event.stopPropagation(); }
     else if (menuOpen) { setMenuOpen(false); (menuOrigin.current?.isConnected ? menuOrigin.current : menuButton.current)?.focus({ preventScroll: true }); }
   }
   function leaveAbout(event) {
@@ -70,7 +75,7 @@ export function Header({ homeChapters = false } = {}) {
       {homeChapters && <nav className="home-desktop-nav" aria-label="Explore Bravo"><NavLink to="/training">Training</NavLink><NavLink to="/our-approach">Our approach</NavLink><NavLink to="/results">The results</NavLink><NavLink to="/team">The team</NavLink></nav>}
       <a className="conversion-header-phone" href="tel:+16058242767" aria-label="Call Bravo at (605) 824-2767"><svg viewBox="0 0 24 24" width="23" height="23" fill="#BA9A64" aria-hidden="true" focusable="false" style={{verticalAlign:"middle",marginRight:8}}><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.25 1.01l-2.2 2.2Z"/></svg><span>(605) 824-2767</span></a>
       <NavLink className="header-quick-action" to={primaryPath}>{primaryLabel}</NavLink>
-      <Editable as="button" contentKey="ui-3" ref={menuButton} type="button" className="menu-toggle" aria-expanded={menuOpen} aria-controls="bravo-navigation" onClick={event => { menuOrigin.current = event.currentTarget; if (about.current) about.current.open = false; setMenuOpen(open => !open); }}>
+      <Editable as="button" contentKey="ui-3" ref={menuButton} type="button" className="menu-toggle" aria-expanded={menuOpen} aria-controls="bravo-navigation" onClick={event => { menuOrigin.current = event.currentTarget; closeNavigationDetails(header.current); setMenuOpen(open => !open); }}>
         <span className="menu-lines" aria-hidden="true"><i/><i/></span>{menuOpen ? 'Close' : 'Menu'}
         {notifications.some(item => item.unread) && <Editable as="span" contentKey="ui-5" className="menu-notification-count notification-count" aria-label="Unread notifications">{Math.min(99, notifications.filter(item => item.unread).length)}</Editable>}
       </Editable>
@@ -78,23 +83,25 @@ export function Header({ homeChapters = false } = {}) {
         <Editable as="div" contentKey="ui-7" className="nav-group nav-explore">
           <Editable as="span" contentKey="ui-8" canEditText className="nav-group-label">Explore Bravo</Editable>
           <Editable as={Link} contentKey="nav-training-pricing" canEditLink canEditText to="/training">Training &amp; Pricing</Editable>
-          <NavLink to="/results">Training in action</NavLink>
           <Editable as={Link} contentKey="ui-12" canEditLink canEditText to="/reviews">Reviews</Editable>
           <Editable as={NavLink} contentKey="cinema-nav-workshops" canEditLink canEditText to="/workshops">Workshops</Editable>
           <Editable as={NavLink} contentKey="nav-k9-transport" canEditLink canEditText to="/k9-transport">K9 Transport</Editable>
-          <NavLink to="/transport">Breeder & Client Portal</NavLink>
-          <Link to="/k9-transport#track-bravo">Track Bravo · Glympse</Link>
-          <NavLink to="/tracker-guide">Tracker video guide</NavLink>
-          <NavLink to="/live">Live Cams</NavLink>
-          <NavLink to="/fci-support">FCI Support</NavLink>
-          <Editable as={NavLink} contentKey="nav-tools-of-the-trade" canEditLink canEditText to="/tools-of-the-trade">Tools of the Trade</Editable>
-          <details className="nav-about" ref={about} onBlur={leaveAbout}>
+          <NavLink to="/live">Bravo Live</NavLink>
+          <details className="nav-about" onBlur={leaveAbout}>
             <summary>About Bravo</summary>
             <div className="nav-about-links">
+              <NavLink to="/results">Training in action</NavLink>
               <Editable as={Link} contentKey="cinema-nav-about" canEditLink canEditText to="/team">Meet the team</Editable>
               <Editable as={Link} contentKey="nav-bravo-approach" canEditLink canEditText to="/our-approach">Our approach</Editable>
               <Editable as={NavLink} contentKey="ui-13" canEditLink canEditText to="/contact">Contact &amp; help</Editable>
               <Editable as="a" contentKey="nav-bravo-phone" canEditLink canEditText href="tel:+16058242767">Call (605) 824-2767</Editable>
+            </div>
+          </details>
+          <details className="nav-resources" onBlur={leaveAbout}>
+            <summary>Resources</summary>
+            <div className="nav-about-links">
+              <NavLink to="/fci-support">FCI Support</NavLink>
+              <Editable as={NavLink} contentKey="nav-tools-of-the-trade" canEditLink canEditText to="/tools-of-the-trade">Tools of the Trade</Editable>
             </div>
           </details>
         </Editable>
@@ -114,7 +121,7 @@ export function Header({ homeChapters = false } = {}) {
     </Editable>
   </Editable>;
 }
-export function Footer() { return <Editable as="footer" contentKey="ui-26" className="bravo-footer"><Editable as="div" contentKey="ui-27" className="shell footer-main"><Editable as="div" contentKey="ui-28"><Brand/><Editable as="p" contentKey="ui-29" canEditText>Professional mobile dog training.<br/>Aberdeen, South Dakota.</Editable><Editable as="a" contentKey="ui-30" canEditLink canEditText className="footer-phone" href="tel:+16058242767">(605) 824-2767</Editable><Editable as="a" contentKey="footer-facebook-link" canEditLink className="footer-facebook" href="https://www.facebook.com/share/1DcYgGp3Sj/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" aria-label="Bravo K9 on Facebook (opens in a new tab)"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true" focusable="false"><path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073c0 6.026 4.388 11.021 10.125 11.927v-8.437H7.078v-3.49h3.047v-2.66c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.971h-1.513c-1.49 0-1.956.931-1.956 1.887v2.263h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.099 24 12.073z"/></svg><Editable as="span" contentKey="footer-facebook-label" canEditText>Follow us on Facebook</Editable></Editable><address className="fci-footer-address"><strong>FCI headquarters — Belgium</strong><br/><span>External organization; not Bravo’s service address.</span><br/>Place Albert 1er, 13<br/>B-6530 Thuin, Belgium<br/><a href="https://www.fci.be/en/" target="_blank" rel="noopener noreferrer">Official FCI website ↗</a><br/><a href="https://www.fci.be/en/Contact-98.html" target="_blank" rel="noopener noreferrer">FCI contact ↗</a></address></Editable><Editable as="nav" contentKey="ui-31" aria-label="Explore Bravo"><Editable as="h2" contentKey="ui-32" canEditText>Explore</Editable><Editable as={NavLink} contentKey="ui-33" canEditLink canEditText to="/dog-training">Dog training</Editable><Editable as={NavLink} contentKey="ui-34" canEditLink canEditText to="/behavior-assessment">Behavior assessments</Editable><Editable as={NavLink} contentKey="ui-36" canEditLink canEditText to="/learn">Online training</Editable><Editable as={Link} contentKey="copy-ui-1" canEditText canEditLink to="/workshops">Workshops</Editable><Editable as={NavLink} contentKey="footer-tools-of-the-trade" canEditLink canEditText to="/tools-of-the-trade">Tools of the Trade</Editable><Editable as={Link} contentKey="footer-k9-transport" canEditLink canEditText to="/k9-transport">K9 Transport</Editable><Editable as={NavLink} contentKey="ui-37" canEditLink canEditText to="/community">Member community</Editable></Editable><Editable as="nav" contentKey="ui-38" aria-label="Bravo client links"><Editable as="h2" contentKey="ui-39" canEditText>Stay connected</Editable><Editable as={NavLink} contentKey="footer-how-to-video" canEditText canEditLink to="/how-to">How-to video</Editable><Editable as={NavLink} contentKey="ui-40" canEditLink canEditText to="/account">Your account</Editable><Editable as={NavLink} contentKey="ui-41" canEditLink canEditText to="/community">Message the team</Editable><Editable as={NavLink} contentKey="ui-42" canEditLink canEditText to="/contact">Contact &amp; visit help</Editable><Editable as={NavLink} contentKey="ui-43" canEditLink canEditText to="/accessibility">Accessibility</Editable><Editable as={NavLink} contentKey="ui-44" canEditLink canEditText to="/media-rights">Media permissions</Editable><Editable as="a" contentKey="ui-45" canEditLink canEditText href="/sitemap.xml">Sitemap</Editable></Editable><Editable as="p" contentKey="ui-46" canEditText className="footer-motto">Trust.<br/>Train.<br/><Editable as="em" contentKey="ui-47" canEditText>Deploy.</Editable></Editable></Editable><Editable as="div" contentKey="ui-48" className="shell footer-baseline footer-baseline--split"><Editable as="span" contentKey="ui-49" canEditText>© 2026 Bravo K9 Solutions, LLC. All rights reserved.</Editable><Editable as="span" contentKey="ui-50" canEditText>ABERDEEN, SD · WE COME TO YOU</Editable></Editable><Editable as="div" contentKey="ui-51" className="shell footer-credit"><Editable as="p" contentKey="ui-52" canEditText>Built by Northrop Web Design &amp; Development Team using FRACTURE.</Editable></Editable></Editable>; }
+export function Footer() { return <Editable as="footer" contentKey="ui-26" className="bravo-footer"><Editable as="div" contentKey="ui-27" className="shell footer-main"><Editable as="div" contentKey="ui-28"><Brand/><Editable as="p" contentKey="ui-29" canEditText>Professional mobile dog training.<br/>Aberdeen, South Dakota.</Editable><Editable as="a" contentKey="ui-30" canEditLink canEditText className="footer-phone" href="tel:+16058242767">(605) 824-2767</Editable><Editable as="a" contentKey="footer-facebook-link" canEditLink className="footer-facebook" href="https://www.facebook.com/share/1DcYgGp3Sj/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" aria-label="Bravo K9 on Facebook (opens in a new tab)"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true" focusable="false"><path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073c0 6.026 4.388 11.021 10.125 11.927v-8.437H7.078v-3.49h3.047v-2.66c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.971h-1.513c-1.49 0-1.956.931-1.956 1.887v2.263h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.099 24 12.073z"/></svg><Editable as="span" contentKey="footer-facebook-label" canEditText>Follow us on Facebook</Editable></Editable><address className="fci-footer-address"><strong>FCI headquarters — Belgium</strong><br/><span>External organization; not Bravo’s service address.</span><br/>Place Albert 1er, 13<br/>B-6530 Thuin, Belgium<br/><a href="https://www.fci.be/en/" target="_blank" rel="noopener noreferrer">Official FCI website ↗</a><br/><a href="https://www.fci.be/en/Contact-98.html" target="_blank" rel="noopener noreferrer">FCI contact ↗</a></address></Editable><Editable as="nav" contentKey="ui-31" aria-label="Explore Bravo"><Editable as="h2" contentKey="ui-32" canEditText>Explore</Editable><Editable as={NavLink} contentKey="ui-33" canEditLink canEditText to="/dog-training">Dog training</Editable><Editable as={NavLink} contentKey="ui-34" canEditLink canEditText to="/behavior-assessment">Behavior assessments</Editable><Editable as={NavLink} contentKey="ui-36" canEditLink canEditText to="/learn">Online training</Editable><Editable as={Link} contentKey="copy-ui-1" canEditText canEditLink to="/workshops">Workshops</Editable><Editable as={NavLink} contentKey="footer-tools-of-the-trade" canEditLink canEditText to="/tools-of-the-trade">Tools of the Trade</Editable></Editable><Editable as="nav" contentKey="ui-38" aria-label="Bravo client links"><Editable as="h2" contentKey="ui-39" canEditText>Stay connected</Editable><Editable as={NavLink} contentKey="footer-how-to-video" canEditText canEditLink to="/how-to">How-to video</Editable><Editable as={NavLink} contentKey="ui-40" canEditLink canEditText to="/account">Your account</Editable><Editable as={NavLink} contentKey="ui-41" canEditLink canEditText to="/community">Message the team</Editable><Editable as={NavLink} contentKey="ui-42" canEditLink canEditText to="/contact">Contact &amp; visit help</Editable><Editable as={NavLink} contentKey="ui-43" canEditLink canEditText to="/accessibility">Accessibility</Editable><Editable as={NavLink} contentKey="ui-44" canEditLink canEditText to="/media-rights">Media permissions</Editable><Editable as="a" contentKey="ui-45" canEditLink canEditText href="/sitemap.xml">Sitemap</Editable></Editable><Editable as="p" contentKey="ui-46" canEditText className="footer-motto">Trust.<br/>Train.<br/><Editable as="em" contentKey="ui-47" canEditText>Deploy.</Editable></Editable></Editable><Editable as="div" contentKey="ui-48" className="shell footer-baseline footer-baseline--split"><Editable as="span" contentKey="ui-49" canEditText>© 2026 Bravo K9 Solutions, LLC. All rights reserved.</Editable><Editable as="span" contentKey="ui-50" canEditText>ABERDEEN, SD · WE COME TO YOU</Editable></Editable><Editable as="div" contentKey="ui-51" className="shell footer-credit"><Editable as="p" contentKey="ui-52" canEditText>Built by Northrop Web Design &amp; Development Team using FRACTURE.</Editable></Editable></Editable>; }
 export function Page({ children, title, eyebrow, intro, className = '' }) { const { pathname } = useLocation(), metadata = PAGE_METADATA[pathname], pageKey = metadata ? (pathname.slice(1) || 'home') : 'not-found'; const pageRoot = useRef(null); const publicPage = Boolean(metadata && !metadata.private); useCinematicMotion(pageRoot, { enabled: publicPage, selector: '.app-page-title, .service-cinematic-image, .service-questions, .training-next-step, .service-process, .workshop-details, .training-facts' }); return <><Header/><Editable as="main" contentKey={`page-${pageKey}-layout`} ref={pageRoot} data-public-page={publicPage ? pageKey : undefined} id="main-content" tabIndex={-1} className={`app-page shell ${className}`}><BackButton/>{metadata && !metadata.private && pathname !== "/" && <Editable as="nav" contentKey="ui-54" className="page-breadcrumbs" aria-label="Breadcrumb"><Editable as={Link} contentKey="ui-55" canEditLink canEditText to="/">Home</Editable><span aria-hidden="true"> / </span><Editable as="span" contentKey="ui-57" aria-current="page">{metadata.label}</Editable></Editable>}<Editable as="div" contentKey={`page-${pageKey}-heading`} className="app-page-title"><Editable as="div" contentKey={`page-${pageKey}-heading-inner`}>{eyebrow && <Editable as="p" contentKey={`page-${pageKey}-eyebrow`} canEditText={!!metadata && !metadata.private && pathname!=="/learn"} className="kicker gold">{eyebrow}</Editable>}<Editable as="h1" contentKey={`page-${pageKey}-title`} canEditText={!!metadata && !metadata.private}>{title}</Editable></Editable>{intro && <Editable as="p" contentKey={`page-${pageKey}-intro`} canEditText={!!metadata && !metadata.private}>{intro}</Editable>}</Editable><Editable as="div" contentKey="ui-63" className="site-media-tools-slot" data-site-media-tools=""/>{children}</Editable><Footer/></>; }
 export function Notice({ children, error = false }) { return children ? <Editable as="div" contentKey="ui-64" className={`notice ${error ? 'notice-error' : ''}`} role={error ? 'alert' : 'status'}>{children}</Editable> : null; }
 export function AppointmentNotice({ compact = false }) { return <Editable as="aside" contentKey="ui-65" className={`appointment-policy ${compact ? 'is-compact' : ''}`} aria-label="Important appointment notice"><Editable as="strong" contentKey="ui-66" canEditText>IMPORTANT APPOINTMENT NOTICE</Editable><Editable as="p" contentKey="ui-67" canEditText>Please provide at least 24 hours’ notice for any appointment changes, cancellations, or rescheduling.</Editable><Editable as="p" contentKey="ui-68" canEditText>Changes made with less than 24 hours’ notice are subject to a $100 inconvenience fee.</Editable></Editable>; }

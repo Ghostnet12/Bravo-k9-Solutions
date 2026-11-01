@@ -18,6 +18,11 @@ export default function TransportPage() {
   }
   return <div className="transport-page"><Header/><main id="main-content" tabIndex={-1}>
     <TransportHero/>
+    <nav className="transport-page-nav" aria-label="Journey shortcuts">
+      <a href="#track-bravo">Track the vehicle <span aria-hidden="true">↗</span></a>
+      <Link to="/transport">Breeder &amp; client portal <span aria-hidden="true">→</span></Link>
+      <Link to="/tracker-guide">Watch tracker guide <span aria-hidden="true">▶</span></Link>
+    </nav>
     <div id="track-bravo"><GlympseTracking/></div>
     <section className="transport-signup panel" aria-labelledby="transport-portal-title"><div><h2 id="transport-portal-title">Your dog’s journey. One private place.</h2><p>Breeders and clients can sign in to view assigned transports, trip updates and available vehicle tracking.</p></div><div><Link className="button" to="/transport">Breeder & Client Portal →</Link><p className="helper">Use your own Bravo account. Trip details appear after Bravo assigns your access.</p></div></section>
     <section id="transport-updates" className="transport-signup panel" tabIndex={-1} aria-labelledby="transport-signup-title">

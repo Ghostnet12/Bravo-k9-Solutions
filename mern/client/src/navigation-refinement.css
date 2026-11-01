@@ -1,0 +1,100 @@
+/* Keep primary choices visible; reveal supporting pages only on request. */
+.app-header.bravo-nav #bravo-navigation.is-open {
+  gap: 18px;
+  padding-block: 14px 22px;
+}
+.app-header.bravo-nav #bravo-navigation.is-open .nav-explore {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 4px 24px;
+}
+.app-header.bravo-nav #bravo-navigation.is-open .nav-group-label {
+  flex-basis: 100%;
+  grid-column: 1 / -1;
+  margin: 0 10px 6px;
+  font-size: 10px;
+  letter-spacing: .1em;
+  color: #b9b3a9;
+}
+.app-header.bravo-nav #bravo-navigation.is-open .nav-explore > a,
+.app-header.bravo-nav #bravo-navigation.is-open :is(.nav-about,.nav-resources) > summary {
+  width: 100%;
+  min-height: 46px;
+  padding: 11px 10px;
+  margin: 0;
+  border: 0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: normal;
+  color: #f4f1eb;
+}
+.app-header.bravo-nav #bravo-navigation.is-open :is(.nav-about,.nav-resources) {
+  width: 100%;
+  min-width: 0;
+}
+.app-header.bravo-nav #bravo-navigation.is-open :is(.nav-about,.nav-resources)[open] {
+  grid-column: 1 / -1;
+}
+.app-header.bravo-nav #bravo-navigation.is-open .nav-about-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 16px;
+  padding: 6px 10px 10px;
+  border: 0;
+  border-left: 1px solid #ba9a6455;
+  border-radius: 0;
+  background: transparent;
+}
+.app-header.bravo-nav #bravo-navigation.is-open .nav-about-links a {
+  min-height: 44px;
+  padding: 10px;
+  border: 0;
+  font-size: 13px;
+  font-weight: 400;
+  white-space: normal;
+}
+.app-header.bravo-nav #bravo-navigation.is-open .nav-workspace,
+.app-header.bravo-nav[data-signed-in=true] #bravo-navigation.is-open .nav-workspace {
+  order: -1;
+  gap: 6px 14px;
+  padding: 0 0 16px;
+  border-top: 0;
+  border-bottom: 1px solid #ffffff12;
+}
+.app-header.bravo-nav #bravo-navigation.is-open .nav-workspace a { border: 0; }
+.app-header.bravo-nav #bravo-navigation.is-open a[aria-current=page]:not(.nav-book),
+.app-header.bravo-nav #bravo-navigation.is-open :is(a,summary):hover {
+  color: #e1c99d;
+  background: #ffffff06;
+}
+.app-header.bravo-nav #bravo-navigation.is-open .nav-book:hover { color: #101010; background: #d2b57f; }
+.transport-page-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 28px;
+  width: min(1200px, calc(100% - 40px));
+  margin: 24px auto;
+  padding: 12px 0;
+  border-block: 1px solid #ba9a6433;
+}
+.transport-page-nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  color: #e1c99d;
+  font-size: 14px;
+  text-decoration: none;
+}
+.transport-page-nav a:hover { text-decoration: underline; }
+@media (max-width: 380px) {
+  .app-header.bravo-nav #bravo-navigation.is-open .nav-explore { column-gap: 6px; }
+  .app-header.bravo-nav #bravo-navigation.is-open .nav-about-links { grid-template-columns: 1fr; }
+}
+@media (forced-colors: active) {
+  .app-header.bravo-nav #bravo-navigation.is-open a[aria-current=page] { outline: 1px solid LinkText; }
+}

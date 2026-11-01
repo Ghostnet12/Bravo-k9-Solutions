@@ -63,11 +63,11 @@ try {
           const photo = await page.locator('.transport-photo').boundingBox(), badge = await page.locator('.transport-badge').boundingBox();
           assert.ok(badge.x >= photo.x && badge.x + badge.width <= photo.x + photo.width && badge.y >= photo.y && badge.y + badge.height <= photo.y + photo.height);
           assert.equal(await page.locator('header a[href="/k9-transport"]').count(), 1);
-          assert.equal(await page.locator('footer a[href="/k9-transport"]').count(), 1);
+          assert.equal(await page.locator('footer a[href="/k9-transport"]').count(), 0);
           await page.screenshot({ path: `test-results/transport-${name}-${width}.png`, fullPage: true });
           // Follow the prominent guide link and verify real media playback,
           // chapter seeking and the return to the same tracker on every layout.
-          await page.getByRole('link', { name: /Watch tracker guide/ }).click();
+          await page.locator('.transport-page-nav').getByRole('link', { name: /Watch tracker guide/ }).click();
           await page.waitForURL('**/tracker-guide');
           const player = page.locator('.how-to-player video');
           await player.waitFor();

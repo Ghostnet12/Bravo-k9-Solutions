@@ -72,8 +72,9 @@ try {
         await page.waitForURL(origin + '/');
         const toggle = page.locator('.menu-toggle');
         if (await toggle.isVisible()) await toggle.click();
-        const menuLink = page.locator('#bravo-navigation .nav-explore > a[href="/fci-support"]');
-        assert.equal(await menuLink.count(), 1, 'one direct FCI menu link');
+        await page.locator('#bravo-navigation .nav-resources > summary').click();
+        const menuLink = page.locator('#bravo-navigation .nav-resources a[href="/fci-support"]');
+        assert.equal(await menuLink.count(), 1, 'one FCI resource link');
         await menuLink.click();
         await page.waitForURL('**/fci-support');
         if (await toggle.isVisible()) assert.equal(await toggle.getAttribute('aria-expanded'), 'false', 'menu closes after navigation');

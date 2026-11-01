@@ -136,11 +136,14 @@ try {
     await page.screenshot({ path:`test-results/mobile-pricing-${engineName}-${width}.png` });
     await page.locator('.mobile-home-nav').getByRole('button', {name:'More'}).click();
     const primary = page.getByRole('navigation', {name:'Primary navigation'});
+    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('href')), '/training', 'bottom menu moves keyboard focus to the revealed links');
+    await primary.locator('.nav-resources > summary').click();
     await primary.getByRole('link', {name:/FCI Support/}).waitFor({state:'visible'});
     assert.ok(await primary.getByRole('link', {name:/Tools of the trade/i}).isVisible());
     const paths = await primary.locator('a').evaluateAll(links=>links.map(link=>link.getAttribute('href')));
     assert.equal(paths.indexOf('/tools-of-the-trade'), paths.indexOf('/fci-support') + 1, 'Tools immediately follows FCI');
-    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('href')), '/training', 'bottom menu moves keyboard focus to the revealed links');
+    await page.keyboard.press('Escape');
+    assert.equal(await primary.locator('.nav-resources').getAttribute('open'), null, 'Escape closes Resources first');
     await page.keyboard.press('Escape');
     assert.equal(await page.evaluate(() => document.activeElement?.hasAttribute('data-navigation-toggle')), true, 'Escape returns focus to the opener');
     await follow(page.locator('.mobile-home-nav').getByRole('link', {name:/Book now/}));
