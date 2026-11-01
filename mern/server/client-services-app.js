@@ -1,4 +1,5 @@
 import { fciUpdatesHandler, fciCronHandler } from './fci-updates.js';
+import { transportPortalRoutes } from './transport-portal.js';
 import { issueRecovery, completeRecovery } from './account-recovery.js';
 import { readLessonLibrary } from './lesson-library.js';
 import siteAdsRouter from './site-ads.js';
@@ -43,6 +44,7 @@ const id = z.string().regex(/^[a-f\d]{24}$/i);
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const staff = user => ['staff', 'owner'].includes(user.role);
 const audience = user => staff(user) ? { $or: [{ staff: true }, { staff: false, userId: user._id }] } : { staff: false, userId: user._id };
+transportPortalRoutes(app);
 
 // Bounded, same-origin telemetry; aggregate reports require the actual Owner.
 app.post('/api/telemetry/visit', ...session, ...write, rateLimit('telemetry-visit', 30, 60000), ingestVisit);

@@ -82,6 +82,7 @@ export function Header({ homeChapters = false } = {}) {
           <Editable as={Link} contentKey="ui-12" canEditLink canEditText to="/reviews">Reviews</Editable>
           <Editable as={NavLink} contentKey="cinema-nav-workshops" canEditLink canEditText to="/workshops">Workshops</Editable>
           <Editable as={NavLink} contentKey="nav-k9-transport" canEditLink canEditText to="/k9-transport">K9 Transport</Editable>
+          <NavLink to="/transport">Breeder & Client Portal</NavLink>
           <NavLink to="/live">Live Cams</NavLink>
           <NavLink to="/fci-support">FCI Support</NavLink>
           <Editable as={NavLink} contentKey="nav-tools-of-the-trade" canEditLink canEditText to="/tools-of-the-trade">Tools of the Trade</Editable>

@@ -10,6 +10,7 @@
     }
   ],
   "redirects": [
+    { "source": "/transport.html", "destination": "/transport", "permanent": true },
     { "source": "/training.html", "destination": "/training", "permanent": true },
     { "source": "/our-approach.html", "destination": "/our-approach", "permanent": true },
     { "source": "/team.html", "destination": "/team", "permanent": true },
@@ -56,6 +57,7 @@
     }
   },
   "rewrites": [
+    { "source": "/transport", "destination": "/transport.html" },
     { "source": "/", "destination": "/api/homepage" },
     { "source": "/training", "destination": "/api/public-page?path=/training" },
     { "source": "/our-approach", "destination": "/api/public-page?path=/our-approach" },
@@ -85,6 +87,7 @@
     { "source": "/hunting-dog-training", "destination": "/api/public-page?path=/hunting-dog-training" }
   ],
   "headers": [
+    { "source": "/transport(.*)", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }, { "key": "Cache-Control", "value": "private, no-store" }] },
     {
       "source": "/assets/:path*",
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
@@ -92,7 +95,7 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; media-src 'self' blob:; connect-src 'self'; frame-src https://www.facebook.com; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" },
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; media-src 'self' blob:; connect-src 'self'; frame-src https://www.facebook.com https://www.openstreetmap.org; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" },
         { "key": "X-Frame-Options", "value": "DENY" },
         { "key": "Permissions-Policy", "value": "camera=(self), microphone=(self), geolocation=(), accelerometer=(), gyroscope=(), magnetometer=(), usb=(), serial=(), hid=(), midi=()" },
         { "key": "X-Content-Type-Options", "value": "nosniff" },
