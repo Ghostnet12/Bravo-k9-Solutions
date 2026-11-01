@@ -7,6 +7,7 @@ const GLYMPSE_EMBED = 'https://glympse.com/ext/!bravok9transport';
 const PORTAL_URL = 'https://bravounleashed.com/transport';
 
 export function CopyTransportLink({ tripId }) {
+  const textId = useId();
   const [notice, setNotice] = useState(''), [fallback, setFallback] = useState('');
   const url = tripId ? `${PORTAL_URL}?trip=${encodeURIComponent(tripId)}` : GLYMPSE_URL;
   async function copy() {
@@ -17,7 +18,7 @@ export function CopyTransportLink({ tripId }) {
     try { await navigator.clipboard.writeText(text); setNotice(tripId ? 'Trip invitation copied. Ready for you to send.' : 'Tracking link copied.'); }
     catch { setFallback(text); setNotice('Copy the text below to share.'); }
   }
-  return <div className="gt-copy"><button type="button" className="button button-ghost" onClick={copy}>{tripId ? 'Copy trip invitation' : 'Copy tracking link'}</button><span className="gt-feedback" role="status">{notice}</span>{fallback && <label>Share text<textarea readOnly value={fallback} rows={tripId ? 5 : 2} onFocus={event => event.target.select()}/></label>}</div>;
+  return <div className="gt-copy"><button type="button" className="button button-ghost" onClick={copy}>{tripId ? 'Copy trip invitation' : 'Copy tracking link'}</button><span className="gt-feedback" role="status">{notice}</span>{fallback && <><label htmlFor={textId}>Share text</label><textarea id={textId} readOnly value={fallback} rows={tripId ? 5 : 2} onFocus={event => event.target.select()}/></>}</div>;
 }
 
 export default function GlympseTracking() {
