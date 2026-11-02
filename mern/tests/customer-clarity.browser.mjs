@@ -37,7 +37,7 @@ try {for(const [engineName,engine]of Object.entries({chromium,webkit})){if(proce
   assert.equal(await page.locator('.home-hero-image').evaluate(el=>getComputedStyle(el).objectFit),'contain');
   await page.goto(origin);await page.waitForLoadState('networkidle');
   assert.match(await page.locator('h1').innerText(), /Dog training.\s*For real life./i);
-  assert.ok(await page.getByText('Real life. Real confidence. A calmer life together.',{exact:true}).isVisible());
+  assert.ok(await page.getByText('A calmer walk. A stronger connection. More life together. Private training that starts with your dog—and fits your everyday.',{exact:true}).isVisible());
   await page.goto(origin+'/training');await page.waitForLoadState('networkidle');
   const visiblePrice=page.locator('.conversion-price');
   assert.ok(await visiblePrice.isVisible());
