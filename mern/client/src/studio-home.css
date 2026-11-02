@@ -132,6 +132,7 @@ body:has(.bravo-studio-home.bravo-hub) #root { padding-top:0; }
   .bravo-studio-home .studio-team { grid-template-columns:120px 1fr auto; gap:28px; padding:30px; }
 }
 @media(max-width:980px) {
+  .bravo-studio-home .app-header.bravo-nav { position:sticky; top:0; z-index:85; background:#101010f5; backdrop-filter:blur(14px); }
   .bravo-studio-home .app-header .home-desktop-nav { display:none; }
   .bravo-studio-home .header-quick-action { margin-left:auto; }
   .bravo-studio-home .studio-hero.home-hero { padding-block:45px; gap:30px; }
@@ -151,7 +152,6 @@ body:has(.bravo-studio-home.bravo-hub) #root { padding-top:0; }
 }
 @media(max-width:700px) {
   .bravo-studio-home .studio-shell,.bravo-studio-home .app-header.bravo-nav .header-inner,.bravo-studio-home .bravo-footer .shell { width:calc(100% - 40px); }
-  .bravo-studio-home .app-header.bravo-nav { position:sticky; top:0; z-index:85; background:#101010f5; backdrop-filter:blur(14px); }
   .bravo-studio-home .app-header.bravo-nav .header-inner { min-height:72px; gap:16px; }
   .bravo-studio-home .header-quick-action { min-height:38px; font-size:9px; padding:8px 11px; }
   .bravo-studio-home .studio-hero.home-hero { grid-template-columns:1fr; gap:30px; padding:38px 0 30px; }

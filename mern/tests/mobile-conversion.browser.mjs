@@ -132,6 +132,18 @@ try {
       assert.ok(access.y + access.height <= nav.y, 'accessibility stays above navigation');
     }
     assert.equal(await hero.getAttribute('href'), '/portal?program=training');
+    if(width>700 && width<=980) {
+      await page.locator('.hub-transport').scrollIntoViewIfNeeded();
+      const more=page.locator('.mobile-home-nav button[aria-controls="bravo-navigation"]');
+      await more.click();
+      const header=await page.locator('.app-header').boundingBox();
+      const firstLink=await page.locator('#bravo-navigation a[href="/training"]').first().boundingBox();
+      const bottomNav=await page.locator('.mobile-home-nav').boundingBox();
+      assert.ok(Math.abs(header.y)<1 && header.y+header.height<=bottomNav.y+1,'tablet menu stays within the viewport after scrolling');
+      assert.ok(firstLink.y>=0 && firstLink.y+firstLink.height<=bottomNav.y,'revealed tablet navigation is reachable');
+      await more.press('Escape');
+      assert.equal(await more.getAttribute('aria-expanded'),'false');
+    }
     await navigate(origin+'/training');
     assert.equal(await page.locator('.conversion-goal').count(), 4);
     assert.equal(await page.locator('.goal-finder').count(), 0, 'one shared training selector');
