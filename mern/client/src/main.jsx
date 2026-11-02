@@ -44,6 +44,7 @@ import './public-experience.css';
 import './home-redesign.css';
 import './bravo-hub.css';
 import './navigation-refinement.css';
+import './studio-home.css';
 // Keep the server-rendered public page readable until its interactive module
 // is ready. A failed chunk must not replace useful HTML with a loading/error shell.
 const publicPageLoaders = {
