@@ -47,7 +47,7 @@ try{
     for(const selector of ['#explore-bravo','.hub-results','.hub-team','.hub-transport','.hub-close']){await page.locator(selector).scrollIntoViewIfNeeded();await page.waitForFunction(s=>getComputedStyle(document.querySelector(s)).opacity==='1',selector);}
     const height=await page.locator('main').evaluate(e=>e.offsetHeight);assert.ok(height<(width<=700?6500:4400),`home content remains focused: ${height}px`);
     await page.screenshot({path:`test-results/focused-home-${name}-${width}.png`,fullPage:true});
-    await page.locator('main a[href="/our-approach"]').first().click();await page.getByRole('tab',{name:'Trust.',exact:true}).waitFor();
+    await page.locator('.hub-team a[href="/our-approach"]').click();await page.getByRole('tab',{name:'Trust.',exact:true}).waitFor();
     for(const tabName of ['Train.','Deploy.','Trust.']){await page.getByRole('tab',{name:tabName,exact:true}).click();assert.equal(await page.getByRole('tabpanel').count(),1);}
     await navigate(origin+'/team');await page.getByRole('heading',{name:'David Northrop',exact:true}).waitFor();
     await navigate(origin+'/reviews');await page.locator('.facebook-recommendations article').first().waitFor();await page.locator('.facebook-recommendations article').first().getByText('Read full review',{exact:true}).click();assert.ok(await page.locator('.review-full blockquote').first().isVisible());
