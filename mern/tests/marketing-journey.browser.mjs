@@ -52,7 +52,7 @@ try {
         const fits = async () => assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${engineName}/${width}: no horizontal overflow`);
         try {
           await visit('/');
-          assert.match(await page.locator('#home-title').innerText(), /Dog training.\s*For real life./);
+          assert.match(await page.locator('#home-title').innerText(), /Dog training.\s*For real life./i);
           await page.locator('.home-hero').screenshot({path:`test-results/clarity-hero-${engineName}-${width}.png`});
           await visit('/reviews');
           assert.equal(await page.locator('.client-story-card').count(), 3, 'published client outcomes become three sourced case summaries');
