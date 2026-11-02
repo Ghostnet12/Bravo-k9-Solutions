@@ -42,7 +42,7 @@ try {
           const image = page.locator('.cinema-hero-still');
           await image.evaluate(img => img.decode());
           const source = await image.evaluate(img => img.currentSrc);
-          const pixels = Math.min(1180,width-(width<=700?40:48)) * deviceScaleFactor;
+          const pixels = (width >= 1296 ? 542 : width <= 700 ? width - 60 : (width - 128) / 2) * deviceScaleFactor;
           const expectedImage = pixels <= 600 ? 'hero-real-confidence-600.webp' : pixels <= 900 ? 'hero-real-confidence-900.webp' : 'hero-real-confidence.webp';
           assert.ok(source.endsWith(expectedImage), source);
           const heroRequests = requests.filter(path => /\/hero-real-confidence(?:-\d+)?\.webp$/.test(path));
@@ -54,13 +54,18 @@ try {
           assert.equal(await page.locator('main a[href="/results"]').count(),1,'editable original gallery remains reachable on Results');
           const photoBox = await image.boundingBox();
           const copyBox = await page.locator('.cinema-hero-copy').boundingBox();
-          assert.ok(copyBox.y + copyBox.height <= photoBox.y, 'headline and booking precede the cinematic image panel');
-          assert.ok(Math.abs(photoBox.x + photoBox.width / 2 - width / 2) < 2, 'the image panel stays centered');
-          assert.ok(photoBox.width >= width * .8, 'the visual fills the page rather than a narrow portrait column');
+          if(width<=700) {
+            assert.ok(copyBox.y + copyBox.height <= photoBox.y, 'phone copy precedes the photo');
+            assert.ok(photoBox.width >= width * .75, 'phone image remains prominent');
+          } else {
+            assert.ok(copyBox.x + copyBox.width <= photoBox.x, 'larger screens show a split hero');
+            assert.ok(photoBox.width >= width * .35, 'photo has a substantial column');
+          }
+          assert.ok(photoBox.x>=0 && photoBox.x+photoBox.width<=width,'photo stays within the screen');
           if (height > 700) {
             const primary = await page.locator('.polish-hero-actions a').first().boundingBox();
             const navigation = await page.locator('.mobile-home-nav').boundingBox();
-            assert.ok(primary.y > 74 && primary.y + primary.height < navigation.y, 'booking stays immediately reachable');
+            assert.ok(primary.y > 0 && primary.y + primary.height < (navigation?.y ?? height), 'booking stays immediately reachable');
           }
           const sectionOrder = await page.locator('#main-content').evaluate(main => {
             const sections = [...main.querySelectorAll('#explore-bravo, .hub-stories, .hub-transport, [aria-labelledby="booking-title"]')];

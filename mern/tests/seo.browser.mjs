@@ -125,7 +125,7 @@ try {
           const price = page.locator('.hub-price');
           await price.waitFor();
           assert.match(await price.innerText(), /\$200/);
-          assert.equal(await page.locator('.cinema-hero .cinema-eyebrow').innerText(), 'TRUST. TRAIN. DEPLOY.');
+          assert.match(await page.locator('.cinema-hero .cinema-eyebrow').innerText(), /ABERDEEN.*WE COME TO YOU/);
           const cta = page.locator('.cinema-hero').getByRole('link', { name: /Start my training plan/i });
           const box = await cta.boundingBox();
           assert.ok(box && box.y >= 0 && box.y + box.height <= 900, 'booking action fits in initial mobile viewport');

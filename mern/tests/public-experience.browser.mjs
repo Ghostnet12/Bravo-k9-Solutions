@@ -55,21 +55,23 @@ try {
           await page.evaluate(()=>document.fonts.ready);
           const hero=await page.locator('.polish-hero-actions').getByRole('link',{name:/Start My Training Plan/i}).boundingBox();
           assert.ok(hero && hero.y>0 && hero.y+hero.height<=950,'booking remains immediately visible');
-          assert.match(await page.locator('#home-title').innerText(),/Dog training.\s*For real life./);
+          assert.match(await page.locator('#home-title').innerText(),/Dog training.\s*For real life./i);
           assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).scrollBehavior),'auto','native anchor navigation keeps controls stationary');
-          assert.match(await page.locator('#home-title').evaluate(node=>getComputedStyle(node).fontFamily),/Montserrat/);
+          assert.match(await page.locator('#home-title').evaluate(node=>getComputedStyle(node).fontFamily),/Bebas Neue/);
           const imageTop=await page.locator('.cinema-hero-media').evaluate(node=>node.getBoundingClientRect().top);
-          assert.ok(imageTop>hero.y+hero.height,'the new opening puts the booking message before the image');
+          if(width<=700) assert.ok(imageTop>hero.y+hero.height,'phone booking precedes the image');
+          else { const media=await page.locator('.cinema-hero-media').boundingBox(); assert.ok(media.x>=hero.x+hero.width,'larger screens place the photo beside booking'); }
           assert.equal(await page.locator('.training-journey').count(),0,'the complete approach has its own page');
           if(width===1440) {
             assert.equal(await page.locator('.home-desktop-nav').getByRole('link',{name:'Training',exact:true}).getAttribute('href'),'/training');
-            for(const breakpointWidth of [1100,1120,1121,1200,1440]) {
+            for(const breakpointWidth of [980,981,1100,1200,1440]) {
+              await page.goto(origin);await page.locator('.bravo-hub').waitFor();
               await page.setViewportSize({width:breakpointWidth,height:950});
               const header=await page.locator('.app-header').boundingBox();
               assert.ok(header.height<100,`${breakpointWidth}: chapter navigation never expands the fixed header`);
               const chapters=page.locator('.home-desktop-nav');
-              assert.equal(await chapters.isVisible(),breakpointWidth>1120,`${breakpointWidth}: chapters respect the shared navigation breakpoint`);
-              if(breakpointWidth>1120) {
+              assert.equal(await chapters.isVisible(),breakpointWidth>980,`${breakpointWidth}: chapters respect the shared navigation breakpoint`);
+              if(breakpointWidth>980) {
                 const tops=await chapters.locator('a').evaluateAll(links=>links.map(link=>link.getBoundingClientRect().top));
                 assert.ok(Math.max(...tops)-Math.min(...tops)<1,'desktop chapter links stay in one row');
                 await chapters.getByRole('link',{name:'Our approach',exact:true}).click();

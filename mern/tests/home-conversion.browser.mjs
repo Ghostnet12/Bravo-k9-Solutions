@@ -56,7 +56,7 @@ try {
         assert.equal(await page.getByRole('button', { name: 'Turn hero video sound on', exact: true }).count(), 0);
         assert.equal(await page.getByRole('button', { name: 'Next hero video', exact: true }).count(), 0);
         await page.emulateMedia({ reducedMotion: 'reduce' });
-        await page.waitForFunction(() => document.querySelector('.cinema-home').dataset.motion === 'off');
+        await page.waitForFunction(() => document.querySelector('.bravo-hub').dataset.motion === 'off');
         await page.emulateMedia({ reducedMotion: 'no-preference' });
         await page.goto(origin+'/reviews',{waitUntil:'networkidle'});
         await page.getByRole('heading', { name: /Don’t take\s*our word for it\./ }).waitFor();

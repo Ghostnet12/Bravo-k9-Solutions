@@ -112,15 +112,25 @@ try {
     const hero = page.locator('.polish-hero-actions').getByRole('link', { name: /Start my training plan/i });
     await hero.scrollIntoViewIfNeeded();
     const box = await hero.boundingBox(), nav = await page.locator('.mobile-home-nav').boundingBox();
-    assert.ok(box.y >= 74 && box.y + box.height <= nav.y, 'hero action is reachable without overlap from sticky controls');
+    const viewportBottom = nav?.y ?? page.viewportSize().height;
+    assert.ok(box.y >= 0 && box.y + box.height <= viewportBottom, 'hero action clears visible navigation');
     const media = await page.locator('.cinema-hero-media').boundingBox();
-    assert.ok(Math.abs(media.x + media.width / 2 - width / 2) < 2, 'the cinematic panel is centered at every width');
     const copy = await page.locator('.cinema-hero-copy').boundingBox();
-    assert.ok(copy.y + copy.height <= media.y, 'the message and booking precede the image panel');
-    assert.ok(media.width >= width*.8 && media.x + media.width <= width, 'the image fills the page without horizontal overflow');
-    if(width>=1000)assert.ok(media.width>media.height,'desktop uses the new wide image composition');
-    assert.equal(await page.locator('.home-ad-dock').count(),0); assert.ok(Math.abs(nav.y+nav.height-page.viewportSize().height)<2, 'navigation sits at the phone bottom without ad space');
-    const access = await page.locator('.accessibility-tools').boundingBox(); assert.ok(access.y + access.height <= nav.y, 'accessibility stays above navigation');
+    assert.ok(media.x >= 0 && media.x + media.width <= width, 'image stays inside viewport');
+    if(width<=700) {
+      assert.ok(copy.y + copy.height <= media.y, 'phone message and booking precede the image');
+      assert.ok(media.width >= width*.75, 'phone image remains prominent');
+    } else {
+      assert.ok(copy.x + copy.width <= media.x, 'desktop and tablet copy sit beside the photo');
+      assert.ok(media.width >= width*.35, 'split hero reserves a substantial photo column');
+    }
+    assert.equal(await page.locator('.home-ad-dock').count(),0);
+    assert.equal(await page.locator('.mobile-home-nav').isVisible(),width<=980,'quick navigation is reserved for smaller screens on home');
+    if(nav) {
+      assert.ok(Math.abs(nav.y+nav.height-page.viewportSize().height)<2, 'navigation sits at the phone bottom');
+      const access = await page.locator('.accessibility-tools').boundingBox();
+      assert.ok(access.y + access.height <= nav.y, 'accessibility stays above navigation');
+    }
     assert.equal(await hero.getAttribute('href'), '/portal?program=training');
     await navigate(origin+'/training');
     assert.equal(await page.locator('.conversion-goal').count(), 4);

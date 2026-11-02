@@ -29,7 +29,7 @@ body:has(.bravo-studio-home.bravo-hub) #root { padding-top:0; }
 .bravo-studio-home .app-header.bravo-nav .header-inner>.header-quick-action { display:inline-flex!important; align-items:center; min-height:40px; margin:0; border:1px solid #ba9a6460; background:transparent; color:var(--studio-cream); border-radius:4px; padding:9px 16px; font-size:11px; font-weight:600; text-decoration:none; }
 .bravo-studio-home .studio-hero.home-hero { display:grid; grid-template-columns:1.04fr 1fr; align-items:center; gap:62px; min-height:0; height:auto; padding:68px 0 56px; background:none; border:0; border-radius:0; position:relative; isolation:auto; overflow:visible; }
 .bravo-studio-home .studio-hero::before, .bravo-studio-home .studio-hero::after { display:none; }
-.bravo-studio-home .studio-hero-copy { position:relative; z-index:2; padding:0; text-align:left; }
+.bravo-studio-home .studio-hero-copy { transform:none; opacity:1; pointer-events:auto; position:relative; z-index:2; padding:0; text-align:left; }
 .bravo-studio-home #home-title { margin:24px 0 23px; padding:0; max-width:none; color:var(--studio-cream); font-size:clamp(64px,7.3vw,104px); line-height:.98; letter-spacing:0; text-wrap:initial; }
 .bravo-studio-home #home-title em { font-style:normal; color:var(--studio-gold); background:none; -webkit-text-fill-color:currentColor; }
 .bravo-studio-home .studio-intro { max-width:440px; color:var(--studio-muted); font-size:14px; line-height:1.9; }
@@ -40,7 +40,7 @@ body:has(.bravo-studio-home.bravo-hub) #root { padding-top:0; }
 .bravo-studio-home .studio-hero-note p { font-size:9px; letter-spacing:.13em; color:#c9b68f; }
 .bravo-studio-home .studio-hero-note a { width:100%; padding-left:46px; font-size:10px; color:#95938d; text-decoration:none; }
 .bravo-studio-home .studio-hero-visual { position:relative; padding:0 16px 25px 0; }
-.bravo-studio-home .studio-hero-photo.cinema-hero-media { position:relative; z-index:0; inset:auto; display:block; width:100%; height:540px; border-radius:100px 7px 7px 7px; overflow:hidden; background:#29271f; transform:none; }
+.bravo-studio-home .studio-hero-photo.cinema-hero-media { pointer-events:auto; position:relative; z-index:0; inset:auto; display:block; width:100%; height:540px; border-radius:100px 7px 7px 7px; overflow:hidden; background:#29271f; transform:none; }
 .bravo-studio-home .studio-hero-photo .cinema-hero-still { position:relative; inset:auto; width:100%; height:100%; object-fit:cover; object-position:center 46%; opacity:1; filter:none; transform:none; }
 .bravo-studio-home .studio-photo-label { position:absolute; left:-24px; bottom:0; width:246px; padding:23px 25px; background:#e9dfcb; color:#171713; border:5px solid #101010; border-radius:7px; }
 .bravo-studio-home .studio-photo-label>span:first-child { display:block; font-size:8px; font-weight:700; letter-spacing:.17em; margin-bottom:8px; color:#61563f; }

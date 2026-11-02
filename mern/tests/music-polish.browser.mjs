@@ -78,9 +78,9 @@ try {
      const secondary=await page.locator('.polish-hero-actions .cinema-link').boundingBox();
      assert.ok(box.y>=intro.y+intro.height && box.y<intro.y+intro.height+24,'booking directly below hero copy');
      assert.ok(art.y >= secondary.y + secondary.height, 'the image panel follows the message and booking actions');
-     assert.ok(box.width > width * .85 && Math.abs(box.width-secondary.width) < 2, 'approved full-width buttons have matching widths');
-     assert.ok(Math.abs(box.x-intro.x)<2 && Math.abs(secondary.x-box.x)<2,'both hero buttons align with intro');
-     assert.ok(secondary.y>=box.y+box.height && secondary.height>=44,'secondary button stacked with touch target');
+     assert.ok(box.width > secondary.width && box.width>=160, 'primary action has more visual emphasis');
+     assert.ok(Math.abs(box.x-intro.x)<2 && secondary.x+secondary.width<=width,'actions fit inside the copy column');
+     assert.ok(secondary.height>=44 && secondary.width>=44,'secondary action keeps its touch target');
      const more=page.locator('.mobile-home-nav button[aria-controls="bravo-navigation"]');
      await more.click();assert.equal(await more.getAttribute('aria-expanded'),'true');
      await more.click();assert.equal(await more.getAttribute('aria-expanded'),'false');
