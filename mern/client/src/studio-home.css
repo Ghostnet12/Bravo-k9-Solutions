@@ -1,5 +1,6 @@
 /* One scoped visual system for the homepage. Shared application pages retain
    their existing styles, navigation behavior, and owner editing controls. */
+html:has(.bravo-studio-home) { scroll-behavior:auto; }
 .bravo-studio-home { --studio-gold:#ba9a64; --studio-cream:#f4f0e8; --studio-muted:#b6b4ae; background:#101010; color:var(--studio-cream); font-family:Montserrat,sans-serif; overflow:clip; }
 body:has(.bravo-studio-home.bravo-hub) #root { padding-top:0; }
 .bravo-studio-home *, .bravo-studio-home *::before, .bravo-studio-home *::after { box-sizing:border-box; }
