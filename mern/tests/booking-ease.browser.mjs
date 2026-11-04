@@ -160,7 +160,10 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})) {
       await page.getByRole('heading',{name:'Build your schedule',exact:true}).waitFor();
       assert.equal(await page.getByRole('heading',{name:'Let’s start with your dog.',exact:true}).count(),0,'a signed-in member keeps the full scheduler after draft persistence');
       await page.getByLabel('Dog’s name',{exact:true}).fill('Member full-schedule draft');await page.reload();
+      // The explicit new-request URL preserves the existing resume/discard guard.
+      await page.getByRole('link',{name:'Resume my request',exact:true}).click();
       await page.getByRole('heading',{name:'Build your schedule',exact:true}).waitFor();
+      assert.equal(await page.getByLabel('Dog’s name',{exact:true}).inputValue(),'Member full-schedule draft');
       // Leave booking before clearing this synthetic session: its pagehide
       // persistence can otherwise restore the member draft after clear(),
       // correctly triggering the signed-out privacy guard in the next case.
@@ -184,7 +187,7 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})) {
       assert.equal(new URL(page.url()).pathname,'/portal','clearing a submitted draft must not redirect away from its success screen');
       assert.deepEqual(errors,[]);
       console.log(`PASS ${engineName}/${width}: lighter entry, honest trainer guidance, inline MFA and retry, no credential storage, explicit request/payment state, weekly preview, conflicts, member routine and no silent renewal`);
-    } catch(error) {await page.screenshot({path:`test-results/easier-failure-${engineName}-${width}.png`,fullPage:true});throw error;}
+    } catch(error) {console.error('Booking failure at',page.url(),(await page.locator('main').innerText()).slice(-2500));await page.screenshot({path:`test-results/easier-failure-${engineName}-${width}.png`,fullPage:true});throw error;}
     finally {await context.close();}
   }} finally {await browser.close();}
 }} finally {await new Promise(resolve=>server.close(resolve));}
