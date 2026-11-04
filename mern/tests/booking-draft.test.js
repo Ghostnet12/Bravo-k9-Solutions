@@ -47,3 +47,13 @@ test('an expired sign-in hides an account draft without deleting it before reaut
  assert.equal(readBookingDraft('user:a',{store,now:102}).requestKey,fixture.requestKey,'the same account can restore the request');
  assert.equal(readBookingDraft('user:b',{store,now:103,claimGuest:true}),null);assert.equal(store.getItem(BOOKING_DRAFT_KEY),undefined,'a confirmed different account clears the draft');
 });
+
+test('weekly booking retains all explicit dates and planning mode through sign-in and reload', () => {
+ const store=memory();const visits=[...fixture.visits,{date:'2026-11-04',time:'11:00',service:'training'}];
+ writeBookingDraft('guest',{...fixture,scheduleMode:'routine',visits},{store,now:100});
+ const claimed=readBookingDraft('user:member',{store,now:101,claimGuest:true});
+ writeBookingDraft('user:member',claimed,{store,now:102});
+ const restored=readBookingDraft('user:member',{store,now:103});
+ assert.equal(restored.scheduleMode,'routine');assert.equal(restored.bookingStep,'review');assert.deepEqual(restored.visits,visits);
+ assert.equal(cleanBookingDraft({...fixture,scheduleMode:'invalid'}).scheduleMode,'single');
+});

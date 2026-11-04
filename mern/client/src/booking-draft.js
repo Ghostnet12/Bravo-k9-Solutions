@@ -40,6 +40,7 @@ export function cleanBookingDraft(value) {
     introDone: value.introDone === true, firstVisit: value.firstVisit !== false,
     bookingStep: ['trainer','visit','review'].includes(value.bookingStep) ? value.bookingStep : 'trainer',
     timeConfirmed: value.timeConfirmed === true,
+    scheduleMode: value.scheduleMode === 'routine' ? 'routine' : 'single',
     requestKey: typeof value.requestKey === 'string' && /^[0-9a-f-]{36}$/i.test(value.requestKey) ? value.requestKey : undefined,
   };
 }

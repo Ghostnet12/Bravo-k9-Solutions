@@ -34,3 +34,25 @@
 .booking-entry-page .first-visit-intro .form-grid{grid-template-columns:1fr;gap:0}
 .booking-account-actions[hidden]{display:none}
 .schedule-routine-options>summary{cursor:pointer;min-height:44px;padding:12px 0;color:var(--gold-light)}
+
+/* One choice at a time for booking and the member calendar. */
+.schedule-mode-switch{display:flex;gap:6px;padding:5px;border:1px solid var(--line);border-radius:12px;margin:18px 0;background:#101010}
+.schedule-mode-switch button{flex:1;min-width:0;min-height:48px;padding:10px 14px;border:1px solid transparent;border-radius:8px;background:transparent;color:#eee5d7;font:inherit;font-weight:600;cursor:pointer;line-height:1.4}
+.schedule-mode-switch button[aria-pressed=true]{background:#ba9a64;color:#101010;border-color:#ba9a64}
+.schedule-mode-switch button:focus-visible,.schedule-day-toolbar button:focus-visible,.routine-presets button:focus-visible{outline:3px solid #e8ce97;outline-offset:3px}
+.routine-presets{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}
+.routine-presets .quiet-button{min-height:44px;border:1px solid var(--line);border-radius:8px;padding:8px 12px}
+.routine-draft{margin:24px 0;padding-top:8px;border-top:1px solid var(--line)}
+.routine-draft ul{padding:0;margin:16px 0;list-style:none;max-height:400px;overflow:auto}
+.routine-draft li{display:grid;grid-template-columns:minmax(0,1fr) minmax(100px,140px) auto;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+.routine-draft li label{margin:0}.routine-draft li strong{font-size:.9rem}.routine-draft li select{min-width:0}
+.schedule-next-visit{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:22px;margin:18px 0 22px;border:1px solid #ba9a64;border-radius:14px;background:linear-gradient(120deg,#ba9a6417,#101010)}
+.schedule-next-visit h3{margin:8px 0;font-size:clamp(1.1rem,3vw,1.5rem)}.schedule-next-visit p{margin:6px 0 12px}
+.schedule-next-visit .button{white-space:normal;flex-shrink:0}
+.schedule-day-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:24px 0 16px;scroll-margin-top:130px}
+.schedule-day-toolbar h3{font-size:1.3rem;margin:0}.schedule-day-toolbar .button{white-space:normal}
+.visit-status{display:inline-block;font-size:.8rem;font-weight:600;line-height:1.5;border:1px solid #ba9a64;border-radius:6px;padding:5px 9px;margin:6px 0;color:#ead7b6;background:#ba9a6414}
+.visit-status-confirmed{border-color:#749784;color:#c3e5cf;background:#233c2a}.visit-status-cancelled{border-color:#777;color:#d1d1d1;background:#282828}
+.saved-calendar button[aria-current=date] strong{text-decoration:underline;text-underline-offset:4px}
+@media(max-width:600px){.schedule-next-visit,.schedule-day-toolbar{align-items:stretch;flex-direction:column}.schedule-next-visit{padding:18px}.schedule-mode-switch button{padding:10px 6px;font-size:.85rem}.routine-draft li{grid-template-columns:minmax(0,1fr) minmax(100px,125px)}.routine-draft li>.quiet-button{grid-column:1/-1;justify-self:end;min-height:44px}.schedule-day-toolbar .button{width:100%}}
+@media print{.schedule-next-visit,.schedule-mode-switch,.schedule-day-toolbar,.schedule-edit-actions,.calendar-month-nav,.routine-presets{display:none!important}}

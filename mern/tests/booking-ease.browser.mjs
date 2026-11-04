@@ -96,7 +96,8 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})) {
       await page.goto(`${origin}/portal?program=training`);
       await page.getByLabel('Dog’s name',{exact:true}).fill('Routine Dog');
       await page.getByRole('button',{name:'Plan my entire month',exact:true}).click();
-      await page.getByLabel('Choose my trainer',{exact:true}).selectOption(trainer);
+      await page.locator('.guided-trainer-cards button').filter({hasText:'Fixture Lead'}).click();
+      await page.getByRole('heading',{name:'Plan your weekly visits',exact:true}).waitFor();
       const planner=page.getByRole('region',{name:'Plan a weekly routine',exact:true});
       await planner.getByRole('button',{name:'Preview my routine',exact:true}).click();
       assert.match(await planner.innerText(),/Wed, Nov 4[\s\S]*unavailable/);
@@ -107,10 +108,33 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})) {
       assert.ok(draft.visits.length>8);assert.ok(draft.visits.every(visit=>visit.time==='17:00'&&[1,3,5].includes(routineWeekday(visit.date))));
       assert.ok(!draft.visits.some(visit=>visit.date==='2026-11-04'));
       await fits();await page.screenshot({path:`test-results/easier-month-${engineName}-${width}.png`,fullPage:true});
+      await page.getByRole('button',{name:'Review my request →',exact:true}).click();
+      await page.getByRole('heading',{name:'Review your training schedule.',exact:true}).waitFor();
+      await page.reload();
+      await page.getByRole('heading',{name:'Review your training schedule.',exact:true}).waitFor();
+      assert.equal(await page.getByRole('button',{name:'Send my request • no charge',exact:true}).isEnabled(),true);
+      assert.equal(state.writes.filter(write=>write.path==='/bookings').length,1,'routine preview, adding and reloading never submit automatically');
+      assert.match(await page.locator('.guided-visit-summary').innerText(),new RegExp(`${draft.visits.length} visits`));
+
 
       // Returning member: same dog/trainer, exact routine, fresh coverage and no cancellation.
       state.membership=true;state.visits=[['2026-10-26','10:00'],['2026-10-28','10:00'],['2026-10-30','10:00'],['2026-11-06','11:00']].map(([date,time])=>({date,time,service:'training'}));
       await page.goto(`${origin}/schedule?month=2026-11`);
+      await page.getByRole('button',{name:'Upcoming visits (1)',exact:true}).click();
+      await page.locator('.schedule-list').getByText('Confirmed',{exact:true}).waitFor();
+      await page.getByRole('button',{name:'Change day or time',exact:true}).click();
+      await page.getByLabel('New date',{exact:true}).fill('2026-11-05');
+      await page.getByLabel('New time',{exact:true}).getByRole('option',{name:'10:00 AM',exact:true}).waitFor({state:'attached'});
+      assert.equal(await page.getByRole('button',{name:'Find available times',exact:true}).count(),0,'rescheduling fetches times automatically');
+      await page.getByRole('button',{name:'Keep current visit',exact:true}).click();
+      await page.getByRole('button',{name:'Calendar',exact:true}).click();
+      await page.getByRole('button',{name:/^Thu, Nov 5, 0 visits/}).click();
+      await page.getByRole('button',{name:'Add a visit on this date',exact:true}).click();
+      await page.getByRole('button',{name:'10:00 AM',exact:true}).click();
+      await page.getByText('1 to add · 0 to cancel',{exact:true}).waitFor();
+      await page.getByRole('button',{name:'Reset changes',exact:true}).click();
+      await page.getByRole('button',{name:'Back to calendar',exact:true}).click();
+      assert.equal(state.writes.filter(write=>write.path==='/client-schedule/changes').length,0,'date shortcut stays a draft until saved');
       await page.getByRole('button',{name:'Plan my weekly routine',exact:true}).click();
       await planner.getByRole('button',{name:'Repeat my usual schedule',exact:true}).click();
       assert.match(await planner.innerText(),/4 available · 8 need another time · 1 already planned/);
@@ -130,7 +154,8 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})) {
       await page.evaluate(()=>sessionStorage.clear());
       await page.goto(`${origin}/portal`);await page.waitForURL(`${origin}/schedule`);
       await page.evaluate(()=>sessionStorage.clear());
-      await page.goto(`${origin}/portal?program=training`);await page.waitForLoadState('networkidle');
+      await page.goto(`${origin}/portal?program=training`);await page.waitForURL(`${origin}/schedule`);
+      await page.goto(`${origin}/portal?program=training&new=1`);await page.waitForLoadState('networkidle');
       await page.getByRole('heading',{name:'Build your schedule',exact:true}).waitFor();
       assert.equal(await page.getByRole('heading',{name:'Let’s start with your dog.',exact:true}).count(),0,'a signed-in member keeps the full scheduler after draft persistence');
       await page.getByLabel('Dog’s name',{exact:true}).fill('Member full-schedule draft');await page.reload();
