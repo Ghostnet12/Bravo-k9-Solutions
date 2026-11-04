@@ -53,9 +53,14 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})) {
     await page.clock.setFixedTime(new Date('2026-11-02T14:00:00Z'));
     await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
     page.setDefaultTimeout(10000);page.on('pageerror',error=>errors.push(error.message));
+    // Let the previous page finish its background reads before replacing the document.
+    // WebKit can otherwise report the forced fixture navigation as an access-control error.
+    async function navigate(url) { await page.waitForLoadState('networkidle'); await page.goto(url); await page.waitForLoadState('networkidle'); }
+    async function reload() { await page.waitForLoadState('networkidle'); await page.reload(); await page.waitForLoadState('networkidle'); }
+
     const fits=async()=>{ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)); await page.addScriptTag({content:axe}); const audit=await page.evaluate(()=>window.axe.run('main',{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa']}})); assert.deepEqual(audit.violations.map(item=>({id:item.id,nodes:item.nodes.map(node=>node.target)})),[]); };
     try {
-      await page.goto(`${origin}/portal?program=training`);
+      await navigate(`${origin}/portal?program=training`);
       assert.equal(await page.getByLabel('Number of dogs',{exact:true}).isVisible(),false);
       assert.equal(await page.getByLabel('Anything you’d like your trainer to know? (optional)',{exact:true}).isVisible(),false);
       await page.getByLabel('Dog’s name',{exact:true}).fill('Guided Dog');
@@ -94,7 +99,7 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})) {
       assert.equal(state.writes.find(write=>write.path==='/bookings').body.trainingFocus,'not-sure');
 
       // First-time full-month planning: preview and add are both local drafts.
-      await page.goto(`${origin}/portal?program=training`);
+      await navigate(`${origin}/portal?program=training`);
       await page.getByLabel('Dog’s name',{exact:true}).fill('Routine Dog');
       await page.getByRole('button',{name:'Plan my entire month',exact:true}).click();
       await page.locator('.guided-trainer-cards button').filter({hasText:'Fixture Lead'}).click();
@@ -111,7 +116,7 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})) {
       await fits();await page.screenshot({path:`test-results/easier-month-${engineName}-${width}.png`,fullPage:true});
       await page.getByRole('button',{name:'Review my request →',exact:true}).click();
       await page.getByRole('heading',{name:'Review your training schedule.',exact:true}).waitFor();
-      await page.reload();
+      await reload();
       await page.getByRole('heading',{name:'Review your training schedule.',exact:true}).waitFor();
       assert.equal(await page.getByRole('button',{name:'Send my request • no charge',exact:true}).isEnabled(),true);
       assert.equal(state.writes.filter(write=>write.path==='/bookings').length,1,'routine preview, adding and reloading never submit automatically');
@@ -120,7 +125,7 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})) {
 
       // Returning member: same dog/trainer, exact routine, fresh coverage and no cancellation.
       state.membership=true;state.visits=[['2026-10-26','10:00'],['2026-10-28','10:00'],['2026-10-30','10:00'],['2026-11-06','11:00']].map(([date,time])=>({date,time,service:'training'}));
-      await page.goto(`${origin}/schedule?month=2026-11`);
+      await navigate(`${origin}/schedule?month=2026-11`);
       await page.getByRole('button',{name:'Upcoming visits (1)',exact:true}).click();
       await page.locator('.schedule-list').getByText('Confirmed',{exact:true}).waitFor();
       await page.getByRole('button',{name:'Change day or time',exact:true}).click();
@@ -168,14 +173,14 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})) {
       assert.equal(state.visits.find(visit=>visit.date==='2026-11-06').time,'11:00');assert.deepEqual(errors,[]);
       // Resolving a paid membership must not change the route's chosen mode.
       await page.evaluate(()=>sessionStorage.clear());
-      await page.goto(`${origin}/portal`);await page.waitForURL(`${origin}/schedule`);
+      await navigate(`${origin}/portal`);await page.waitForURL(`${origin}/schedule`);
       await page.evaluate(()=>sessionStorage.clear());
-      await page.goto(`${origin}/portal?program=training`);await page.waitForURL(`${origin}/schedule`);
+      await navigate(`${origin}/portal?program=training`);await page.waitForURL(`${origin}/schedule`);
       assert.equal(await page.evaluate(()=>sessionStorage.getItem('bravo-booking-draft-v1')),null,'opening the saved calendar must not create an empty booking draft');
-      await page.goto(`${origin}/portal?program=training&new=1`);await page.waitForLoadState('networkidle');
+      await navigate(`${origin}/portal?program=training&new=1`);await page.waitForLoadState('networkidle');
       await page.getByRole('heading',{name:'Build your schedule',exact:true}).waitFor();
       assert.equal(await page.getByRole('heading',{name:'Let’s start with your dog.',exact:true}).count(),0,'a signed-in member keeps the full scheduler after draft persistence');
-      await page.getByLabel('Dog’s name',{exact:true}).fill('Member full-schedule draft');await page.reload();
+      await page.getByLabel('Dog’s name',{exact:true}).fill('Member full-schedule draft');await reload();
       // The explicit new-request URL preserves the existing resume/discard guard.
       await page.getByRole('link',{name:'Resume my request',exact:true}).click();
       await page.getByRole('heading',{name:'Build your schedule',exact:true}).waitFor();
@@ -183,9 +188,9 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})) {
       // Leave booking before clearing this synthetic session: its pagehide
       // persistence can otherwise restore the member draft after clear(),
       // correctly triggering the signed-out privacy guard in the next case.
-      await page.goto(`${origin}/contact`);await page.waitForLoadState('networkidle');
+      await navigate(`${origin}/contact`);await page.waitForLoadState('networkidle');
       state.user=null;state.mfa=false;await page.evaluate(()=>sessionStorage.clear());
-      await page.goto(`${origin}/portal`);
+      await navigate(`${origin}/portal`);
       await page.getByLabel('Dog’s name',{exact:true}).fill('Existing Member Dog');
       await page.getByRole('button',{name:'Choose a trainer →',exact:true}).click();
       await page.locator('.guided-trainer-cards button').filter({hasText:'Fixture Lead'}).click();
@@ -196,7 +201,7 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})) {
       await page.getByRole('button',{name:'Send my request • no charge',exact:true}).waitFor();
       assert.equal(new URL(page.url()).pathname,'/portal','inline sign-in must not redirect an active member away from their draft');
       assert.equal(await page.getByLabel('Dog’s name',{exact:true}).inputValue(),'Existing Member Dog','an inline login keeps the guided request even with an active membership');
-      await page.reload();await page.getByRole('button',{name:'Send my request • no charge',exact:true}).waitFor();
+      await reload();await page.getByRole('button',{name:'Send my request • no charge',exact:true}).waitFor();
       assert.equal(new URL(page.url()).pathname,'/portal','reloading the resumed member draft keeps the review open');
       await page.getByRole('button',{name:'Send my request • no charge',exact:true}).click();
       await page.getByRole('list',{name:'Request, payment and appointment status'}).waitFor();
