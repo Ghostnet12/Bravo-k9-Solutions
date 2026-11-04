@@ -155,6 +155,7 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})) {
       await page.goto(`${origin}/portal`);await page.waitForURL(`${origin}/schedule`);
       await page.evaluate(()=>sessionStorage.clear());
       await page.goto(`${origin}/portal?program=training`);await page.waitForURL(`${origin}/schedule`);
+      assert.equal(await page.evaluate(()=>sessionStorage.getItem('bravo-booking-draft-v1')),null,'opening the saved calendar must not create an empty booking draft');
       await page.goto(`${origin}/portal?program=training&new=1`);await page.waitForLoadState('networkidle');
       await page.getByRole('heading',{name:'Build your schedule',exact:true}).waitFor();
       assert.equal(await page.getByRole('heading',{name:'Let’s start with your dog.',exact:true}).count(),0,'a signed-in member keeps the full scheduler after draft persistence');
