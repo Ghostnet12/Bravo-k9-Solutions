@@ -113,7 +113,7 @@ export default function ScheduleChanges({data,initialMonth,onSaved,onClose,start
       }catch(e){setError(e.message)}finally{setBusy(false)}
       return;
     }
-    try {const r=await api('/client-schedule/changes',{method:'POST',body:{bookingId,revision:booking.updatedAt,additions,removals,note,openWeekends:canOpen&&openWeekends,...(isStaff&&!booking.staffId&&!booking.requestedStaffId?{staffId:chosenTrainer}:{})}});onSaved(r.message)}catch(e){setError(e.message)}finally{setBusy(false)}
+    try {const r=await api('/client-schedule/changes',{method:'POST',body:{bookingId,revision:booking.updatedAt,additions,removals,note,openWeekends:canOpen&&openWeekends,...(isStaff&&!booking.staffId&&!booking.requestedStaffId?{staffId:chosenTrainer}:{})}});onSaved(r.message, additions[0]?.date || removals[0]?.date)}catch(e){setError(e.message)}finally{setBusy(false)}
   }
   return <section className="schedule-change-editor" aria-label="Add or Cancel Date"><button type="button" className="button button-ghost editor-back" disabled={busy} onClick={leaveEditor}>{hasChanges ? 'Discard changes & back' : 'Back to calendar'}</button><h3>Add or Cancel Date</h3><ol className="schedule-help" aria-label="Scheduling steps"><li>Select your dates</li><li>{isStaff?'Choose a time, cancel, or give credit':'Choose a time or cancel'}</li><li>Review and save</li></ol><p className="helper">{isStaff?'To credit a missed day, select its date, choose “Give credit for this day”, then save.':'Tap a date and choose a time. For several dates, tap each day first, then apply a time to them together.'}</p>
     {!bookings.length?<p>No paid training request is available to edit. Contact Bravo for help.</p>:<form onSubmit={save}>
