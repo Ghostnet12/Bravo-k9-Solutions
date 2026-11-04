@@ -54,25 +54,25 @@ export default function SavedScheduleCalendar({ data, month, reload, onMonth, st
 function VisitStatus({status}) { return <span className={`visit-status visit-status-${status}`}>{({confirmed:'Confirmed',requested:'Awaiting Bravo confirmation',waitlisted:'Waiting list · no time reserved',cancelled:'Cancelled'})[status] || status}</span>; }
 function VisitEditor({ visit, reload }) {
   const {user}=useBravo(),isStaff=['staff','owner'].includes(user.role);
-  const [action, setAction] = useState(''), [date, setDate] = useState(visit.date), [time, setTime] = useState(''), [hours, setHours] = useState([]), [note, setNote] = useState(''), [error, setError] = useState(''), [busy, setBusy] = useState(false);
+  const [action, setAction] = useState(''), [date, setDate] = useState(visit.date), [time, setTime] = useState(''), [hours, setHours] = useState([]), [note, setNote] = useState(''), [error, setError] = useState(''), [busy, setBusy] = useState(false), [loadingTimes, setLoadingTimes] = useState(false);
   const editable = ['paid','covered'].includes(visit.paymentStatus) && ['requested','confirmed'].includes(visit.status) && DateTime.fromISO(`${visit.date}T${visit.time}`, {zone:'America/Chicago'}) > DateTime.now();
   useEffect(() => {
-    if (action !== 'change' || !date) return;
-    let current = true; setBusy(true);setError('');setTime('');setHours([]);
+    if (action !== 'change' || !date) { setLoadingTimes(false); return; }
+    let current = true; setLoadingTimes(true);setError('');setTime('');setHours([]);
     api(`/availability?from=${date}&to=${date}${visit.trainerChoice || visit.staffId ? `&staffId=${visit.trainerChoice || visit.staffId}` : ''}`)
       .then(result => { if(current) { const values=result.days?.[0]?.slots || [];setHours(values);if(!values.length)setError('No available times on this date. Choose another day.'); } })
-      .catch(error => {if(current)setError(error.message);}).finally(()=>{if(current)setBusy(false);});
+      .catch(error => {if(current)setError(error.message);}).finally(()=>{if(current)setLoadingTimes(false);});
     return () => {current=false;};
   }, [action,date,visit.trainerChoice,visit.staffId]);
   async function submit(e) {
-    e.preventDefault(); if (busy) return; setBusy(true); setError('');
+    e.preventDefault(); if (busy || (action === 'change' && loadingTimes)) return; setBusy(true); setError('');
     try { await api('/client-schedule/visit', {method:'POST',body:{ bookingId:visit.bookingId, action, original:{date:visit.date,time:visit.time,service:visit.service}, ...(action === 'change' ? {replacement:{date,time,service:visit.service}} : {}), note }}); setAction(''); setNote(''); reload(isStaff?'Saved. The client and Bravo team have been notified.':'Saved. The Bravo team has been notified.', action === 'change' ? date : visit.date); } catch(e) { setError(e.message); } finally {setBusy(false);}
   }
-  return <div className="schedule-visit-actions"><div className="record-actions">{editable && <><button type="button" className="quiet-button" onClick={() => setAction('change')}>Change day or time</button><button type="button" className="quiet-button" onClick={() => setAction('cancel')}>Cancel this visit</button></>}<button type="button" className="quiet-button" onClick={() => setAction('note')}>{isStaff?'Note to client':'Note to staff'}</button></div>
+  return <div className="schedule-visit-actions"><div className="record-actions">{editable && <><button type="button" className="quiet-button" disabled={busy} onClick={() => {setAction('change');setError('');}}>Change day or time</button><button type="button" className="quiet-button" disabled={busy} onClick={() => {setAction('cancel');setError('');}}>Cancel this visit</button></>}<button type="button" className="quiet-button" disabled={busy} onClick={() => {setAction('note');setError('');}}>{isStaff?'Note to client':'Note to staff'}</button></div>
   {action && <form onSubmit={submit}><h4>{action === 'change' ? 'Change visit' : action === 'cancel' ? 'Cancel visit' : 'Note to the team'}</h4><Notice error>{error}</Notice>
-    {action === 'change' && <><label>New date<input aria-label="New date" type="date" required min={DateTime.now().setZone('America/Chicago').toISODate()} value={date} onChange={e => setDate(e.target.value)}/></label><p className="helper" role="status">{busy ? 'Checking available times…' : 'Available times load when you choose a date.'}</p><label>New time<select aria-label="New time" required disabled={busy || !hours.length} value={time} onChange={e => setTime(e.target.value)}><option value="">Choose an available time</option>{hours.map(t => <option key={t} value={t}>{formatTime(t)}</option>)}</select></label></>}
+    {action === 'change' && <><label>New date<input aria-label="New date" type="date" disabled={busy} required min={DateTime.now().setZone('America/Chicago').toISODate()} value={date} onChange={e => setDate(e.target.value)}/></label><p className="helper" role="status">{loadingTimes ? 'Checking available times…' : 'Available times load when you choose a date.'}</p><label>New time<select aria-label="New time" required disabled={busy || loadingTimes || !hours.length} value={time} onChange={e => setTime(e.target.value)}><option value="">Choose an available time</option>{hours.map(t => <option key={t} value={t}>{formatTime(t)}</option>)}</select></label></>}
     <label>{isStaff?'Note to the client and Bravo team':'Note to all staff, administrators and owners'}{action !== 'note' && ' (optional)'}<textarea aria-label={isStaff?'Note to the client and Bravo team':'Note to all staff, administrators and owners'} required={action === 'note'} maxLength={1200} value={note} onChange={e => setNote(e.target.value)}/></label>
     {action !== 'note' && <p className="helper">Changes within 24 hours are subject to Bravo’s appointment policy. Cancelling a visit does not refund payment or extend your membership.</p>}
-    <button className="button" disabled={busy || (action === 'note' && !note.trim()) || (action === 'change' && (!time || !hours.includes(time)))}>{busy ? 'Saving…' : action === 'cancel' ? 'Confirm cancellation & notify team' : 'Save & notify team'}</button><button type="button" className="quiet-button" disabled={busy} onClick={() => setAction('')}>Keep current visit</button>
+    <button className="button" disabled={busy || (action === 'note' && !note.trim()) || (action === 'change' && (loadingTimes || !time || !hours.includes(time)))}>{busy ? 'Saving…' : action === 'cancel' ? 'Confirm cancellation & notify team' : 'Save & notify team'}</button><button type="button" className="quiet-button" disabled={busy} onClick={() => setAction('')}>Keep current visit</button>
   </form>}</div>;
 }

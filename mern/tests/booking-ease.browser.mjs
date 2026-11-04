@@ -38,6 +38,7 @@ app.use('/api', (req,res) => {
     visits:state.visits.filter(visit=>visit.date.startsWith(req.query.month)).map(visit=>({...visit,bookingId,dogName:member.dogName,status:'confirmed',paymentStatus:'covered',trainer:'Fixture Lead',staffId:trainer}))};
   if (path === '/client-schedule/changes') {state.visits.push(...req.body.additions.map(visit=>({...visit,service:'training'})));data={message:'Fixture routine saved.'};}
   if (path === '/bookings' && req.method==='POST') data={booking:{...req.body,_id:bookingId,status:'requested',paymentStatus:'unpaid',quote:{dueNowCents:20000}}};
+  if (path === '/availability' && state.holdAvailability) { state.heldAvailability.push(() => res.json(data)); return; }
   res.json(data);
 });
 app.use(express.static(dist));app.get('/{*path}',(_req,res)=>res.type('html').send(html));
@@ -127,6 +128,21 @@ try {for(const [engineName,engine] of Object.entries({chromium,webkit})) {
       await page.getByLabel('New time',{exact:true}).getByRole('option',{name:'10:00 AM',exact:true}).waitFor({state:'attached'});
       assert.equal(await page.getByRole('button',{name:'Find available times',exact:true}).count(),0,'rescheduling fetches times automatically');
       await page.getByRole('button',{name:'Keep current visit',exact:true}).click();
+      // Switching actions during a slow availability response must never block cancelling or adding a note.
+      state.holdAvailability=true;state.heldAvailability=[];
+      const writesBeforeSwitch=state.writes.length;
+      for (const action of ['Cancel this visit','Note to staff']) {
+        await page.getByRole('button',{name:'Change day or time',exact:true}).click();
+        await page.getByText('Checking available times…',{exact:true}).waitFor();
+        await page.getByRole('button',{name:action,exact:true}).click();
+        if (action==='Note to staff') await page.getByLabel('Note to all staff, administrators and owners',{exact:true}).fill('Fixture note while availability is loading.');
+        const submit=action==='Cancel this visit'?'Confirm cancellation & notify team':'Save & notify team';
+        assert.equal(await page.getByRole('button',{name:submit,exact:true}).isEnabled(),true);
+        assert.equal(await page.getByRole('button',{name:'Keep current visit',exact:true}).isEnabled(),true);
+        await page.getByRole('button',{name:'Keep current visit',exact:true}).click();
+      }
+      state.holdAvailability=false;for(const finish of state.heldAvailability)finish();
+      assert.equal(state.writes.length,writesBeforeSwitch,'switching actions and keeping a visit never writes');
       await page.getByRole('button',{name:'Calendar',exact:true}).click();
       await page.getByRole('button',{name:/^Thu, Nov 5, 0 visits/}).click();
       await page.getByRole('button',{name:'Add a visit on this date',exact:true}).click();
