@@ -15,7 +15,8 @@ export default function SavedScheduleCalendar({ data, month, reload, onMonth, st
   const [editData,setEditData]=useState(null), [openingData]=useState(data);
   const [startRoutine,setStartRoutine]=useState(false), [editDate,setEditDate]=useState(''), [view,setView]=useState('calendar');
   const now = DateTime.now().setZone('America/Chicago');
-  const upcoming = data.visits.filter(visit => ['confirmed','requested'].includes(visit.status) && DateTime.fromISO(`${visit.date}T${visit.time}`, {zone:'America/Chicago'}) > now).sort((a,b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+  const orderedVisits = [...data.visits].sort((a,b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+  const upcoming = orderedVisits.filter(visit => ['confirmed','requested'].includes(visit.status) && DateTime.fromISO(`${visit.date}T${visit.time}`, {zone:'America/Chicago'}) > now);
   const activeEditData=editData||(startEditing?openingData:null);
   const [day, setDay] = useState(focusDate || upcoming[0]?.date || (now.toFormat('yyyy-MM') === month ? now.toISODate() : `${month}-01`));
   const trainingDays = new Set(data.visits.filter(v=>v.service==='training' && v.status!=='cancelled' && v.status!=='waitlisted').map(v=>v.date));
@@ -43,7 +44,7 @@ export default function SavedScheduleCalendar({ data, month, reload, onMonth, st
     {!visibleVisits.length && <p>{credited.has(day) ? 'Credited membership day. Choose an available time to schedule a visit.' : 'No saved visits on this day.'}</p>}
     <CreditActions key={`move-${day}`} data={data} date={day} onSaved={reload} disabled={creditBusy} onBusyChange={setCreditBusy}/></>}
     {view==='upcoming' && !visibleVisits.length && <p>No upcoming visits in this month. Choose another month or plan your next dates.</p>}
-    <div className="schedule-list">{data.visits.map((visit,i) => <article hidden={!visibleVisits.includes(visit)} className="schedule-visit" key={`${visit.bookingId}-${visit.date}-${visit.time}-${i}`}>
+    <div className="schedule-list">{orderedVisits.map(visit => <article hidden={!visibleVisits.includes(visit)} className="schedule-visit" key={`${visit.bookingId}-${visit.date}-${visit.time}-${visit.service}`}>
       <h3>{formatDate(visit.date)} · {formatTime(visit.time)}</h3><p>{visit.service === 'training' ? trainingFocusName(visit.trainingFocus) : visit.service} · {visit.dogName}</p><p>Trainer: {visit.trainer}</p><VisitStatus status={visit.status}/><p className="helper">{visit.paymentStatus === 'covered' ? 'Covered by your membership' : visit.paymentStatus === 'paid' ? 'Paid' : 'Payment pending'} · Central Time</p>
       {visit.status !== 'cancelled' && <VisitEditor visit={visit} reload={reload}/>}
     </article>)}</div>
@@ -69,7 +70,7 @@ function VisitEditor({ visit, reload }) {
   }
   return <div className="schedule-visit-actions"><div className="record-actions">{editable && <><button type="button" className="quiet-button" onClick={() => setAction('change')}>Change day or time</button><button type="button" className="quiet-button" onClick={() => setAction('cancel')}>Cancel this visit</button></>}<button type="button" className="quiet-button" onClick={() => setAction('note')}>{isStaff?'Note to client':'Note to staff'}</button></div>
   {action && <form onSubmit={submit}><h4>{action === 'change' ? 'Change visit' : action === 'cancel' ? 'Cancel visit' : 'Note to the team'}</h4><Notice error>{error}</Notice>
-    {action === 'change' && <><label>New date<input type="date" required min={DateTime.now().setZone('America/Chicago').toISODate()} value={date} onChange={e => setDate(e.target.value)}/></label><p className="helper" role="status">{busy ? 'Checking available times…' : 'Available times load when you choose a date.'}</p><label>New time<select required disabled={busy || !hours.length} value={time} onChange={e => setTime(e.target.value)}><option value="">Choose an available time</option>{hours.map(t => <option key={t} value={t}>{formatTime(t)}</option>)}</select></label></>}
+    {action === 'change' && <><label>New date<input aria-label="New date" type="date" required min={DateTime.now().setZone('America/Chicago').toISODate()} value={date} onChange={e => setDate(e.target.value)}/></label><p className="helper" role="status">{busy ? 'Checking available times…' : 'Available times load when you choose a date.'}</p><label>New time<select aria-label="New time" required disabled={busy || !hours.length} value={time} onChange={e => setTime(e.target.value)}><option value="">Choose an available time</option>{hours.map(t => <option key={t} value={t}>{formatTime(t)}</option>)}</select></label></>}
     <label>{isStaff?'Note to the client and Bravo team':'Note to all staff, administrators and owners'}{action !== 'note' && ' (optional)'}<textarea aria-label={isStaff?'Note to the client and Bravo team':'Note to all staff, administrators and owners'} required={action === 'note'} maxLength={1200} value={note} onChange={e => setNote(e.target.value)}/></label>
     {action !== 'note' && <p className="helper">Changes within 24 hours are subject to Bravo’s appointment policy. Cancelling a visit does not refund payment or extend your membership.</p>}
     <button className="button" disabled={busy || (action === 'note' && !note.trim()) || (action === 'change' && (!time || !hours.includes(time)))}>{busy ? 'Saving…' : action === 'cancel' ? 'Confirm cancellation & notify team' : 'Save & notify team'}</button><button type="button" className="quiet-button" disabled={busy} onClick={() => setAction('')}>Keep current visit</button>
