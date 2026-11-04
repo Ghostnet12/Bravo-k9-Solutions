@@ -100,8 +100,9 @@ try {
           }
           await page.goto(`${origin}/portal?program=training`, { waitUntil: 'networkidle' });
           await page.getByRole('heading', { name: 'Let’s start with your dog.' }).waitFor();
+          await page.getByLabel('Dog’s name', {exact:true}).fill('Monthly fixture dog');
           await page.getByRole('button', { name: 'Plan my entire month', exact: true }).click();
-          await page.getByRole('heading', { name: 'Build your schedule', exact: true }).waitFor();
+          await page.getByRole('heading', { name: 'Choose your trainer.', exact: true }).waitFor();
           await page.addScriptTag({ content: axe.source });
           const violations = await page.evaluate(async () => (await axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a','wcag2aa','wcag21aa','wcag22aa'] } })).violations.map(v => ({ id: v.id, impact: v.impact, targets: v.nodes.map(n => n.target) })));
           assert.deepEqual(violations, [], 'booking automated WCAG checks');

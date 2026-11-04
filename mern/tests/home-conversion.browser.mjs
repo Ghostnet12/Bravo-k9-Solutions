@@ -112,10 +112,10 @@ try {
           await page.getByRole('heading', { name: 'Let’s start with your dog.' }).waitFor();
           const fullMonth = page.getByRole('button', { name: 'Plan my entire month', exact: true });
           assert.ok(await fullMonth.isVisible(), 'whole-month entry is not hidden in a disclosure');
+          await page.getByLabel('Dog’s name',{exact:true}).fill('Whole month fixture');
           await fullMonth.click();
-          const booking = await page.locator('.mobile-booking-bar').boundingBox();
-          const access = await page.locator('.accessibility-tools').boundingBox();
-          assert.ok(booking && access && access.y + access.height <= booking.y, `${engineName}: accessibility control overlaps booking bar`);
+          await page.getByRole('heading',{name:'Choose your trainer.',exact:true}).waitFor();
+          assert.equal(await page.locator('.mobile-booking-bar').isVisible(),false,'guided monthly planning has no competing booking bar');
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${engineName}: booking overflow`);
           assert.deepEqual(errors, [], `${engineName}: booking runtime errors`);
           await page.screenshot({ path: `test-results/booking-controls-${engineName}-390.png`, fullPage: false });

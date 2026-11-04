@@ -36,7 +36,7 @@ test('full-month and returning-client entry points are outside disclosures', () 
   const intro = source('FirstVisitIntro.jsx');
   assert.ok(intro.indexOf('<details') === -1 || intro.indexOf('</details>') < intro.indexOf('Plan my entire month'));
   assert.ok(intro.indexOf('Already training with Bravo?') < intro.indexOf('<form'));
-  assert.match(intro, /type="button"[^>]+onClick=\{onFullSchedule\}/);
+  assert.match(intro, /type="button"[^>]+onClick=\{event => \{ if \(event.currentTarget.form.reportValidity\(\)\) onFullSchedule\(\); \}\}/);
   assert.match(intro, /Bravo confirms visits separately/);
 });
 test('navigation keeps operational paths and only one member lesson link', () => {

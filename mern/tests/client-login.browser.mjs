@@ -144,7 +144,7 @@ try {
           await page.getByLabel('Confirm new password', { exact: true }).fill(ownPassword);
           await page.getByRole('button', { name: 'Save password & open schedule', exact: true }).click();
           await page.getByRole('heading', { name: 'New Fixture Client’s schedule.', exact: true }).waitFor(); assert.ok(scheduleReads > 0);
-          await page.locator('.saved-calendar button.has-visits').click(); await page.getByRole('heading', { name: /10:00 AM/ }).waitFor();
+          await page.locator('.saved-calendar button.has-visits').click(); await page.getByRole('article').getByRole('heading', { name: /10:00 AM/ }).waitFor();
           await reload(); await page.getByRole('heading', { name: 'New Fixture Client’s schedule.', exact: true }).waitFor();
           assert.equal(await page.getByRole('heading', { name: 'Create your password.', exact: true }).count(), 0);
           await navigate(`${origin}/account`); await page.getByRole('heading', { name: 'Membership dates & renewal', exact: true }).waitFor();

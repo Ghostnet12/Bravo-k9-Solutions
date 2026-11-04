@@ -121,7 +121,7 @@ try {
           await page.getByLabel('Schedule month',{exact:true}).fill(month);
           await page.getByRole('button',{name:'Add or Cancel Date',exact:true}).waitFor();
           await savedGrid.getByRole('button',{name:dateName(missed)}).click();
-          assert.equal(await page.locator('.schedule-visit:visible').getByText('CANCELLED',{exact:true}).count(),2);
+          assert.equal(await page.locator('.schedule-visit:visible').getByText('Cancelled',{exact:true}).count(),2);
           await page.getByRole('button',{name:'Add or Cancel Date',exact:true}).click();
           await page.getByText('Checking available times…').waitFor({state:'hidden'});
           await grid.getByRole('button',{name:dateName(missed)}).click();
