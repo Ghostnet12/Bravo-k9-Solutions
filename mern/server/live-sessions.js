@@ -1,3 +1,4 @@
+import { liveConnectionConfig, relayConfiguration } from './live-relay.js';
 import { randomUUID, randomBytes, createHash } from 'node:crypto';
 import { z } from 'zod';
 import { LiveSession, LivePeer, User, Booking, AuditEvent, Notification } from './models.js';
@@ -79,6 +80,14 @@ export async function liveApiRateLimit(req, res, next) {
       req.liveControlRateIdentity = `live-control:${req.user._id}:${match[1]}:${match[2]}`;
     }
   }
+  // Cellular providers can put many viewers behind one public address.
+  // Only an existing, authorized token-bound peer gets an independent polling
+  // budget; guessed credentials keep the ordinary shared abuse protection.
+  const viewerPath = req.method === 'POST' && req.path.match(/^\/live\/([a-f0-9-]{36})\/peers\/([a-f0-9-]{36})\/(poll|leave)\/?$/i);
+  if (viewerPath && peerSecret.safeParse(req.body?.token).success) {
+    const session = await LiveSession.findOne({ _id: viewerPath[1], ...visibility(req.user), transport: 'direct', open: true, lastSeenAt: { $gt: cutoff() } }).lean();
+    if (session && await LivePeer.exists({ _id: viewerPath[2], sessionId: session._id, tokenHash: hash(req.body.token), ...viewerBinding(req), expiresAt: { $gt: new Date() } })) req.liveControlRateIdentity = `live-viewer:${viewerPath[2]}`;
+  }
   return apiLimit(req, res, next);
 }
 async function peersForTrainer(session) {
@@ -108,7 +117,7 @@ export function liveRoutes(app) {
     }).select('dogName userId visits staffId staffIds').populate({ path: 'userId', model: User, select: 'name blocked removedAt' }).sort({ updatedAt: -1 }).limit(150).lean();
     const snapshot = await liveSnapshot(req.user);
     const sessions = snapshot.sessions.filter(row => req.user.role === 'owner' || row.trainerId === String(req.user._id));
-    res.json({ configured: liveConfigured(), transport: 'direct', viewerLimit: null, serverTime: new Date(),
+    res.json({ configured: liveConfigured(), relay: relayConfiguration(), transport: 'direct', viewerLimit: null, serverTime: new Date(),
       bookings: bookings.filter(b => b.userId && !b.userId.blocked && !b.userId.removedAt).map(b => ({ id: String(b._id), dogName: b.dogName,
         clientName: b.userId.name, visits: b.visits })), sessions: sessions.map(s => ({ ...s, mine: s.trainerId === String(req.user._id) })) });
   });
@@ -162,6 +171,25 @@ export function liveRoutes(app) {
     } }, { upsert: true });
     res.json({ session: liveSummary(updated, req.user), peers: await peersForTrainer(updated), serverTime: new Date() });
   });
+  // Public sessions have no account or subscription requirement. Private
+  // sessions still use the exact server-side audience/owner authorization.
+  app.post('/api/live/:id/connection', ready, rateLimit('live-connection', 60, 60000), async (req, res) => {
+    z.object({}).strict().parse(req.body);
+    const session = await accessible(req);
+    const broadcaster = req.user && String(session.trainerId) === String(req.user._id);
+    if ((!broadcaster && sessionState(session) !== 'live') || !await activeTrainer(session)) throw fail('This session is not broadcasting right now.', 410);
+    let config;
+    try { config = await liveConnectionConfig(); }
+    catch (error) {
+      if (['LIVE_RELAY_NOT_CONFIGURED', 'LIVE_RELAY_UNAVAILABLE', 'LIVE_RELAY_INVALID_RESPONSE'].includes(error.code)) return res.status(503).json({ error: 'The video relay is temporarily unavailable. Please retry shortly or contact Bravo.', code: error.code });
+      throw error;
+    }
+    // A slow upstream credential request must not resurrect ended/revoked access.
+    const fresh = await accessible(req);
+    if (req.user && fresh.audience === 'client' && !await User.exists({ _id: req.user._id, blocked: false, removedAt: null, credentialVersion: req.user.credentialVersion || { $in: [0, null] } })) throw fail('Your account changed. Sign in again to watch.', 403);
+    if ((!broadcaster && sessionState(fresh) !== 'live') || !await activeTrainer(fresh)) throw fail('This session is not broadcasting right now.', 410);
+    res.set('Cache-Control', 'private, no-store').json(config);
+  });
   app.post('/api/live/:id/watch', ready, rateLimit('live-watch', 12, 60000), async (req, res) => {
     const { offer } = z.object({ offer: description('offer') }).strict().parse(req.body);
     const session = await accessible(req);
@@ -179,7 +207,7 @@ export function liveRoutes(app) {
     });
     res.json({ session: liveSummary(session), peerId, token });
   });
-  app.post('/api/live/:id/peers/:peerId/poll', ready, rateLimit('live-peer-poll', 120, 60000), async (req, res) => {
+  app.post('/api/live/:id/peers/:peerId/poll', ready, rateLimit('live-peer-poll', 120, 60000, req => req.liveControlRateIdentity || String(req.user?._id || req.ip)), async (req, res) => {
     const { token } = z.object({ token: peerSecret }).strict().parse(req.body);
     const session = await accessible(req);
     if (!await activeTrainer(session)) throw fail('This session has ended.', 410);
@@ -217,3 +245,4 @@ export function liveRoutes(app) {
     res.json({ ok: true });
   });
 }
+

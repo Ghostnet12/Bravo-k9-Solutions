@@ -60,9 +60,9 @@ function LivePlayer({ session, offset }) {
     </div>
     <div className="live-player-caption"><div><h2>{session.trainerName} <span> / </span> {session.dogName}</h2>
       {session.trainingFocus && <p className="live-training-focus">{session.trainingFocus}</p>}
-      <p>Started {liveTime(session.startedAt)} Central Time · {session.audience === 'client' ? 'Client session' : 'Public session'}</p><p role="status">{connection}</p></div>
+      <p>Started {liveTime(session.startedAt)} Central Time · {session.audience === 'client' ? 'Client session' : 'Public session · guests welcome, no subscription or sign-in'}</p><p role="status">{connection}</p></div>
       <div className="live-controls"><button onClick={() => toggleSound().catch(() => { video.current.muted = true; releaseLiveAudio(video.current); setError('Tap again to enable sound.'); })} disabled={!ready} aria-pressed={sound}>{sound ? 'Mute audio' : 'Enable audio'}</button><button onClick={() => { const element = video.current; if (element?.webkitEnterFullscreen) element.webkitEnterFullscreen(); else element?.requestFullscreen?.().catch(() => setError('Full screen is unavailable in this browser.')); }} disabled={!ready}>Full screen</button></div>
-    </div><p className="live-caption-note">Direct phone stream. Quality depends on the trainer’s connection and audience size. On a weak cellular connection, retry here or switch networks. Some networks require a media relay before a direct stream can connect. Automatic captions and replays are not available.</p>
+    </div><p className="live-caption-note">Quality depends on both connections and audience size. A configured relay provides a fallback when direct video is blocked. Retry here after a network change. Automatic captions and replays are not available.</p>
   </section>;
 }
 function TrainingHighlights() {
@@ -104,5 +104,6 @@ export default function LivePage() {
       <div className="live-signature"><img src="/bravo-shield-192.png" width="56" height="56" alt="Bravo K9 shield"/><p>MORE THAN TRAINING.<br/><span>A STRONGER TOMORROW.</span></p></div>
     </div></main><Footer/></>;
 }
+
 
 

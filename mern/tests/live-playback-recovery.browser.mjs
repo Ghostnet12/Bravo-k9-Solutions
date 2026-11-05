@@ -18,6 +18,7 @@ try {for(const width of [390,1440]){
   HTMLMediaElement.prototype.play=function(){return this.getAttribute('aria-label')==='Live training video'&&!window.fixturePlaybackAllowed?Promise.reject(new DOMException('Fixture autoplay blocked','NotAllowedError')):originalPlay.call(this);};
   window.RTCPeerConnection=class{
    constructor(){this.connectionState='new';this.iceGatheringState='complete';}
+   setConfiguration(config){this.configuration=config;}
    addTransceiver(){}
    async createOffer(){return {type:'offer',sdp:'fixture-offer'};}
    async setLocalDescription(value){this.localDescription=value;}
@@ -30,6 +31,7 @@ try {for(const width of [390,1440]){
   if(u.pathname==='/api/config')data={connected:true,paymentsReady:false,services:SERVICES,lessonLibrary:{open:false}};
   if(u.pathname==='/api/auth/me')data={user:null,services:[],membership:{active:false}};
   if(u.pathname==='/api/live')data={availability:'available',serverTime:new Date().toISOString(),announcements:[],sessions:[{id:'autoplay-fixture',trainerId:'fixture',trainerName:'Fixture Trainer',dogName:'Fixture Dog',audience:'public',status:'live',liveUntil:new Date(Date.now()+120000).toISOString(),startedAt:new Date(Date.now()-60000).toISOString()}]};
+  if(u.pathname==='/api/live/autoplay-fixture/connection')data={iceServers:[{urls:'stun:stun.cloudflare.com:3478'}],iceTransportPolicy:'all',relayConfigured:false,expiresAt:null};
   if(u.pathname==='/api/live/autoplay-fixture/watch')data={peerId:'fixture-peer',token:'synthetic-test-only'};
   if(u.pathname.endsWith('/poll')){polls++;data={status:'live',answer:{type:'answer',sdp:'fixture-answer'}};}
   return route.fulfill({json:data});
@@ -47,3 +49,4 @@ try {for(const width of [390,1440]){
  console.log(`PASS ${width}px: blocked recovery survives ${polls} successful transport polls; user playback and resumed timeline restore LIVE and audio controls.`);
  await context.close();
 }}finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
+
