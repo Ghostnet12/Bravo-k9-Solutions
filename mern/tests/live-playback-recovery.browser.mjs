@@ -30,6 +30,7 @@ try {for(const width of [390,1440]){
   if(u.pathname==='/api/config')data={connected:true,paymentsReady:false,services:SERVICES,lessonLibrary:{open:false}};
   if(u.pathname==='/api/auth/me')data={user:null,services:[],membership:{active:false}};
   if(u.pathname==='/api/live')data={availability:'available',serverTime:new Date().toISOString(),announcements:[],sessions:[{id:'autoplay-fixture',trainerId:'fixture',trainerName:'Fixture Trainer',dogName:'Fixture Dog',audience:'public',status:'live',liveUntil:new Date(Date.now()+120000).toISOString(),startedAt:new Date(Date.now()-60000).toISOString()}]};
+  if(u.pathname==='/api/live/autoplay-fixture/network')data={version:1,iceServers:[{urls:'stun:stun.cloudflare.com:3478'}],relayConfigured:false,expiresAt:null};
   if(u.pathname==='/api/live/autoplay-fixture/watch')data={peerId:'fixture-peer',token:'synthetic-test-only'};
   if(u.pathname.endsWith('/poll')){polls++;data={status:'live',answer:{type:'answer',sdp:'fixture-answer'}};}
   return route.fulfill({json:data});
