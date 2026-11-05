@@ -1,0 +1,59 @@
+{
+  "expo": {
+    "name": "Bravo K9",
+    "slug": "bravo-app",
+    "owner": "ghostnet12s-team",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#101010",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.bravounleashed.app",
+      "buildNumber": "1",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.bravounleashed.app",
+      "versionCode": 1,
+      "allowBackup": false,
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ],
+      "predictiveBackGestureEnabled": true
+    },
+    "web": {
+      "favicon": "./assets/icon.png",
+      "name": "Bravo K9 app preview",
+      "themeColor": "#101010",
+      "output": "single"
+    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#101010",
+          "image": "./assets/icon.png",
+          "imageWidth": 180
+        }
+      ],
+      "expo-router"
+    ],
+    "scheme": "bravok9",
+    "extra": {
+      "eas": {
+        "projectId": "6e045e71-3563-472b-9036-855ba473f3f7"
+      }
+    },
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
